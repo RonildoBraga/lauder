@@ -1,0 +1,28 @@
+# Keep source and documentation reviewable as ordinary Git text.
+* text=auto
+*.swift text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.usda text eol=lf
+
+# Editable binary sources and deliberate runtime delivery assets.
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.fbx filter=lfs diff=lfs merge=lfs -text
+*.glb filter=lfs diff=lfs merge=lfs -text
+*.usdc filter=lfs diff=lfs merge=lfs -text
+*.usdz filter=lfs diff=lfs merge=lfs -text
+*.reality filter=lfs diff=lfs merge=lfs -text
+*.psd filter=lfs diff=lfs merge=lfs -text
+*.psb filter=lfs diff=lfs merge=lfs -text
+*.exr filter=lfs diff=lfs merge=lfs -text
+*.hdr filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.wav filter=lfs diff=lfs merge=lfs -text
+*.aif filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+
+# Repository policy: PNG/JPEG and other binary image/texture files without a format-wide rule
+# larger than 1 MiB (1,048,576 bytes) need an explicit-path LFS rule before commit.
+# PNG/JPEG files at or below that size stay in ordinary Git. This is not a GitHub limit.
+# Inspect mixed-format .usd files separately; binary .usd needs a path rule at any size.
