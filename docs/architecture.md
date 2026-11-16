@@ -2,7 +2,7 @@
 
 **Date:** 16 November 2026\
 **Status:** Swift and RealityKit accepted. Architecture below is proposed for the first prototype.\
-**Scope:** Stage 1 implementation is in progress. Gameplay and persistence below remain planned.
+**Scope:** Stage 1 is merged; Stage 2 movement and controls are in progress. Mission rules and persistence below remain planned.
 
 ## Decision and platform
 
@@ -104,6 +104,8 @@ Use RealityKit's built-in character controller and collision behaviour. Continuo
 GameWorld sets up and tears down its callbacks explicitly. Cancel unfinished loads when restarting or leaving; a late load must not attach objects to a discarded scene.
 
 The camera has a fixed elevated perspective, follows Miki and cannot rotate in the prototype. Use level layout and low obstacles to maintain visibility before adding an occlusion subsystem.
+
+Stage 2 prefers the maintainer's connected PlayStation controller, with native touch controls available without a physical gamepad. Controller source selection, glyphs, pause input and neutral-input gating are owned by the interface input adapter; GameWorld consumes snapshots. The [Stage 2 record](stage-2.md) distinguishes SDK evidence from physical checks. The foreground game keeps the screen awake, including Pause, and restores the idle timer when inactive.
 
 Scene composition and the named animation library are configured in Swift for the first playable. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
 

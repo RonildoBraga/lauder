@@ -4,7 +4,7 @@ import SwiftUI
 struct LauderApp: App {
   var body: some Scene {
     WindowGroup {
-      AssetPreview()
+      GameView()
     }
   }
 }

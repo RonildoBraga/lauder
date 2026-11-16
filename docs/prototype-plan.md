@@ -1,11 +1,13 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Stage 1 is in progress. Scope split and Stage 1 stop criterion approved by the maintainer.\
+**Status:** Stage 1 is merged; Stage 2 is authorised and in progress. Scope split and Stage 1 stop criterion approved by the maintainer.\
 **Technical direction:** Swift + RealityKit, current stable iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
 Record attempts and actual results in the [Stage 1 session log](stage-1.md).
+
+Stage 2 implementation decisions and device observations are in the [movement and controls record](stage-2.md).
 
 **Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
 
@@ -45,7 +47,7 @@ The blocked entrance uses ordinary level geometry and collision. It creates a re
 | Remote cast | Lara and Nina represented through text dialogue |
 | Salvage | One regulator, one pickup |
 | Repair | One transmitter, with visibly broken and working states |
-| Controls | Left movement thumbstick; one contextual action button |
+| Controls | PlayStation left stick or touch thumbstick; one contextual action button |
 | Camera | Fixed elevated perspective with follow; landscape |
 | Interface | Objective, carried-part indicator, dialogue, Pause/Resume and Restart |
 | Progress | In-memory run state; a fresh launch starts a new run |
@@ -74,11 +76,13 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 ### 2. Make movement comfortable
 
 - Add screen-relative touch movement, character collision and camera follow.
+- Prefer the maintainer's paired PlayStation controller; evaluate native touch controls when no physical controller is connected. Verify disconnect/reconnect and controller Pause/Resume.
 - Describe the shelter, depot, landmarks and service passage in one small typed Swift layout definition consumed by GameWorld. Keep explicit placements and the existing stable interaction IDs.
 - Inspect simulator/device screenshots and play the route while refining geometry and framing.
 - Add a nearby stationary Tomas placeholder.
 - Verify simultaneous movement and action-button input, safe areas and visibility.
 - On inactivity, clear held input, pause the live world and reset frame timing on resume.
+- Keep the foreground game awake, including Pause; restore normal idle locking when leaving it. Use the baseline iPhone as the primary playable-build test device.
 
 **Exit:** Miki can walk the route predictably without getting stuck or disappearing behind geometry. Touch release and interruptions cannot leave her moving.
 

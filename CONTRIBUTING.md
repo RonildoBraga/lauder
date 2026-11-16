@@ -1,6 +1,6 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. The project is developing its story and Stage 1 of the first Swift/RealityKit prototype.
+People and AI-assisted contributors are welcome. Stage 1 is merged; the project is developing Stage 2 of the first Swift/RealityKit prototype.
 
 ## Before working
 
@@ -47,6 +47,8 @@ It then runs the selected toolchain's `swift format` with the committed `.swift-
 The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDER_DESTINATION` can override the Xcode destination; `LAUDER_DEVELOPMENT_TEAM` supplies a signing team for a physical-device test. Configure your Apple account and signing locally in Xcode first; do not commit those values or device identifiers. The default simulator check does not need code signing.
 
 Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
+
+Use the baseline iPhone 13 Pro Max for playable-build validation. A connected PlayStation controller is the preferred input; check touch controls without a physical gamepad as well. Verify movement, collision, camera, Pause/Resume, release/interruptions and controller switching on the phone. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it.
 
 ## Git LFS and cloning
 
