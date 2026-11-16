@@ -1,9 +1,11 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Scope split and Stage 1 stop criterion approved by the maintainer; implementation has not started.\
+**Status:** Stage 1 is in progress. Scope split and Stage 1 stop criterion approved by the maintainer.\
 **Technical direction:** Swift + RealityKit, current stable iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
+
+Record attempts and actual results in the [Stage 1 session log](stage-1.md).
 
 **Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
 
@@ -109,7 +111,7 @@ Use Swift Testing for rules that can fail:
 - Briefing → pickup → repair → call completes, with consistent item, radio and objective state.
 - Restart resets the phase; **Read plan** after completion does not restart the mission.
 
-Use manual device checks for controls, camera, collision, interruptions and a complete unfamiliar-player run. There is no app or runnable test command yet; add one documented build-and-test command when the project exists.
+Use manual device checks for controls, camera, collision, interruptions and a complete unfamiliar-player run. Run `./scripts/check` for formatting, build and unit tests. The initial test checks the bundled character import; the mission-rule tests above belong with Stage 3's implementation.
 
 ## Later hardening, after the loop is worth keeping
 

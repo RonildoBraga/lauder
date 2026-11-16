@@ -11,7 +11,7 @@ Do not duplicate those documents here or silently turn a working proposal into a
 
 ## Stay within the task
 
-The project is planning its first prototype. Its plan does not itself authorise implementation. An explicit maintainer assignment or instruction authorises that work; do not request duplicate permission when it already supplies it.
+The project is building Stage 1 of its first prototype. Its plan does not itself authorise further implementation. An explicit maintainer assignment or instruction authorises that work; do not request duplicate permission when it already supplies it.
 
 Keep changes small. Preserve the Swift/RealityKit direction and the agreed prototype scope unless the task explicitly changes them. Use existing patterns and introduce abstractions or dependencies only for a demonstrated need.
 
@@ -39,9 +39,9 @@ Do not interpret an ambiguous cleanup request as permission to remove valuable m
 
 Use focused branches and pull requests after the initial repository bootstrap. Do not merge or publish releases unless the maintainer has explicitly authorised it.
 
-Keep narrative and technical references consistent. For documentation changes, check links and claims. No app build/test command exists at the current planning stage. When the project is created, document one reproducible build-and-test command here and in CONTRIBUTING.md. Do not invent a scheme or report a successful app build before one exists.
+Keep narrative and technical references consistent. For documentation changes, check links and claims. For Swift changes, run `./scripts/check`: it checks formatting, builds the shared Lauder scheme and runs Swift Testing on an available iOS 27 or later iPhone simulator. See [CONTRIBUTING.md](CONTRIBUTING.md#validation) for toolchain and destination requirements.
 
-Use Swift 6 language mode, Swift Testing and toolchain `swift format` with the committed `.swift-format`, as defined in the [architecture](docs/architecture.md#swift-conventions). Once implementation exists, report successful builds or device runs only when actually verified.
+Use Swift 6 language mode, Swift Testing and toolchain `swift format` with the committed `.swift-format`, as defined in the [architecture](docs/architecture.md#swift-conventions). Report successful builds or device runs only when actually verified.
 
 When application code exists, run checks appropriate to the change. Device behaviour and performance need physical-device evidence. Record what was actually tested and what remains unverified.
 

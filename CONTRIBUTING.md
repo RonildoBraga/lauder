@@ -1,6 +1,6 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. The project is currently planning its story and first Swift/RealityKit prototype.
+People and AI-assisted contributors are welcome. The project is developing its story and Stage 1 of the first Swift/RealityKit prototype.
 
 ## Before working
 
@@ -32,17 +32,19 @@ Use GitHub issues and pull requests to exchange review findings so the maintaine
 
 ## Validation
 
-There is no app or Xcode project yet, so there is no application build/test command.
-
 For documentation changes, check relative links and consistency with the story and technical plan. Explain any assumptions or checks you could not perform.
 
-When Swift files exist, use the formatter shipped with the selected Xcode toolchain and the repository's `.swift-format` configuration:
+Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime. With Git LFS assets downloaded, run the standard validation command from the repository root:
 
 ```sh
-xcrun swift format lint --strict --recursive .
+./scripts/check
 ```
 
-This checks formatting; it does not build the app or verify device behaviour. Once an Xcode project exists, document one standard command for its build and unit tests, with the actual scheme and destination. Keep tests focused on meaningful behaviour and report device and toolchain details where relevant.
+This runs the selected toolchain's `swift format` with the committed `.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Build products, logs and the result bundle remain in a local temporary directory outside Git.
+
+The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDER_DESTINATION` can override the Xcode destination; `LAUDER_DEVELOPMENT_TEAM` supplies a signing team for a physical-device test. Configure your Apple account and signing locally in Xcode first; do not commit those values or device identifiers. The default simulator check does not need code signing.
+
+Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
 
 ## Git LFS and cloning
 

@@ -2,7 +2,7 @@
 
 **Date:** 16 November 2026\
 **Status:** Swift and RealityKit accepted. Architecture below is proposed for the first prototype.\
-**Scope:** Planning only; no app project or implementation has been created.
+**Scope:** Stage 1 implementation is in progress. Gameplay and persistence below remain planned.
 
 ## Decision and platform
 
@@ -36,7 +36,7 @@ These are folders and responsibilities within the app, rather than separate fram
 - Select **Swift 6 language mode** deliberately from the first source commit. It enables complete data-race checking; do not rely on an Xcode template's default language mode. Keep UI/session work main-actor isolated and make concurrency boundaries explicit. [Swift migration guidance](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/enabledataracesafety/)
 - Use **Swift Testing** for new unit tests. The physical-device checks in the prototype plan remain necessary. [Swift Testing](https://developer.apple.com/xcode/swift-testing/)
 - Use the toolchain's **`swift format`** and the repository's [`.swift-format`](../.swift-format): two-space indentation and a 100-column line length; other options use tool defaults. No third-party formatter or linter is needed.
-- When the app and its test target exist, publish **one reproducible build-and-test command** in AGENTS.md and CONTRIBUTING.md. There is no valid app build/test command yet.
+- Run **`./scripts/check`** for toolchain formatting, the shared Lauder scheme's build and its Swift Testing target. [Validation requirements](../CONTRIBUTING.md#validation)
 
 The first playable uses in-memory progress. The saving design below remains the target for later hardening; [the prototype plan](prototype-plan.md) separates those milestones.
 
