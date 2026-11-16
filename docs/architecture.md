@@ -8,6 +8,8 @@
 
 Use **Swift + RealityKit** for gameplay and the 3D world, **SwiftUI** for the interface, and **Reality Composer Pro** for scene and asset authoring.
 
+The accepted rationale, alternatives, costs and three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md). This preparation does not start Stage 1; it requests Claude's review first.
+
 Interpret “latest iOS” as the current stable **iOS 27 family**. Proposed minimum deployment target: **iOS 27.0**. Build with the latest stable SDK and test on the latest stable patch. On the review date, Apple lists **iOS 27.2.1** and **Xcode 27.2** as released; iOS/Xcode 27.3 are beta. [Apple releases](https://developer.apple.com/news/releases/)
 
 Use the stable Xcode 27.2 toolchain for the first prototype. Record the actual editor, SDK, device and OS versions with the first device validation results.
@@ -27,7 +29,16 @@ Start with iPhone and landscape orientation. The initial performance baseline is
 | Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
 | Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
 
-These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it.
+These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it. A content bundle or package required by Apple's authoring tools is an asset-pipeline container, not a reason to split gameplay into internal frameworks. Verify the current Reality Composer Pro output during Stage 1 instead of assuming an older `.rkassets` package layout.
+
+## Swift conventions
+
+- Select **Swift 6 language mode** deliberately from the first source commit. It enables complete data-race checking; do not rely on an Xcode template's default language mode. Keep UI/session work main-actor isolated and make concurrency boundaries explicit. [Swift migration guidance](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/enabledataracesafety/)
+- Use **Swift Testing** for new unit tests. The physical-device checks in the prototype plan remain necessary. [Swift Testing](https://developer.apple.com/xcode/swift-testing/)
+- Use the toolchain's **`swift format`** and the repository's [`.swift-format`](../.swift-format): two-space indentation and a 100-column line length; other options use tool defaults. No third-party formatter or linter is needed.
+- When the app and its test target exist, publish **one reproducible build-and-test command** in AGENTS.md and CONTRIBUTING.md. There is no valid app build/test command yet.
+
+The first playable uses in-memory progress. The saving design below remains the target for later hardening; [the prototype plan](prototype-plan.md) separates those milestones.
 
 ## Runtime ownership
 
@@ -117,7 +128,7 @@ Test rules and save round-trips independently of the rendered scene. Test contro
 
 Additional packages, custom rendering, generic inventory/crafting/quest frameworks, service locators, a global event bus, backend accounts, networking, cloud saves, monetisation, scene streaming and a broad UI automation suite.
 
-Navigation APIs are available for the chosen iOS generation, but stationary Tomas and a single controllable character do not yet require NPC pathfinding. Add it when a demonstrated interaction needs it.
+RealityKit's [NavigationComponent](https://developer.apple.com/documentation/realitykit/navigationcomponent) is available on iOS 27 and later, but stationary Tomas and a single controllable character do not yet require NPC pathfinding. Add it when a demonstrated interaction needs it.
 
 ## Revisit after the first playable
 
