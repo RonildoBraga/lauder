@@ -63,9 +63,24 @@ The follow-up passed `./scripts/check` on the iPhone 17 / iOS 27.0 Simulator wit
 
 [Issue #13](https://github.com/RonildoBraga/lauder/issues/13) retains the later interaction-reachability and command-routing design notes. This response does not start Stage 3.
 
+## First visual polish pass
+
+The maintainer selected Death's Door as the main reference and authorised polishing the current scene while keeping it suitable for the baseline iPhone. The accepted [visual direction](visual-direction.md) applies readable silhouettes, a restrained palette and clear paths to Lauder's own futuristic setting. This work is a separate change based on PR #11's follow-up revision `d0a29f8`; it does not alter that PR's review head or start Stage 3.
+
+[SceneStyle](../Lauder/World/SceneStyle.swift) supplies shared primitive meshes, eight opaque rough SimpleMaterials and two UnlitMaterials. The shelter has warm window and relay accents; the transmitter and regulator have simple layered utility forms; Tomas has a more legible clothed silhouette. [SceneDressing](../Lauder/World/SceneDressing.swift) adds 105 static models for shallow paving, wall caps, panels, sparse vegetation and salvage details. One warm directional key casts a single shadow cascade; a cool directional fill has no shadow component. Unlit accents do not illuminate neighbouring geometry. The HUD uses solid dark panels and explicit contrasting text in place of background blur.
+
+The route retains its 19 static collision roots plus Miki's character controller, original interaction anchors, 1.8-metre service opening, movement and camera framing. Decoration has no collision bodies or update subscriptions. Character asset bytes and input behaviour are unchanged. There are no new dependencies, textures, particles, postprocessing effects or visual animations.
+
+Validation on 16 November 2026:
+
+- The final `./scripts/check` passed strict formatting, build and all existing Swift Testing checks, including the input-rule cases, on iPhone 17 / iOS 27.0 Simulator using Xcode 27.2 / SDK 27.2. Successful temporary build/test output was removed by the script.
+- A temporary native macOS RealityKit geometry probe loaded the current layout, style, dressing and actual idle asset. It counted **142 nonempty renderable models and 10,240 triangle instances**, including 105 dressing models / 1,504 triangles. This is a geometry inventory, not an iPhone performance or draw-call measurement. Component inspection confirmed two explicit lights and one actual directional-shadow component.
+- In the final landscape Simulator build, Codex walked from the shelter through the service opening to the regulator, triggered its observation with E, and checked Escape Pause/Resume. The route, feet, contrasting HUD and utility landmarks remained visible in the inspected views. Keyboard capture was restored off afterward. An earlier check in the same pass also confirmed the blocked front entrance remained impassable.
+- No new phone installation or physical-controller test was performed. Frame pacing, memory, thermals and battery cost on iPhone remain unmeasured; the 60 fps device target is not a result of these checks. The earlier phone-check deferral remains in effect. Walking-cadence calibration is still deferred; no gait improvement is claimed.
+
 ## Everyday Simulator and milestone phone checks
 
-Run formatting, build and Swift Testing with `./scripts/check` on Simulator during everyday development. In Device Hub, enable **Capture Keyboard** and use WASD, E and a short Escape press; holding Escape releases keyboard capture. Check movement release and Pause/Resume while playing the route. Controller enumeration alone does not prove physical stick/button delivery; use keyboard play for this setup until forwarding is verified.
+Run formatting, build and Swift Testing with `./scripts/check` on Simulator during everyday development. In Device Hub, enable **Capture Keyboard**, click the game preview to focus it, and use WASD, E and a short Escape press; holding Escape releases keyboard capture. Check movement release and Pause/Resume while playing the route. Controller enumeration alone does not prove physical stick/button delivery; use keyboard play for this setup until forwarding is verified.
 
 At playable-feature milestones before merging, repeat the checks below on the baseline iPhone. Check actual device performance and Bluetooth/lifecycle behaviour on the phone; Simulator timing does not establish them. The earlier phone results above apply to the recorded PS5 revisions, not automatically to later input changes.
 

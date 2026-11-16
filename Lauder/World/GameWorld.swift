@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import RealityKit
-import UIKit
 import simd
 
 @MainActor
@@ -37,21 +36,20 @@ final class GameWorld {
   init() {
     root.name = "relay-district"
     root.components.set(PhysicsSimulationComponent())
+    let style = SceneStyle()
     for box in PrototypeLayout.boxes {
       let entity = ModelEntity(
         mesh: .generateBox(size: box.size),
-        materials: [SimpleMaterial(color: color(for: box.surface), isMetallic: false)]
+        materials: [box.name == "ground" ? style.ground : style.material(for: box.surface)]
       )
       entity.name = box.name
       entity.position = box.position
       makeSolid(entity, size: box.size)
       root.addChild(entity)
     }
-    addLandmarks()
-    let light = DirectionalLight()
-    light.light.intensity = 4000
-    light.look(at: .zero, from: [3, 8, 5], relativeTo: nil)
-    root.addChild(light)
+    addLandmarks(style: style)
+    SceneDressing.add(to: root, style: style)
+    style.addLighting(to: root)
     camera.camera.fieldOfViewInDegrees = 42
     root.addChild(camera)
     player.name = "miki"
@@ -215,39 +213,22 @@ final class GameWorld {
     }
   }
 
-  private func addLandmarks() {
+  private func addLandmarks(style: SceneStyle) {
     for point in PrototypeLayout.points {
-      let entity: ModelEntity
-      if point.id == .tomas {
-        entity = ModelEntity(
-          mesh: .generateBox(size: PrototypeLayout.tomasBodySize),
-          materials: [SimpleMaterial(color: .systemBrown, isMetallic: false)]
-        )
-        entity.position = point.position + PrototypeLayout.tomasBodyOffset
-        let head = ModelEntity(
-          mesh: .generateSphere(radius: PrototypeLayout.tomasHeadRadius),
-          materials: [SimpleMaterial(color: .systemBrown, isMetallic: false)]
-        )
-        head.position = PrototypeLayout.tomasHeadOffset
-        entity.addChild(head)
-        makeSolid(entity, size: PrototypeLayout.tomasCollisionSize)
-      } else {
-        let size =
-          point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
-        entity = ModelEntity(
-          mesh: .generateBox(size: size),
-          materials: [SimpleMaterial(color: .systemCyan, isMetallic: true)]
-        )
-        entity.position = point.position + [0, size.y / 2, 0]
-        makeSolid(entity, size: size)
-      }
+      let entity = style.landmark(for: point)
+      let size =
+        point.id == .tomas
+        ? PrototypeLayout.tomasCollisionSize
+        : (point.id == .transmitter
+          ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize)
+      makeSolid(entity, size: size)
       entity.name = point.id.rawValue
       root.addChild(entity)
     }
     for position in PrototypeLayout.serviceMarkerPositions {
       let marker = ModelEntity(
         mesh: .generateBox(size: PrototypeLayout.serviceMarkerSize),
-        materials: [UnlitMaterial(color: .systemCyan)]
+        materials: [style.signal]
       )
       marker.position = position
       root.addChild(marker)
@@ -259,12 +240,4 @@ final class GameWorld {
     entity.components.set(PhysicsBodyComponent(massProperties: .default, mode: .static))
   }
 
-  private func color(for surface: PrototypeLayout.Surface) -> UIColor {
-    switch surface {
-    case .concrete: UIColor(white: 0.24, alpha: 1)
-    case .shelter: UIColor(red: 0.15, green: 0.29, blue: 0.31, alpha: 1)
-    case .depot: UIColor(white: 0.4, alpha: 1)
-    case .hazard: UIColor(red: 0.65, green: 0.36, blue: 0.12, alpha: 1)
-    }
-  }
 }

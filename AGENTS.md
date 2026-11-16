@@ -13,6 +13,8 @@ Do not duplicate those documents here or silently turn a working proposal into a
 
 Stage 1 is merged and the maintainer has authorised Stage 2, including issues #5 and #10. Its plan does not itself authorise later stages. An explicit maintainer assignment or instruction authorises that work; do not request duplicate permission when it already supplies it.
 
+The maintainer has also authorised a small visual polish pass on the existing Stage 2 route, following the accepted [visual direction](docs/visual-direction.md). This authorises scene presentation work before Stage 3; it does not start Stage 3 gameplay.
+
 Keep changes small. Preserve the Swift/RealityKit direction and the agreed prototype scope unless the task explicitly changes them. Use existing patterns and introduce abstractions or dependencies only for a demonstrated need.
 
 Do not restore deleted legacy projects, backups or superseded research.
