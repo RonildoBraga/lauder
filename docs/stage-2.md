@@ -1,6 +1,6 @@
 # Stage 2 — movement and controls
 
-**Status:** The PS5-only route is running on the baseline iPhone after merged [Stage 1 PR #8](https://github.com/RonildoBraga/lauder/pull/8). Final disconnect/reconnect checks and PR review remain open.
+**Status:** The PS5-only route is built, tested and running on the baseline iPhone after merged [Stage 1 PR #8](https://github.com/RonildoBraga/lauder/pull/8). PR review remains open.
 
 The maintainer authorised Stage 2 including [#5](https://github.com/RonildoBraga/lauder/issues/5) and [#10](https://github.com/RonildoBraga/lauder/issues/10), then specified PS5-controller-only input, the iPhone as the primary test device, and an awake screen while the foreground game is open. Claude communication stays on GitHub.
 
@@ -34,7 +34,8 @@ The reusable [character loader](../Lauder/World/CharacterAsset.swift) is separat
 - The updated app was installed and launched on that phone. A live device capture shows the scene and character, the PlayStation input source, its Cross glyph and no virtual-control overlay. This establishes recognition and rendering; movement, camera behaviour, interruption, switching and awake-screen timing remain separate playtest checks below.
 - The maintainer then confirmed left-stick movement, Cross while moving, Options/Menu Pause/Resume, stopping after release/centring, camera follow and wall collision on the phone. They also confirmed the game stays awake during the requested idle/Pause check; no numeric timing interval was recorded.
 - The maintainer also confirmed background/manual-lock recovery without stuck movement on that build. These observations precede the removal of the touch paths and on-screen buttons; the PS5-only revision needs its own final device check. Normal Auto-Lock timing after leaving the app has not been measured.
-- After simplification to PS5-only input, the standard physical-iPhone check passed all five tests again. The installed revision's live capture shows the PS5 input source, Cross action prompt and read-only Options instruction. Source inspection confirms no SwiftUI buttons, touch gestures or virtual-controller path remain. Final controller playtest/reconnection confirmation is still pending.
+- After simplification to PS5-only input, the standard physical-iPhone check passed all five tests again. The installed revision's live capture shows the PS5 input source, Cross action prompt and read-only Options instruction. Source inspection confirms no SwiftUI buttons, touch gestures or virtual-controller path remain.
+- The maintainer confirmed movement, Cross and Options Pause/Resume on the PS5-only revision, with no clickable screen actions. They also confirmed disconnecting stops the game with the connection message and reconnecting returns control after centring/releasing, without stuck movement.
 
 ## Phone acceptance checks
 
