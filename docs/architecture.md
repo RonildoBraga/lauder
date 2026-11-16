@@ -1,8 +1,8 @@
 # Lauder — architecture
 
 **Date:** 16 November 2026\
-**Status:** Swift and RealityKit accepted. This party design was consolidated through [PR #22](https://github.com/RonildoBraga/lauder/pull/22) at the maintainer's request. Initial planning defaults are accepted, while Claude's confirmation of the latest B1/B3 proposal remains pending before code.\
-**Scope:** The current app has one moving character, stationary Tomas, observation prompts and Pause/Resume. GameSession, three-body following, switching, specialist interactions, mission rules, Restart and persistence are not implemented. The [walkthrough](gameplay-script.md) and [prototype plan](prototype-plan.md) define the proposed party experience; this document does not authorise code or settle the cast's open relationships.
+**Status:** Swift and RealityKit accepted. The party design was consolidated through [PR #22](https://github.com/RonildoBraga/lauder/pull/22); the maintainer has now assigned Party A regardless of Claude's response.\
+**Scope:** Party A implements primitive bodies, leadership/Pause, switching, recorded trails and camera follow. Its [session record](party-a.md) distinguishes verification from remaining work. Specialist interactions, mission rules, dialogue, Restart and persistence remain later stages; this design does not settle open relationships.
 
 ## Decision and platform
 
@@ -23,7 +23,7 @@ Keep **one app target**, one Swift Testing target and ordinary feature folders. 
 | Content | Typed layout, character/interaction IDs, approaches, prompts and delivery assets | Small authored definitions within the app |
 | Persistence, later | Versioned checkpoints and an ordered writer | Values, never entity graphs |
 
-These are responsibilities, not new frameworks or a requirement to create every folder immediately. Add GameSession for Party A; add interaction/progress rules with B/C and SaveStore only during later hardening.
+These are responsibilities, not new frameworks or a requirement to create every folder immediately. Party A adds GameSession with exploring/paused modes and leadership only. Add dialogue/interaction/progress rules with B/C and SaveStore during later hardening.
 
 ## Scene and asset authoring
 
@@ -84,9 +84,11 @@ GameSession decides what an allowed intent means for the current mode. World mov
 
 ## Movement and presentation
 
-Continue using one owned RealityKit simulation update with elapsed time. **RealityView.update is for state-driven scene changes, not the simulation loop.** Do not add a timer or per-input tasks. Keep the existing cancellation, first-step timing reset and late-load protection.
+Continue using one owned RealityKit scene update with elapsed time. **RealityView.update is for state-driven scene changes, not the simulation loop.** Do not add a timer or per-input tasks. Keep the existing cancellation, first-step timing reset and late-load protection.
 
-All three initial stand-ins use the same controller footprint and collide with the world, including closed barriers. Exclude party-member collisions from one another so companions cannot physically block the leader in the narrow opening. Trail spacing provides best-effort visual separation; temporary overlap on reversals is a graybox trade-off, not a claim that spacing guarantees separation. RealityKit exposes a character-controller [collision filter](https://developer.apple.com/documentation/realitykit/charactercontrollercomponent/collisionfilter); verify the intended world/party masks in the actual route tests.
+Party A samples input and advances plain body transforms through one owned `SceneEvents.Update` subscription. Static scenery queries do not require an active rigid-body simulation; the earlier physics-only subscription stopped delivering input updates when the all-static scene idled.
+
+All three initial stand-ins use the same circular footprint and check scenery, including closed barriers. Party A uses plain body transforms and a shared RealityKit sphere sweep against the scenery group, so party members are excluded from the query. The first live character-controller implementation reported peer contacts despite exclusion filters; construction tests alone did not establish runtime behaviour. Keep this execution detail limited to the existing flat floor: body height is fixed, the ground is excluded from horizontal obstacle sweeps, and a wall slide receives its own second sweep. The query sphere has the common body radius and runs at the authored obstacle plane; all current floor-standing blockers must cross that plane. Contact geometry determines and validates travel along the requested segment, rather than accepting an oversized distance value from the tested query runtime. Slopes, steps and vertical traversal are outside this experiment. Trail spacing provides best-effort visual separation; temporary overlap on reversals is a graybox trade-off, not a separation guarantee. See the [Party A record](party-a.md) for actual route results.
 
 Use a bounded recorded-path trail with retained route connections and per-member cursors, as specified in [ADR 0002](decisions/0002-party-following.md). A leader's recorded path is useful evidence of travel, not proof of follower clearance. Each follower still moves through collision-checked world space; corners, reversals, switching and a changed barrier can invalidate an assumed connection.
 
@@ -116,7 +118,7 @@ Tests cover stale prompts after movement/switching, both alternative methods ind
 
 ## Restart and lifecycle
 
-Party C implements the proposed **in-place Restart** of the existing session/world. Reset mode to exploring, active leader to Miki, mission to briefing and passage to closed. Restore all three authored spawn positions, controller motion state, regulator visibility, unrepaired transmitter, dialogue/objective state and observation/prompt state. Clear/reseed trails, camera transition and input edge history; require neutral input before movement resumes.
+Party C implements the proposed **in-place Restart** of the existing session/world. Reset mode to exploring, active leader to Miki, mission to briefing and passage to closed. Restore all three authored spawn positions, body motion state, regulator visibility, unrepaired transmitter, dialogue/objective state and observation/prompt state. Clear/reseed trails, camera transition and input edge history; require neutral input before movement resumes.
 
 Restart does not attach a second simulation callback, rebuild the static scene or reload already available stand-ins. Invalidate unfinished run-specific effects or loads so late results cannot alter the reset run. Verify a single owned subscription and exactly three members across repeated restarts.
 

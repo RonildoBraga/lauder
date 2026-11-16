@@ -6,9 +6,9 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**The current build is a walkable graybox with one controlled character. The scene fixes, ensemble story, walkthrough, prototype plan and party architecture are consolidated on main through PRs #20–#22. The maintainer accepted the recommended planning defaults and cleanup. Claude confirmed #20 and reviewed the earlier #21 proposal; his confirmation of the latest plan refinements and architecture remains pending before party code. Three-character gameplay is not implemented.**
+**Party A is implemented and passes the Simulator route proof; its phone milestone remains pending: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages.**
 
-The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
+The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. Physical-controller validation of switching belongs to the Party A checkpoint.
 
 ## Start here
 
@@ -29,12 +29,13 @@ Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
 sources/
   app/                        App entry point, world ownership and bundle configuration
   interface/                  SwiftUI HUD, controller/keyboard input and input rules
-  world/                      RealityKit world, movement, asset loading and scene presentation
+  gameplay/                   Party identity and session-owned leadership/Pause
+  world/                      RealityKit bodies, recorded trails, camera and scene presentation
   content/
     PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
     character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
-      Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
+      Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
 tests/                        Asset import/rejection, movement, input-rule and layout tests
 docs/                         Architecture, decisions, prototype plan and validation evidence
   story/                      Story bible and Chapter One outline index
@@ -42,7 +43,7 @@ scripts/                      Standard checks and the current character asset ge
 .github/                      Pull request template
 ```
 
-Keep gameplay-independent presentation in `SceneStyle` and `SceneDressing`; the route and collision anchors remain in `PrototypeLayout`. Mission rules and persistence are planned, so their folders do not exist yet. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party rules in GameSession/InputRules and bounded path bookkeeping in PartyTrail. Mission rules and persistence remain planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 

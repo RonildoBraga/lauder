@@ -1,7 +1,7 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 16 November 2026\
-**Status:** Three-character planning walkthrough consolidated on main. The maintainer accepted proceeding with the recommendations; Claude's confirmation of the latest refinements and architecture remains pending before code. Character biographies and dialogue are still working proposals drawn from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines the staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline without retaining the obsolete family/solo script.
+**Status:** Three-character walkthrough, with Party A implementation assigned regardless of Claude's response. The [Party A record](party-a.md) tracks actual checks. Biographies, dialogue and B/C interactions remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
 
 ## The game we are building
 
@@ -15,9 +15,9 @@ This walkthrough starts at Relay House after the East Span closure. The party re
 
 ## What exists today
 
-The build has one controlled character, a stationary Tomas stand-in, movement, collision, camera follow, observation prompts and Pause/Resume. It does not have the trio, follower behaviour, leader switching, skill interactions, collection, repair, mission dialogue, completion or Restart.
+The Party A branch introduces three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB cycling, collision-checked trail following and an eased camera target. Observations remain the only action. Skill interactions, collection, repair, mission dialogue, completion and Restart are not included. See the session record for actual verification.
 
-The accepted planning sequence is: **party movement and switching → one shared access problem → salvage, repair and contact**. Do not start the old solo Stage 3 from this document. Confirmation of the latest architecture review and an implementation assignment come first.
+The accepted sequence is: **party movement and switching → one shared access problem → salvage, repair and contact**. Party A is assigned; the old solo Stage 3 is superseded. Add later stages only after the party movement checkpoint is established.
 
 ## Readable controls and party feedback
 
@@ -34,7 +34,7 @@ There are no touch controls or clickable screen actions. Q replaces the earlier 
 
 Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
 
-Dialogue and Pause suspend switching and world movement. Existing release guidance and fresh-input recovery still apply after interruption, reconnection and pause transitions. The [party architecture](architecture.md) records the proposed command routing and ownership; its latest independent review confirmation remains pending.
+Pause suspends switching and world movement; dialogue will do the same when introduced in C. Release guidance and fresh-input recovery apply after interruption, reconnection and pause transitions. The [party architecture](architecture.md) records command routing and ownership.
 
 ## 1. Three people with a reason to leave
 

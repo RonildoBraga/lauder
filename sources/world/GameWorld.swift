@@ -6,34 +6,43 @@ import simd
 @MainActor
 @Observable
 final class GameWorld {
-  enum Status: Equatable {
-    case loading, ready
-    case failed(String)
-  }
+  static let obstacleGroup = CollisionGroup(rawValue: 1 << 4)
+  private static let floorGroup = CollisionGroup(rawValue: 1 << 5)
 
   let root = Entity()
   let controls = GameControls()
-  private(set) var status = Status.loading
-  private(set) var isPaused = false
+  let session = GameSession()
   private(set) var nearbyName: String?
-  private(set) var observation = "Find the service passage beside the blocked depot entrance."
+  private(set) var observation = "Walk the party through the service passage, then return."
+  private(set) var diagnostic: String?
 
-  @ObservationIgnored private let player = Entity()
+  @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
+  @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
+  @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
   @ObservationIgnored private let camera = PerspectiveCamera()
-  @ObservationIgnored private var character: CharacterAsset?
-  @ObservationIgnored private var playback: AnimationPlaybackController?
+  @ObservationIgnored private let bodyShape = ShapeResource.generateSphere(
+    radius: PrototypeLayout.characterRadius)
+  @ObservationIgnored private var trail: PartyTrail
   @ObservationIgnored private var subscription: EventSubscription?
-  @ObservationIgnored private var loadGeneration: UUID?
   @ObservationIgnored private var isPresented = false
   @ObservationIgnored private var isApplicationActive = false
   @ObservationIgnored private var skipNextStep = true
-  @ObservationIgnored private var actionWasPressed = false
-  @ObservationIgnored private var pauseWasPressed = false
-  @ObservationIgnored private var isWalking = false
   @ObservationIgnored private var wasRunning = false
   @ObservationIgnored private var nearby: PrototypeLayout.PointOfInterest?
+  @ObservationIgnored private var cameraTarget: SIMD3<Float>
+  @ObservationIgnored private var cameraStart: SIMD3<Float>?
+  @ObservationIgnored private var cameraElapsed: Float = 0
+
+  var isPaused: Bool { session.isPaused }
 
   init() {
+    let members = PartyMember.allCases
+    trail = PartyTrail(
+      spawns: members.map {
+        let position = PrototypeLayout.spawn(for: $0)
+        return (member: $0, position: SIMD2(position.x, position.z))
+      })
+    cameraTarget = PrototypeLayout.spawn + [0, PrototypeLayout.characterHeight / 2 + 0.1, 0]
     root.name = "relay-district"
     root.components.set(PhysicsSimulationComponent())
     let style = SceneStyle()
@@ -52,14 +61,25 @@ final class GameWorld {
     style.addLighting(to: root)
     camera.camera.fieldOfViewInDegrees = 42
     root.addChild(camera)
-    player.name = "miki"
-    player.position = PrototypeLayout.spawn + [0, PrototypeLayout.characterHeight / 2, 0]
-    player.components.set(
-      CharacterControllerComponent(
-        radius: 0.26, height: PrototypeLayout.characterHeight, stepLimit: 0.1)
-    )
-    root.addChild(player)
-    updateCamera()
+    for member in members {
+      let body = Entity()
+      body.name = "party.\(member.rawValue)"
+      body.position =
+        PrototypeLayout.spawn(for: member) + [0, PrototypeLayout.characterHeight / 2, 0]
+      let visual = style.partyMember(member)
+      body.addChild(visual)
+      let marker = ModelEntity(
+        mesh: .generateCylinder(height: 0.015, radius: 0.34), materials: [style.warm])
+      marker.position.y = -PrototypeLayout.characterHeight / 2 + 0.025
+      marker.isEnabled = member == session.leader
+      body.addChild(marker)
+      bodies[member] = body
+      visuals[member] = visual
+      markers[member] = marker
+      root.addChild(body)
+    }
+    updateCamera(deltaTime: 0)
+    updateNearby()
   }
 
   func attach(_ subscription: EventSubscription) {
@@ -69,143 +89,135 @@ final class GameWorld {
     updateActivity()
   }
 
-  func load() async {
-    guard character == nil else {
-      updateActivity()
-      return
-    }
-    let generation = UUID()
-    loadGeneration = generation
-    status = .loading
-    do {
-      let asset = try await CharacterAsset.load()
-      try Task.checkCancellation()
-      guard loadGeneration == generation, isPresented else { return }
-      asset.entity.position.y = -PrototypeLayout.characterHeight / 2
-      player.addChild(asset.entity)
-      character = asset
-      status = .ready
-      play(walking: false)
-      updateActivity()
-    } catch is CancellationError {
-      // Leaving the view cancels its asset load.
-    } catch {
-      guard loadGeneration == generation else { return }
-      status = .failed(error.localizedDescription)
-    }
-  }
-
   func setApplicationActive(_ active: Bool) {
+    guard active != isApplicationActive else { return }
     isApplicationActive = active
-    updateActivity()
-  }
-
-  func setPaused(_ paused: Bool) {
-    isPaused = paused
     updateActivity()
   }
 
   func stop() {
     isPresented = false
-    loadGeneration = nil
     subscription?.cancel()
     subscription = nil
     updateActivity()
   }
 
-  // Called synchronously by RealityKit's physics update, not RealityView.update.
+  // The next active step observes the preceding collision-checked body positions.
   func step(deltaTime: TimeInterval) {
     MainActor.preconditionIsolated()
-    guard isPresented, isApplicationActive, status == .ready else { return }
-    let input = controls.sample()
-    if input.pausePressed && !pauseWasPressed {
-      setPaused(!isPaused)
+    guard isPresented, isApplicationActive else { return }
+    let input = controls.sample(mode: session.mode)
+    if input.pausePressed {
+      session.togglePause()
+      controls.requireNeutralInput()
+    } else if input.switchPressed {
+      session.cycleLeader()
+      cameraStart = cameraTarget
+      cameraElapsed = 0
+      for member in PartyMember.allCases {
+        markers[member]?.isEnabled = member == session.leader
+      }
+      updateNearby()
     }
-    pauseWasPressed = input.pausePressed
-    synchronizePlayback()
-    guard isRunning, let character else { return }
+    let running = !session.isPaused && controls.status == .ready && !controls.needsNeutralInput
+    if running != wasRunning {
+      wasRunning = running
+      skipNextStep = true
+    }
+    guard running else { return }
     guard !skipNextStep else {
       skipNextStep = false
       return
     }
     guard deltaTime.isFinite, deltaTime > 0 else { return }
     let dt = min(Float(deltaTime), 1 / 30)
+    let actual = positions
+    trail.observe(positions: actual, deltaTime: dt)
     let direction = Movement.direction(
       for: input.movement, cameraOffset: PrototypeLayout.cameraOffset)
-    let state = player.components[CharacterControllerStateComponent.self]
-    let fallingSpeed: Float =
-      state?.isOnGround == true ? -0.2 : max(-12, (state?.velocity.y ?? 0) - 9.8 * dt)
-    let velocity = direction * PrototypeLayout.speed + [0, fallingSpeed, 0]
-    player.moveCharacter(by: velocity * dt, deltaTime: dt, relativeTo: nil)
-
-    let walking = simd_length_squared(direction) > 0.001
-    if walking {
-      character.entity.orientation = simd_quatf(
-        angle: atan2(-direction.x, -direction.z), axis: [0, 1, 0]
-      )
+    let leaderDelta = SIMD2(direction.x, direction.z) * PrototypeLayout.speed * dt
+    let deltas = trail.prepareStep(
+      leader: session.leader, leaderDelta: leaderDelta,
+      maximumFollowerDistance: PrototypeLayout.speed * dt)
+    let message = trail.diagnostic.map { String(describing: $0) }
+    if diagnostic != message { diagnostic = message }
+    if !trail.holdsAllMovement {
+      for member in PartyMember.allCases {
+        guard let body = bodies[member] else { continue }
+        let horizontal = deltas[member] ?? .zero
+        let start = SIMD2(body.position.x, body.position.z)
+        let resolved = PartyMotion.resolve(start: start, delta: horizontal) { [self] from, to in
+          guard let scene = root.scene else {
+            return PartyMotion.Hit(distance: 0, normal: .zero)
+          }
+          let height = PrototypeLayout.obstacleSweepHeight
+          guard
+            let hit = scene.convexCast(
+              convexShape: bodyShape,
+              fromPosition: [from.x, height, from.y],
+              fromOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+              toPosition: [to.x, height, to.y],
+              toOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+              query: .nearest, mask: Self.obstacleGroup, relativeTo: root
+            ).first
+          else { return nil }
+          return PartyMotion.footprintHit(
+            from: from, to: to, point: hit.position, normal: hit.normal,
+            radius: PrototypeLayout.characterRadius)
+        }
+        body.position = [resolved.x, PrototypeLayout.characterHeight / 2, resolved.y]
+        if simd_length_squared(horizontal) > 0.000001 {
+          visuals[member]?.orientation = simd_quatf(
+            angle: atan2(-horizontal.x, -horizontal.y), axis: [0, 1, 0])
+        }
+      }
     }
-    if walking != isWalking { play(walking: walking) }
-    updateCamera()
+    updateCamera(deltaTime: dt)
     updateNearby()
-    if input.actionPressed && !actionWasPressed {
+    if input.actionPressed {
       observation =
-        nearby?.observation ?? "The depot's front entrance is blocked. Look for the side passage."
+        nearby?.observation
+        ?? "The front entrance is blocked. The whole party can use the side passage."
     }
-    actionWasPressed = input.actionPressed
   }
 
-  private var isRunning: Bool {
-    isPresented && isApplicationActive && !isPaused && status == .ready
-      && controls.status == .ready
+  private var positions: [PartyMember: SIMD2<Float>] {
+    Dictionary(
+      uniqueKeysWithValues: bodies.map { member, body in
+        (member, SIMD2(body.position.x, body.position.z))
+      })
   }
 
   private func updateActivity() {
-    controls.setActive(isPresented && isApplicationActive && status == .ready)
-    controls.setPaused(isPaused)
-    actionWasPressed = false
+    controls.setActive(isPresented && isApplicationActive)
+    controls.requireNeutralInput()
     skipNextStep = true
-    if !isPresented || !isApplicationActive {
-      pauseWasPressed = false
-    }
-    synchronizePlayback()
   }
 
-  private func synchronizePlayback() {
-    let running = isRunning
-    guard running != wasRunning else { return }
-    wasRunning = running
-    actionWasPressed = false
-    skipNextStep = true
-    if running {
-      playback?.resume()
+  private func updateCamera(deltaTime: Float) {
+    guard let body = bodies[session.leader] else { return }
+    let target = body.position + [0, 0.1, 0]
+    if let start = cameraStart {
+      cameraElapsed = min(0.25, cameraElapsed + deltaTime)
+      let amount = cameraElapsed / 0.25
+      let eased = amount * amount * (3 - 2 * amount)
+      cameraTarget = start + (target - start) * eased
+      if cameraElapsed >= 0.25 { cameraStart = nil }
     } else {
-      playback?.pause()
+      cameraTarget = target
     }
-  }
-
-  private func play(walking: Bool) {
-    guard let character else { return }
-    playback?.stop()
-    playback = character.animationEntity.playAnimation(
-      (walking ? character.walk : character.idle).repeat(),
-      transitionDuration: 0.12, startsPaused: !isRunning
-    )
-    isWalking = walking
-  }
-
-  private func updateCamera() {
-    let target = player.position + [0, 0.1, 0]
-    camera.look(at: target, from: target + PrototypeLayout.cameraOffset, relativeTo: nil)
+    camera.look(
+      at: cameraTarget, from: cameraTarget + PrototypeLayout.cameraOffset, relativeTo: nil)
   }
 
   private func updateNearby() {
+    guard let player = bodies[session.leader] else { return }
+    let position = player.position * [1, 0, 1]
     let closest = PrototypeLayout.points.min {
-      simd_distance_squared($0.position, player.position * [1, 0, 1])
-        < simd_distance_squared($1.position, player.position * [1, 0, 1])
+      simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
     }
     let point = closest.flatMap {
-      simd_distance($0.position, player.position * [1, 0, 1]) < PrototypeLayout.interactionRadius
-        ? $0 : nil
+      simd_distance($0.position, position) < PrototypeLayout.interactionRadius ? $0 : nil
     }
     if nearby?.id != point?.id {
       nearby = point
@@ -217,27 +229,25 @@ final class GameWorld {
     for point in PrototypeLayout.points {
       let entity = style.landmark(for: point)
       let size =
-        point.id == .tomas
-        ? PrototypeLayout.tomasCollisionSize
-        : (point.id == .transmitter
-          ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize)
+        point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
       makeSolid(entity, size: size)
       entity.name = point.id.rawValue
       root.addChild(entity)
     }
     for position in PrototypeLayout.serviceMarkerPositions {
       let marker = ModelEntity(
-        mesh: .generateBox(size: PrototypeLayout.serviceMarkerSize),
-        materials: [style.signal]
-      )
+        mesh: .generateBox(size: PrototypeLayout.serviceMarkerSize), materials: [style.signal])
       marker.position = position
       root.addChild(marker)
     }
   }
 
   private func makeSolid(_ entity: Entity, size: SIMD3<Float>) {
-    entity.components.set(CollisionComponent(shapes: [.generateBox(size: size)]))
+    entity.components.set(
+      CollisionComponent(
+        shapes: [.generateBox(size: size)],
+        filter: CollisionFilter(
+          group: entity.name == "ground" ? Self.floorGroup : Self.obstacleGroup, mask: .all)))
     entity.components.set(PhysicsBodyComponent(massProperties: .default, mode: .static))
   }
-
 }

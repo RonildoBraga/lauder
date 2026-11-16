@@ -53,51 +53,57 @@ struct SceneStyle {
     return model
   }
 
+  func partyMember(_ member: PartyMember) -> Entity {
+    let visual = Entity()
+    let color: UIColor
+    let width: Float
+    switch member {
+    case .miki:
+      color = UIColor(red: 0.25, green: 0.65, blue: 0.59, alpha: 1)
+      width = 0.38
+    case .lara:
+      color = UIColor(red: 0.9, green: 0.61, blue: 0.29, alpha: 1)
+      width = 0.31
+    case .tomas:
+      color = UIColor(red: 0.38, green: 0.51, blue: 0.81, alpha: 1)
+      width = 0.49
+    }
+    let clothing = SimpleMaterial(color: color, roughness: 1, isMetallic: false)
+    visual.addChild(block(size: [width, 0.72, 0.3], at: [0, 0.04, 0], material: clothing))
+    let head = ModelEntity(mesh: unitSphere, materials: [wallCap])
+    head.scale = SIMD3(repeating: 0.16)
+    head.position = [0, 0.57, 0]
+    visual.addChild(head)
+    // A small front mark makes facing readable without a rig or new animation.
+    visual.addChild(block(size: [0.15, 0.2, 0.025], at: [0, 0.12, -0.16], material: signal))
+    for side: Float in [-1, 1] {
+      visual.addChild(
+        block(size: [0.13, 0.55, 0.18], at: [side * 0.105, -0.55, 0], material: metal))
+      visual.addChild(
+        block(size: [0.18, 0.1, 0.28], at: [side * 0.105, -0.8, -0.04], material: clothing))
+    }
+    return visual
+  }
+
   func landmark(for point: PrototypeLayout.PointOfInterest) -> ModelEntity {
     let entity = ModelEntity()
-    if point.id == .tomas {
-      entity.position = point.position + PrototypeLayout.tomasBodyOffset
+    let size =
+      point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
+    entity.position = point.position + [0, size.y / 2, 0]
+    entity.addChild(block(size: size, at: .zero, material: metal))
+    entity.addChild(
+      block(
+        size: [size.x * 0.85, size.y * 0.15, size.z * 1.03], at: [0, -size.y * 0.27, 0],
+        material: wallCap))
+    if point.id == .transmitter {
       entity.addChild(
-        self.block(size: [0.38, 0.65, 0.36], at: [0, 0.25, 0], material: self.cloth))
+        block(size: [0.48, 0.32, 0.025], at: [0, 0.12, 0.315], material: signal))
       entity.addChild(
-        self.block(size: [0.15, 0.17, 0.15], at: [0, 0.6, 0], material: self.stone))
-      let head = ModelEntity(mesh: self.unitSphere, materials: [self.stone])
-      head.scale = SIMD3(repeating: PrototypeLayout.tomasHeadRadius)
-      head.position = PrototypeLayout.tomasHeadOffset
-      entity.addChild(head)
+        block(size: [0.14, 0.04, 0.03], at: [-0.19, -0.16, 0.32], material: warm))
       entity.addChild(
-        self.block(size: [0.36, 0.12, 0.34], at: [0, 0.94, 0], material: self.metal))
-      for side: Float in [-1, 1] {
-        entity.addChild(
-          self.block(
-            size: [0.1, 0.57, 0.28], at: [side * 0.2, 0.2, 0], material: self.cloth))
-        entity.addChild(
-          self.block(
-            size: [0.17, 0.6, 0.23], at: [side * 0.13, -0.4, 0], material: self.metal))
-        entity.addChild(
-          self.block(
-            size: [0.2, 0.1, 0.32], at: [side * 0.13, -0.7, 0.05], material: self.metal))
-      }
+        block(size: [0.05, 0.9, 0.05], at: [0.28, 0.9, 0], material: metal))
     } else {
-      let size =
-        point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
-      entity.position = point.position + [0, size.y / 2, 0]
-      entity.addChild(self.block(size: size, at: .zero, material: self.metal))
-      entity.addChild(
-        self.block(
-          size: [size.x * 0.85, size.y * 0.15, size.z * 1.03], at: [0, -size.y * 0.27, 0],
-          material: self.wallCap))
-      if point.id == .transmitter {
-        entity.addChild(
-          self.block(size: [0.48, 0.32, 0.025], at: [0, 0.12, 0.315], material: self.signal))
-        entity.addChild(
-          self.block(size: [0.14, 0.04, 0.03], at: [-0.19, -0.16, 0.32], material: self.warm))
-        entity.addChild(
-          self.block(size: [0.05, 0.9, 0.05], at: [0.28, 0.9, 0], material: self.metal))
-      } else {
-        entity.addChild(
-          self.block(size: [0.3, 0.035, 0.28], at: [0, 0.27, 0], material: self.signal))
-      }
+      entity.addChild(block(size: [0.3, 0.035, 0.28], at: [0, 0.27, 0], material: signal))
     }
     return entity
   }
