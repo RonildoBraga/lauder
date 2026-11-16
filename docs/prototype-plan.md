@@ -1,13 +1,17 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Stage 1 is in progress. Scope split and Stage 1 stop criterion approved by the maintainer.\
+**Status:** Stage 1 is merged; Stage 2 is authorised and in progress. Scope split and Stage 1 stop criterion approved by the maintainer.\
 **Technical direction:** Swift + RealityKit, current stable iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
 Record attempts and actual results in the [Stage 1 session log](stage-1.md).
 
+Stage 2 implementation decisions and device observations are in the [movement and controls record](stage-2.md).
+
 **Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
+
+Use Simulator keyboard controls for everyday iteration: WASD moves, E acts and Escape pauses/resumes. At milestones, before merging playable features, validate the affected controls, lifecycle and performance on the baseline iPhone. Follow the [validation workflow](../CONTRIBUTING.md#validation) and record results in the [movement and controls record](stage-2.md).
 
 The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) uses Swift scene construction and direct USDZ loading.
 
@@ -45,9 +49,9 @@ The blocked entrance uses ordinary level geometry and collision. It creates a re
 | Remote cast | Lara and Nina represented through text dialogue |
 | Salvage | One regulator, one pickup |
 | Repair | One transmitter, with visibly broken and working states |
-| Controls | Left movement thumbstick; one contextual action button |
+| Controls | Phone: PS5 DualSense/Xbox left stick, Cross/A action, Options/Menu Pause/Resume. Simulator: WASD, E, Escape. No touch controls |
 | Camera | Fixed elevated perspective with follow; landscape |
-| Interface | Objective, carried-part indicator, dialogue, Pause/Resume and Restart |
+| Interface | Objective, carried-part indicator, dialogue, Pause/Resume and Restart; no clickable screen actions |
 | Progress | In-memory run state; a fresh launch starts a new run |
 | Presentation | Graybox first; limited war damage, signs and sound for readability |
 
@@ -73,14 +77,17 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 
 ### 2. Make movement comfortable
 
-- Add screen-relative touch movement, character collision and camera follow.
+- Add screen-relative movement, character collision and camera follow.
+- Use one GameController extended-gamepad input path for PS5 DualSense and Xbox. Verify action, disconnect/reconnect and Options/Menu Pause/Resume on the supported controllers at the iPhone milestone.
+- Use WASD movement, E action and Escape Pause/Resume for everyday Simulator playtests, through the same input snapshot consumed by GameWorld.
 - Describe the shelter, depot, landmarks and service passage in one small typed Swift layout definition consumed by GameWorld. Keep explicit placements and the existing stable interaction IDs.
-- Inspect simulator/device screenshots and play the route while refining geometry and framing.
+- Iterate the route, geometry and framing in Simulator; confirm readability and control behavior on the baseline phone before merging the playable milestone.
 - Add a nearby stationary Tomas placeholder.
-- Verify simultaneous movement and action-button input, safe areas and visibility.
+- Verify simultaneous movement/action input, safe areas and visibility, with no clickable screen controls.
 - On inactivity, clear held input, pause the live world and reset frame timing on resume.
+- Keep the foreground game awake, including Pause; restore normal idle locking when leaving it.
 
-**Exit:** Miki can walk the route predictably without getting stuck or disappearing behind geometry. Touch release and interruptions cannot leave her moving.
+**Exit:** Miki can walk the route predictably without getting stuck or disappearing behind geometry. Controller release and interruptions cannot leave her moving.
 
 ### 3. Close and evaluate the loop
 
@@ -100,11 +107,11 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 - A new player understands the goal and finishes the loop without developer guidance.
 - The intended route and alternative entrance read from the environment.
 - Movement follows screen direction, collision is predictable, and the camera keeps Miki readable.
-- The contextual button offers the correct action. Current distance/accessibility are rechecked on press.
+- The contextual prompt offers the correct action input. Current distance/accessibility are rechecked on press.
 - Repair before collection explains itself and changes nothing; the regulator cannot be collected twice in a run.
 - The repaired radio enables the call. Rereading the meeting plan leaves progress unchanged.
 - Restart begins a clean in-memory run with no duplicated scene content or callbacks.
-- Backgrounding, lock/unlock and interrupted touch clear held input and pause/resume the live scene coherently.
+- Backgrounding, lock/unlock and controller interruptions clear held input and pause/resume the live scene coherently.
 - Smooth **60 fps is measured on the iPhone 13 Pro Max** with representative placeholder animation and scene load. If missed, record the measurement and adjust scope or budget before declaring the loop proven.
 
 ## Focused first-playable verification
@@ -114,7 +121,7 @@ Use Swift Testing for rules that can fail:
 - Briefing → pickup → repair → call completes, with consistent item, radio and objective state.
 - Restart resets the phase; **Read plan** after completion does not restart the mission.
 
-Use manual device checks for controls, camera, collision, interruptions and a complete unfamiliar-player run. Run `./scripts/check` for formatting, build and unit tests. The initial test checks the bundled character import; the mission-rule tests above belong with Stage 3's implementation.
+Use Simulator for daily iteration and `./scripts/check` for formatting, build and unit tests. At milestones, before merging playable features, use the baseline iPhone to check affected controller inputs, camera, collision, interruptions and measured frame pacing. Keep the complete unfamiliar-player run on the phone. The initial test checks the bundled character import; the mission-rule tests above belong with Stage 3's implementation.
 
 ## Later hardening, after the loop is worth keeping
 

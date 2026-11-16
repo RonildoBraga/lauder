@@ -1,6 +1,6 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. The project is developing its story and Stage 1 of the first Swift/RealityKit prototype.
+People and AI-assisted contributors are welcome. Stage 1 is merged; the project is developing Stage 2 of the first Swift/RealityKit prototype.
 
 ## Before working
 
@@ -47,6 +47,14 @@ It then runs the selected toolchain's `swift format` with the committed `.swift-
 The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDER_DESTINATION` can override the Xcode destination; `LAUDER_DEVELOPMENT_TEAM` supplies a signing team for a physical-device test. Configure your Apple account and signing locally in Xcode first; do not commit those values or device identifiers. The default simulator check does not need code signing.
 
 Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
+
+Use Simulator for everyday scene, gameplay and interface iteration with keyboard controls: WASD moves, E acts and Escape pauses/resumes. Live PS5 stick input has not worked in the tested Simulator setup, even with Device Hub visible. Generic MFi enumeration does not prove controller forwarding, so use the keyboard for Simulator playtests.
+
+Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/Resume; holding Escape releases keyboard capture so you can use the Mac normally.
+
+Phone gameplay uses PS5 DualSense and Xbox through one GameController extended-gamepad input path: left stick moves, Cross/A acts and Options/Menu pauses/resumes. Both input methods supply the same gameplay intents. There are no virtual touch controls or clickable screen actions.
+
+At milestones, before merging playable features, run the affected controls, lifecycle and performance checks on the baseline iPhone 13 Pro Max with the supported controllers. Verify movement, collision, camera, action while moving, Pause/Resume, release/interruptions and disconnect/reconnect. Measure phone frame pacing for performance claims; simulator frame rate, battery and thermal behavior are not phone evidence. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it. Record actual outcomes and remaining gaps in the [Stage 2 evidence](docs/stage-2.md).
 
 ## Git LFS and cloning
 
