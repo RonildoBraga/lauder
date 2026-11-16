@@ -32,7 +32,6 @@ enum PrototypeLayout {
   static let movementDeadZone: Float = 0.15
   static let interactionRadius: Float = 2.3
 
-  static let tomasBodySize: SIMD3<Float> = [0.45, 1.3, 0.35]
   static let tomasBodyOffset: SIMD3<Float> = [0, 0.75, 0]
   static let tomasHeadRadius: Float = 0.18
   static let tomasHeadOffset: SIMD3<Float> = [0, 0.8, 0]

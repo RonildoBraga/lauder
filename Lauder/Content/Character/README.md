@@ -57,6 +57,6 @@ Initial checks passed for both sources and exports. An independent check of the 
 
 ## Approved code-first path
 
-The preview bundles the validated USDZ files directly. Its gray floor, landmark and camera are composed in Swift. All editable inputs needed to reproduce those runtime assets are in this directory and the generator.
+The game bundles the validated USDZ files directly. `CharacterAsset` loads and validates them; `GameWorld` owns playback and composes the scene in Swift. The original Stage 1 diagnostic preview has been removed. All editable inputs needed to reproduce the current runtime assets are in this directory and the generator.
 
 This follows the [approved code-first direction](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) and [engine decision](../../../docs/decisions/0001-engine.md).

@@ -21,6 +21,30 @@ The technical direction is Swift, RealityKit and SwiftUI, targeting the current 
 
 Names, ages and details marked as proposals remain open for discussion. Miki is widowed; Nina is her daughter; Lara is a trusted friend; Tomas is the working name for Miki's father.
 
+## Project structure
+
+```text
+Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
+Lauder/
+  App/                        App entry point, world ownership and bundle configuration
+  Interface/                  SwiftUI HUD, controller/keyboard input and input rules
+  World/                      RealityKit world, movement, asset loading and scene presentation
+  Content/
+    PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
+    Character/                Current animated stand-in, editable sources and provenance
+      source/                 Editable USD layers; excluded from the app bundle
+      Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
+LauderTests/                  Asset import/rejection, movement and input-rule tests
+story/                        Story bible and Chapter One script
+docs/                         Architecture, decisions, prototype plan and validation evidence
+scripts/                      Standard checks and the current character asset generator
+.github/                      Pull request template
+```
+
+Keep gameplay-independent presentation in `SceneStyle` and `SceneDressing`; the route and collision anchors remain in `PrototypeLayout`. Mission rules and persistence are planned, so their folders do not exist yet. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+
+For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `Lauder/Content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
+
 ## First prototype
 
 One short round trip: talk to Tomas, explore the depot, recover a regulator, repair the transmitter and contact Lara and Nina. Start with a small graybox environment and one representative animated character. The initial performance target is 60 fps on an iPhone 13 Pro Max.

@@ -1,12 +1,14 @@
 # Stage 1 — device and asset workflow
 
+**Current status:** Stage 1 is complete and merged in [PR #8](https://github.com/RonildoBraga/lauder/pull/8). The session below records the original diagnostic preview and its handoff; subsequent movement and controller work is recorded in [Stage 2](stage-2.md).
+
 ## Exit criterion
 
 Run a small scene and one representative rigged character with idle and walk animation on the baseline iPhone. Verify the import, composition and app workflow before producing further content. See the [prototype plan](prototype-plan.md#1-establish-the-device-and-asset-path) and [three-session stop criterion](decisions/0001-engine.md#stage-1-stop-criterion).
 
 ## Session 1 — 16 November 2026
 
-**Status:** The device/rig/idle-walk criterion and latest diagnostic-panel layout have been confirmed on the baseline iPhone. PR #8 remains unmerged.
+**Status at this session's handoff:** The device/rig/idle-walk criterion and latest diagnostic-panel layout had been confirmed on the baseline iPhone. PR #8 was awaiting merge at that point.
 
 The maintainer [confirmed the code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023): Swift scene construction and direct USDZ loading. The three-session stop criterion is unchanged.
 
