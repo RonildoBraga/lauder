@@ -6,12 +6,13 @@ Miki is travelling with her father to reunite with her daughter, Nina. Explorati
 
 ## Project status
 
-**Stage 1 is merged. Stage 2 is in progress, with a [visual polish pass](docs/visual-direction.md) on the current walkable route before Stage 3.**
+**The current build is a walkable graybox. The next step is reviewing the [gameplay script](docs/gameplay-script.md) before implementing the salvage-and-repair loop.**
 
 The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 
+- [Gameplay script](docs/gameplay-script.md): what the player sees and does in the proposed first playable, with the wider game's purpose and review questions.
 - [Story bible](docs/story/story-bible.md): agreed foundations, characters, world and working timeline.
 - [Chapter One — A Place to Meet](docs/story/chapter-01.md): the current scene and dialogue draft.
 - [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
@@ -48,6 +49,8 @@ For new art, group an asset's editable inputs, deliberate delivery exports and p
 ## First prototype
 
 One short round trip: talk to Tomas, explore the depot, recover a regulator, repair the transmitter and contact Lara and Nina. Start with a small graybox environment and one representative animated character. The initial performance target is 60 fps on an iPhone 13 Pro Max.
+
+The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-in while testing movement, exploration, purposeful salvage and repair. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). The gameplay script is a review draft, not a claim that its interactions are implemented or that every detail is agreed.
 
 ## Contribute
 

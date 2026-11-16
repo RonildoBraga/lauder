@@ -5,15 +5,16 @@
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the documents relevant to the assigned task. The source of shared project decisions is this repository, not private assistant memory.
 
 - Narrative: [story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md).
+- Player experience: [gameplay script](docs/gameplay-script.md), a review draft describing the planned first playable.
 - Technical work: [architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md).
 
 Do not duplicate those documents here or silently turn a working proposal into an agreed fact.
 
 ## Stay within the task
 
-Stage 1 is merged and the maintainer has authorised Stage 2, including issues #5 and #10. Its plan does not itself authorise later stages. An explicit maintainer assignment or instruction authorises that work; do not request duplicate permission when it already supplies it.
+Stage 1 is merged. The maintainer has authorised integrating the prepared Stage 2, visual pass and project-organisation work into main, then reviewing the gameplay script before continuing implementation. The graybox approach is approved; the script's detailed dialogue and interaction flow remain a review draft. Stage 3 gameplay is still planned. An explicit later maintainer assignment authorises that work; do not request duplicate permission when it already supplies it.
 
-The maintainer has also authorised a small visual polish pass on the existing Stage 2 route, following the accepted [visual direction](docs/visual-direction.md). This authorises scene presentation work before Stage 3; it does not start Stage 3 gameplay.
+The earlier [visual pass](docs/visual-direction.md) remains part of the current scene. Further art production and visual polish are deferred while the core loop is evaluated with simple shapes and colours. Do not turn the gameplay script's existence into an assignment to implement it.
 
 Keep changes small. Preserve the Swift/RealityKit direction and the agreed prototype scope unless the task explicitly changes them. Use existing patterns and introduce abstractions or dependencies only for a demonstrated need.
 
@@ -51,7 +52,7 @@ When application code exists, run checks appropriate to the change. Device behav
 
 Use Simulator for everyday iteration and automated checks, with WASD movement, E action and Escape Pause/Resume. Live game-controller input has not worked in the tested Simulator setup; enumeration alone does not establish input delivery. At milestones, before merging playable features, verify the affected controls, lifecycle and performance on the baseline iPhone.
 
-The maintainer has deferred PR #11's refreshed phone check for now. Preserve that gap in the Stage 2 record; do not report it as a passed device check.
+The maintainer deferred PR #11's refreshed phone check, and the prepared-work integration retains that verification gap. Preserve it in the Stage 2 record; do not report it as a passed device check. Future gameplay milestones retain their planned phone checks.
 
 Phone gameplay uses PS5 DualSense and Xbox through one GameController extended-gamepad input path. Simulator keyboard input supplies the same movement/action/pause intents. There are no virtual touch controls or clickable screen actions. Keep the screen awake while the game is active in the foreground, including the pause screen, and restore the idle timer on leaving the app.
 
