@@ -24,6 +24,10 @@ The generated app plist merges typed Game Controllers support declarations from 
 - Pause or loss of the PS5 controller freezes character progression and animation; foreground restoration clears held input. The app sets [the idle-timer flag](https://developer.apple.com/documentation/uikit/uiapplication/isidletimerdisabled) while active, including Pause, and resets it when inactive or leaving the view. It does not alter the phone's Auto-Lock setting.
 - The action currently gives a short observation. Mission phases, pickup, repair, dialogue progression, restart and saving remain later work.
 
+### Camera framing
+
+The maintainer requested a slightly wider, more top-down action-RPG view. The camera offset is now `[5.25, 10, 8.4]` from the same follow target, replacing `[5, 7.5, 8]`: about 17% farther away and 45.3° above the ground instead of 38.5°. The 42° perspective field of view and horizontal direction are unchanged, so the screen-relative stick axes stay the same. The standard physical-iPhone check passed all five tests for this change, and the maintainer accepted the framing while moving, with Miki and the route clear.
+
 The reusable [character loader](../Lauder/World/CharacterAsset.swift) is separate from the removed diagnostic preview. Rejection tests reuse real imported mesh/animation data to verify incompatible bindings and a skinned model without its authored clip; no extra binary fixtures are needed. The [folder-group decision and membership checks](stage-2-project-groups.md) record the project changes for #10.
 
 ## Validation record
@@ -33,7 +37,7 @@ The reusable [character loader](../Lauder/World/CharacterAsset.swift) is separat
 - After the PlayStation and awake-screen changes, the standard `./scripts/check` passed on the **physical iPhone 13 Pro Max / iOS 27.2.1** with Xcode 27.2 / SDK 27.2. Formatting, signed build and all five checks passed; the script removed its successful temporary output.
 - The updated app was installed and launched on that phone. A live device capture shows the scene and character, the PlayStation input source, its Cross glyph and no virtual-control overlay. This establishes recognition and rendering; movement, camera behaviour, interruption, switching and awake-screen timing remain separate playtest checks below.
 - The maintainer then confirmed left-stick movement, Cross while moving, Options/Menu Pause/Resume, stopping after release/centring, camera follow and wall collision on the phone. They also confirmed the game stays awake during the requested idle/Pause check; no numeric timing interval was recorded.
-- The maintainer also confirmed background/manual-lock recovery without stuck movement on that build. These observations precede the removal of the touch paths and on-screen buttons; the PS5-only revision needs its own final device check. Normal Auto-Lock timing after leaving the app has not been measured.
+- The maintainer also confirmed background/manual-lock recovery without stuck movement on that build. These observations precede the removal of the touch paths and on-screen buttons; the subsequent PS5-only phone checks are recorded below. Normal Auto-Lock timing after leaving the app has not been measured.
 - After simplification to PS5-only input, the standard physical-iPhone check passed all five tests again. The installed revision's live capture shows the PS5 input source, Cross action prompt and read-only Options instruction. Source inspection confirms no SwiftUI buttons, touch gestures or virtual-controller path remain.
 - The maintainer confirmed movement, Cross and Options Pause/Resume on the PS5-only revision, with no clickable screen actions. They also confirmed disconnecting stops the game with the connection message and reconnecting returns control after centring/releasing, without stuck movement.
 

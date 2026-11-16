@@ -26,7 +26,7 @@ enum PrototypeLayout {
   }
 
   static let spawn: SIMD3<Float> = [-8, 0, 3]
-  static let cameraOffset: SIMD3<Float> = [5, 7.5, 8]
+  static let cameraOffset: SIMD3<Float> = [5.25, 10, 8.4]
   static let characterHeight: Float = 1.7
   static let speed: Float = 2.6
 
