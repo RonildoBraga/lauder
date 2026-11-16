@@ -12,13 +12,11 @@ Do not duplicate those documents here or silently turn a working proposal into a
 
 ## Stay within the task
 
-Stage 1 is merged. The maintainer has authorised integrating the prepared Stage 2, visual pass and project-organisation work into main, then reviewing the gameplay script before continuing implementation. The graybox approach is approved; the script's detailed dialogue and interaction flow remain a review draft. Stage 3 gameplay is still planned. An explicit later maintainer assignment authorises that work; do not request duplicate permission when it already supplies it.
+Read the current status and next-step gates in [README.md](README.md) and the [prototype plan](docs/prototype-plan.md). Keep changing stage and review status there, rather than duplicating it in this file.
 
-The maintainer subsequently approved an ensemble story and specified three playable characters travelling together, switching the controlled leader while the other two follow, with distinct skills and discreet synthetic/biological enhancements. The story bible records that direction and marks proposed identities, roles and relationships. Its earlier family assumptions are reopened. The walkthrough and prototype plan now propose the party sequence; the full Chapter One script and architecture still need reconciliation. Do not implement the older stationary-companion/remote-Lara setup as the party design.
+Use the story bible's distinction between agreed foundations and proposals. Do not restore assumptions from a superseded script or treat a plan's existence as an implementation assignment. A maintainer assignment authorises its stated work; do not request duplicate permission already supplied by it. Review recommendations do not independently authorise implementation or merge.
 
-The current assignment is to update the walkthrough and prototype plan, then ask Claude to review before implementation. New control mappings, skill actions, command precedence and stage criteria are proposals for that review. No gameplay code or merge is assigned by this documentation task. Read Claude's findings and the maintainer's subsequent assignment before starting party work.
-
-The earlier [visual pass](docs/visual-direction.md) remains part of the current scene. Further art production and visual polish are deferred while the core loop is evaluated with simple shapes and colours. Do not turn the gameplay script's existence into an assignment to implement it.
+Use simple shapes and colours to evaluate gameplay. Further art production and visual polish follow an agreed task and a demonstrated gameplay need; the [visual direction](docs/visual-direction.md) supplies context.
 
 Keep changes small. Preserve the Swift/RealityKit direction and the agreed prototype scope unless the task explicitly changes them. Use existing patterns and introduce abstractions or dependencies only for a demonstrated need.
 

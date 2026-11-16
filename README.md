@@ -6,7 +6,7 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**The current build is a walkable graybox with one controlled character. The [story bible](docs/story/story-bible.md), [gameplay walkthrough](docs/gameplay-script.md) and [prototype plan](docs/prototype-plan.md) now describe the three-character proposal. Claude's review and a later implementation assignment come before gameplay work resumes.**
+**The current build is a walkable graybox with one controlled character. Claude reviewed the three-character proposal in [PR #21](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122) and found no blocker to merging it as a labelled proposal. Before code, the follow/recovery policy, Party A stop criterion and separate architecture review must be settled. The documentation follow-ups remain for confirmation; no party implementation or merge is assigned.**
 
 The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 

@@ -1,6 +1,6 @@
 # Lauder — story bible, draft 0.4
 
-**Date:** 16 November 2026 (Australia/Sydney)\
+**Date:** 16 November 2026\
 **Status:** Ensemble direction approved; rewritten character and chapter details below are proposals for review. This narrative revision does not imply that party gameplay is implemented.
 
 ## Agreed direction
@@ -28,7 +28,7 @@ The [older Chapter One script](chapter-01.md) still records the previous family/
 
 Three travellers reach a relay shelter after their intended crossing closes. They have different reasons to reach the coast, limited supplies and incomplete information. Restoring the shelter's transmitter gives each a practical reason to help the others.
 
-Miki has spent years maintaining a damaged district. She is leaving for a coastal settlement where Lara has offered to introduce her to people making a life there. Lara needs a checked route back to the water crew she works with. Tomas needs current information for inland communities depending on his deliveries.
+Miki has spent years maintaining a damaged district. She is leaving for a coastal settlement where Lara has offered to introduce her to people making a life there. Lara needs a checked route back to the water crew she works with. Tomas needs to reach the coastal supply team to arrange the next inland deliveries. Meeting its crew at Old Lock gives him contacts and an onward route; his obligations explain why he continues beyond repairing the radio.
 
 They begin with a shared journey, not a complete shared history. Some trust already exists between Miki and Lara; the circumstances behind it emerge gradually. Tomas's cooperation grows through their work together. The opening makes these immediate reasons clear without presenting everyone's biography.
 
@@ -94,7 +94,7 @@ The proposed depot discovery reveals that she once helped maintain water for peo
 **Proposed role:** Strength, handling loads and route knowledge.\
 **Possible enhancement:** Internal synthetic muscle and supporting skeletal replacements fitted for medical or civilian work reasons; the actual history remains undecided.
 
-Tomas travels with the group throughout the chapter. He carries his share, has people depending on his return and knows the district's former connections. His relationship to Miki is open; the new script should introduce what they actually know about each other.
+Tomas travels with the group throughout the chapter. He carries his share, has inland communities depending on deliveries and knows the district's former connections. He intends to reach the coastal supply team to arrange their next allocation; Old Lock is his meeting point with its crew and part of that onward journey. His relationship to Miki is open; the new script should introduce what they actually know about each other.
 
 A stronger build gives him a clear silhouette. His useful strength is controlled and specific: he can shift an obstructing frame the others cannot safely move. He cannot lift an entire ruined structure or make an unsafe floor bear its weight.
 

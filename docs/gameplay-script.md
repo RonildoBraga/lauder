@@ -1,6 +1,6 @@
 # Lauder — gameplay walkthrough
 
-**Date:** 16 November 2026 (Australia/Sydney)\
+**Date:** 16 November 2026\
 **Status:** Three-character proposal for Claude and maintainer review before implementation. This replaces the previous solo walkthrough. Character names, skill assignments, dialogue and new control mappings are working proposals drawn from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines the staged checks; the full [Chapter One script](story/chapter-01.md) still needs its ensemble rewrite.
 
 ## The game we are building
@@ -9,7 +9,7 @@ One human player directs three characters travelling together. The selected char
 
 The proposed trio is Miki, who understands systems and careful salvage; Lara, who is agile and reads access routes; and Tomas, whose strength and load-handling experience offer another approach. Their abilities are understandable before the player knows their histories. Internal synthetic replacements and biological changes belong to the world, but this slice needs no medical exposition or visible machinery in anyone's body.
 
-They are crossing a ruined future in which safe water, maintained equipment and current route information matter. Their immediate reasons to cooperate are clear. Miki wants a viable route to the coastal settlement, Lara needs contact with its water crew, and Tomas needs reliable information for inland deliveries. Their deeper connections emerge through what they recognise and choose to do.
+They are crossing a ruined future in which safe water, maintained equipment and current route information matter. Their immediate reasons to cooperate are clear. Miki wants a viable route to the coastal settlement; Lara needs contact with its water crew. Tomas needs to reach the coastal supply team to arrange the next inland deliveries. Meeting that crew at Old Lock gives him an onward route and people with whom to make those arrangements. Their deeper connections emerge through what they recognise and choose to do.
 
 This walkthrough starts at Relay House after the East Span closure. The party restores its transmitter by recovering one regulator from the nearby depot, then makes a concrete onward plan. The trip tests exploration, switching and cooperation without combat, a timer or survival meters. Its duration will be measured once the party can actually play the route; the earlier solo 3–5 minute estimate is not a party target.
 
@@ -27,12 +27,12 @@ The following new mappings are proposals for review, alongside the existing move
 |---|---|---|---|
 | Move the leader | Left stick | Left stick | WASD |
 | Act / advance a line / confirm a menu choice | Cross | A | E |
-| Cycle leader: Miki → Lara → Tomas → Miki | R1 | RB | Tab |
+| Cycle leader: Miki → Lara → Tomas → Miki | R1 | RB | Q |
 | Pause / resume | Options | Menu | Escape |
 
-There are no touch controls or clickable screen actions. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently shaped or coloured stand-ins are sufficient, with text so colour alone carries no essential information. The current character asset may be reused where useful; no new art is a prerequisite.
+There are no touch controls or clickable screen actions. Q replaces the earlier Tab proposal to avoid using a focus-navigation key; actual delivery must still be verified in Simulator during Party A. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently shaped or coloured stand-ins are sufficient, with text so colour alone carries no essential information. The current character asset may be reused where useful; no new art is a prerequisite.
 
-Switching is available while exploring, including during movement. Each character stays at their current location. The camera follows the new leader without rotating or jumping to a different district, the previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
+Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
 
 Dialogue and Pause suspend switching and world movement. Existing release guidance and fresh-input recovery still apply after interruption, reconnection and pause transitions. The full command routing and ownership need to be resolved in the architecture review; these paragraphs define the proposed player experience.
 
@@ -54,7 +54,9 @@ These lines are a condensed proposal, not a biography. The objective becomes **F
 
 The player walks away with two companions following. An early open stretch offers space to try the switch button before an obstacle demands a specialty.
 
-The camera remains at the accepted elevated angle and follows the selected character. A switch makes the change of leader clear through the name, marker and camera target. The party takes real routes around wrecks and walls. Companions do not walk through scenery, push the leader away from an interaction or teleport across a blocked passage.
+The camera remains at the accepted elevated angle and follows the selected character. A switch makes the change of leader clear through the name, marker and camera target. The proposed follow method uses recorded, collision-resolved movement trails. Followers still check their own movement against scenery; the leader's path alone does not prove clearance at corners. Party members do not physically collide with each other, and trail spacing keeps their presentation readable.
+
+Initial Party A has no automatic teleport or regroup. A blocked follower holds safely and the failed route is recorded for correction. A simpler layout is the first remedy. If the bounded experiment reaches its stop criterion, a constrained out-of-view regroup can be discussed with the maintainer as an alternative; it is not an approved fallback or an implementation requirement.
 
 Following should require little attention. The player should be reading the district, not repeatedly rescuing companions. If this short route cannot support reliable following, simplify its layout and retest before adding mission content. Do not hide the problem with another control mode or a formation menu.
 
@@ -71,7 +73,7 @@ With Miki leading, the hint explains that Lara can reach the release or Tomas ca
 
 The action works only from its valid side and with the appropriate leader. From behind a wall or out of reach, it cannot open the gate. Once open, repeat requests do nothing. All three traverse the opening on the way in and out.
 
-This one access problem lets the player choose an approach. It avoids a compulsory sequence of agility, strength and technical locks.
+This one access problem lets the player choose an approach. It avoids a compulsory sequence of agility, strength and technical locks. With both methods represented by one action press, this slice tests eligible-character prompts and switching, not whether agility and strength feel different in movement or combat. Record which method an unfamiliar player chooses and whether they notice the alternative.
 
 ## 4. Salvage without cutting someone else's supply
 
@@ -113,7 +115,15 @@ The party reports the closure. Information from both approaches supports a canal
 
 Nina is part of the wider story, but this first prototype omits her dialogue until her underlying relationship is decided. The scene does not use family titles or an emergency involving her to supply motivation.
 
-The achievement is concrete: **Transmitter restored. Meeting agreed at Old Lock.** A brief reciprocal gesture or line can supply warmth while the full chapter develops its relationships further.
+The achievement is concrete: **Transmitter restored. Meeting agreed at Old Lock.** A proposed coda shows the repaired set serving someone else and the party making room for one another:
+
+> **Miki:** I'll check it once more.
+>
+> **Lara:** The next caller's waiting.
+>
+> **Tomas, indicating their meal:** Come on. We've kept you a place.
+
+This can test a small moment of inclusion among the three adults. It does not prove that the full chapter's emotional ending works. Decide the underlying relationships, including Nina's role, before finalising Party C dialogue; no kinship is implied by these provisional lines.
 
 ## 7. Finish, reread, restart
 

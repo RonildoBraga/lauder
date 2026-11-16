@@ -27,15 +27,19 @@ Use one contiguous Relay House–depot scene, simple coloured stand-ins and the 
 
 The two access methods are alternatives, not consecutive tasks. There is no separate strength obstacle or trio of mandatory skill locks. The wider game retains distinct skills, discreet enhancements, exploration, survival context and light combat. This slice needs no combat, health, hunger, countdown, equipment or enhancement-resource system.
 
+This is a materially larger first playable than the earlier solo scope. Two followers through the existing narrow passage add navigation, switching and camera risk before the salvage loop has been played. Party A is a bounded experiment to expose that cost, not a small extension already known to work. Do not continue adding content if it fails its stop criterion.
+
 Nina-specific dialogue is excluded from this prototype while kinship remains undecided. Lara participates beside the others, rather than as the remote contact. The full chapter's departure, crossing, further encounters and detailed revelations are outside this slice.
 
 ## Review before implementation
 
-Request Claude's review of the walkthrough, this sequence and the party architecture on GitHub before assigning implementation. Resolve the remaining maintainer choices, then use focused implementation PRs with review before merge.
+Claude [reviewed this proposal at `fe9af2d`](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122): nothing blocked merging it as a labelled proposal, but B1–B3 must be settled before code. These follow-ups require confirmation; they are not an implementation assignment. Use focused implementation PRs with review before merge only after that assignment.
 
-The architecture pass must settle a single authority for leader identity, shared progress and interaction modes; how input reaches it; how the world owns three bodies and the camera; and how following, restart and teardown work. Existing solo ownership and save assumptions are not automatically accepted for the party. Carry forward the [reachability, command-routing and restart discussion](https://github.com/RonildoBraga/lauder/issues/13).
+Prepare and review a separate short architecture PR before Party A code. It must settle a single authority for mode, leader identity and shared progress; input routing and edge rules; three world bodies; the follow/recovery policy; and easing the camera to a new leader. Before B, record the per-interaction approach, eligible characters, prompt and collision data. Before C, record in-place restart and teardown rules. Existing solo ownership and save assumptions are not automatically accepted. Carry forward the [updated B1–B3 discussion](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6916287544).
 
-Choose the simplest follow method that passes the route tests. A bounded authored route is acceptable for this scene; no particular engine API, navigation framework or package is prescribed. Prove it before expanding the level.
+Proposed B1 decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and world collision checks for every body. Exclude party members from physical collision with each other, retain scenery collision, and use spacing for readable separation. Keep equal controller footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture PR must make trail rebasing and bounds concrete.
+
+Initial recovery is **hold and diagnose**, not an automatic warp: stop the blocked follower safely, record the failing route and correct the trail or simplify the authored layout. At the stop review, a constrained out-of-view regroup may be proposed separately. It would require explicit maintainer agreement, safe placement on the same currently reachable/open route, and both origin and destination outside the current camera view including a switch transition. It could never move the active leader or bypass a closed barrier. None of that fallback is approved or required for initial Party A.
 
 ## Proposed input and interaction contract
 
@@ -43,13 +47,13 @@ Choose the simplest follow method that passes the route tests. A bounded authore
 |---|---|---|
 | Move active character | Left stick | WASD |
 | Contextual action / advance text | Cross / A | E |
-| Cycle leader Miki → Lara → Tomas | R1 / RB | Tab |
+| Cycle leader Miki → Lara → Tomas | R1 / RB | Q |
 | Pause / Resume | Options / Menu | Escape |
 
-These switching mappings are proposals, not implemented controls. There are no touch controls or clickable screen actions.
+These switching mappings are proposals, not implemented controls. Q replaces the Tab proposal to avoid focus navigation; verify actual delivery in Simulator during Party A. There are no touch controls or clickable screen actions.
 
 - Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
-- A switch changes leadership and the camera target, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
+- A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
 - Held movement may continue on the new leader. Switching alone does not close the neutral-input gate. Existing release requirements after interruption, reconnection and Pause/Resume remain.
 - Consume a switch edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts for the new leader.
 - Prompts describe what the active character can do from an accessible approach. On press, revalidate the active character, role, range, accessibility and current progress; a stale prompt cannot act through a wall or call a remote companion.
@@ -88,6 +92,10 @@ Use three clearly named, differently coloured primitive stand-ins on the existin
 
 **Exit:** The whole party completes the round trip under every leader, with predictable collision and readable camera behaviour. Record stuck, separated or obscured cases and fix the bounded route before adding content.
 
+### Party A stop criterion — proposed
+
+Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. This proposed budget needs agreement before Party A starts; it does not alter the completed Stage 1 criterion.
+
 ## Party B — prove alternative specialist actions
 
 Add one closed barrier to the existing service passage. Lara can **Reach latch** from the ground, or Tomas can **Shift loose panel** from a stable grip. Each is a contextual action conveyed by brief text or a simple pose. No free jump, climbing mode, vertical control, simulated heavy-object physics or inaccessible follower ledge is needed.
@@ -98,7 +106,7 @@ Add one closed barrier to the existing service passage. Lara can **Reach latch**
 - Switching preserves the opened state. The front entrance stays blocked; the closed barrier cannot be bypassed by changing leaders.
 - Recheck approach accessibility and role on press, including when a prompt became stale after moving or switching.
 
-**Exit:** A new player understands why to switch and can choose either method to admit everyone. Following still passes with the barrier closed and open. Add no separate strength task or additional item requirement.
+**Exit:** A new player understands why to switch and can choose either method to admit everyone. Record which method they chose and whether they noticed the other. Following still passes with the barrier closed and open. This establishes role-gated prompts and alternative access, not distinct skill feel: both methods are contextual single-press actions. Add no separate strength task or additional item requirement.
 
 ## Party C — close and evaluate the shared loop
 
@@ -106,11 +114,13 @@ Add only the briefing, one regulator, transmitter repair, short crew call, compl
 
 The trio leaves Relay House together. Miki checks disconnected equipment and takes its compatible regulator without disabling the maintained water supply. The party returns; Miki repairs the transmitter. Any leader can start the call with the coastal operator and water crew and secure the Old Lock meeting plan. All three remain present locally.
 
+Tomas needs the coastal supply team to arrange future inland deliveries, so meeting its crew at Old Lock serves his onward journey as well as the immediate repair. A brief proposed meal coda in the walkthrough tests inclusion among the adults. Finalise the underlying relationships and ending dialogue before Party C; the provisional crew call does not establish that the full chapter's emotional ending lands.
+
 - Keep the opened passage, carried part and mission progress with the party. Switching cannot duplicate, drop or hide progress. The architecture review should determine which indicators are derived from the phase rather than stored twice.
 - Repair without the part explains what is missing and changes nothing. Repeated pickup, repair or call requests cannot award or consume progress twice.
 - Completion states what changed. **Read plan** repeats the meeting details without restarting the mission.
 - Keep dialogue and Pause controls distinct from world actions. Paused/dialogue input cannot move the party, switch leaders or trigger a nearby object.
-- A controller/keyboard-operated Restart resets the party, passage, regulator and transmitter together, without duplicate entities, loads or callbacks. Settle the minimal menu and reset-versus-rebuild choice in the architecture review.
+- A controller/keyboard-operated Restart resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
 
 **Exit:** An unfamiliar player with a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
 
@@ -124,9 +134,17 @@ Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for every
 - Shared part/progress surviving switches; repair without the part; duplicate requests; full pickup → repair → call progression.
 - Restart restoring the beginning; **Read plan** leaving secured progress unchanged.
 
-Rendered route tests must check three-body following, collision, narrow passages, reversals, separation and camera visibility. Pure rule tests alone cannot establish these behaviours.
+Use a **manual Simulator playtest checklist**, not an implied automated rendering suite:
 
-At playable-feature milestones, before merging, validate affected inputs, party movement, lifecycle and frame pacing on the **iPhone 13 Pro Max** with supported controllers. The [phone-check tracker #18](https://github.com/RonildoBraga/lauder/issues/18) preserves the accepted earlier deferral; it is not a passed check or a waiver for future milestones. This documentation task requests no phone session.
+1. Complete shelter → depot → shelter with each leader; inspect both followers at turns and the opening.
+2. Reverse and switch beside obstacles and inside the passage; check world collision, trail rebasing, spacing and camera easing. Record any hold/stuck case rather than hiding it.
+3. Check Q delivery, switch while moving, simultaneous switch/action and release recovery after Pause or input interruption.
+4. From fresh runs, open the barrier with Lara and with Tomas. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
+5. Carry the part through leader changes, repair, call, reread and restart. Verify that dialogue/Pause controls do not act on nearby objects or duplicate world updates.
+
+Run the relevant subset at A, B and C; items for later stages do not block the earlier movement experiment. Pure rule tests alone cannot establish these spatial behaviours.
+
+Propose **two milestone phone sessions**, using the **iPhone 13 Pro Max**: one at the end of Party A for switching/following/controller feel, interruptions and measured frame pacing; one at the end of Party C for the complete loop and the [deferred #18 checks](https://github.com/RonildoBraga/lauder/issues/18). Party B uses everyday Simulator checks and is covered on the phone with C. Review intermediate PRs independently; keep their phone-dependent exit unclaimed until the relevant session. Agree this schedule with the maintainer before implementation; this documentation task requests no phone session. The earlier deferral and separate Xbox-hardware gap remain recorded, not passed or silently waived.
 
 The target remains **60 fps** on that phone, measured during representative party play before declaring the first playable proven. Record the build, conditions and results; adjust scope or budget if missed. Simulator timing and previous solo phone checks are not party performance evidence. Keep the foreground game awake, including Pause, and restore normal idle locking when inactive.
 
