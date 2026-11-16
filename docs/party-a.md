@@ -1,7 +1,7 @@
 # Party A — three-character movement
 
 **Date:** 17 November 2026\
-**Status:** Focused work session 1 completed the implementation and Simulator route proof. The phone milestone remains pending; Party A has not exited and is not ready to merge. Party implementation is authorised by the maintainer's instruction to continue regardless of Claude's response, recorded in [#13](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6917260783). This overrides the earlier documentation wait gate; it does not waive the plan's validation or phone checkpoint.
+**Status:** Focused work session 1 completed the implementation and Simulator route proof. The baseline phone route/control/recovery checks and short performance sample are now recorded below; the maintainer deferred remaining manual tests. [PR #24](https://github.com/RonildoBraga/lauder/pull/24) remains unmerged. Party implementation is authorised by the maintainer's instruction to continue regardless of Claude's response, recorded in [#13](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6917260783). This overrides the earlier documentation wait gate; it does not waive the plan's validation or phone checkpoint.
 
 ## Scope
 
@@ -13,7 +13,7 @@ The animated USDZ assets and their source/provenance remain preserved for future
 
 | Session | Date | Attempt | Result |
 |---|---|---|---|
-| 1 | 17 November 2026 | Integrate input/session rules, three bodies, following and camera; run rule/scene checks and the Simulator route | Build/rule checks and Simulator round trips passed; phone milestone pending |
+| 1 | 17 November 2026 | Integrate input/session rules, three bodies, following and camera; run rule/scene checks and the Simulator route | Build/rule checks and Simulator round trips passed; subsequent phone results recorded below |
 
 The accepted stop criterion remains three focused sessions. If the round trip is still unreliable under any leader after session 3, stop before adding B/C and reassess the route or a separately approved recovery policy.
 
@@ -33,13 +33,31 @@ The loop uses one `SceneEvents.Update` subscription, cancelled on teardown, so i
 - The fallen-panel contact/slide, blocked transmitter/shelter approach, movement away from contact, idle follower settling, one switch per held Q, whole-party Pause, ignored movement/switch while paused, resume and Home → foreground recovery were observed. HUD/marker/next-leader labels and the eased camera remained readable. These are manual observations, not measured device performance.
 - Simultaneous held movement/switch, Pause priority and neutral/held-input lifecycle edge cases have pure rule tests. They are not claimed as live controller or held-input phone observations.
 - No automatic warp/regroup, skill barrier, mission, dialogue, repair or Restart was implemented. Capacity, disconnected-route and follower-stall holds have rule tests; nominal route checks did not trigger them.
-- The baseline iPhone controller/camera/lifecycle run and measured frame pacing are pending. Xbox hardware and previously deferred Stage 2 checks remain unverified; Simulator keyboard results do not close them.
+- The subsequent baseline iPhone evidence is recorded below. Xbox hardware and walking-cadence calibration remain unverified; these checks do not establish those separate results.
 
 ## Phone checkpoint — 17 November 2026
 
-A signed **Release** build of `fc53d52` (version 0.1.0, build 1) built with Xcode 27.2 / iPhoneOS SDK 27.2 was installed and launched on the baseline **iPhone 13 Pro Max / iOS 27.2.1**, connected over USB. A live device preview showed all three stand-ins and the PS5 source, Cross, R1 and Options prompts. Installation, rendering and controller recognition are verified; these observations alone do not establish input delivery, following, lifecycle recovery or performance.
+A signed **Release** build of `fc53d52` (version 0.1.0, build 1) built with Xcode 27.2 / iPhoneOS SDK 27.2 was installed and launched on the baseline **iPhone 13 Pro Max / iOS 27.2.1**, connected over USB. A live device preview showed all three stand-ins and the PS5 source, Cross, R1 and Options prompts. Installation, rendering and controller recognition are directly verified. The maintainer subsequently confirmed actual left-stick movement/release, R1 cycling through Miki/Lara/Tomas, both followers and clear camera/HUD during warm-up.
 
-The phone is ready for warm-up and an active-play performance capture; the maintainer's warm-up result is awaited. Control/route observations, interruptions, disconnect/reconnect, awake-screen behaviour and measured frame pacing remain pending. No merge or Party B implementation is assigned by this installation.
+The maintainer also confirmed moving switches, whole-party Pause, ignored paused movement/R1, correct resumption after centring/release, controller disconnect/reconnect and background plus lock/unlock recovery without stuck movement. These are user-reported physical checks of this build. The maintainer confirmed completing the unpaused service-passage → depot → return route during the timed recording, switching leaders with both followers and no party diagnostic. The 75-second physical-device capture saved successfully and its results follow. Remaining manual tests, including the awake-screen/normal-lock timing check, were deferred at the maintainer's request: “We dont need to do all these tests now”. This is a deferral, not a passed observation. No merge or Party B implementation is assigned by this installation.
+
+## Phone performance sample
+
+Game Performance Overview captured the physical phone through its all-processes target after name/PID attachment failed. Analysis selected **one Lauder Metal layer**, with no FPS combining across layers. The live phone preview was removed before capture. The maintainer confirmed active, unpaused route play during the recording.
+
+The first 15 seconds and partial boundary buckets were excluded. The [sanitised metric CSV](party-a-phone-metrics.csv) contains 59 complete aggregation buckets from **15.304 to 74.224 seconds**, covering **58.921 seconds** and **3,534 reported frames**.
+
+| Metric | Reported result |
+|---|---:|
+| Duration-weighted FPS | 59.9791 |
+| Bucket FPS range | 59.1622–60.7713 |
+| Frame-weighted mean display interval | 16.6725 ms |
+| Maximum reported display interval | 33.3355 ms |
+| Reported skipped-frame counter | 0 |
+
+The nominal **60 fps mean target was met for this short representative Release run**. One bucket reported a 33.3355 ms maximum interval; zero reported skipped frames does not mean every interval met 16.7 ms. Thermal state changed from Nominal to Fair during capture, with no Serious or Critical state reported.
+
+These are instrument-reported aggregate display-pacing statistics. The trace's per-frame tables exported no rows, so no p95/p99 or exact individual-hitch count is claimed. Frame-count/duration and interval-based FPS crosschecks agree. The trace saved and metrics exported despite symbol-timeline warnings during postprocessing. Raw traces remain private; the CSV contains only relative times and numeric metrics. Profiling overhead, sustained thermal behaviour, memory reliability and other devices remain outside this short result.
 
 ## Milestone checklist
 

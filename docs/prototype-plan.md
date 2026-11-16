@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is assigned by the maintainer's instruction to continue implementation regardless of Claude's response. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -50,7 +50,7 @@ Initial recovery is **hold and diagnose**, not an automatic warp: stop the block
 | Cycle leader Miki → Lara → Tomas | R1 / RB | Q |
 | Pause / Resume | Options / Menu | Escape |
 
-These switching mappings are accepted initial defaults, not implemented controls. Q replaces the Tab proposal to avoid focus navigation; verify actual delivery in Simulator during Party A. There are no touch controls or clickable screen actions.
+These initial switching mappings are implemented in Party A. Q delivery was checked in Simulator and R1 on the baseline PS5-connected phone; Xbox RB uses the same input path but hardware delivery remains unverified. Q replaces the earlier Tab proposal to avoid focus navigation. There are no touch controls or clickable screen actions.
 
 - Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
 - A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
