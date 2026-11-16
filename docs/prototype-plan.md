@@ -1,157 +1,161 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** The walkable scene is implemented. Graybox development is approved; review the gameplay-script draft before implementing Stage 3's salvage-and-repair loop. Scope split and Stage 1 stop criterion remain unchanged.\
-**Technical direction:** Swift + RealityKit, current stable iOS 27, iPhone first.\
+**Status:** Party prototype proposal for Claude's documentation review and maintainer agreement before implementation. The approved direction is one human player controlling three characters together, switching the leader while two companions follow. The proposed cast, roles, controls and milestones below remain review choices. The current build has one controlled character, stationary Tomas and observations; party movement, specialist actions and the repair loop are not implemented.\
+**Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
-Read the [gameplay script](gameplay-script.md) for the player-facing walkthrough. Its detailed beats and dialogue are proposals for review; the current build still provides movement and observations rather than the complete loop. Use the existing simple geometry and animated stand-in. Further art production and presentation work follow evaluation of the loop.
+The [story bible](story/story-bible.md) supplies the ensemble direction; the [gameplay walkthrough](gameplay-script.md) describes the proposed experience. Their new dialogue, exact relationships and enhancement histories remain proposals. This plan replaces the earlier solo Stage 3 target. It does not rewrite the completed [Stage 1](stage-1.md) and [Stage 2](stage-2.md) evidence or authorise gameplay work.
 
-Record attempts and actual results in the [Stage 1 session log](stage-1.md).
+## Purpose and scope
 
-Stage 2 implementation decisions and device observations are in the [movement and controls record](stage-2.md).
+First prove that controlling a party is comfortable on the existing route. Then test whether reading the depot, using a companion's ability, recovering a useful part and repairing a shared transmitter makes the journey satisfying.
 
-**Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
+Use one contiguous Relay House–depot scene, simple coloured stand-ins and the current geometry. No new art or animation production is required. Identify characters and interactions with text as well as colour. Duration should come from playtesting; the previous solo estimate of 3–5 minutes is not a party requirement.
 
-Use Simulator keyboard controls for everyday iteration: WASD moves, E acts and Escape pauses/resumes. At milestones, before merging playable features, validate the affected controls, lifecycle and performance on the baseline iPhone. Follow the [validation workflow](../CONTRIBUTING.md#validation) and record results in the [movement and controls record](stage-2.md).
-
-The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) uses Swift scene construction and direct USDZ loading.
-
-## Purpose and milestones
-
-Prove that moving through this world, noticing a route, salvaging something useful and returning to make a repair feels understandable and satisfying on a phone.
-
-This is a **Relay House slice** from the middle of [Chapter One](story/chapter-01.md). Aim for roughly **3–5 minutes** for a first playthrough, without padding the route.
-
-The maintainer approved [issue #4's scope split](https://github.com/RonildoBraga/lauder/issues/4#issuecomment-6905581377):
-- **First playable:** Stages 1–3 and the prototype exit checks below.
-- **Later hardening:** Stage 4 persistence and Stage 5 sustained memory/thermal validation, after the maintainer decides the loop is worth keeping.
-
-The [saving design](architecture.md#saving-and-interruption) remains the target for hardening. It is not a prerequisite for evaluating the first loop.
-
-## The playable loop
-
-1. At Relay House, Tomas explains the broken transmitter and points Miki toward the depot. Brief text establishes the closed crossing and insufficient water for the longer detour.
-2. Walk through a compact ruined service district.
-3. Discover that the direct depot entrance is blocked. Observe a visible service passage and go around.
-4. Identify and take one compatible regulator from abandoned equipment.
-5. Return to Relay House and repair the transmitter.
-6. Read a short radio conversation with Lara, Nina and Tomas. Agree to meet at Old Lock.
-7. See a clear completion message and reread the meeting plan in the current run.
-
-The blocked entrance uses ordinary level geometry and collision. It creates a reason to observe the environment without another key, extra fetch task or timed damage system.
-
-## Content budget
-
-| Element | First playable |
+| Element | Proposed first playable |
 |---|---|
-| World | One contiguous scene: relay shelter, short route and depot |
-| Player | Miki, using a properly sourced animated stand-in |
-| Other physical character | Tomas at the shelter; stationary |
-| Remote cast | Lara and Nina represented through text dialogue |
-| Salvage | One regulator, one pickup |
-| Repair | One transmitter, with visibly broken and working states |
-| Controls | Phone: PS5 DualSense/Xbox left stick, Cross/A action, Options/Menu Pause/Resume. Simulator: WASD, E, Escape. No touch controls |
-| Camera | Fixed elevated perspective with follow; landscape |
-| Interface | Objective, carried-part indicator, dialogue, Pause/Resume and Restart; no clickable screen actions |
-| Progress | In-memory run state; a fresh launch starts a new run |
-| Presentation | Graybox first; limited war damage, signs and sound for readability |
+| Party | Miki, Lara and Tomas, all present and controllable; names and role assignments remain proposals |
+| Leadership | One active character, two computer-controlled followers, one elevated follow camera |
+| Access | One barrier: Lara reaches its latch, or Tomas shifts its loose panel; either opens the same passage |
+| Salvage and repair | Miki inspects and takes one regulator, then repairs one transmitter |
+| Other dialogue | Keeper briefing through text, without a fourth physical character rig |
+| Contact | Coastal operator/water crew; all three party members remain local |
+| Progress | Party-wide opened-passage, carried-regulator and mission progress |
+| Interface | Active-character label, contextual prompt, objective, carried-part indicator, dialogue, Pause/Resume and Restart |
+| Run | In-memory progress; a fresh launch or Restart begins a new run |
 
-Miki is widowed; Nina is her daughter; Tomas is her father; Lara is her trusted friend. The call uses those relationships consistently. The cause of her husband's death and the cause of the collapse remain unexplained.
+The two access methods are alternatives, not consecutive tasks. There is no separate strength obstacle or trio of mandatory skill locks. The wider game retains distinct skills, discreet enhancements, exploration, survival context and light combat. This slice needs no combat, health, hunger, countdown, equipment or enhancement-resource system.
 
-Water, shelter and travel risk supply the narrative context. Water depletion, hunger meters, health, combat and the security-machine encounter follow a proven base loop. This prototype's smaller scope does not revise the full game's survival direction.
+This is a materially larger first playable than the earlier solo scope. Two followers through the existing narrow passage add navigation, switching and camera risk before the salvage loop has been played. Party A is a bounded experiment to expose that cost, not a small extension already known to work. Do not continue adding content if it fails its stop criterion.
 
-## First playable: Stages 1–3
+Nina-specific dialogue is excluded from this prototype while kinship remains undecided. Lara participates beside the others, rather than as the remote contact. The full chapter's departure, crossing, further encounters and detailed revelations are outside this slice.
+
+## Review before implementation
+
+Claude [reviewed this proposal at `fe9af2d`](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122): nothing blocked merging it as a labelled proposal, but B1–B3 must be settled before code. These follow-ups require confirmation; they are not an implementation assignment. Use focused implementation PRs with review before merge only after that assignment.
+
+Prepare and review a separate short architecture PR before Party A code. It must settle a single authority for mode, leader identity and shared progress; input routing and edge rules; three world bodies; the follow/recovery policy; and easing the camera to a new leader. Before B, record the per-interaction approach, eligible characters, prompt and collision data. Before C, record in-place restart and teardown rules. Existing solo ownership and save assumptions are not automatically accepted. Carry forward the [updated B1–B3 discussion](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6916287544).
+
+Proposed B1 decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and world collision checks for every body. Exclude party members from physical collision with each other, retain scenery collision, and use spacing for readable separation. Keep equal controller footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture PR must make trail rebasing and bounds concrete.
+
+Initial recovery is **hold and diagnose**, not an automatic warp: stop the blocked follower safely, record the failing route and correct the trail or simplify the authored layout. At the stop review, a constrained out-of-view regroup may be proposed separately. It would require explicit maintainer agreement, safe placement on the same currently reachable/open route, and both origin and destination outside the current camera view including a switch transition. It could never move the active leader or bypass a closed barrier. None of that fallback is approved or required for initial Party A.
+
+## Proposed input and interaction contract
+
+| Intent | PS5 / Xbox | Simulator |
+|---|---|---|
+| Move active character | Left stick | WASD |
+| Contextual action / advance text | Cross / A | E |
+| Cycle leader Miki → Lara → Tomas | R1 / RB | Q |
+| Pause / Resume | Options / Menu | Escape |
+
+These switching mappings are proposals, not implemented controls. Q replaces the Tab proposal to avoid focus navigation; verify actual delivery in Simulator during Party A. There are no touch controls or clickable screen actions.
+
+- Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
+- A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
+- Held movement may continue on the new leader. Switching alone does not close the neutral-input gate. Existing release requirements after interruption, reconnection and Pause/Resume remain.
+- Consume a switch edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts for the new leader.
+- Prompts describe what the active character can do from an accessible approach. On press, revalidate the active character, role, range, accessibility and current progress; a stale prompt cannot act through a wall or call a remote companion.
+- An unsuitable character receives a short explanation or a suggestion to switch. Do not automatically make the specialist perform the action elsewhere.
+
+| Interaction | Eligible active character | Result |
+|---|---|---|
+| Keeper briefing | Any leader | Establish the fault and shared objective |
+| Reach latch | Lara | Open the shared ground-level service passage once |
+| Shift loose panel | Tomas | Open that same passage once, as an alternative to the latch |
+| Inspect and take regulator | Miki | Confirm compatibility and collect the single party-owned part |
+| Repair | Miki, with the part | Consume the part once and restore the transmitter |
+| Call / Read plan | Any leader | Contact the water crew / reread the secured meeting details |
+
+## Completed foundations — preserve their evidence
 
 ### 1. Establish the device and asset path
 
-- Verify the test device and its installed stable iOS version.
-- Use stable Xcode and record its version and the SDK version before validating the asset workflow.
-- Create one app target and one Swift Testing unit-test target with the [Swift conventions](architecture.md#swift-conventions).
-- Follow the [asset contribution policy](../CONTRIBUTING.md#assets-and-attribution) before adding any model or scene.
-- Generate or obtain one properly sourced rigged character with idle/walk animation; preserve editable inputs, export steps and provenance. The [current scripted stand-in](../sources/content/character/README.md) supplies this without a visual editor.
-- Build a small scene in Swift and load its character and animation USDZ files directly.
-- Build, sign and run on the baseline phone.
+Stage 1 established the representative rig, idle/walk clips, direct USDZ loading and Swift-composed scene on the baseline iPhone. Keep the [asset provenance and reproduction workflow](../sources/content/character/README.md), [session log](stage-1.md) and [engine decision](decisions/0001-engine.md).
 
-**Exit:** The representative character and Swift-composed scene load correctly on the phone, with both skeletal clips visibly working. The editable-source-to-USDZ-to-app workflow is understood and reproducible.
-
-**Stop criterion:** If that rigged character, scene and idle/walk animation are not running on the baseline phone after **three focused work sessions**, stop and document the blocker. Reassess with the maintainer before expanding the work. Use the [engine decision record](decisions/0001-engine.md#stage-1-stop-criterion) for the agreed criterion and how to record the sessions.
+The agreed [three-session stop criterion](decisions/0001-engine.md#stage-1-stop-criterion) remains unchanged in the engine decision record. This party plan does not restart that completed proof or require three animated character assets before testing following.
 
 ### 2. Make movement comfortable
 
-- Add screen-relative movement, character collision and camera follow.
-- Use one GameController extended-gamepad input path for PS5 DualSense and Xbox. Verify action, disconnect/reconnect and Options/Menu Pause/Resume on the supported controllers at the iPhone milestone.
-- Use WASD movement, E action and Escape Pause/Resume for everyday Simulator playtests, through the same input snapshot consumed by GameWorld.
-- Describe the shelter, depot, landmarks and service passage in one small typed Swift layout definition consumed by GameWorld. Keep explicit placements and the existing stable interaction IDs.
-- Iterate the route, geometry and framing in Simulator; confirm readability and control behavior on the baseline phone before merging the playable milestone.
-- Add a nearby stationary Tomas placeholder.
-- Verify simultaneous movement/action input, safe areas and visibility, with no clickable screen controls.
-- On inactivity, clear held input, pause the live world and reset frame timing on resume.
-- Keep the foreground game awake, including Pause; restore normal idle locking when leaving it.
+Stage 2 supplies the existing route, character collision, camera framing, controller/keyboard input, pause and interruption handling. Its stationary Tomas and single moving character are historical implementation facts, not the party target. Preserve the actual [Simulator and phone observations](stage-2.md); passing the earlier solo checks does not establish party behaviour.
 
-**Exit:** Miki can walk the route predictably without getting stuck or disappearing behind geometry. Controller release and interruptions cannot leave her moving.
+## Party A — prove switching and following
 
-### 3. Close and evaluate the loop
+Use three clearly named, differently coloured primitive stand-ins on the existing route. Animation is not an exit requirement for this milestone. Retain its open service passage while testing shelter → depot → shelter movement; add no mission or skill gate yet.
 
-- Add mission phases, authored interactions and the correct objective/action labels.
-- Gate repair on possessing the regulator.
-- Add repair feedback, the family call, completion and **Read plan**.
-- Validate required scene IDs at load.
-- Add an in-memory Restart that tears down the old scene and cancels old loads/callbacks.
-- Add only the environmental details needed to communicate a ruined future and the route.
-- Let someone unfamiliar with the prototype try the complete loop without coaching.
-- Measure frame pacing during representative play on the baseline phone.
+- Direct each character in turn. The other two follow through the actual route, including turns and the service opening, without clipping walls, automatic teleports or player rescue.
+- Switch at rest and while moving, including beside obstacles and with followers on different parts of the route. Preserve positions and transfer camera follow without losing the active character.
+- Avoid followers repeatedly blocking the leader or each other. Reversing direction and switching to a trailing member must remain usable.
+- Freeze the whole party on Pause, inactivity or loss of available input. Resume without stale movement, accumulated frame time or duplicate update callbacks.
+- Check the proposed input priority and release behaviour before adding interactions.
 
-**Exit:** The first-playable criteria pass. Review what was enjoyable or unclear before deciding to harden or expand the loop.
+**Exit:** The whole party completes the round trip under every leader, with predictable collision and readable camera behaviour. Record stuck, separated or obscured cases and fix the bounded route before adding content.
 
-## First-playable exit checks
+### Party A stop criterion — proposed
 
-- A new player understands the goal and finishes the loop without developer guidance.
-- The intended route and alternative entrance read from the environment.
-- Movement follows screen direction, collision is predictable, and the camera keeps Miki readable.
-- The contextual prompt offers the correct action input. Current distance/accessibility are rechecked on press.
-- Repair before collection explains itself and changes nothing; the regulator cannot be collected twice in a run.
-- The repaired radio enables the call. Rereading the meeting plan leaves progress unchanged.
-- Restart begins a clean in-memory run with no duplicated scene content or callbacks.
-- Backgrounding, lock/unlock and controller interruptions clear held input and pause/resume the live scene coherently.
-- Smooth **60 fps is measured on the iPhone 13 Pro Max** with representative placeholder animation and scene load. If missed, record the measurement and adjust scope or budget before declaring the loop proven.
+Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. This proposed budget needs agreement before Party A starts; it does not alter the completed Stage 1 criterion.
 
-## Focused first-playable verification
+## Party B — prove alternative specialist actions
 
-Use Swift Testing for rules that can fail:
-- Repair without the part is rejected; duplicate collection and repair requests have no additional effect.
-- Briefing → pickup → repair → call completes, with consistent item, radio and objective state.
-- Restart resets the phase; **Read plan** after completion does not restart the mission.
+Add one closed barrier to the existing service passage. Lara can **Reach latch** from the ground, or Tomas can **Shift loose panel** from a stable grip. Each is a contextual action conveyed by brief text or a simple pose. No free jump, climbing mode, vertical control, simulated heavy-object physics or inaccessible follower ledge is needed.
 
-Use Simulator for daily iteration and `./scripts/check` for formatting, build and unit tests. At milestones, before merging playable features, use the baseline iPhone to check affected controller inputs, camera, collision, interruptions and measured frame pacing. Keep the complete unfamiliar-player run on the phone. The initial test checks the bundled character import; the mission-rule tests above belong with Stage 3's implementation.
+- Author one accessible approach and prompt for each method. Miki's feedback explains the Lara/Tomas alternatives; an unsuitable leader cannot use the other character remotely.
+- Either action sets the same party-owned open flag. The player never needs both. Test each solution independently from a fresh run.
+- Once opened, all three traverse the normal ground passage in either direction. Repeating either action, including the other method, has no additional effect.
+- Switching preserves the opened state. The front entrance stays blocked; the closed barrier cannot be bypassed by changing leaders.
+- Recheck approach accessibility and role on press, including when a prompt became stale after moving or switching.
+
+**Exit:** A new player understands why to switch and can choose either method to admit everyone. Record which method they chose and whether they noticed the other. Following still passes with the barrier closed and open. This establishes role-gated prompts and alternative access, not distinct skill feel: both methods are contextual single-press actions. Add no separate strength task or additional item requirement.
+
+## Party C — close and evaluate the shared loop
+
+Add only the briefing, one regulator, transmitter repair, short crew call, completion, **Read plan** and in-memory Restart.
+
+The trio leaves Relay House together. Miki checks disconnected equipment and takes its compatible regulator without disabling the maintained water supply. The party returns; Miki repairs the transmitter. Any leader can start the call with the coastal operator and water crew and secure the Old Lock meeting plan. All three remain present locally.
+
+Tomas needs the coastal supply team to arrange future inland deliveries, so meeting its crew at Old Lock serves his onward journey as well as the immediate repair. A brief proposed meal coda in the walkthrough tests inclusion among the adults. Finalise the underlying relationships and ending dialogue before Party C; the provisional crew call does not establish that the full chapter's emotional ending lands.
+
+- Keep the opened passage, carried part and mission progress with the party. Switching cannot duplicate, drop or hide progress. The architecture review should determine which indicators are derived from the phase rather than stored twice.
+- Repair without the part explains what is missing and changes nothing. Repeated pickup, repair or call requests cannot award or consume progress twice.
+- Completion states what changed. **Read plan** repeats the meeting details without restarting the mission.
+- Keep dialogue and Pause controls distinct from world actions. Paused/dialogue input cannot move the party, switch leaders or trigger a nearby object.
+- A controller/keyboard-operated Restart resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
+
+**Exit:** An unfamiliar player with a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
+
+## Verification and performance
+
+Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Add focused Swift Testing cases with the relevant implementation:
+
+- Leader cycling, mode restrictions, simultaneous switch/action priority and no held-action replay.
+- Role validation, accessible approaches and revalidation after moving or switching.
+- Both barrier solutions independently, shared opening state and harmless requests after opening.
+- Shared part/progress surviving switches; repair without the part; duplicate requests; full pickup → repair → call progression.
+- Restart restoring the beginning; **Read plan** leaving secured progress unchanged.
+
+Use a **manual Simulator playtest checklist**, not an implied automated rendering suite:
+
+1. Complete shelter → depot → shelter with each leader; inspect both followers at turns and the opening.
+2. Reverse and switch beside obstacles and inside the passage; check world collision, trail rebasing, spacing and camera easing. Record any hold/stuck case rather than hiding it.
+3. Check Q delivery, switch while moving, simultaneous switch/action and release recovery after Pause or input interruption.
+4. From fresh runs, open the barrier with Lara and with Tomas. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
+5. Carry the part through leader changes, repair, call, reread and restart. Verify that dialogue/Pause controls do not act on nearby objects or duplicate world updates.
+
+Run the relevant subset at A, B and C; items for later stages do not block the earlier movement experiment. Pure rule tests alone cannot establish these spatial behaviours.
+
+Propose **two milestone phone sessions**, using the **iPhone 13 Pro Max**: one at the end of Party A for switching/following/controller feel, interruptions and measured frame pacing; one at the end of Party C for the complete loop and the [deferred #18 checks](https://github.com/RonildoBraga/lauder/issues/18). Party B uses everyday Simulator checks and is covered on the phone with C. Review intermediate PRs independently; keep their phone-dependent exit unclaimed until the relevant session. Agree this schedule with the maintainer before implementation; this documentation task requests no phone session. The earlier deferral and separate Xbox-hardware gap remain recorded, not passed or silently waived.
+
+The target remains **60 fps** on that phone, measured during representative party play before declaring the first playable proven. Record the build, conditions and results; adjust scope or budget if missed. Simulator timing and previous solo phone checks are not party performance evidence. Keep the foreground game awake, including Pause, and restore normal idle locking when inactive.
 
 ## Later hardening, after the loop is worth keeping
 
-### 4. Preserve progress
+Revise the [saving design](architecture.md#saving-and-interruption) for party checkpoints before implementation. Preserve stable member identities, shared mission progress and a safe group placement when reconstructing a run; do not serialise entity graphs or assume the old solo spawn model is sufficient. Use versioned snapshots, ordered atomic writes, restart invalidation and explicit failure handling. Test save round-trips, relaunch, completed progress and interrupted/restarted writes.
 
-Implement the existing [saving and interruption design](architecture.md#saving-and-interruption):
-- Versioned checkpoint snapshots and an ordered atomic writer.
-- Continue across relaunch and restoration at the declared safe spawns.
-- Restart invalidation of older pending writes.
-- Visible save/load failure handling; corrupt saves are not silently erased.
-- Coherent recovery after termination before collection, after pickup, after repair and after completion.
-
-Add save round-trip, completed-save reload and write-order/restart checks here. Ordinary in-memory pause/resume already belongs in Stage 2; hardening adds persistence.
-
-### 5. Validate sustained behaviour
-
-Repeat full runs and restarts on the physical phone over roughly 15–20 minutes. Inspect frame pacing, memory and thermal behaviour. Check that scene content, subscriptions and unfinished loads do not accumulate.
-
-**Hardening exit:** Checkpoint persistence works, interrupted/restarted runs remain coherent, and repeated play shows no sustained unexpected memory growth or unacceptable thermal/frame-time degradation on the baseline phone.
-
-These checks are not the first-playable exit gate.
+Then repeat full runs and restarts on the physical phone over roughly **15–20 minutes**. Inspect frame pacing, memory, thermals and accumulation of scene content, subscriptions or unfinished loads. Persistence and sustained thermal validation remain later hardening, outside the first-playable exit gate.
 
 ## Outside the first playable
 
-The home departure and bridge scenes, moving companions, NPC pathfinding, combat, health or hunger systems, extra salvage errands, equipment, crafting, branching dialogue, voice acting, cinematics, multiple levels, checkpoint saves, persistent Continue, sustained memory/thermal profiling, cloud services and App Store submission.
+Mandatory strength obstacles, free jumping/climbing, formation orders, separate character inventories, skill trees, multiplayer, combat, health/hunger systems, extra salvage errands, crafting, branching dialogue, voice acting, cinematics, additional levels, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission.
 
-## What completion tells us
-
-The first playable provides evidence for the Swift/RealityKit asset workflow, phone controls, camera, in-memory interaction rules and the salvage-and-repair loop. It does not establish persistent-save reliability or sustained performance.
-
-No release date is promised before the actual character, content and device workflow is proven.
+The party loop can establish whether switching, following and purposeful salvage work together. It will not establish full-chapter pacing, persistent-save reliability or sustained device performance. Expand only in response to a concrete playtest need.

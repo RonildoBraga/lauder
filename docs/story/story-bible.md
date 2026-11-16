@@ -1,215 +1,263 @@
-# Lauder — story bible, draft 0.3
+# Lauder — story bible, draft 0.4
 
-**Date:** 16 November 2026 (Australia/Sydney)
+**Date:** 16 November 2026\
+**Status:** Ensemble direction approved; rewritten character and chapter details below are proposals for review. This narrative revision does not imply that party gameplay is implemented.
 
-## Agreed foundation
+## Agreed direction
 
-- Family reunion drives a homecoming.
-- The first chapter centres on restoring a transmitter.
-- The setting is futuristic, with a devastated world resembling the aftermath of a world war.
-- What caused the wider collapse remains uncertain.
-- Survival, exploration and salvage lead the experience; combat is light.
-- Miki is widowed. Nina is her daughter from that marriage; the circumstances of her husband's death remain unexplored.
-- Lara is Miki's friend. The living father in the travelling group is Miki's own dad.
-- This document defines the story and script.
+- Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
+- Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
+- Three playable characters are present together. The player moves the active character; the other two follow. A button switches control and leadership to another member.
+- Each character has distinct capabilities that make different approaches useful, including agility and strength.
+- Chapter One centres on restoring a transmitter through exploration and purposeful salvage.
+- The world is futuristic and devastated, resembling the aftermath of a world war. The cause and wider extent of the collapse remain uncertain.
+- Survival shapes decisions; combat is light. Ordinary cooperation, humour and care remain possible.
+- Human enhancement exists through discreet internal synthetic replacements and biological or genetic changes. Characters retain a human exterior; exposed machinery is not the visual direction.
 
-The ages, timing, geography and scene details below are working proposals. Tomas remains the working name for Miki's father.
+The control description is understood as **one human player directing a party of three**, with two computer-controlled followers. Three simultaneous human players or online co-op are not assumed by this document.
+
+### What remains open
+
+Miki, Lara and Tomas are the proposed playable trio. Their skills, enhancement histories, ages and biographies are working choices. Nina is proposed as a supporting character outside that trio.
+
+The previous draft established Miki as widowed, Nina as her daughter, Tomas as her father and Lara as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. Some may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
+
+The [older Chapter One script](chapter-01.md) still records the previous family/solo version and needs a separate script pass. The current [gameplay walkthrough](../gameplay-script.md) condenses the ensemble outline into a proposed party slice for review. Older chapter dialogue is not evidence that family roles remain settled.
 
 ## Premise
 
-Miki and her father are leaving the damaged district where their family survived the collapse. Her daughter Nina has gone ahead to a coastal refuge with Lara, a trusted friend. Miki helped plan the move and entrusted Nina to Lara for this part of the journey.
+Three travellers reach a relay shelter after their intended crossing closes. They have different reasons to reach the coast, limited supplies and incomplete information. Restoring the shelter's transmitter gives each a practical reason to help the others.
 
-A closed crossing breaks Miki's route. The longer road requires more drinking water than they can carry, and the nearby relay shelter can receive messages but cannot answer them. To make a safe plan with Lara, Miki must explore a ruined transport depot and salvage a part for its transmitter.
+Miki has spent years maintaining a damaged district. She is leaving for a coastal settlement where Lara has offered to introduce her to people making a life there. Lara needs a checked route back to the water crew she works with. Tomas needs to reach the coastal supply team to arrange the next inland deliveries. Meeting its crew at Old Lock gives him contacts and an onward route; his obligations explain why he continues beyond repairing the radio.
 
-The chapter ends with a live conversation with Nina and Lara and an agreed meeting at a staffed crossing. They know where they are going and who will meet them.
+They begin with a shared journey, not a complete shared history. Some trust already exists between Miki and Lara; the circumstances behind it emerge gradually. Tomas's cooperation grows through their work together. The opening makes these immediate reasons clear without presenting everyone's biography.
 
-## Working timeline
+At the depot, they discover that a supposedly abandoned block still has a maintained water connection. Their different knowledge gives that discovery human meaning. Their first achievement is a working transmitter and an agreed meeting at Old Lock. Choosing to travel there together begins a commitment beyond completing one repair.
 
-- **Six years earlier:** widespread fighting and infrastructure failure destroy ordinary civic life. Miki is about 29, her father about 58, and Nina about two.
-- **The following years:** the family survives together in a partly inhabited residential block in the Basin. Miki maintains water and power equipment. Her father helps organise local deliveries. Lara is a friend already trusted by Miki and Nina; her earlier life is not established.
-- **Three weeks before Chapter One:** Nina travels with Lara in an organised supply convoy to a known coastal refuge. Lara confirms room for herself, Nina, Miki and Tomas. Water deliveries in the Basin have become less dependable; a confirmed place with a reliable water source makes the move practical.
-- **Before departure:** the family agrees on a route, a relay shelter to use if travel is interrupted, and regular radio check-ins. Miki and her father stay to complete a fixed handover and recover the household's useful equipment.
-- **Chapter One:** their handover is complete. They leave on the agreed day. A recent bridge closure makes them use the contingency shelter and seek current route information.
+The longer story follows that commitment. Homecoming can mean finding people and a place with which to build a future. The group gradually chooses what they owe one another and the communities sustaining their journey.
 
-The collapse predates their temporary separation. Their move is a sensible attempt to build a better life in its aftermath. The timing of Miki's husband's death is not assigned in this timeline.
+## The playable party
 
-## Miki
+All three remain people in the scene when control changes. Switching leadership represents whose abilities the player directs; it does not transfer memories, change personalities or turn followers into silent possessions of the leader.
 
-**Working name:** Miki.\
-**Proposed age:** 35.\
-**Background:** Municipal water and power maintenance technician.\
-**Family:** Her daughter Nina, her late husband, and her father Tomas.\
-**Trusted friend:** Lara.
+The active character leads movement and supplies their particular interaction capabilities. The other two follow and remain involved in the story. Skills should be understandable at first use, even when their medical origins or personal histories remain unknown.
 
-Miki reads places through their utilities: a dry pipe, a warm cable, a pump that still vibrates behind a wall. This makes her a purposeful explorer. She can identify what might still be useful, what needs inspection, and what should be left connected.
+| Working character | Contribution | Example use | Personal tension |
+|---|---|---|---|
+| Miki | Systems knowledge, inspection and careful salvage | Identify a compatible regulator without cutting a live supply | Finds mechanical certainty easier than relying on another person's judgement |
+| Lara | Agility, balance and reading a route | Reach a service latch and open access for the whole party | Is used to carrying a route's risks herself and must share decisions |
+| Tomas | Strength, controlled load handling and delivery knowledge | Shift a manageable obstruction or support a heavy assembly | Wants to remain dependable when his old information is no longer enough |
 
-Her expertise is practical and limited. A familiar housing does not guarantee a compatible part. She checks markings and follows diagrams. She knows little about military systems beyond the precautions people in the Basin have learned.
+These distinctions are not complete identities. All three can observe, talk, help and carry ordinary supplies. Expertise and enhanced capacity are different things: stronger arms do not explain knowing how to repair a transmitter.
 
-### What she wants
+### Leadership should create decisions
 
-Reach Nina at the refuge with her father, carrying enough useful equipment to begin their life there. Lara is helping them make that journey.
+- Favour readable alternatives. A stable route may take longer; an agile approach may open a convenient passage. Strength can make a load safer to handle without solving every obstacle.
+- Avoid repeating three obstacles each labelled for a different character. Switching should follow the player's reading of a place.
+- A specialist opening should ultimately admit the party. Lara might reach a latch to release access for the others; following her does not make them equally agile.
+- Companions should not repeatedly become stuck or need rescue to justify their presence. A narrow passage needs a credible group route before the scene is written around it.
+- Detailed formation orders, skill trees and separate equipment systems are not required by this direction. The switch button remains to be chosen.
 
-The family already matters to her. She starts the story taking action to join them.
+## Miki — understanding what still works
 
-### Her previous marriage
+**Proposed background:** Municipal water and power maintenance.\
+**Proposed role:** Technical inspection and purposeful salvage.\
+**Enhancement status:** Undecided; her competence does not require an enhancement.
 
-Nina is Miki's daughter from her marriage to Nina's father. He has died. His name, the timing of his death and its circumstances remain open for later development.
+Miki reads places through a dry pipe, a warm cable or a pump vibrating behind a wall. She checks markings and diagrams rather than assuming a familiar housing contains a safe part. Her practical local knowledge does not give her universal access to future technology.
 
-Miki's loss is part of her life, alongside her work, humour, friendships and parenthood. Her need for certainty is not automatically explained by bereavement.
+She wants to reach the coast and discover whether she can belong somewhere beyond the district that has needed her for years. Lara has offered an introduction and a possible place to stay; Miki chooses to pursue it. The opening has a destination without depending on an endangered relative.
 
-Chapter One can acknowledge him through a family photograph without explaining his death. Before writing flashbacks or detailed memories, establish when he died and what Nina can remember. The cause of his death and the cause of the wider collapse are separate open questions.
+She tends to add one more task to a completed job. Under pressure she becomes brief and exact. Dry humour and small acts of care appear when she stops trying to control every uncertainty.
 
-### What makes her particular
+Her first important act is restraint: she leaves useful infrastructure intact because other people depend on it. Over the chapter, she accepts that Lara's experience and Tomas's conversations supply facts her instruments cannot.
 
-Miki feels at home when she knows how things work. The Basin is dangerous, but she understands its routines and remembers it before the collapse. Leaving means giving up that familiarity.
+## Lara — finding a way through
 
-She finds it easier to identify a useful repair than to admit she is afraid of the new life waiting for her. She tends to add “one more thing” to a completed job and to pack tools for problems that may never happen.
+**Proposed background:** Scout and route worker for a coastal water crew.\
+**Proposed role:** Agility, balance and access.\
+**Possible enhancement:** Biological changes supporting coordination and recovery; the changes, timing and reason remain undecided.
 
-Her father is ready to leave before she expects him to be. This gently challenges her assumption that she is the practical one managing his attachment.
+Lara is physically present with Miki and Tomas from the opening playable journey. The radio does not introduce her as an absent companion waiting at the coast.
 
-### Strengths, limits and voice
+She needs current conditions to get herself and the water crew safely through the crossing. Her responsibilities continue while she travels; joining the group is her decision, with obligations and limits of its own.
 
-- Observant, patient with equipment and economical with materials.
-- Good at preparing for a known problem; less comfortable changing a plan she has already checked.
-- Willing to ask precise questions, though she initially leaves personal uncertainty unspoken.
-- Capable of defending herself, with no military background.
-- Dry humour appears in small moments. Under pressure, she becomes brief and exact.
+Miki already has reason to trust her. Show that through a kept appointment, an accurate warning or an honest limit before explaining their history. Lara can be dependable and have a past the player has not heard.
 
-She checks whether someone still depends on a machine before stripping it. Salvage is a survival practice with consequences.
+She reads footing and structure before committing her weight. Her agility appears in controlled movement, not necessarily acrobatics. She tires, makes mistakes and can be injured.
 
-### Chapter One movement
+The proposed depot discovery reveals that she once helped maintain water for people who stayed in an officially emptied block. She answers naturally when asked. Her knowledge reflects a particular experience, not proof of a secret role in the global collapse.
 
-Miki leaves with a familiar route and a tightly packed bag. When the route fails, she must use current observations, other people's knowledge and her own technical judgement together.
+## Tomas — carrying his share
 
-By the closing call, she can tell Lara what she knows, what remains uncertain and what they can reasonably do next.
+**Proposed background:** Transport and water-delivery work.\
+**Proposed role:** Strength, handling loads and route knowledge.\
+**Possible enhancement:** Internal synthetic muscle and supporting skeletal replacements fitted for medical or civilian work reasons; the actual history remains undecided.
 
-## Tomas — Miki's father
+Tomas travels with the group throughout the chapter. He carries his share, has inland communities depending on deliveries and knows the district's former connections. He intends to reach the coastal supply team to arrange their next allocation; Old Lock is his meeting point with its crew and part of that onward journey. His relationship to Miki is open; the new script should introduce what they actually know about each other.
 
-**Proposed age:** 64.\
-**Background:** Public transport driver before the collapse; later an organiser of local water and supply deliveries.
+A stronger build gives him a clear silhouette. His useful strength is controlled and specific: he can shift an obstructing frame the others cannot safely move. He cannot lift an entire ruined structure or make an unsafe floor bear its weight.
 
-Tomas is present with Miki in the chapter. He finishes his own handover, chooses his belongings, carries his share and contributes to their travel plan.
+He asks who walked a road and when. His maps are useful, but he will correct them. The depot's occupied water line challenges what his transport records said about the block.
 
-He knows how the district used to connect. He also knows that a remembered road is not evidence of a safe road today. He asks travellers where they actually came from and when.
+He sometimes masks worry with instructions. His arc involves accepting help and sharing responsibility, not proving his worth through a heroic sacrifice. He has a voice beyond being the strongest member or an older source of wisdom.
 
-### Relationship with Miki
+## Nina — a life beyond the journey
 
-Miki grew up watching him learn routes and remember the people along them. She inherited his attention to practical detail, although she tends to trust an instrument before a conversation.
+**Proposed age:** Eight.\
+**Role:** Supporting character at the coastal settlement, outside the playable trio.\
+**Relationship to the party:** To be settled before detailed dialogue is rewritten.
 
-He sometimes masks worry with instructions. Miki sometimes treats his age as permission to make decisions for him. They can disagree affectionately without either being the permanent wise one.
+Nina has routines, friendships, responsibilities and things she wants for herself. She is not waiting alone to be rescued. Her connection with the travellers can carry warmth without declaring a blood relationship at the beginning.
 
-He wants to see his granddaughter Nina and is grateful to Lara for helping her. His attachment is to the people he is leaving and the work they will inherit, rather than a refusal to move.
+A dry place kept for someone's bag, a borrowed cup or an ordinary promise can show attachment. Such details should follow a relationship actually chosen by the writers, rather than replace that decision.
 
-### Independent contribution
+She is not a mysterious biological key or an enhancement specimen. Her age does not prevent her noticing what adults overlook, but it does not supply knowledge the story has not earned.
 
-- Hands over the local delivery book and storage keys before leaving.
-- Notices what the bridge closure means and checks the report with people at the crossing.
-- Identifies a former depot that might contain compatible emergency hardware.
-- At the shelter, prepares their battery for the repair test, compares current travel reports and prepares the radio contact details while Miki salvages the part. The community supply powers the set after the test.
-- Speaks with Nina himself during the closing call.
+## Enhancement in this world
 
-His limits are physical effort and outdated information, not helplessness. His future family history, including Miki's mother, is not established in this chapter.
+This is original fictional technology. The reference to discreet, human-looking enhancement describes appearance and tone, not borrowed characters, terminology or another setting's biology.
 
-## Lara — Miki's friend
+### Synthetic replacement
 
-Miki and Nina already know and trust Lara. The player meets her through her actions and brief conversations, with little information about her background.
+Some people have internal replacements for tissue: muscle, bone, joints or organs. These integrate beneath an ordinary human exterior. Clothing, skin and expression are what the player first sees. Exposed metal limbs, glowing seams and decorative ports are not the default language.
 
-She accompanied Nina to the coastal refuge under the plan agreed with Miki. She keeps the radio appointments, makes sure Nina can speak for herself and checks practical details before passing them on.
+Replacement and enhancement overlap without meaning the same thing. One synthetic joint restores ordinary movement; another replacement may support greater force. A medical history does not automatically imply exceptional powers.
 
-During the final call, she supplies current information from the coast and arranges to meet Miki and Tomas with a water crew at a staffed crossing.
+### Biological and genetic changes
 
-Her age, former occupation and reasons for travelling with the family are not yet established. Trust can appear in ordinary specifics: knowing which belongings matter to Nina, keeping a promise and giving Miki an honest account of their situation. Her unexplored history does not itself imply a hidden agenda.
+Some humans have engineered biological traits affecting capacity, such as muscle development, coordination or recovery. Treatment methods, inheritance and exact capabilities remain world-building decisions.
 
-Lara has her own judgement and boundaries. Later scenes can reveal her gradually through decisions and disagreements.
+These changes need not alter visible anatomy. They do not automatically make a person invulnerable, ageless or capable of immediate healing.
 
-## Nina — daughter, eight
+### Everyday consequences
 
-Nina is Miki's daughter. Her father is Miki's late husband; whether she remembers him clearly depends on the date of his death, which remains undecided.
+Before the collapse, replacements and enhancements could serve healthcare, transport, hazardous maintenance and other civilian work as well as military uses. Access varied. Not every enhanced person needs to have been a soldier or manufactured weapon.
 
-Nina has few memories of the world before the collapse. She knows how much a bottle holds and which warning sounds adults take seriously. She is also an ordinary child who gets bored, makes things and cares about her belongings.
+Leverage, footing, fatigue, recovery and injury still matter. Medical care may be harder to obtain after the collapse, but compulsory drug dependence, constant implant failure and new resource meters are not assumed mechanics.
 
-Before leaving the Basin, she asked Miki and Tomas to bring a blue ceramic cup she painted. Tomas has been using it. Their mild disagreement about whose cup it is provides an ordinary thread across the separation.
+Enhanced and unenhanced people have skills, agency and moral differences. Enhancement does not establish worth, allegiance or humanity. Not every party member needs one, and abilities need not explain why their lives intersected.
 
-She contributes briefly to the radio conversation, including asking for her grandfather. She has a life at the refuge: other children, improvised lessons and chores. The chapter does not depend on placing her in immediate danger.
+### How the player learns
+
+Show a useful capability clearly, then develop its context. Tomas moves a load with unusual control; a later encounter can explain who fitted his replacement and what it meant to him. Lara's movement can become familiar before her training or treatment history is discussed.
+
+Avoid an opening diagnostic dossier, an obligatory body reveal or a surprise ability that invalidates earlier obstacles. Keep abilities reliable enough to learn. Let mystery concern the person, their choices and the history surrounding that ability.
 
 ## The world after the collapse
 
-### What is clear
+Networks supplying water, power, food and communications have broken apart. Civilian buildings bear blast damage. Military wreckage lies among public vehicles; stripped checkpoints have become shelters and storage. No dependable national authority reaches the Basin.
 
-Organised society has broken apart. The old networks that supplied water, power, food and communications no longer provide dependable service. The Basin's remaining inhabitants survive through repairs, rationed supplies and cooperation.
+The future is visible in surviving materials, automated services and distributed utilities. A transit display refreshes above a burnt vehicle. Delivery-machine panels patch a blast shutter. An announcement repeats directions to a shelter whose roof has fallen.
 
-Large-scale fighting happened. Civilian buildings bear blast damage. Military wreckage lies among public transport vehicles. Fortified checkpoints have been stripped and reused. There is no dependable national authority reaching the district.
+Years of weather, salvage and habitation matter as much as the original destruction. Places are not empty simply because official systems stopped counting them. Settlements function because people maintain them.
 
-The coastline has functioning pockets of life because people maintain them locally. Their existence does not establish how much of the wider world is still operating.
+People disagree about the sequence of fighting and infrastructure failure. Local records, broadcasts and survivor accounts contain evidence, errors and gaps. None of the party has a complete global explanation. Enhancement history may intersect particular events, but it is not automatically the cause of the collapse.
 
-### What remains uncertain
+Water, food, warmth, shelter, load and reliable information shape choices. A dry detour can be impossible with the water they carry. These pressures give salvage purpose without requiring a meter for every bodily need.
 
-People disagree about the sequence of the disaster. Did the fighting bring down the networks, or did cascading failures precede and intensify it? Who ordered the first attacks? How many governments or communities remain elsewhere?
-
-Miki witnessed local events. She cannot explain the global collapse. Tomas's memories are similarly local. Old broadcasts, records and survivor accounts contain useful evidence, gaps and claims.
-
-The reader should understand what a clue actually establishes. A log of a local blackout does not prove who started a world war. A surviving announcement may repeat a claim nobody at the time could verify.
-
-The underlying explanation remains a writing decision to develop. Chapter One does not settle it.
-
-### A ruined future
-
-The former city used advanced materials, automated services and distributed utilities. Fragments still operate:
-
-- A transit display refreshes above a burnt armoured vehicle.
-- Civilian route maps carry later military stencils and newer handwritten corrections.
-- Residential blast shutters have been repaired with panels from delivery machines.
-- A public announcement repeats instructions to use a shelter whose roof has fallen.
-- A security machine charges from an isolated solar rail and continues enforcing an obsolete restriction.
-
-The remains should show years of weather, salvage and habitation. A depot may be stripped almost bare yet still contain something difficult to remove from a damaged vehicle.
-
-### Survival
-
-Safe water, food, warmth, shelter and reliable route information shape choices in the script.
-
-Their supplies cover the intended journey. A longer dry detour changes what is possible. Waiting uses food and water. Going out late exposes Miki to cold and poor visibility. A heavy useful object may be more than they can reasonably carry.
-
-These pressures should lead to understandable decisions. Each salvage trip needs a purpose beyond filling a bag.
-
-### Danger and other people
-
-Survivors can be cooperative, guarded or hostile. Useful things are already being claimed and reused.
-
-Chapter One centres on damaged structures, exposure and one surviving security machine. The machine can be avoided through observation and an accessible service route; a direct encounter can be brief and dangerous.
-
-Human conflict can develop through specific people and competing needs as the story continues.
+People can cooperate, disagree or compete over resources without belonging to a hidden faction. Light combat and observation-based avoidance belong to the wider direction; the first repair need not require a fight.
 
 ## Place and communications
 
-**The Basin:** the inland district where the family lived through the collapse.\
-**East Span:** their planned crossing, now closed after structural movement.\
-**Relay House:** the nearby occupied shelter named in their contingency plan.\
-**The depot:** a stripped transit maintenance site close enough for a short salvage trip.\
-**Old Lock:** a staffed service crossing proposed as the next meeting point.\
-**The coastal refuge:** Lara and Nina's current home.
+| Place | Working purpose |
+|---|---|
+| The Basin | Damaged inland district Miki has helped maintain |
+| East Span | Recently closed crossing interrupting the travellers' routes |
+| Relay House | Occupied shelter with a working receiver and failed transmitter |
+| The depot | Stripped transit maintenance site with a regulator and evidence of continuing use |
+| Old Lock | Staffed crossing where the party can meet the coastal water crew |
+| The coastal settlement | Inhabited destination with a water crew, local routines and Nina's present home |
 
-These are working labels. Their exact distances and geography need a map before later chapters are scripted.
+Names, distances and the full map remain working choices. The canal route needs a water stop and current reports from both approaches before the party relies on it.
 
-The former public communications network is gone. Handsets still provide local functions and short-range radio where power and terrain permit. The communities use maintained relay sets for longer calls.
+Handsets retain offline functions and limited short-range radio. Maintained relay sets permit longer contacts at scheduled times. Relay House hears the coastal operator but cannot answer until its power regulator is replaced.
 
-Relay House's receiver works, but its transmitter's power regulator has failed. The family has an agreed evening call appointment through the coastal operator. Repairing the set lets Miki answer and exchange current route information.
-
-The successful call establishes a specific meeting and the next check-in. It does not restore transport or make the roads safe.
+The repaired set serves others as well as the party. It establishes contact and a meeting plan; it does not restore the old network or make the roads safe.
 
 ## Chapter One — A Place to Meet
 
-**Immediate goal:** Restore the shelter's transmitter and agree on a viable route with Lara.\
-**Emotional movement:** Leaving the familiar → adapting together → a shared plan.\
-**Beginning:** Miki and Tomas close their old home after completing their handover.\
-**Ending:** The family agrees to meet at Old Lock, with current information from both sides.
+**Immediate goal:** Restore the transmitter and agree a viable onward route.\
+**Emotional movement:** Practical cooperation becomes a deliberate commitment to travel together.\
+**Party:** Miki, Lara and Tomas are together from the opening journey, using the proposed lineup.\
+**Achievement:** A working community transmitter, an Old Lock appointment and a concrete discovery about the district.
 
-See [Chapter One script](chapter-01.md).
+### 1. The road on the map
 
-## Story promises
+East Span is closed after recent structural movement. Miki cannot reach the place Lara described; Lara cannot confirm the water crew's approach; Tomas cannot rely on his delivery route. The northern detour takes more water than they carry.
 
-The homecoming is intended to reach a real reunion. Family members remain people with their own activity and knowledge throughout the journey.
+They compare what each actually knows and head to Relay House. Dialogue establishes present needs and a little familiarity, without a family introduction or an account of the war.
 
-Discoveries about the collapse can deepen the world and complicate decisions. They should not repeatedly erase the family's progress or move their destination simply to extend the search.
+### 2. A reason to help
 
-The first chapter gives a complete achievement: a useful transmitter restored and a plan the family can act on.
+The keeper explains the transmitter fault. Miki identifies compatible equipment. Tomas remembers protected bays at the depot. Lara assesses the route from its last known access points, acknowledging that conditions may have changed.
+
+They agree to make the short salvage trip together. The keeper remains at the shelter. None of the playable trio is parked there as a stationary quest-giver.
+
+### 3. What still serves someone
+
+Front access is blocked. The group reads the depot and chooses an approach. The scene can demonstrate a useful leadership switch without requiring an obstacle for each skill.
+
+The current walkthrough proposes two approaches to the same service barrier: Lara reaches its release latch, or Tomas shifts its loose panel from a stable grip. Either opens the passage for everyone; neither requires the other first. These are contextual actions represented simply in the graybox, not free climbing or a physics lifting system. Miki checks the regulator and isolates the disconnected equipment containing it.
+
+A maintained bypass supplies a neighbouring block marked empty in an old transport register. Inspection shows current use. Miki leaves that supply connected; the regulator comes from separate equipment. This decision belongs to ordinary salvage, not a new branching morality system.
+
+### 4. Different knowledge of the same place
+
+Lara recognises the bypass. Tomas has different information in his records. They discuss it where they find it:
+
+> **Lara:** We kept that tap open for the people who stayed.
+>
+> **Tomas:** That block was marked empty.
+>
+> **Lara:** Some people never left.
+
+These are proposed lines. A direct follow-up should get a natural answer about who was there and what Lara knew. The discovery raises a local human question; it does not prove a global conspiracy or Tomas's culpability.
+
+### 5. Make the return matter
+
+All three return with the regulator. Miki installs and tests it while the others contribute to preparation and route reports. The community supply powers the repaired transmitter. The part stays for the next person who needs to answer a call.
+
+They contact the coastal operator and water crew. Reports from both approaches make the canal route credible. The party and crew agree to meet at Old Lock, with a next radio appointment and a staffed shelter to use if travel fails.
+
+Nina can speak during the scheduled contact once her relationship has been settled in the dialogue pass. A brief ordinary exchange supplies warmth. Lara participates beside Miki and Tomas, not as a remote voice.
+
+### 6. Tomorrow's bags
+
+Another traveller uses the set. The party shares food, checks its water and packs for the route it now knows. Each has contributed; each has a reason to continue. A reciprocal act, such as making room for another person's tools, expresses growing care.
+
+The chapter ends with lasting progress. They choose to make the next journey together. They also know that the district's written history has left people out.
+
+## Mystery and revelation
+
+Exploration creates a question, interaction supplies a perspective, and a later event tests or deepens it. An answer should change the player's understanding of a person or place. Not every discovery needs to open a larger mystery.
+
+| Player encounters | First understanding | Later development |
+|---|---|---|
+| Maintained water in a block marked empty | People continued living beyond the official account | Meet someone who depended on it and learn what maintaining it required |
+| Lara recognises the bypass | She helped people there | Learn the circumstances through an encounter and her choices about a new obligation |
+| Tomas corrects a record | He can admit his information has limits | Discover how the delivery network affected particular people |
+| Miki leaves useful infrastructure intact | Her care extends beyond the party | A recipient recognises the consequences of that decision |
+| A companion demonstrates unusual capacity | The player learns a reliable capability | Medical or work history gives it personal meaning when relevant |
+
+### Author knowledge and fair disclosure
+
+Before scripting the chapter, settle the local truth. A proposed explanation: the transport register recorded the end of organised evacuation as an empty block, although residents stayed. Lara and residents maintained the bypass. Tomas knew the transport record, not an exhaustive census. Miki discovers current use through inspection. This remains an author proposal, not a revelation already delivered by the game.
+
+For important reveals, record what happened, what each character knows, what the player has observed and what the reveal changes. Decide underlying relationships before writing lines intended to conceal them. Public repository notes may contain labelled spoilers; mystery is for the player's experience, not a lack of answers among writers.
+
+Characters should not feign ignorance, avoid ordinary names or refuse useful information solely to prolong suspense. Avoid amnesia as an opening shortcut. Some connections can be unrecognised because their effects passed through other people, rather than because everyone has a secret identity.
+
+Balance questions with answers, jokes, reliable actions and progress. Major connections need an accessible story beat; optional records add texture rather than carrying all the emotional explanation. The collapse and individual relationships can develop at different speeds.
+
+## Story promises and next writing pass
+
+- The group becomes worth caring about through what members do for one another, including disagreement and repair of trust.
+- Their histories are not all branches of one hidden experiment. Shared purpose can grow from present commitments.
+- Enhancements support readable abilities and human stories; they do not replace character, training or judgement.
+- Each chapter delivers a concrete achievement. New information does not repeatedly erase routes, move destinations or undo trust merely to extend the journey.
+- People beyond the party have meaningful lives of their own.
+
+Next settle the trio's identities, underlying relationships and enhancement specifics; rewrite the full Chapter One dialogue against those decisions. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
+
+The current build has one controlled character, stationary Tomas and observations. Following, switching, character-specific actions and the repair loop are not implemented. The [prototype plan](../prototype-plan.md) now proposes party movement/switching, one shared access problem and then the repair loop. It awaits Claude's review before implementation; the [architecture](../architecture.md) still needs reconciliation with the party proposal. This revision does not authorise implementation.

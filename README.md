@@ -1,26 +1,26 @@
 # Lauder
 
-An open-source, Apple-only survival exploration game about a homecoming through the ruins of a futuristic world.
+An open-source, Apple-only survival exploration game about three travellers finding belonging through the ruins of a futuristic world.
 
-Miki is travelling with her father to reunite with her daughter, Nina. Exploration and purposeful salvage help them find a viable way across a world devastated by war and infrastructure failure. The full cause of the collapse remains uncertain.
+The player switches between three characters while the other two follow. Their distinct abilities support exploration and purposeful salvage; their connections and histories emerge through the journey. Humans may have discreet internal synthetic replacements or biological enhancements. The full cause of the warfare and infrastructure collapse remains uncertain.
 
 ## Project status
 
-**The current build is a walkable graybox. The next step is reviewing the [gameplay script](docs/gameplay-script.md) before implementing the salvage-and-repair loop.**
+**The current build is a walkable graybox with one controlled character. Claude reviewed the three-character proposal in [PR #21](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122) and found no blocker to merging it as a labelled proposal. Before code, the follow/recovery policy, Party A stop criterion and separate architecture review must be settled. The documentation follow-ups remain for confirmation; no party implementation or merge is assigned.**
 
 The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 
-- [Gameplay script](docs/gameplay-script.md): what the player sees and does in the proposed first playable, with the wider game's purpose and review questions.
-- [Story bible](docs/story/story-bible.md): agreed foundations, characters, world and working timeline.
-- [Chapter One — A Place to Meet](docs/story/chapter-01.md): the current scene and dialogue draft.
-- [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
-- [First playable prototype](docs/prototype-plan.md): a small Relay House salvage-and-repair loop with staged acceptance criteria.
+- [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
+- [Gameplay script](docs/gameplay-script.md): proposed party controls, shared access problem, salvage, repair and coastal contact.
+- [Chapter One — A Place to Meet](docs/story/chapter-01.md): previous family script, awaiting the ensemble rewrite.
+- [Architecture](docs/architecture.md): Apple toolchain and earlier solo design, awaiting the party design pass.
+- [First playable prototype](docs/prototype-plan.md): party movement and switching first, then access and the repair loop, with staged checks.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
 - [Stage 2 evidence](docs/stage-2.md): controller decisions, simulator iteration and physical-device checks.
 
-Names, ages and details marked as proposals remain open for discussion. Miki is widowed; Nina is her daughter; Lara is a trusted friend; Tomas is the working name for Miki's father.
+The proposed cast has Miki, Lara and Tomas as the playable trio and Nina as a supporting character. Their role assignments, enhancement histories and exact relationships remain proposals. The earlier family relationships are under review.
 
 ## Project structure
 
@@ -48,9 +48,9 @@ For new art, group an asset's editable inputs, deliberate delivery exports and p
 
 ## First prototype
 
-One short round trip: talk to Tomas, explore the depot, recover a regulator, repair the transmitter and contact Lara and Nina. Start with a small graybox environment and one representative animated character. The initial performance target is 60 fps on an iPhone 13 Pro Max.
+The proposed sequence proves movement, switching and following with three stand-ins first. It then adds one service barrier with alternative agile/strength actions and a regulator-and-transmitter round trip ending in a coastal water-crew call. Following, switching, distinct abilities and the repair loop are not implemented. The revised scope, controls and interaction details await review; a new playthrough duration will come from testing. The initial performance target remains 60 fps on an iPhone 13 Pro Max.
 
-The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-in while testing movement, exploration, purposeful salvage and repair. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). The gameplay script is a review draft, not a claim that its interactions are implemented or that every detail is agreed.
+The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-in when testing the revised scope. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). Narrative proposals do not imply implemented interactions or approval of every detail.
 
 ## Contribute
 

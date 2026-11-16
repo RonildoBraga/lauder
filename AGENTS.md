@@ -5,16 +5,18 @@
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the documents relevant to the assigned task. The source of shared project decisions is this repository, not private assistant memory.
 
 - Narrative: [story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md).
-- Player experience: [gameplay script](docs/gameplay-script.md), a review draft describing the planned first playable.
+- Player experience: the ensemble outline in the [story bible](docs/story/story-bible.md) and the current three-character [gameplay script](docs/gameplay-script.md), proposed for review before implementation.
 - Technical work: [architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md).
 
 Do not duplicate those documents here or silently turn a working proposal into an agreed fact.
 
 ## Stay within the task
 
-Stage 1 is merged. The maintainer has authorised integrating the prepared Stage 2, visual pass and project-organisation work into main, then reviewing the gameplay script before continuing implementation. The graybox approach is approved; the script's detailed dialogue and interaction flow remain a review draft. Stage 3 gameplay is still planned. An explicit later maintainer assignment authorises that work; do not request duplicate permission when it already supplies it.
+Read the current status and next-step gates in [README.md](README.md) and the [prototype plan](docs/prototype-plan.md). Keep changing stage and review status there, rather than duplicating it in this file.
 
-The earlier [visual pass](docs/visual-direction.md) remains part of the current scene. Further art production and visual polish are deferred while the core loop is evaluated with simple shapes and colours. Do not turn the gameplay script's existence into an assignment to implement it.
+Use the story bible's distinction between agreed foundations and proposals. Do not restore assumptions from a superseded script or treat a plan's existence as an implementation assignment. A maintainer assignment authorises its stated work; do not request duplicate permission already supplied by it. Review recommendations do not independently authorise implementation or merge.
+
+Use simple shapes and colours to evaluate gameplay. Further art production and visual polish follow an agreed task and a demonstrated gameplay need; the [visual direction](docs/visual-direction.md) supplies context.
 
 Keep changes small. Preserve the Swift/RealityKit direction and the agreed prototype scope unless the task explicitly changes them. Use existing patterns and introduce abstractions or dependencies only for a demonstrated need.
 
