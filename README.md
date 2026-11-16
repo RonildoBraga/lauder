@@ -12,14 +12,38 @@ The technical direction is Swift, RealityKit and SwiftUI, targeting the current 
 
 ## Start here
 
-- [Story bible](story/story-bible.md): agreed foundations, characters, world and working timeline.
-- [Chapter One — A Place to Meet](story/chapter-01.md): the current scene and dialogue draft.
+- [Story bible](docs/story/story-bible.md): agreed foundations, characters, world and working timeline.
+- [Chapter One — A Place to Meet](docs/story/chapter-01.md): the current scene and dialogue draft.
 - [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
 - [First playable prototype](docs/prototype-plan.md): a small Relay House salvage-and-repair loop with staged acceptance criteria.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
 - [Stage 2 evidence](docs/stage-2.md): controller decisions, simulator iteration and physical-device checks.
 
 Names, ages and details marked as proposals remain open for discussion. Miki is widowed; Nina is her daughter; Lara is a trusted friend; Tomas is the working name for Miki's father.
+
+## Project structure
+
+```text
+Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
+sources/
+  app/                        App entry point, world ownership and bundle configuration
+  interface/                  SwiftUI HUD, controller/keyboard input and input rules
+  world/                      RealityKit world, movement, asset loading and scene presentation
+  content/
+    PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
+    character/                Current animated stand-in, editable sources and provenance
+      source/                 Editable USD layers; excluded from the app bundle
+      Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
+tests/                        Asset import/rejection, movement and input-rule tests
+docs/                         Architecture, decisions, prototype plan and validation evidence
+  story/                      Story bible and Chapter One script
+scripts/                      Standard checks and the current character asset generator
+.github/                      Pull request template
+```
+
+Keep gameplay-independent presentation in `SceneStyle` and `SceneDressing`; the route and collision anchors remain in `PrototypeLayout`. Mission rules and persistence are planned, so their folders do not exist yet. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+
+For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 
 ## First prototype
 

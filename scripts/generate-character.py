@@ -13,7 +13,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSET = ROOT / "Lauder/Content/Character"
+ASSET = ROOT / "sources/content/character"
 SOURCE = ASSET / "source"
 
 # Joint positions in the bind pose, in metres. Parents precede children.

@@ -40,7 +40,7 @@ def run(command, log):
 def check_assets():
     problems = []
     for name in ("Idle", "Walk"):
-        relative = Path("Lauder/Content/Character") / f"{name}.usdz"
+        relative = Path("sources/content/character") / f"{name}.usdz"
         path = ROOT / relative
         if not path.is_file():
             problems.append(f"{relative} (missing)")
@@ -96,7 +96,7 @@ def main():
     try:
         print("Checking Swift formatting.", flush=True)
         run(
-            ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "Lauder", "LauderTests"],
+            ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "sources", "tests"],
             output / "format.log",
         )
         destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()

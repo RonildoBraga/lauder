@@ -1,12 +1,14 @@
 # Stage 1 — device and asset workflow
 
+**Current status:** Stage 1 is complete and merged in [PR #8](https://github.com/RonildoBraga/lauder/pull/8). The session below records the original diagnostic preview and its handoff; subsequent movement and controller work is recorded in [Stage 2](stage-2.md).
+
 ## Exit criterion
 
 Run a small scene and one representative rigged character with idle and walk animation on the baseline iPhone. Verify the import, composition and app workflow before producing further content. See the [prototype plan](prototype-plan.md#1-establish-the-device-and-asset-path) and [three-session stop criterion](decisions/0001-engine.md#stage-1-stop-criterion).
 
 ## Session 1 — 16 November 2026
 
-**Status:** The device/rig/idle-walk criterion and latest diagnostic-panel layout have been confirmed on the baseline iPhone. PR #8 remains unmerged.
+**Status at this session's handoff:** The device/rig/idle-walk criterion and latest diagnostic-panel layout had been confirmed on the baseline iPhone. PR #8 was awaiting merge at that point.
 
 The maintainer [confirmed the code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023): Swift scene construction and direct USDZ loading. The three-session stop criterion is unchanged.
 
@@ -29,7 +31,7 @@ Personal account information, signing identifiers and device identifiers are int
 - Preparation PR #7 was merged after Claude confirmed that its findings were addressed. The maintainer explicitly authorised Stage 1.
 - Installed stable Xcode 27.2 after the maintainer signed in to Apple Developer. It was selected for these commands through `DEVELOPER_DIR`; the existing global Xcode selection was preserved.
 - Created one iPhone app target, one hosted Swift Testing target, a fixed virtual camera and diagnostic Idle/Walk buttons. No movement, mission, inventory or persistence implementation is included.
-- Created an original 18-joint skinned stand-in, separate idle/walk USDZ exports, editable USDA layers and a standard-library Python generator. [Provenance and regeneration](../Lauder/Content/Character/README.md)
+- Created an original 18-joint skinned stand-in, separate idle/walk USDZ exports, editable USDA layers and a standard-library Python generator. [Provenance and regeneration](../sources/content/character/README.md)
 - `./scripts/check` passed with Xcode 27.2 on an iPhone 17 simulator running iOS 27.0: formatting, build and the one hosted Swift Testing import test. Result bundle and detailed logs are retained locally outside Git.
 - Built a signed iPhone app with Xcode 27.2, installed and launched it on the baseline phone. A device screenshot showed the character, floor, landmark and loaded 18-joint rig. The maintainer then confirmed that both Walk and Idle visibly work when selected.
 - Moved the diagnostic panel to the upper-left after that observation so it does not cover the character's legs. The updated build and simulator import test pass, and the update is installed on the phone. Its automatic relaunch was initially blocked when the phone locked. The maintainer subsequently reopened the preview and confirmed that the panel is readable, both animations work and the character's legs are unobstructed.

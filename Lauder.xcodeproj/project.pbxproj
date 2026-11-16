@@ -24,25 +24,25 @@
 		A60000000000000000000001 /* Exceptions for Lauder */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				App/Info.plist,
-				Content/Character/README.md,
-				Content/Character/source,
+				app/Info.plist,
+				content/character/README.md,
+				content/character/source,
 			);
 			target = A70000000000000000000001 /* Lauder */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A50000000000000000000002 /* Lauder */ = {
+		A50000000000000000000002 /* sources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (A60000000000000000000001 /* Exceptions for Lauder */);
-			explicitFolders = (Content/Character/source);
-			path = Lauder;
+			explicitFolders = (content/character/source);
+			path = sources;
 			sourceTree = "<group>";
 		};
-		A50000000000000000000006 /* LauderTests */ = {
+		A50000000000000000000006 /* tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = LauderTests;
+			path = tests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -55,7 +55,7 @@
 /* Begin PBXGroup section */
 		A50000000000000000000001 = {
 			isa = PBXGroup;
-			children = (A50000000000000000000002 /* Lauder */, A50000000000000000000006 /* LauderTests */, A50000000000000000000007 /* Products */);
+			children = (A50000000000000000000002 /* sources */, A50000000000000000000006 /* tests */, A50000000000000000000007 /* Products */);
 			sourceTree = "<group>";
 		};
 		A50000000000000000000007 /* Products */ = {isa = PBXGroup; children = (A20000000000000000000006 /* Lauder.app */, A20000000000000000000007 /* LauderTests.xctest */); name = Products; sourceTree = "<group>"; };
@@ -68,7 +68,7 @@
 			buildPhases = (A90000000000000000000001 /* Sources */, A40000000000000000000001 /* Frameworks */, AA0000000000000000000001 /* Resources */);
 			buildRules = ();
 			dependencies = ();
-			fileSystemSynchronizedGroups = (A50000000000000000000002 /* Lauder */);
+			fileSystemSynchronizedGroups = (A50000000000000000000002 /* sources */);
 			name = Lauder;
 			productName = Lauder;
 			productReference = A20000000000000000000006 /* Lauder.app */;
@@ -80,7 +80,7 @@
 			buildPhases = (A90000000000000000000002 /* Sources */, A40000000000000000000002 /* Frameworks */, AA0000000000000000000002 /* Resources */);
 			buildRules = ();
 			dependencies = (AC0000000000000000000001);
-			fileSystemSynchronizedGroups = (A50000000000000000000006 /* LauderTests */);
+			fileSystemSynchronizedGroups = (A50000000000000000000006 /* tests */);
 			name = LauderTests;
 			productName = LauderTests;
 			productReference = A20000000000000000000007 /* LauderTests.xctest */;
@@ -173,7 +173,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Lauder/App/Info.plist;
+				INFOPLIST_FILE = sources/app/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Lauder;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -197,7 +197,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Lauder/App/Info.plist;
+				INFOPLIST_FILE = sources/app/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Lauder;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

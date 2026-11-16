@@ -5,13 +5,19 @@ People and AI-assisted contributors are welcome. Stage 1 is merged; the project 
 ## Before working
 
 Read the [README](README.md) and the documents relevant to the change:
-- [Story bible](story/story-bible.md) and [Chapter One](story/chapter-01.md) for narrative work.
+- [Story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md) for narrative work.
 - [Architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md) for technical work.
 - [AGENTS.md](AGENTS.md) when using a coding agent.
 
 Distinguish agreed foundations from working proposals. For changes to the story foundations, engine, architecture or prototype scope, explain the proposal in an issue before investing in a large rewrite, unless an existing issue or maintainer assignment already describes that work.
 
 An explicit maintainer assignment or instruction authorises that task. Avoid asking again for permission already supplied by that assignment. Implementation should begin from a task that explicitly starts the prototype, rather than from the existence of its plan.
+
+## Naming conventions
+
+Use lowercase names for manually maintained folders, with hyphens between words when needed. Swift source filenames use PascalCase, such as `GameWorld.swift`. Other documentation and script filenames use lowercase kebab-case, such as `visual-direction.md` and `generate-character.py`.
+
+Preserve conventional names: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `LICENSE`, `Info.plist` and `Lauder.xcodeproj`. Leave Xcode/tool-owned internal folder names unchanged. Targets, modules and products remain `Lauder` and `LauderTests`. Asset resource names and USD prim paths retain their intentional case; `/Character/Rig` is an asset identifier, not a repository folder.
 
 ## Pull requests
 

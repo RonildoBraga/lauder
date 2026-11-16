@@ -4,7 +4,7 @@
 
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the documents relevant to the assigned task. The source of shared project decisions is this repository, not private assistant memory.
 
-- Narrative: [story bible](story/story-bible.md) and [Chapter One](story/chapter-01.md).
+- Narrative: [story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md).
 - Technical work: [architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md).
 
 Do not duplicate those documents here or silently turn a working proposal into an agreed fact.
