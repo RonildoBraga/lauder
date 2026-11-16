@@ -9,7 +9,7 @@ Record attempts and actual results in the [Stage 1 session log](stage-1.md).
 
 **Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
 
-The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907080643) uses Swift scene construction and direct USDZ loading. Reality Composer Pro is optional and deferred; its export experiment is outside the first-playable gate.
+The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) uses Swift scene construction and direct USDZ loading.
 
 ## Purpose and milestones
 

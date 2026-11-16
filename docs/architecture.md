@@ -6,7 +6,7 @@
 
 ## Decision and platform
 
-Use **Swift + RealityKit** for gameplay and the 3D world, and **SwiftUI** for the interface. Build the first playable's scenes in Swift and load USDZ assets directly. Reality Composer Pro is optional and deferred under the [approved code-first decision](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907080643).
+Use **Swift + RealityKit** for gameplay and the 3D world, and **SwiftUI** for the interface. Build scenes in Swift and load USDZ assets directly, following the [maintainer's clarified code-first decision](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023).
 
 The accepted rationale, alternatives, costs and three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md).
 
@@ -29,7 +29,7 @@ Start with iPhone and landscape orientation. The initial performance baseline is
 | Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
 | Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
 
-These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it. The first playable uses app-bundled USDZ resources and does not require an editor project or internal content package. If a later authoring tool needs a content container, that is not a reason to split gameplay into internal frameworks.
+These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it. Use app-bundled USDZ resources within the single app target.
 
 ## Scene and asset authoring
 
@@ -38,8 +38,6 @@ Compose the graybox from RealityKit entities in Swift: generated meshes, simple 
 Load character and prop USDZ files directly from the app bundle. Preserve editable inputs and deliberate exports with their provenance. The current [stand-in generator](../Lauder/Content/Character/README.md) emits a real rig and idle/walk clips without a GUI; it is a prototype asset tool, not a system for producing finished character art. Artist-made assets and specialist tools remain options when a concrete visual requirement needs them.
 
 Inspect the rendered scene in simulator screenshots and on the phone while iterating placements. Source review cannot prove route readability, collision, camera framing or touch comfort. Keep the prototype plan's physical-device checks and measured frame-rate gate.
-
-Reality Composer Pro can be reconsidered for a human artist, material authoring or other demonstrated content needs. Its installation, project format and animation export workflow are outside the first playable's prerequisites and exit criteria. The earlier experiment is preserved locally as recorded in the [Stage 1 evidence](stage-1.md).
 
 ## Swift conventions
 

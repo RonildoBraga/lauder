@@ -8,7 +8,7 @@ Miki is travelling with her father to reunite with her daughter, Nina. Explorati
 
 **Stage 1 is in progress: an iPhone asset preview, with an Xcode project and import test.**
 
-The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. The first playable builds scenes in Swift and loads USDZ assets directly; Reality Composer Pro is optional. The current preview checks a rigged stand-in and its idle/walk clips. The salvage-and-repair gameplay loop has not been implemented.
+The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. The current preview checks a rigged stand-in and its idle/walk clips. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 

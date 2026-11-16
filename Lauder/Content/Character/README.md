@@ -53,12 +53,6 @@ Initial checks passed for both sources and exports. An independent check of the 
 
 ## Approved code-first path
 
-The preview bundles the validated USDZ files directly. Its gray floor, landmark and camera are composed in Swift. All editable inputs needed to reproduce those runtime assets are in this directory and the generator; no Composer project is required to build this preview.
+The preview bundles the validated USDZ files directly. Its gray floor, landmark and camera are composed in Swift. All editable inputs needed to reproduce those runtime assets are in this directory and the generator.
 
-This follows the [approved code-first direction](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907080643) and [engine decision](../../../docs/decisions/0001-engine.md). Reality Composer Pro is optional and deferred, so its authoring workflow is not a build dependency or Stage 1 exit requirement.
-
-### Historical Composer investigation
-
-Reality Composer Pro 3.1 successfully imported both USDZ files, and the character was placed in an editor scene. A test `.reality` export preserved the 18-joint rig, skin and materials but exposed no playable animations in a RealityKit probe. That specific model export is not used by the app; the result does not establish that Composer cannot export animations. A complete Composer animation-library workflow is deferred and would need verification if adopted later.
-
-The exploratory `.realitycomposerpro` package and static export are retained locally under the ignored `.local/authoring/Content/` directory. Its generated Apple factory `core.lib` is not published or relicensed as original MIT material. This is a local investigation, not a portable Composer workflow claim.
+This follows the [approved code-first direction](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) and [engine decision](../../../docs/decisions/0001-engine.md).

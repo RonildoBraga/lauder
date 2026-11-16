@@ -79,8 +79,6 @@ Submit original material or material you are entitled to contribute. For third-p
 
 Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. Keep generated build products and caches out of source control.
 
-The approved current path generates editable USD sources and USDZ delivery assets, loads the USDZ files directly, and composes scenes in Swift. Reality Composer Pro is optional and deferred; it is not a build or Stage 1 requirement. See the [engine decision](docs/decisions/0001-engine.md).
-
-If a future contribution adds a visual-editor project, inspect its actual package contents, relative asset paths and provenance before committing it or extending LFS rules. Keep text source files reviewable and apply LFS to the applicable binaries. Do not publish generated Apple factory libraries as repository assets.
+The supported path generates editable USD sources and USDZ delivery assets, loads the USDZ files directly, and composes scenes in Swift. See the [engine decision](docs/decisions/0001-engine.md).
 
 Keep signing credentials, API keys, personal device identifiers, local account information, generated builds and caches out of the repository.
