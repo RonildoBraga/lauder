@@ -6,7 +6,7 @@ Miki is travelling with her father to reunite with her daughter, Nina. Explorati
 
 ## Project status
 
-**Stage 1 is merged. Stage 2 is in progress: a walkable graybox, collision, camera follow and controls.**
+**Stage 1 is merged. Stage 2 is in progress, with a [visual polish pass](docs/visual-direction.md) on the current walkable route before Stage 3.**
 
 The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 

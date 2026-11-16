@@ -10,7 +10,7 @@ struct GameView: View {
 
   var body: some View {
     ZStack(alignment: .top) {
-      Color.black.ignoresSafeArea()
+      Color(red: 0.055, green: 0.09, blue: 0.09).ignoresSafeArea()
       RealityView { [world] content in
         content.camera = .virtual
         content.add(world.root)
@@ -28,28 +28,33 @@ struct GameView: View {
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 5) {
           Text("Relay district").font(.headline)
-          Text("Explore the depot and return to the shelter.")
+          Text("Explore the depot, then return.")
             .font(.subheadline)
           Text(world.observation).font(.caption)
           Label(
             world.nearbyName.map { "Look at \($0)" } ?? "Look around",
             systemImage: world.controls.actionSymbol ?? "a.circle"
           )
-          .font(.caption).foregroundStyle(.secondary)
-          Text(world.controls.sourceName).font(.caption2).foregroundStyle(.secondary)
+          .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+          Text(world.controls.sourceName).font(.caption2)
+            .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
           if case .loading = world.status {
             ProgressView("Loading…")
           } else if case .failed(let message) = world.status {
             Text(message).font(.caption).foregroundStyle(.red)
           }
         }
-        .frame(maxWidth: 330, alignment: .leading)
+        .frame(maxWidth: 290, alignment: .leading)
         .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
+        .background(
+          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 12))
         Spacer()
         Text("\(world.controls.pauseButtonName) · Pause").font(.caption)
           .padding(12)
-          .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+          .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
+          .background(
+            Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 12))
       }
       .padding()
 
@@ -59,7 +64,10 @@ struct GameView: View {
           Text(world.controls.sourceName).font(.title2.bold())
         }
         .padding(28)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
+        .background(
+          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 18)
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if world.status == .ready && (world.isPaused || world.controls.needsNeutralInput) {
         Color.black.opacity(0.45).ignoresSafeArea()
@@ -72,7 +80,10 @@ struct GameView: View {
           }
         }
         .padding(28)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
+        .background(
+          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 18)
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
