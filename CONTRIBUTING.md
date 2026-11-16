@@ -48,7 +48,9 @@ The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDE
 
 Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
 
-Use the baseline iPhone 13 Pro Max for playable-build validation with its paired PS5 DualSense controller. The current prototype has no virtual controls or clickable screen actions. Verify movement, collision, camera, Options Pause/Resume, release/interruptions and controller disconnect/reconnect on the phone. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it.
+Use Simulator for everyday scene, gameplay and interface iteration. PS5 DualSense and Xbox controllers share one GameController extended-gamepad input path: left stick moves, Cross/A acts and Options/Menu pauses/resumes. There are no virtual touch controls or clickable screen actions. Simulator may expose a generic MFi profile, so controller detection there does not verify brand identity, physical button mapping or the phone's Bluetooth behavior.
+
+At milestones, before merging playable features, run the affected controls, lifecycle and performance checks on the baseline iPhone 13 Pro Max with the supported controllers. Verify movement, collision, camera, action while moving, Pause/Resume, release/interruptions and disconnect/reconnect. Measure phone frame pacing for performance claims; simulator frame rate, battery and thermal behavior are not phone evidence. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it. Record actual outcomes and remaining gaps in the [Stage 2 evidence](docs/stage-2.md).
 
 ## Git LFS and cloning
 

@@ -21,16 +21,14 @@ final class GameControls {
 
   private(set) var status = Status.inactive
   private(set) var actionSymbol: String?
-
-  var sourceName: String {
-    status == .ready ? "PS5 controller" : "Connect your PS5 controller"
-  }
+  private(set) var sourceName = "Connect a PS5 or Xbox controller"
+  private(set) var pauseButtonName = "Menu"
 
   @ObservationIgnored private var isActive = false
   @ObservationIgnored private var isPaused = false
   @ObservationIgnored private var needsNeutralInput = true
   @ObservationIgnored private var controller: GCController?
-  @ObservationIgnored private var gamepad: GCDualSenseGamepad?
+  @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
 
   func setActive(_ active: Bool) {
@@ -89,11 +87,12 @@ final class GameControls {
   }
 
   private func selectController(excluding disconnected: GCController? = nil) {
+    // Simulator may expose a generic profile instead of the vendor-specific subclass.
     let candidates = GCController.controllers().filter {
-      $0 !== disconnected && $0.extendedGamepad is GCDualSenseGamepad
+      $0 !== disconnected && $0.extendedGamepad != nil
     }
     guard let selected = candidates.first(where: { $0 === controller }) ?? candidates.first,
-      let profile = selected.extendedGamepad as? GCDualSenseGamepad
+      let profile = selected.extendedGamepad
     else {
       detachController()
       status = .waitingForController
@@ -104,6 +103,13 @@ final class GameControls {
     controller = selected
     gamepad = profile
     actionSymbol = profile.buttonA.sfSymbolsName
+    if profile is GCDualSenseGamepad {
+      sourceName = "PS5 controller"
+      pauseButtonName = "Options"
+    } else {
+      sourceName = profile is GCXboxGamepad ? "Xbox controller" : "Game controller"
+      pauseButtonName = "Menu"
+    }
     status = .ready
   }
 
@@ -111,6 +117,8 @@ final class GameControls {
     controller = nil
     gamepad = nil
     actionSymbol = nil
+    sourceName = "Connect a PS5 or Xbox controller"
+    pauseButtonName = "Menu"
     needsNeutralInput = true
   }
 

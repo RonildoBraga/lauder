@@ -8,7 +8,7 @@ Miki is travelling with her father to reunite with her daughter, Nina. Explorati
 
 **Stage 1 is merged. Stage 2 is in progress: a walkable graybox, collision, camera follow and controls.**
 
-The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. The prototype uses a paired PS5 DualSense controller exclusively: left stick to move, Cross to act, Options to pause/resume. The salvage-and-repair gameplay loop has not been implemented.
+The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act, Options/Menu to pause/resume, with no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 
@@ -17,7 +17,7 @@ The technical direction is Swift, RealityKit and SwiftUI, targeting the current 
 - [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
 - [First playable prototype](docs/prototype-plan.md): a small Relay House salvage-and-repair loop with staged acceptance criteria.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
-- [Stage 2 evidence](docs/stage-2.md): controller decisions, movement and physical-device checks.
+- [Stage 2 evidence](docs/stage-2.md): controller decisions, simulator iteration and physical-device checks.
 
 Names, ages and details marked as proposals remain open for discussion. Miki is widowed; Nina is her daughter; Lara is a trusted friend; Tomas is the working name for Miki's father.
 
@@ -31,7 +31,7 @@ People and AI-assisted contributors are welcome. Useful contributions now includ
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md). Use issues for proposals and questions; maintainers review changes before merging. The project plans alone are not an assignment to start implementation.
 
-With Xcode 27.2 selected and LFS assets downloaded, run `./scripts/check` for formatting, build and unit tests. Open `Lauder.xcodeproj` and the shared `Lauder` scheme for the route prototype. Use the iPhone 13 Pro Max as the primary playable-build test device; simulator checks supplement it. The app keeps the screen awake while active, including when paused. See [validation and local signing](CONTRIBUTING.md#validation) before testing on your phone.
+With Xcode 27.2 selected and LFS assets downloaded, run `./scripts/check` for formatting, build and unit tests. Open `Lauder.xcodeproj` and the shared `Lauder` scheme for the route prototype. Use Simulator for everyday iteration, with iPhone 13 Pro Max checks at milestones before merging playable features. The app keeps the screen awake while active, including when paused. See [validation and local signing](CONTRIBUTING.md#validation) for the testing workflow.
 
 ## Licence
 

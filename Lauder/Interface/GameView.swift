@@ -33,7 +33,7 @@ struct GameView: View {
           Text(world.observation).font(.caption)
           Label(
             world.nearbyName.map { "Look at \($0)" } ?? "Look around",
-            systemImage: world.controls.actionSymbol ?? "xmark.circle"
+            systemImage: world.controls.actionSymbol ?? "a.circle"
           )
           .font(.caption).foregroundStyle(.secondary)
           Text(world.controls.sourceName).font(.caption2).foregroundStyle(.secondary)
@@ -47,7 +47,7 @@ struct GameView: View {
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         Spacer()
-        Text("Options · Pause").font(.caption)
+        Text("\(world.controls.pauseButtonName) · Pause").font(.caption)
           .padding(12)
           .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
       }
@@ -56,7 +56,7 @@ struct GameView: View {
       if world.status == .ready && world.controls.status != .ready {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 12) {
-          Text("Connect your PS5 controller").font(.title2.bold())
+          Text(world.controls.sourceName).font(.title2.bold())
           Text("Centre the stick and release the buttons to continue.")
         }
         .padding(28)
@@ -66,7 +66,7 @@ struct GameView: View {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 16) {
           Text("Paused").font(.title2.bold())
-          Text("Press Options to resume.")
+          Text("Press \(world.controls.pauseButtonName) to resume.")
         }
         .padding(28)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
