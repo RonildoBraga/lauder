@@ -8,7 +8,7 @@ Miki is travelling with her father to reunite with her daughter, Nina. Explorati
 
 **Stage 1 is merged. Stage 2 is in progress: a walkable graybox, collision, camera follow and controls.**
 
-The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. A connected PlayStation controller is the default input; native touch controls are available without a physical gamepad. The salvage-and-repair gameplay loop has not been implemented.
+The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. The prototype uses a paired PS5 DualSense controller exclusively: left stick to move, Cross to act, Options to pause/resume. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 

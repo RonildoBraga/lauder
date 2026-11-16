@@ -33,7 +33,7 @@ struct GameView: View {
           Text(world.observation).font(.caption)
           Label(
             world.nearbyName.map { "Look at \($0)" } ?? "Look around",
-            systemImage: world.controls.actionSymbol ?? "hand.tap"
+            systemImage: world.controls.actionSymbol ?? "xmark.circle"
           )
           .font(.caption).foregroundStyle(.secondary)
           Text(world.controls.sourceName).font(.caption2).foregroundStyle(.secondary)
@@ -42,26 +42,31 @@ struct GameView: View {
           } else if case .failed(let message) = world.status {
             Text(message).font(.caption).foregroundStyle(.red)
           }
-          if case .failed(let message) = world.controls.status {
-            Text(message).font(.caption).foregroundStyle(.red)
-            Button("Retry controls") { world.controls.retry() }
-          }
         }
         .frame(maxWidth: 330, alignment: .leading)
         .padding(12)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         Spacer()
-        Button("Pause", systemImage: "pause.fill") { world.setPaused(true) }
-          .buttonStyle(.borderedProminent)
+        Text("Options · Pause").font(.caption)
+          .padding(12)
+          .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
       }
       .padding()
 
-      if world.isPaused {
+      if world.status == .ready && world.controls.status != .ready {
+        Color.black.opacity(0.45).ignoresSafeArea()
+        VStack(spacing: 12) {
+          Text("Connect your PS5 controller").font(.title2.bold())
+          Text("Centre the stick and release the buttons to continue.")
+        }
+        .padding(28)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else if world.isPaused {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 16) {
           Text("Paused").font(.title2.bold())
-          Button("Resume", systemImage: "play.fill") { world.setPaused(false) }
-            .buttonStyle(.borderedProminent)
+          Text("Press Options to resume.")
         }
         .padding(28)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))

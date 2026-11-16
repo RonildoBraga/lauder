@@ -47,7 +47,7 @@ The blocked entrance uses ordinary level geometry and collision. It creates a re
 | Remote cast | Lara and Nina represented through text dialogue |
 | Salvage | One regulator, one pickup |
 | Repair | One transmitter, with visibly broken and working states |
-| Controls | PlayStation left stick or touch thumbstick; one contextual action button |
+| Controls | PS5 DualSense left stick, Cross action, Options Pause/Resume; no touch controls |
 | Camera | Fixed elevated perspective with follow; landscape |
 | Interface | Objective, carried-part indicator, dialogue, Pause/Resume and Restart |
 | Progress | In-memory run state; a fresh launch starts a new run |
@@ -75,16 +75,16 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 
 ### 2. Make movement comfortable
 
-- Add screen-relative touch movement, character collision and camera follow.
-- Prefer the maintainer's paired PlayStation controller; evaluate native touch controls when no physical controller is connected. Verify disconnect/reconnect and controller Pause/Resume.
+- Add screen-relative controller movement, character collision and camera follow.
+- Use the maintainer's paired PS5 DualSense exclusively, following the Stage 2 input decision. Verify disconnect/reconnect and controller Pause/Resume.
 - Describe the shelter, depot, landmarks and service passage in one small typed Swift layout definition consumed by GameWorld. Keep explicit placements and the existing stable interaction IDs.
 - Inspect simulator/device screenshots and play the route while refining geometry and framing.
 - Add a nearby stationary Tomas placeholder.
-- Verify simultaneous movement and action-button input, safe areas and visibility.
+- Verify simultaneous stick/action input, safe areas and visibility, with no clickable screen controls.
 - On inactivity, clear held input, pause the live world and reset frame timing on resume.
 - Keep the foreground game awake, including Pause; restore normal idle locking when leaving it. Use the baseline iPhone as the primary playable-build test device.
 
-**Exit:** Miki can walk the route predictably without getting stuck or disappearing behind geometry. Touch release and interruptions cannot leave her moving.
+**Exit:** Miki can walk the route predictably without getting stuck or disappearing behind geometry. Controller release and interruptions cannot leave her moving.
 
 ### 3. Close and evaluate the loop
 
@@ -108,7 +108,7 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 - Repair before collection explains itself and changes nothing; the regulator cannot be collected twice in a run.
 - The repaired radio enables the call. Rereading the meeting plan leaves progress unchanged.
 - Restart begins a clean in-memory run with no duplicated scene content or callbacks.
-- Backgrounding, lock/unlock and interrupted touch clear held input and pause/resume the live scene coherently.
+- Backgrounding, lock/unlock and controller interruptions clear held input and pause/resume the live scene coherently.
 - Smooth **60 fps is measured on the iPhone 13 Pro Max** with representative placeholder animation and scene load. If missed, record the measurement and adjust scope or budget before declaring the loop proven.
 
 ## Focused first-playable verification

@@ -38,7 +38,7 @@ These are scope and workflow judgments, not comparative performance benchmarks. 
 - Code-based placement still needs inspection in the running app for readable routes, framing, occlusion and comfortable controls. Source review and asset-import tests cannot establish those qualities.
 - Individual RealityKit runtime APIs must fit the agreed deployment target.
 - The USD asset workflow must preserve the representative character's rig, idle/walk animation, materials and scale. Verify that pipeline before producing content. [Apple asset guidance](https://developer.apple.com/documentation/usd/creating-usd-files-for-apple-devices)
-- Framework choice does not prove touch usability, sustained performance or reliable saves. Those remain physical-device exit criteria in the [prototype plan](../prototype-plan.md).
+- Framework choice does not prove control usability, sustained performance or reliable saves. Those remain physical-device exit criteria in the [prototype plan](../prototype-plan.md).
 
 ## Stage 1 stop criterion
 

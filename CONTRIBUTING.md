@@ -48,7 +48,7 @@ The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDE
 
 Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
 
-Use the baseline iPhone 13 Pro Max for playable-build validation. A connected PlayStation controller is the preferred input; check touch controls without a physical gamepad as well. Verify movement, collision, camera, Pause/Resume, release/interruptions and controller switching on the phone. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it.
+Use the baseline iPhone 13 Pro Max for playable-build validation with its paired PS5 DualSense controller. The current prototype has no virtual controls or clickable screen actions. Verify movement, collision, camera, Options Pause/Resume, release/interruptions and controller disconnect/reconnect on the phone. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it.
 
 ## Git LFS and cloning
 

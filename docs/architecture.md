@@ -25,7 +25,7 @@ Start with iPhone and landscape orientation. The initial performance baseline is
 | App composition | Creates the session, world and save store; owns launch, restart and teardown | Wiring and lifecycle |
 | Gameplay | Mission facts, progress transitions and simple dialogue definitions | Ordinary Swift values and rules; no RealityKit entities or SwiftUI views |
 | World | Loaded scene, Miki, movement, camera, collision and nearby interactions | RealityKit owns live spatial state |
-| Interface | Touch controls, objective, contextual button, dialogue and pause screen | Presents state and requests actions |
+| Interface | PS5 input adapter, objective, action prompt, dialogue and pause presentation | Presents state and supplies controller input |
 | Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
 | Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
 
@@ -37,7 +37,7 @@ Compose the graybox from RealityKit entities in Swift: generated meshes, simple 
 
 Load character and prop USDZ files directly from the app bundle. Preserve editable inputs and deliberate exports with their provenance. The current [stand-in generator](../Lauder/Content/Character/README.md) emits a real rig and idle/walk clips without a GUI; it is a prototype asset tool, not a system for producing finished character art. Artist-made assets and specialist tools remain options when a concrete visual requirement needs them.
 
-Inspect the rendered scene in simulator screenshots and on the phone while iterating placements. Source review cannot prove route readability, collision, camera framing or touch comfort. Keep the prototype plan's physical-device checks and measured frame-rate gate.
+Inspect the rendered scene on the phone and in supplementary simulator screenshots while iterating placements. Source review cannot prove route readability, collision, camera framing or control comfort. Keep the prototype plan's physical-device checks and measured frame-rate gate.
 
 ## Swift conventions
 
@@ -59,8 +59,8 @@ Mission state does not contain entities. The world does not keep a second invent
 
 ```mermaid
 flowchart LR
-    UI["SwiftUI controls and HUD"] -->|movement intent| W["GameWorld / RealityKit"]
-    UI -->|dialogue and menu commands| S["GameSession / rules"]
+    I["PS5 controller / input adapter"] -->|input snapshot| W["GameWorld / RealityKit"]
+    UI["SwiftUI HUD"]
     W -->|interaction request| S
     S -->|accepted progress| W
     S -->|display state| UI
@@ -84,8 +84,8 @@ Interactions have stable IDs such as `relay.tomas`, `depot.regulator` and `relay
 ### One interaction
 
 1. GameWorld identifies the accessible object within interaction range.
-2. The interface shows the available action: **Talk**, **Take**, **Repair** or **Call**.
-3. Pressing the contextual button rechecks current distance and accessibility in GameWorld before submitting a named gameplay command; a stale prompt cannot trigger a remote interaction.
+2. The interface shows the available action prompt: **Talk**, **Take**, **Repair** or **Call**.
+3. Pressing Cross rechecks current distance and accessibility in GameWorld before submitting a named gameplay command; a stale prompt cannot trigger a remote interaction.
 4. GameSession validates its phase and accepts or rejects it.
 5. The accepted state drives the objective, item visibility, radio appearance and checkpoint save.
 
@@ -105,7 +105,7 @@ GameWorld sets up and tears down its callbacks explicitly. Cancel unfinished loa
 
 The camera has a fixed elevated perspective, follows Miki and cannot rotate in the prototype. Use level layout and low obstacles to maintain visibility before adding an occlusion subsystem.
 
-Stage 2 prefers the maintainer's connected PlayStation controller, with native touch controls available without a physical gamepad. Controller source selection, glyphs, pause input and neutral-input gating are owned by the interface input adapter; GameWorld consumes snapshots. The [Stage 2 record](stage-2.md) distinguishes SDK evidence from physical checks. The foreground game keeps the screen awake, including Pause, and restores the idle timer when inactive.
+Stage 2 uses the maintainer's paired PS5 DualSense controller exclusively. Connection selection, glyphs, pause input and neutral-input gating are owned by the interface input adapter; GameWorld consumes snapshots. The interface has no clickable screen actions. The [Stage 2 record](stage-2.md) distinguishes SDK evidence from physical checks. The foreground game keeps the screen awake, including Pause, and restores the idle timer when inactive.
 
 Scene composition and the named animation library are configured in Swift for the first playable. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
 
@@ -122,7 +122,7 @@ The mission phase selects the spawn. No arbitrary pose, physics state or animati
 
 Save after each meaningful phase change. A single ordered writer prevents an older snapshot overwriting a newer one. Restarting a run must invalidate old pending work. Report save failures rather than claiming progress is secured.
 
-Normal background/foreground pauses and resumes the live scene in place. Clear held touch input, stop simulation/animation progression while inactive, pause interaction, and reset frame timing on resume. After termination, Continue reconstructs the saved checkpoint. Do not depend on an application shutdown callback to save.
+Normal background/foreground pauses and resumes the live scene in place. Clear held input, stop simulation/animation progression while inactive, pause interaction, and reset frame timing on resume. After termination, Continue reconstructs the saved checkpoint. Do not depend on an application shutdown callback to save.
 
 If termination interrupts a conversation, replay that conversation from its checkpoint. Normal pause/resume keeps the current line in the live session; no dialogue cursor is added to the save format.
 

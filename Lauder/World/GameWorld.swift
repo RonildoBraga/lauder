@@ -31,6 +31,7 @@ final class GameWorld {
   @ObservationIgnored private var actionWasPressed = false
   @ObservationIgnored private var pauseWasPressed = false
   @ObservationIgnored private var isWalking = false
+  @ObservationIgnored private var wasRunning = false
   @ObservationIgnored private var nearby: PrototypeLayout.PointOfInterest?
 
   init() {
@@ -123,6 +124,7 @@ final class GameWorld {
       setPaused(!isPaused)
     }
     pauseWasPressed = input.pausePressed
+    synchronizePlayback()
     guard isRunning, let character else { return }
     guard !skipNextStep else {
       skipNextStep = false
@@ -156,6 +158,7 @@ final class GameWorld {
 
   private var isRunning: Bool {
     isPresented && isApplicationActive && !isPaused && status == .ready
+      && controls.status == .ready
   }
 
   private func updateActivity() {
@@ -166,7 +169,16 @@ final class GameWorld {
     if !isPresented || !isApplicationActive {
       pauseWasPressed = false
     }
-    if isRunning {
+    synchronizePlayback()
+  }
+
+  private func synchronizePlayback() {
+    let running = isRunning
+    guard running != wasRunning else { return }
+    wasRunning = running
+    actionWasPressed = false
+    skipNextStep = true
+    if running {
       playback?.resume()
     } else {
       playback?.pause()
