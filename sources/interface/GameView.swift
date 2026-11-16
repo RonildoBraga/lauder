@@ -38,6 +38,12 @@ struct GameView: View {
           .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
           Text(world.controls.sourceName).font(.caption2)
             .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+          if world.status == .ready && world.controls.status == .ready
+            && world.controls.needsNeutralInput && !world.isPaused
+          {
+            Text("Centre the stick and release all buttons and keys to continue.")
+              .font(.caption)
+          }
           if case .loading = world.status {
             ProgressView("Loading…")
           } else if case .failed(let message) = world.status {
@@ -69,10 +75,10 @@ struct GameView: View {
           Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 18)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else if world.status == .ready && (world.isPaused || world.controls.needsNeutralInput) {
+      } else if world.status == .ready && world.isPaused {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 16) {
-          Text(world.isPaused ? "Paused" : "Release controls to continue").font(.title2.bold())
+          Text("Paused").font(.title2.bold())
           if world.controls.needsNeutralInput {
             Text("Centre the stick and release all buttons and keys to continue.")
           } else {

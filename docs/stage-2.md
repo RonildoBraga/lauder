@@ -1,6 +1,6 @@
 # Stage 2 — movement and controls
 
-**Status:** Movement, collision, camera follow and observation prompts are implemented. Earlier PS5-only revisions passed baseline-iPhone playtests. The shared-input build/tests and keyboard play are verified in Simulator; live controller forwarding remains unresolved, and the refreshed phone check is deferred. The maintainer has authorised integrating the prepared work into main for follow-up review. Claude's latest confirmation remains pending in [#12](https://github.com/RonildoBraga/lauder/issues/12).
+**Status:** Movement, collision, camera follow and observation prompts are implemented. Earlier PS5-only revisions passed baseline-iPhone playtests. The shared-input build/tests and keyboard play are verified in Simulator; live controller forwarding remains unresolved, and the refreshed phone check is deferred. The prepared work is merged into main. Claude [confirmed the prior fixes and dispositions](https://github.com/RonildoBraga/lauder/issues/12#issuecomment-6914369450) and closed #12; the subsequent low-severity review is tracked in [#19](https://github.com/RonildoBraga/lauder/issues/19).
 
 The maintainer authorised Stage 2 including [#5](https://github.com/RonildoBraga/lauder/issues/5) and [#10](https://github.com/RonildoBraga/lauder/issues/10), then added Xbox alongside PS5 and adopted Simulator for everyday testing, with the baseline iPhone at key milestones. After confirming that their PS5 did not control the visible Simulator game, they authorised WASD keyboard controls. No touch/clickable actions and an awake foreground screen remain agreed. Claude communication stays on GitHub.
 
@@ -59,7 +59,7 @@ The reusable [character loader](../sources/world/CharacterAsset.swift) is separa
 - **L3, layout values:** Landmark dimensions, Tomas geometry/offsets, service markers and interaction radius now live in PrototypeLayout. Movement and input gating use its single dead-zone constant. All numeric values, placements and camera framing are unchanged.
 - **L4, ownership:** LauderApp owns the stable GameWorld instance and passes it into GameView. No session/restart system is introduced.
 
-The follow-up passed `./scripts/check` on the iPhone 17 / iOS 27.0 Simulator with Xcode 27.2 / SDK 27.2: strict formatting, build, the existing five tests and the new input-rule tests. A live Device Hub check also exercised movement, E observations and Escape Pause/Resume on the updated build, then restored keyboard capture off. These checks do not establish phone performance or controller forwarding. Claude's confirmation of the follow-up commit remains pending.
+The follow-up passed `./scripts/check` on the iPhone 17 / iOS 27.0 Simulator with Xcode 27.2 / SDK 27.2: strict formatting, build, the existing five tests and the new input-rule tests. A live Device Hub check also exercised movement, E observations and Escape Pause/Resume on the updated build, then restored keyboard capture off. These checks do not establish phone performance or controller forwarding. Claude subsequently [confirmed M2/L1/L3/L4 and accepted the M1/L2 dispositions](https://github.com/RonildoBraga/lauder/issues/12#issuecomment-6914369450), closing #12. That confirmation does not establish the deferred phone observations.
 
 [Issue #13](https://github.com/RonildoBraga/lauder/issues/13) retains the later interaction-reachability and command-routing design notes. This response does not start Stage 3.
 
@@ -78,11 +78,28 @@ Validation on 16 November 2026:
 - In the final landscape Simulator build, Codex walked from the shelter through the service opening to the regulator, triggered its observation with E, and checked Escape Pause/Resume. The route, feet, contrasting HUD and utility landmarks remained visible in the inspected views. Keyboard capture was restored off afterward. An earlier check in the same pass also confirmed the blocked front entrance remained impassable.
 - No new phone installation or physical-controller test was performed. Frame pacing, memory, thermals and battery cost on iPhone remain unmeasured; the 60 fps device target is not a result of these checks. The earlier phone-check deferral remains in effect. Walking-cadence calibration is still deferred; no gait improvement is claimed.
 
+## Post-merge review follow-ups
+
+[Claude's review of main at `3583f98`](https://github.com/RonildoBraga/lauder/issues/19) found no defects requiring a revert or urgent fix. The follow-up addresses its first three low-severity items:
+
+- **L1, layout anchors:** Layout boxes have typed IDs while retaining their existing entity names, positions and dimensions. Dressing uses those IDs; a required-box lookup reports a missing or duplicated ID rather than silently skipping it. Layout tests verify that every declared box ID occurs exactly once.
+- **L2, release guidance:** When playing, the neutral-input hint is a small line in the HUD. It no longer dims the scene or opens a full-screen release panel. Pause and input-loss overlays remain; input gating itself is unchanged. The original flashing concern was inferred from source, not observed by Claude.
+- **L3, planters:** All five planters sit on existing wall-cap footprints, with their bases at cap height. They remain noncolliding decorations and no longer occupy the walking surface. Their geometry and the level's collision layout are unchanged; a support-footprint check protects those placements.
+- **L4, per-interaction data:** Moving landmark collision dimensions onto `PointOfInterest` remains deferred to the [Stage 3 design discussion](https://github.com/RonildoBraga/lauder/issues/13), alongside approach areas and command routing. Those are reviewer proposals to settle when Stage 3 is assigned, not implemented features.
+
+The [phone-check tracker](https://github.com/RonildoBraga/lauder/issues/18) and [gait follow-up](https://github.com/RonildoBraga/lauder/issues/14) remain open under the existing deferrals. Claude reproduced Simulator checks and reviewed source; he did not visually playtest the scene. CI remains a reviewer proposal for a separate maintainer decision, and these fixes do not authorise Stage 3 or change the gameplay-script draft.
+
+Validation on 16 November 2026:
+
+- `./scripts/check` passed with Xcode 27.2 / SDK 27.2 on the iPhone 17 / iOS 27.0 Simulator, including formatting, build, existing input tests and the new layout checks.
+- Codex launched the updated build in Device Hub, checked keyboard movement and Escape Pause/Resume, walked through the service passage into the depot and triggered the regulator observation with E. The inspected planters sat on wall caps and the walking surface remained clear. Keyboard capture was restored off afterward. This was a short smoke check, not a timed measurement of release-hint behaviour.
+- The Simulator reported an Apple `PosterBoard` process crash during startup, before Lauder was launched. Lauder subsequently launched and completed the checks above; the report alone does not identify its cause. No phone/controller session or performance measurement was performed.
+
 ## Everyday Simulator and milestone phone checks
 
 Run formatting, build and Swift Testing with `./scripts/check` on Simulator during everyday development. In Device Hub, enable **Capture Keyboard**, click the game preview to focus it, and use WASD, E and a short Escape press; holding Escape releases keyboard capture. Check movement release and Pause/Resume while playing the route. Controller enumeration alone does not prove physical stick/button delivery; use keyboard play for this setup until forwarding is verified.
 
-At playable-feature milestones before merging, repeat the checks below on the baseline iPhone. Check actual device performance and Bluetooth/lifecycle behaviour on the phone; Simulator timing does not establish them. The earlier phone results above apply to the recorded PS5 revisions, not automatically to later input changes.
+At playable-feature milestones before merging, repeat the checks below on the baseline iPhone. [Issue #18](https://github.com/RonildoBraga/lauder/issues/18) consolidates the deferred shared-input, release guidance, visual-pass, gait and Xbox checks for the first-playable phone milestone; it does not request another session now. Check actual device performance and Bluetooth/lifecycle behaviour on the phone; Simulator timing does not establish them. The earlier phone results above apply to the recorded PS5 revisions, not automatically to later input changes.
 
 1. With each supported controller, confirm the source and action glyph; walk the route, enter the service opening and return. Check collision, framing and visible feet/ground contact.
 2. Hold movement while pressing Cross/A. Release the stick; motion must stop. Pause/Resume with Options/Menu; held input must not resume motion. Verify there are no clickable screen actions.

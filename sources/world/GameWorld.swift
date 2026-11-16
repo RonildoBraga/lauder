@@ -40,7 +40,7 @@ final class GameWorld {
     for box in PrototypeLayout.boxes {
       let entity = ModelEntity(
         mesh: .generateBox(size: box.size),
-        materials: [box.name == "ground" ? style.ground : style.material(for: box.surface)]
+        materials: [box.id == .ground ? style.ground : style.material(for: box.surface)]
       )
       entity.name = box.name
       entity.position = box.position

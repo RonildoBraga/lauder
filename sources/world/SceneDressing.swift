@@ -3,6 +3,27 @@ import simd
 
 @MainActor
 enum SceneDressing {
+  static let wallCapHeight: Float = 0.08
+  static let planterSize: SIMD3<Float> = [0.42, 0.16, 0.35]
+  static let planterPlacements: [PlanterPlacement] = [
+    PlanterPlacement(support: .westBoundary, offset: [0, 4.7]),
+    PlanterPlacement(support: .shelterBack, offset: [3.2, 0]),
+    PlanterPlacement(support: .depotBack, offset: [2.6, 0]),
+    PlanterPlacement(support: .depotBack, offset: [-2.6, 0]),
+    PlanterPlacement(support: .southBoundary, offset: [13, 0]),
+  ]
+
+  @MainActor
+  struct PlanterPlacement {
+    let support: PrototypeLayout.BoxID
+    let offset: SIMD2<Float>
+
+    var basePosition: SIMD3<Float> {
+      let wall = PrototypeLayout.box(support)
+      return wall.position + [offset.x, wall.size.y / 2 + wallCapHeight, offset.y]
+    }
+  }
+
   static func add(to root: Entity, style: SceneStyle) {
     let dressing = Entity()
     dressing.name = "scene-dressing"
@@ -41,21 +62,16 @@ enum SceneDressing {
   }
 
   private static func addWallCaps(using geometry: Geometry) {
-    for wall in PrototypeLayout.boxes
-    where wall.name.contains("boundary") || wall.name.hasPrefix("shelter-")
-      || wall.name.hasPrefix("depot-")
-    {
+    for wall in PrototypeLayout.boxes where wall.id.hasWallCap {
       geometry.box(
-        "\(wall.name)-cap", size: [wall.size.x, 0.08, wall.size.z],
-        at: wall.position + [0, wall.size.y / 2 + 0.04, 0],
+        "\(wall.name)-cap", size: [wall.size.x, wallCapHeight, wall.size.z],
+        at: wall.position + [0, wall.size.y / 2 + wallCapHeight / 2, 0],
         material: geometry.style.wallCap)
     }
   }
 
   private static func addShelterDetails(using geometry: Geometry) {
-    guard let wall = PrototypeLayout.boxes.first(where: { $0.name == "shelter-back" }) else {
-      return
-    }
+    let wall = PrototypeLayout.box(.shelterBack)
     let style = geometry.style
     let face = wall.position.z + wall.size.z / 2 + 0.045
     let window: SIMD3<Float> = [wall.position.x - 1.6, 0.58, face]
@@ -101,52 +117,49 @@ enum SceneDressing {
 
   private static func addDepotDetails(using geometry: Geometry) {
     let style = geometry.style
-    if let back = PrototypeLayout.boxes.first(where: { $0.name == "depot-back" }) {
-      let face = back.position.z + back.size.z / 2 + 0.035
-      for x: Float in [-2.25, -0.75, 0.75, 2.25] {
-        geometry.box(
-          "depot-panel", size: [1.32, 0.72, 0.035],
-          at: [back.position.x + x, 0.58, face], material: style.metal)
-      }
-      for x: Float in [-2.95, -1.5, 0, 1.5, 2.95] {
-        geometry.box(
-          "depot-seam", size: [0.045, 0.92, 0.065],
-          at: [back.position.x + x, 0.55, face + 0.025], material: style.rust)
-      }
-    }
-    if let side = PrototypeLayout.boxes.first(where: { $0.name == "depot-east" }) {
-      let face = side.position.x + side.size.x / 2 + 0.035
-      for z: Float in [-1.8, 0, 1.8] {
-        geometry.box(
-          "depot-side-panel", size: [0.035, 0.7, 1.55],
-          at: [face, 0.58, side.position.z + z], material: style.metal)
-      }
-      for z: Float in [-0.9, 0.9] {
-        geometry.box(
-          "depot-side-seam", size: [0.065, 0.92, 0.045],
-          at: [face + 0.025, 0.55, side.position.z + z], material: style.rust)
-      }
-    }
-    if let entrance = PrototypeLayout.boxes.first(where: { $0.name == "blocked-entrance" }) {
-      let face = entrance.position.z + entrance.size.z / 2 + 0.035
-      let panel: SIMD3<Float> = [entrance.position.x, 0.6, face]
+    let back = PrototypeLayout.box(.depotBack)
+    let backFace = back.position.z + back.size.z / 2 + 0.035
+    for x: Float in [-2.25, -0.75, 0.75, 2.25] {
       geometry.box(
-        "damaged-access-panel", size: [1.45, 0.4, 0.07], at: panel, material: style.metal,
-        rotation: simd_quatf(angle: 0.08, axis: [0, 0, 1]))
-      for x: Float in [-0.45, 0, 0.45] {
-        geometry.box(
-          "access-panel-rib", size: [0.05, 0.32, 0.1], at: panel + [x, 0, 0.035],
-          material: style.rust)
-      }
-      geometry.box(
-        "damaged-status-strip", size: [0.22, 0.045, 0.025], at: panel + [-0.25, 0.1, 0.085],
-        material: style.warm)
+        "depot-panel", size: [1.32, 0.72, 0.035],
+        at: [back.position.x + x, 0.58, backFace], material: style.metal)
     }
+    for x: Float in [-2.95, -1.5, 0, 1.5, 2.95] {
+      geometry.box(
+        "depot-seam", size: [0.045, 0.92, 0.065],
+        at: [back.position.x + x, 0.55, backFace + 0.025], material: style.rust)
+    }
+    let side = PrototypeLayout.box(.depotEast)
+    let sideFace = side.position.x + side.size.x / 2 + 0.035
+    for z: Float in [-1.8, 0, 1.8] {
+      geometry.box(
+        "depot-side-panel", size: [0.035, 0.7, 1.55],
+        at: [sideFace, 0.58, side.position.z + z], material: style.metal)
+    }
+    for z: Float in [-0.9, 0.9] {
+      geometry.box(
+        "depot-side-seam", size: [0.065, 0.92, 0.045],
+        at: [sideFace + 0.025, 0.55, side.position.z + z], material: style.rust)
+    }
+    let entrance = PrototypeLayout.box(.blockedEntrance)
+    let entranceFace = entrance.position.z + entrance.size.z / 2 + 0.035
+    let panel: SIMD3<Float> = [entrance.position.x, 0.6, entranceFace]
+    geometry.box(
+      "damaged-access-panel", size: [1.45, 0.4, 0.07], at: panel, material: style.metal,
+      rotation: simd_quatf(angle: 0.08, axis: [0, 0, 1]))
+    for x: Float in [-0.45, 0, 0.45] {
+      geometry.box(
+        "access-panel-rib", size: [0.05, 0.32, 0.1], at: panel + [x, 0, 0.035],
+        material: style.rust)
+    }
+    geometry.box(
+      "damaged-status-strip", size: [0.22, 0.045, 0.025], at: panel + [-0.25, 0.1, 0.085],
+      material: style.warm)
 
     // End-face accents stay on the existing wall pieces, outside the service opening.
-    for name in ["depot-west-back", "depot-west-front"] {
-      guard let wall = PrototypeLayout.boxes.first(where: { $0.name == name }) else { continue }
-      let direction: Float = name == "depot-west-back" ? 1 : -1
+    for id: PrototypeLayout.BoxID in [.depotWestBack, .depotWestFront] {
+      let wall = PrototypeLayout.box(id)
+      let direction: Float = id == .depotWestBack ? 1 : -1
       let end = wall.position.z + direction * (wall.size.z / 2 - 0.05)
       let x = wall.position.x - wall.size.x / 2 - 0.025
       geometry.box(
@@ -160,12 +173,10 @@ enum SceneDressing {
 
   private static func addVegetationAndDebris(using geometry: Geometry) {
     let style = geometry.style
-    let plants: [SIMD3<Float>] = [
-      [-12.8, 0, 4.7], [-5.8, 0, -0.5], [10.5, 0, -6.7], [3.45, 0, -6.7], [13, 0, 8.9],
-    ]
-    for position in plants {
+    for placement in planterPlacements {
+      let position = placement.basePosition
       geometry.box(
-        "planter", size: [0.42, 0.16, 0.35], at: position + [0, 0.08, 0],
+        "planter", size: planterSize, at: position + [0, planterSize.y / 2, 0],
         material: style.rust)
       for index in 0..<3 {
         let lean = Float(index - 1) * 0.38
@@ -191,26 +202,24 @@ enum SceneDressing {
 
   private static func addWreckDetails(using geometry: Geometry) {
     let style = geometry.style
-    if let wreck = PrototypeLayout.boxes.first(where: { $0.name == "street-wreck" }) {
-      let top = wreck.position + [0, wreck.size.y / 2 + 0.04, 0]
+    let wreck = PrototypeLayout.box(.streetWreck)
+    let top = wreck.position + [0, wreck.size.y / 2 + 0.04, 0]
+    geometry.box(
+      "wreck-hood", size: [1.5, 0.08, 0.95], at: top + [-0.35, 0, 0],
+      material: style.metal)
+    geometry.box(
+      "wreck-hatch", size: [0.5, 0.15, 0.9], at: top + [0.85, 0.06, 0],
+      material: style.wallCap, rotation: simd_quatf(angle: 0.2, axis: [0, 0, 1]))
+    for z: Float in [-0.55, 0.55] {
       geometry.box(
-        "wreck-hood", size: [1.5, 0.08, 0.95], at: top + [-0.35, 0, 0],
-        material: style.metal)
-      geometry.box(
-        "wreck-hatch", size: [0.5, 0.15, 0.9], at: top + [0.85, 0.06, 0],
-        material: style.wallCap, rotation: simd_quatf(angle: 0.2, axis: [0, 0, 1]))
-      for z: Float in [-0.55, 0.55] {
-        geometry.box(
-          "wreck-rail", size: [2.35, 0.06, 0.05], at: top + [0, 0.04, z],
-          material: style.rust)
-      }
+        "wreck-rail", size: [2.35, 0.06, 0.05], at: top + [0, 0.04, z],
+        material: style.rust)
     }
-    if let panel = PrototypeLayout.boxes.first(where: { $0.name == "fallen-panel" }) {
-      for z: Float in [-0.7, 0.7] {
-        geometry.box(
-          "fallen-panel-rib", size: [0.8, 0.06, 0.16],
-          at: panel.position + [0, panel.size.y / 2 + 0.03, z], material: style.metal)
-      }
+    let panel = PrototypeLayout.box(.fallenPanel)
+    for z: Float in [-0.7, 0.7] {
+      geometry.box(
+        "fallen-panel-rib", size: [0.8, 0.06, 0.16],
+        at: panel.position + [0, panel.size.y / 2 + 0.03, z], material: style.metal)
     }
   }
 

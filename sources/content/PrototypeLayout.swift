@@ -5,11 +5,43 @@ enum PrototypeLayout {
     case concrete, shelter, depot, hazard
   }
 
+  enum BoxID: String, CaseIterable {
+    case ground
+    case southBoundary = "south-boundary"
+    case northBoundary = "north-boundary"
+    case westBoundary = "west-boundary"
+    case eastBoundary = "east-boundary"
+    case shelterBack = "shelter-back"
+    case shelterSide = "shelter-side"
+    case streetWreck = "street-wreck"
+    case fallenPanel = "fallen-panel"
+    case depotBack = "depot-back"
+    case depotEast = "depot-east"
+    case depotWestBack = "depot-west-back"
+    case depotWestFront = "depot-west-front"
+    case depotFrontWest = "depot-front-west"
+    case depotFrontEast = "depot-front-east"
+    case blockedEntrance = "blocked-entrance"
+
+    var hasWallCap: Bool {
+      switch self {
+      case .southBoundary, .northBoundary, .westBoundary, .eastBoundary,
+        .shelterBack, .shelterSide, .depotBack, .depotEast,
+        .depotWestBack, .depotWestFront, .depotFrontWest, .depotFrontEast:
+        true
+      case .ground, .streetWreck, .fallenPanel, .blockedEntrance:
+        false
+      }
+    }
+  }
+
   struct Box {
-    let name: String
+    let id: BoxID
     let position: SIMD3<Float>
     let size: SIMD3<Float>
     let surface: Surface
+
+    var name: String { id.rawValue }
   }
 
   enum InteractionID: String {
@@ -44,30 +76,36 @@ enum PrototypeLayout {
   // Low walls preserve the elevated camera's view of Miki. The depot's front is
   // blocked; its west wall leaves a 1.8 m service opening around the corner.
   static let boxes: [Box] = [
-    Box(name: "ground", position: [0, -0.15, 0], size: [28, 0.3, 20], surface: .concrete),
+    Box(id: .ground, position: [0, -0.15, 0], size: [28, 0.3, 20], surface: .concrete),
     Box(
-      name: "south-boundary", position: [0, 0.45, 9.7], size: [28, 0.9, 0.6], surface: .concrete),
+      id: .southBoundary, position: [0, 0.45, 9.7], size: [28, 0.9, 0.6], surface: .concrete),
     Box(
-      name: "north-boundary", position: [0, 0.45, -9.7], size: [28, 0.9, 0.6], surface: .concrete),
+      id: .northBoundary, position: [0, 0.45, -9.7], size: [28, 0.9, 0.6], surface: .concrete),
     Box(
-      name: "west-boundary", position: [-13.7, 0.45, 0], size: [0.6, 0.9, 20], surface: .concrete),
+      id: .westBoundary, position: [-13.7, 0.45, 0], size: [0.6, 0.9, 20], surface: .concrete),
     Box(
-      name: "east-boundary", position: [13.7, 0.45, 0], size: [0.6, 0.9, 20], surface: .concrete),
-    Box(name: "shelter-back", position: [-9, 0.5, 0], size: [7, 1, 0.35], surface: .shelter),
-    Box(name: "shelter-side", position: [-12.3, 0.5, 2.5], size: [0.35, 1, 5], surface: .shelter),
-    Box(name: "street-wreck", position: [-1.5, 0.4, 1], size: [2.5, 0.8, 1.2], surface: .hazard),
-    Box(name: "fallen-panel", position: [1, 0.3, -2], size: [1.2, 0.6, 2.5], surface: .shelter),
-    Box(name: "depot-back", position: [7, 0.55, -7], size: [6.4, 1.1, 0.35], surface: .depot),
-    Box(name: "depot-east", position: [10, 0.55, -4], size: [0.35, 1.1, 6], surface: .depot),
+      id: .eastBoundary, position: [13.7, 0.45, 0], size: [0.6, 0.9, 20], surface: .concrete),
+    Box(id: .shelterBack, position: [-9, 0.5, 0], size: [7, 1, 0.35], surface: .shelter),
+    Box(id: .shelterSide, position: [-12.3, 0.5, 2.5], size: [0.35, 1, 5], surface: .shelter),
+    Box(id: .streetWreck, position: [-1.5, 0.4, 1], size: [2.5, 0.8, 1.2], surface: .hazard),
+    Box(id: .fallenPanel, position: [1, 0.3, -2], size: [1.2, 0.6, 2.5], surface: .shelter),
+    Box(id: .depotBack, position: [7, 0.55, -7], size: [6.4, 1.1, 0.35], surface: .depot),
+    Box(id: .depotEast, position: [10, 0.55, -4], size: [0.35, 1.1, 6], surface: .depot),
     Box(
-      name: "depot-west-back", position: [4, 0.55, -6.2], size: [0.35, 1.1, 1.6], surface: .depot),
+      id: .depotWestBack, position: [4, 0.55, -6.2], size: [0.35, 1.1, 1.6], surface: .depot),
     Box(
-      name: "depot-west-front", position: [4, 0.55, -2.3], size: [0.35, 1.1, 2.6], surface: .depot),
-    Box(name: "depot-front-west", position: [5, 0.55, -1], size: [2, 1.1, 0.35], surface: .depot),
-    Box(name: "depot-front-east", position: [9, 0.55, -1], size: [2, 1.1, 0.35], surface: .depot),
+      id: .depotWestFront, position: [4, 0.55, -2.3], size: [0.35, 1.1, 2.6], surface: .depot),
+    Box(id: .depotFrontWest, position: [5, 0.55, -1], size: [2, 1.1, 0.35], surface: .depot),
+    Box(id: .depotFrontEast, position: [9, 0.55, -1], size: [2, 1.1, 0.35], surface: .depot),
     Box(
-      name: "blocked-entrance", position: [7, 0.45, -0.7], size: [2.2, 0.9, 1], surface: .hazard),
+      id: .blockedEntrance, position: [7, 0.45, -0.7], size: [2.2, 0.9, 1], surface: .hazard),
   ]
+
+  static func box(_ id: BoxID) -> Box {
+    let matches = boxes.filter { $0.id == id }
+    precondition(matches.count == 1, "Layout must contain exactly one \(id.rawValue) box.")
+    return matches[0]
+  }
 
   static let points: [PointOfInterest] = [
     PointOfInterest(
