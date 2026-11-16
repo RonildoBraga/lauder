@@ -6,7 +6,9 @@ Run a small scene and one representative rigged character with idle and walk ani
 
 ## Session 1 — 16 November 2026
 
-**Status:** In progress; Stage 1 has not passed its exit criterion.
+**Status:** The device/rig/idle-walk criterion has been demonstrated with direct USDZ loading. The latest diagnostic-panel layout check and PR review remain open.
+
+The maintainer [approved the code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907080643) after this session's implementation assessment. Composer is optional and deferred; completing its export experiment is no longer part of the Stage 1 gate. The three-session stop criterion is unchanged.
 
 ### Verified preflight
 
@@ -36,10 +38,15 @@ Personal account information, signing identifiers and device identifiers are int
 - The preview currently consumes USDZ directly. Reality Composer Pro 3.1 import and rig export were inspected; its initial `.reality` export omitted playable clips. The app does not depend on that unverified animation export path.
 - The actual authoring package is `.realitycomposerpro`, with text scene/import definitions and binary buffers. A new project also copies an Apple factory `core.lib`. The experimental package and static export are preserved under the ignored `.local/authoring/Content/` directory; they are excluded from the public contribution. No claim is made that the factory library can safely be omitted from a portable Composer project.
 
-### Remaining evidence
+### Remaining Stage 1 review
 
-- Complete a reproducible Composer animation-library/export workflow before adopting `.reality` runtime assets or publishing that authoring package.
+- Visually recheck the latest upper-left diagnostic-panel placement on the baseline phone; its installation and build/test checks have passed.
+- Review PR #8 before merging or starting another stage. Approval of the authoring direction does not authorise either action.
+
+### Deferred work and limits
+
+- Verify a reproducible Composer animation-library/export workflow only if a future content need calls for its exports. Preserve the current experiment; it is outside the first-playable gate.
 - Record interruption/resume and repeated-run checks when they are exercised. They have not been established by the import test or the maintainer's animation confirmation.
 - Gameplay, movement, controls and measured 60 fps belong to later prototype stages. No sustained performance, thermal or save-reliability claim is made here.
 
-Simulator success, animation metadata and a connected phone alone do not satisfy the exit criterion. Record blockers and attempts in this log; stop and reassess if the representative character is not running after three focused sessions.
+Simulator success, animation metadata and a connected phone alone do not satisfy the device criterion. This session includes the physical scene observation and the maintainer's idle/walk confirmation. Keep recording actual attempts and results; the [three-session stop criterion](decisions/0001-engine.md#stage-1-stop-criterion) still governs an unproven character/device path.

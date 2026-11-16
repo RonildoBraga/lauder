@@ -9,6 +9,8 @@ Record attempts and actual results in the [Stage 1 session log](stage-1.md).
 
 **Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
 
+The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907080643) uses Swift scene construction and direct USDZ loading. Reality Composer Pro is optional and deferred; its export experiment is outside the first-playable gate.
+
 ## Purpose and milestones
 
 Prove that moving through this world, noticing a route, salvaging something useful and returning to make a repair feels understandable and satisfying on a phone.
@@ -58,21 +60,22 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 ### 1. Establish the device and asset path
 
 - Verify the test device and its installed stable iOS version.
-- Install Reality Composer Pro 3 separately from Apple Developer; it is a standalone app and is no longer bundled with Xcode. [Apple release notes](https://developer.apple.com/documentation/realitycomposerpro/reality-composer-pro-3-release-notes)
-- Use stable Xcode and Reality Composer Pro versions. Record both installed versions and the SDK version before validating the asset workflow.
+- Use stable Xcode and record its version and the SDK version before validating the asset workflow.
 - Create one app target and one Swift Testing unit-test target with the [Swift conventions](architecture.md#swift-conventions).
 - Follow the [asset contribution policy](../CONTRIBUTING.md#assets-and-attribution) before adding any model or scene.
-- Load a small scene and one rigged character with idle/walk animation.
+- Generate or obtain one properly sourced rigged character with idle/walk animation; preserve editable inputs, export steps and provenance. The [current scripted stand-in](../Lauder/Content/Character/README.md) supplies this without a visual editor.
+- Build a small scene in Swift and load its character and animation USDZ files directly.
 - Build, sign and run on the baseline phone.
 
-**Exit:** The representative character and scene load correctly on the phone. We understand the authored-asset-to-app workflow.
+**Exit:** The representative character and Swift-composed scene load correctly on the phone, with both skeletal clips visibly working. The editable-source-to-USDZ-to-app workflow is understood and reproducible.
 
 **Stop criterion:** If that rigged character, scene and idle/walk animation are not running on the baseline phone after **three focused work sessions**, stop and document the blocker. Reassess with the maintainer before expanding the work. Use the [engine decision record](decisions/0001-engine.md#stage-1-stop-criterion) for the agreed criterion and how to record the sessions.
 
 ### 2. Make movement comfortable
 
 - Add screen-relative touch movement, character collision and camera follow.
-- Lay out the shelter, depot, landmarks and service passage.
+- Describe the shelter, depot, landmarks and service passage in one small typed Swift layout definition consumed by GameWorld. Keep explicit placements and the existing stable interaction IDs.
+- Inspect simulator/device screenshots and play the route while refining geometry and framing.
 - Add a nearby stationary Tomas placeholder.
 - Verify simultaneous movement and action-button input, safe areas and visibility.
 - On inactivity, clear held input, pause the live world and reset frame timing on resume.
