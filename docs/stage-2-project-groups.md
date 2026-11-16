@@ -2,11 +2,13 @@
 
 **Decision and verification:** 16 November 2026, following [issue #10](https://github.com/RonildoBraga/lauder/issues/10).
 
-Use Xcode folder-synchronised roots for `Lauder/` and `LauderTests/`, each associated with its own target. New Swift files in those folders no longer require individual project-file references or build-phase entries. This uses Xcode's built-in support without adding a project generator or dependency. Apple describes the reduced project-file changes in [Managing files and folders](https://developer.apple.com/documentation/xcode/managing-files-and-folders-in-your-xcode-project) and [Xcode 16 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-16-release-notes).
+Use Xcode folder-synchronised roots for `Sources/` (app target `Lauder`) and `tests/` (test target `LauderTests`). The folder names do not change the target or module names. New Swift files in those folders no longer require individual project-file references or build-phase entries. This uses Xcode's built-in support without adding a project generator or dependency. Apple describes the reduced project-file changes in [Managing files and folders](https://developer.apple.com/documentation/xcode/managing-files-and-folders-in-your-xcode-project) and [Xcode 16 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-16-release-notes).
 
 The project uses `PBXFileSystemSynchronizedRootGroup`, target `fileSystemSynchronizedGroups`, and project object version 77. These were checked against the installed Xcode 27.2 project model and validated with Xcode's command-line tools. The existing flattened `Content/Character` group prevented a direct UI conversion because its path spans two directory levels; the final roots follow the actual directory structure.
 
 ## Target membership
+
+The app-target paths below are relative to `Sources/`.
 
 - Exclude `Content/Character/README.md` from the app target.
 - Exclude `App/Info.plist` from copied resources. Both app configurations use it as the typed input to the generated bundle plist, including the declared Extended Gamepad support.

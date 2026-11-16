@@ -19,7 +19,7 @@ The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues
 
 Prove that moving through this world, noticing a route, salvaging something useful and returning to make a repair feels understandable and satisfying on a phone.
 
-This is a **Relay House slice** from the middle of [Chapter One](../story/chapter-01.md). Aim for roughly **3–5 minutes** for a first playthrough, without padding the route.
+This is a **Relay House slice** from the middle of [Chapter One](story/chapter-01.md). Aim for roughly **3–5 minutes** for a first playthrough, without padding the route.
 
 The maintainer approved [issue #4's scope split](https://github.com/RonildoBraga/lauder/issues/4#issuecomment-6905581377):
 - **First playable:** Stages 1–3 and the prototype exit checks below.
@@ -67,7 +67,7 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 - Use stable Xcode and record its version and the SDK version before validating the asset workflow.
 - Create one app target and one Swift Testing unit-test target with the [Swift conventions](architecture.md#swift-conventions).
 - Follow the [asset contribution policy](../CONTRIBUTING.md#assets-and-attribution) before adding any model or scene.
-- Generate or obtain one properly sourced rigged character with idle/walk animation; preserve editable inputs, export steps and provenance. The [current scripted stand-in](../Lauder/Content/Character/README.md) supplies this without a visual editor.
+- Generate or obtain one properly sourced rigged character with idle/walk animation; preserve editable inputs, export steps and provenance. The [current scripted stand-in](../Sources/Content/Character/README.md) supplies this without a visual editor.
 - Build a small scene in Swift and load its character and animation USDZ files directly.
 - Build, sign and run on the baseline phone.
 

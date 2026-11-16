@@ -5,7 +5,7 @@ People and AI-assisted contributors are welcome. Stage 1 is merged; the project 
 ## Before working
 
 Read the [README](README.md) and the documents relevant to the change:
-- [Story bible](story/story-bible.md) and [Chapter One](story/chapter-01.md) for narrative work.
+- [Story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md) for narrative work.
 - [Architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md) for technical work.
 - [AGENTS.md](AGENTS.md) when using a coding agent.
 

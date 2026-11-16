@@ -12,8 +12,8 @@ The technical direction is Swift, RealityKit and SwiftUI, targeting the current 
 
 ## Start here
 
-- [Story bible](story/story-bible.md): agreed foundations, characters, world and working timeline.
-- [Chapter One — A Place to Meet](story/chapter-01.md): the current scene and dialogue draft.
+- [Story bible](docs/story/story-bible.md): agreed foundations, characters, world and working timeline.
+- [Chapter One — A Place to Meet](docs/story/chapter-01.md): the current scene and dialogue draft.
 - [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
 - [First playable prototype](docs/prototype-plan.md): a small Relay House salvage-and-repair loop with staged acceptance criteria.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
@@ -25,7 +25,7 @@ Names, ages and details marked as proposals remain open for discussion. Miki is 
 
 ```text
 Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
-Lauder/
+Sources/
   App/                        App entry point, world ownership and bundle configuration
   Interface/                  SwiftUI HUD, controller/keyboard input and input rules
   World/                      RealityKit world, movement, asset loading and scene presentation
@@ -34,16 +34,16 @@ Lauder/
     Character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
       Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
-LauderTests/                  Asset import/rejection, movement and input-rule tests
-story/                        Story bible and Chapter One script
+tests/                        Asset import/rejection, movement and input-rule tests
 docs/                         Architecture, decisions, prototype plan and validation evidence
+  story/                      Story bible and Chapter One script
 scripts/                      Standard checks and the current character asset generator
 .github/                      Pull request template
 ```
 
 Keep gameplay-independent presentation in `SceneStyle` and `SceneDressing`; the route and collision anchors remain in `PrototypeLayout`. Mission rules and persistence are planned, so their folders do not exist yet. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
-For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `Lauder/Content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
+For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `Sources/Content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 
 ## First prototype
 
