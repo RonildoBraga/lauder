@@ -25,7 +25,7 @@ Start with iPhone and landscape orientation. The initial performance baseline is
 | App composition | Creates the session, world and save store; owns launch, restart and teardown | Wiring and lifecycle |
 | Gameplay | Mission facts, progress transitions and simple dialogue definitions | Ordinary Swift values and rules; no RealityKit entities or SwiftUI views |
 | World | Loaded scene, Miki, movement, camera, collision and nearby interactions | RealityKit owns live spatial state |
-| Interface | GameController input, objective, action prompt, dialogue and pause presentation | Presents state and supplies controller input |
+| Interface | Gamepad/Simulator keyboard input, objective, action prompt, dialogue and pause presentation | Presents state and supplies input snapshots |
 | Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
 | Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
 
@@ -59,7 +59,7 @@ Mission state does not contain entities. The world does not keep a second invent
 
 ```mermaid
 flowchart LR
-    I["PS5 / Xbox controller input"] -->|input snapshot| W["GameWorld / RealityKit"]
+    I["Gamepad / Simulator keyboard input"] -->|input snapshot| W["GameWorld / RealityKit"]
     UI["SwiftUI HUD"]
     W -->|interaction request| S
     S -->|accepted progress| W
@@ -85,7 +85,7 @@ Interactions have stable IDs such as `relay.tomas`, `depot.regulator` and `relay
 
 1. GameWorld identifies the accessible object within interaction range.
 2. The interface shows the available action prompt: **Talk**, **Take**, **Repair** or **Call**.
-3. Pressing the controller's action button (Cross/A) rechecks current distance and accessibility in GameWorld before submitting a named gameplay command; a stale prompt cannot trigger a remote interaction.
+3. Pressing the action input (Cross/A, or E in Simulator) rechecks current distance and accessibility in GameWorld before submitting a named gameplay command; a stale prompt cannot trigger a remote interaction.
 4. GameSession validates its phase and accepts or rejects it.
 5. The accepted state drives the objective, item visibility, radio appearance and checkpoint save.
 
@@ -105,9 +105,9 @@ GameWorld sets up and tears down its callbacks explicitly. Cancel unfinished loa
 
 The camera has a fixed elevated perspective, follows Miki and cannot rotate in the prototype. Use level layout and low obstacles to maintain visibility before adding an occlusion subsystem.
 
-Use one GameController extended-gamepad input path for PS5 DualSense and Xbox controllers. The left stick moves; with default mappings, logical `buttonA` is Cross/A for actions and `buttonMenu` is Options/Menu for Pause/Resume. Read the selected profile's `sfSymbolsName` for action glyphs, including system remapping. Connection selection, pause input and neutral-input gating belong to the interface input owner; GameWorld consumes snapshots. There are no virtual touch controls or clickable screen actions.
+Phone gameplay uses one GameController extended-gamepad input path for PS5 DualSense and Xbox controllers. The left stick moves; with default mappings, logical `buttonA` is Cross/A for actions and `buttonMenu` is Options/Menu for Pause/Resume. Read the selected profile's `sfSymbolsName` for action glyphs, including system remapping. Simulator keyboard controls use WASD for movement, E for action and Escape for Pause/Resume. Both supply the same input snapshot to GameWorld; selection, pause input and neutral-input gating belong to the interface input owner. There are no virtual touch controls or clickable screen actions.
 
-Simulator is the everyday iteration environment and may expose a generic MFi profile. Do not depend on brand identity there or treat recognition as physical button verification. Validate controller behavior, interruptions and performance on the iPhone at milestones before merging playable features. The [Stage 2 record](stage-2.md) separates simulator observations from physical checks. The foreground game keeps the screen awake, including Pause, and restores the idle timer when inactive.
+Use keyboard input for everyday Simulator iteration. A generic MFi profile was enumerated, but live PS5 stick input did not work in the tested setup, including with Device Hub visible; controller forwarding remains unresolved. Validate controller behavior, interruptions and performance on the iPhone at milestones before merging playable features. The [Stage 2 record](stage-2.md) separates simulator observations from physical checks. The foreground game keeps the screen awake, including Pause, and restores the idle timer when inactive.
 
 Scene composition and the named animation library are configured in Swift for the first playable. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
 

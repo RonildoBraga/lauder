@@ -1,13 +1,14 @@
 import Foundation
 import GameController
 import Observation
+import simd
 
 @MainActor
 @Observable
 final class GameControls {
   enum Status: Equatable {
     case inactive
-    case waitingForController
+    case waitingForInput
     case ready
   }
 
@@ -21,7 +22,7 @@ final class GameControls {
 
   private(set) var status = Status.inactive
   private(set) var actionSymbol: String?
-  private(set) var sourceName = "Connect a PS5 or Xbox controller"
+  private(set) var sourceName = "Connect a controller or keyboard"
   private(set) var pauseButtonName = "Menu"
 
   @ObservationIgnored private var isActive = false
@@ -53,13 +54,40 @@ final class GameControls {
 
   // This is a snapshot of the current button state; the caller detects press edges.
   func sample() -> Input {
-    guard isActive, status == .ready, let gamepad else { return .neutral }
-    let movement = SIMD2(gamepad.leftThumbstick.xAxis.value, gamepad.leftThumbstick.yAxis.value)
-    let actionPressed = gamepad.buttonA.isPressed
-    let pausePressed = gamepad.buttonMenu.isPressed
+    guard isActive, status == .ready else { return .neutral }
+    let keyboard = GCKeyboard.coalesced?.keyboardInput
+    func pressed(_ code: GCKeyCode) -> Bool {
+      keyboard?.button(forKeyCode: code)?.isPressed ?? false
+    }
+    let left = pressed(.keyA)
+    let right = pressed(.keyD)
+    let up = pressed(.keyW)
+    let down = pressed(.keyS)
+    let keyboardAction = pressed(.keyE)
+    let keyboardPause = pressed(.escape)
+    let hasMovementKey = left || right || up || down
+    let hasKeyboardInput = hasMovementKey || keyboardAction || keyboardPause
+    let stick = SIMD2(
+      gamepad?.leftThumbstick.xAxis.value ?? 0,
+      gamepad?.leftThumbstick.yAxis.value ?? 0
+    )
+    let movement =
+      hasMovementKey
+      ? SIMD2<Float>(
+        Float(right ? 1 : 0) - Float(left ? 1 : 0),
+        Float(up ? 1 : 0) - Float(down ? 1 : 0)) : stick
+    let actionPressed = keyboardAction || (gamepad?.buttonA.isPressed ?? false)
+    let pausePressed = keyboardPause || (gamepad?.buttonMenu.isPressed ?? false)
+    if hasKeyboardInput {
+      showKeyboard()
+    } else if let gamepad,
+      simd_length_squared(stick) > 0.15 * 0.15 || actionPressed || pausePressed
+    {
+      showController(gamepad)
+    }
     if needsNeutralInput {
-      if movement.x * movement.x + movement.y * movement.y <= 0.15 * 0.15,
-        !actionPressed, !pausePressed
+      if simd_length_squared(stick) <= 0.15 * 0.15,
+        !hasKeyboardInput, !actionPressed, !pausePressed
       {
         needsNeutralInput = false
       }
@@ -83,6 +111,16 @@ final class GameControls {
         guard let self, self.isActive else { return }
         self.selectController(excluding: message.controller)
       },
+      center.addObserver(of: GCKeyboard.self, for: .didConnect) { [weak self] _ in
+        guard let self, self.isActive else { return }
+        self.needsNeutralInput = true
+        self.selectController()
+      },
+      center.addObserver(of: GCKeyboard.self, for: .didDisconnect) { [weak self] _ in
+        guard let self, self.isActive else { return }
+        self.needsNeutralInput = true
+        self.selectController()
+      },
     ]
   }
 
@@ -95,13 +133,23 @@ final class GameControls {
       let profile = selected.extendedGamepad
     else {
       detachController()
-      status = .waitingForController
+      if GCKeyboard.coalesced?.keyboardInput != nil {
+        showKeyboard()
+        status = .ready
+      } else {
+        status = .waitingForInput
+      }
       return
     }
     guard selected !== controller else { return }
     detachController()
     controller = selected
     gamepad = profile
+    showController(profile)
+    status = .ready
+  }
+
+  private func showController(_ profile: GCExtendedGamepad) {
     actionSymbol = profile.buttonA.sfSymbolsName
     if profile is GCDualSenseGamepad {
       sourceName = "PS5 controller"
@@ -110,14 +158,19 @@ final class GameControls {
       sourceName = profile is GCXboxGamepad ? "Xbox controller" : "Game controller"
       pauseButtonName = "Menu"
     }
-    status = .ready
+  }
+
+  private func showKeyboard() {
+    sourceName = "Keyboard · WASD"
+    actionSymbol = "e.square"
+    pauseButtonName = "Escape"
   }
 
   private func detachController() {
     controller = nil
     gamepad = nil
     actionSymbol = nil
-    sourceName = "Connect a PS5 or Xbox controller"
+    sourceName = "Connect a controller or keyboard"
     pauseButtonName = "Menu"
     needsNeutralInput = true
   }

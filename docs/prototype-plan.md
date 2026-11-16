@@ -11,7 +11,7 @@ Stage 2 implementation decisions and device observations are in the [movement an
 
 **Physical baseline:** iPhone 13 Pro Max on the current stable iOS 27 release. Target 60 fps on this phone; 120 fps is outside the prototype requirement.
 
-Use Simulator for everyday iteration. At milestones, before merging playable features, validate the affected controls, lifecycle and performance on the baseline iPhone. Follow the [validation workflow](../CONTRIBUTING.md#validation) and record results in the [movement and controls record](stage-2.md).
+Use Simulator keyboard controls for everyday iteration: WASD moves, E acts and Escape pauses/resumes. At milestones, before merging playable features, validate the affected controls, lifecycle and performance on the baseline iPhone. Follow the [validation workflow](../CONTRIBUTING.md#validation) and record results in the [movement and controls record](stage-2.md).
 
 The [approved code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) uses Swift scene construction and direct USDZ loading.
 
@@ -49,9 +49,9 @@ The blocked entrance uses ordinary level geometry and collision. It creates a re
 | Remote cast | Lara and Nina represented through text dialogue |
 | Salvage | One regulator, one pickup |
 | Repair | One transmitter, with visibly broken and working states |
-| Controls | PS5 DualSense or Xbox through shared extended-gamepad input: left stick, Cross/A action, Options/Menu Pause/Resume; no touch controls |
+| Controls | Phone: PS5 DualSense/Xbox left stick, Cross/A action, Options/Menu Pause/Resume. Simulator: WASD, E, Escape. No touch controls |
 | Camera | Fixed elevated perspective with follow; landscape |
-| Interface | Objective, carried-part indicator, dialogue and controller-operated Pause/Resume and Restart; no clickable screen actions |
+| Interface | Objective, carried-part indicator, dialogue, Pause/Resume and Restart; no clickable screen actions |
 | Progress | In-memory run state; a fresh launch starts a new run |
 | Presentation | Graybox first; limited war damage, signs and sound for readability |
 
@@ -77,12 +77,13 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 
 ### 2. Make movement comfortable
 
-- Add screen-relative controller movement, character collision and camera follow.
+- Add screen-relative movement, character collision and camera follow.
 - Use one GameController extended-gamepad input path for PS5 DualSense and Xbox. Verify action, disconnect/reconnect and Options/Menu Pause/Resume on the supported controllers at the iPhone milestone.
+- Use WASD movement, E action and Escape Pause/Resume for everyday Simulator playtests, through the same input snapshot consumed by GameWorld.
 - Describe the shelter, depot, landmarks and service passage in one small typed Swift layout definition consumed by GameWorld. Keep explicit placements and the existing stable interaction IDs.
 - Iterate the route, geometry and framing in Simulator; confirm readability and control behavior on the baseline phone before merging the playable milestone.
 - Add a nearby stationary Tomas placeholder.
-- Verify simultaneous stick/action input, safe areas and visibility, with no clickable screen controls.
+- Verify simultaneous movement/action input, safe areas and visibility, with no clickable screen controls.
 - On inactivity, clear held input, pause the live world and reset frame timing on resume.
 - Keep the foreground game awake, including Pause; restore normal idle locking when leaving it.
 
@@ -106,7 +107,7 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 - A new player understands the goal and finishes the loop without developer guidance.
 - The intended route and alternative entrance read from the environment.
 - Movement follows screen direction, collision is predictable, and the camera keeps Miki readable.
-- The contextual prompt offers the correct controller action. Current distance/accessibility are rechecked on press.
+- The contextual prompt offers the correct action input. Current distance/accessibility are rechecked on press.
 - Repair before collection explains itself and changes nothing; the regulator cannot be collected twice in a run.
 - The repaired radio enables the call. Rereading the meeting plan leaves progress unchanged.
 - Restart begins a clean in-memory run with no duplicated scene content or callbacks.

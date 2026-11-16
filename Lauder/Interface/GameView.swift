@@ -57,7 +57,7 @@ struct GameView: View {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 12) {
           Text(world.controls.sourceName).font(.title2.bold())
-          Text("Centre the stick and release the buttons to continue.")
+          Text("Centre the stick and release all buttons and keys to continue.")
         }
         .padding(28)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
