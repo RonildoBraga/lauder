@@ -18,10 +18,11 @@ final class GameControls {
   private(set) var actionSymbol: String?
   private(set) var sourceName = "Connect a controller or keyboard"
   private(set) var pauseButtonName = "Menu"
+  private(set) var switchButtonName = "Right shoulder"
   private(set) var needsNeutralInput = true
 
   @ObservationIgnored private var isActive = false
-  @ObservationIgnored private var isPaused = false
+  @ObservationIgnored private var inputState = InputRules.State()
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
@@ -30,6 +31,7 @@ final class GameControls {
     guard active != isActive else { return }
     isActive = active
     if active {
+      requireNeutralInput()
       observeControllers()
       selectController()
     } else {
@@ -40,14 +42,13 @@ final class GameControls {
     }
   }
 
-  func setPaused(_ paused: Bool) {
-    guard paused != isPaused else { return }
-    isPaused = paused
-    needsNeutralInput = true
+  func requireNeutralInput() {
+    inputState = InputRules.State()
+    if !needsNeutralInput { needsNeutralInput = true }
   }
 
-  // This is a snapshot of the current button state; the caller detects press edges.
-  func sample() -> Input {
+  // Buttons are fresh press intents; callers must not detect the same edges again.
+  func sample(mode: GameSession.Mode) -> Input {
     guard isActive, status == .ready else { return .neutral }
     let keyboard = GCKeyboard.coalesced?.keyboardInput
     func pressed(_ code: GCKeyCode) -> Bool {
@@ -60,23 +61,26 @@ final class GameControls {
       ),
       controllerAction: gamepad?.buttonA.isPressed ?? false,
       controllerPause: gamepad?.buttonMenu.isPressed ?? false,
+      controllerSwitch: gamepad?.rightShoulder.isPressed ?? false,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
-      keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape)
+      keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
+      keyboardSwitch: pressed(.keyQ)
     )
     let deadZone = PrototypeLayout.movementDeadZone
     if raw.hasKeyboardInput {
       showKeyboard()
     } else if let gamepad,
       simd_length_squared(raw.stick) > deadZone * deadZone
-        || raw.controllerAction || raw.controllerPause
+        || raw.controllerAction || raw.controllerPause || raw.controllerSwitch
     {
       showController(gamepad)
     }
-    let result = InputRules.resolve(
-      raw, isPaused: isPaused, needsNeutralInput: needsNeutralInput
-    )
-    needsNeutralInput = result.needsNeutralInput
+    let result = InputRules.resolve(raw, mode: mode, state: inputState)
+    inputState = result.state
+    if needsNeutralInput != inputState.needsNeutralInput {
+      needsNeutralInput = inputState.needsNeutralInput
+    }
     return result.input
   }
 
@@ -93,12 +97,12 @@ final class GameControls {
       },
       center.addObserver(of: GCKeyboard.self, for: .didConnect) { [weak self] _ in
         guard let self, self.isActive else { return }
-        self.needsNeutralInput = true
+        self.requireNeutralInput()
         self.selectController()
       },
       center.addObserver(of: GCKeyboard.self, for: .didDisconnect) { [weak self] _ in
         guard let self, self.isActive else { return }
-        self.needsNeutralInput = true
+        self.requireNeutralInput()
         self.selectController()
       },
     ]
@@ -130,29 +134,36 @@ final class GameControls {
   }
 
   private func showController(_ profile: GCExtendedGamepad) {
-    actionSymbol = profile.buttonA.sfSymbolsName
     if profile is GCDualSenseGamepad {
-      sourceName = "PS5 controller"
-      pauseButtonName = "Options"
+      showSource(
+        "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1")
+    } else if profile is GCXboxGamepad {
+      showSource(
+        "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB")
     } else {
-      sourceName = profile is GCXboxGamepad ? "Xbox controller" : "Game controller"
-      pauseButtonName = "Menu"
+      showSource(
+        "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
+        cycle: "Right shoulder")
     }
   }
 
   private func showKeyboard() {
-    sourceName = "Keyboard · WASD"
-    actionSymbol = "e.square"
-    pauseButtonName = "Escape"
+    showSource("Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q")
+  }
+
+  private func showSource(_ name: String, action: String?, pause: String, cycle: String) {
+    if sourceName != name { sourceName = name }
+    if actionSymbol != action { actionSymbol = action }
+    if pauseButtonName != pause { pauseButtonName = pause }
+    if switchButtonName != cycle { switchButtonName = cycle }
   }
 
   private func detachController() {
     controller = nil
     gamepad = nil
-    actionSymbol = nil
-    sourceName = "Connect a controller or keyboard"
-    pauseButtonName = "Menu"
-    needsNeutralInput = true
+    showSource(
+      "Connect a controller or keyboard", action: nil, pause: "Menu", cycle: "Right shoulder")
+    requireNeutralInput()
   }
 
   isolated deinit {

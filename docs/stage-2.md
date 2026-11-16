@@ -30,7 +30,7 @@ The generated app plist merges typed Game Controllers support declarations from 
 
 The maintainer requested a slightly wider, more top-down action-RPG view. The camera offset is now `[5.25, 10, 8.4]` from the same follow target, replacing `[5, 7.5, 8]`: about 17% farther away and 45.3° above the ground instead of 38.5°. The 42° perspective field of view and horizontal direction are unchanged, so the screen-relative stick axes stay the same. The standard physical-iPhone check passed all five tests for this change, and the maintainer accepted the framing while moving, with Miki and the route clear.
 
-The reusable [character loader](../sources/world/CharacterAsset.swift) is separate from the removed diagnostic preview. Rejection tests reuse real imported mesh/animation data to verify incompatible bindings and a skinned model without its authored clip; no extra binary fixtures are needed. The [folder-group decision and membership checks](stage-2-project-groups.md) record the project changes for #10.
+The Stage 2 [character loader](../tests/support/CharacterAsset.swift), now preserved as a test-only fixture, is separate from the removed diagnostic preview. Rejection tests reuse real imported mesh/animation data to verify incompatible bindings and a skinned model without its authored clip; no extra binary fixtures are needed. The [folder-group decision and membership checks](stage-2-project-groups.md) record the project changes for #10.
 
 ## Validation record
 
@@ -110,3 +110,9 @@ At playable-feature milestones before merging, repeat the checks below on the ba
 5. Leave the active game untouched beyond the phone's normal Auto-Lock interval, including on Pause. Check that it remains awake, then verify normal locking after leaving the app.
 
 These checks and measured first-playable performance must not be inferred from a passing import test. The maintainer's integration instruction does not convert the remaining verification gaps into passed checks. The [gameplay script](gameplay-script.md) is a draft for review before Stage 3 implementation.
+
+## Party A phone checkpoint — 17 November 2026
+
+A signed Release build of `fc53d52` (version 0.1.0, build 1), using Xcode 27.2 / SDK 27.2, built successfully and was installed and launched on iPhone 13 Pro Max / iOS 27.2.1. The live phone preview showed three stand-ins and PS5/Cross/R1/Options prompts. This proves installation, rendering and recognition; physical input delivery and performance are separate checks.
+
+The current session is in progress in the [Party A record](party-a.md#phone-checkpoint--17-november-2026). The maintainer confirmed PS5 movement/release, switching/following, camera/HUD, Pause/resume, paused-input suppression and disconnect/reconnect plus background/lock recovery on this build. The maintainer also confirmed the full unpaused depot round trip during the timed recording without a party diagnostic. The 75-second capture saved successfully; one Lauder Metal layer supplied 59 complete buckets covering 58.921 seconds after settling, averaging 59.9791 fps. The reported mean display interval was 16.6725 ms and maximum was 33.3355 ms, with zero reported skipped frames. This meets the nominal 60 fps mean target in the short sample and does not prove hitch-free or sustained performance. The [Party A performance record](party-a.md#phone-performance-sample) and sanitised CSV contain the method and limits. The maintainer deferred further manual tests (“We dont need to do all these tests now”); awake-screen and normal-lock timing were not newly verified in this session. The earlier PR #11 deferral remains historical, and Xbox hardware plus walking-cadence calibration remain unverified.

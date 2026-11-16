@@ -6,9 +6,9 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**The current build is a walkable graybox with one controlled character. The scene fixes, ensemble story, walkthrough, prototype plan and party architecture are consolidated on main through PRs #20–#22. The maintainer accepted the recommended planning defaults and cleanup. Claude confirmed #20 and reviewed the earlier #21 proposal; his confirmation of the latest plan refinements and architecture remains pending before party code. Three-character gameplay is not implemented.**
+**Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. The scope is: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages.**
 
-The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
+The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. PS5 switching is confirmed in the Party A phone check; Xbox hardware remains unverified.
 
 ## Start here
 
@@ -29,26 +29,28 @@ Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
 sources/
   app/                        App entry point, world ownership and bundle configuration
   interface/                  SwiftUI HUD, controller/keyboard input and input rules
-  world/                      RealityKit world, movement, asset loading and scene presentation
+  gameplay/                   Party identity and session-owned leadership/Pause
+  world/                      RealityKit bodies, recorded trails, camera and scene presentation
   content/
     PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
     character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
-      Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
-tests/                        Asset import/rejection, movement, input-rule and layout tests
+      Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
+tests/                        Party/session, asset import, movement, input and layout tests
+  support/                    Test-only asset validator; excluded from the app target
 docs/                         Architecture, decisions, prototype plan and validation evidence
   story/                      Story bible and Chapter One outline index
 scripts/                      Standard checks and the current character asset generator
 .github/                      Pull request template
 ```
 
-Keep gameplay-independent presentation in `SceneStyle` and `SceneDressing`; the route and collision anchors remain in `PrototypeLayout`. Mission rules and persistence are planned, so their folders do not exist yet. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party rules in GameSession/InputRules and bounded path bookkeeping in PartyTrail. Mission rules and persistence remain planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 
 ## First prototype
 
-The accepted planning sequence proves movement, switching and following with three stand-ins first. It then adds one service barrier with alternative agile/strength actions and a regulator-and-transmitter round trip ending in a coastal water-crew call. Party A has a three-focused-session stop criterion, initial hold-and-diagnose recovery without automatic warps, and R1/RB/Q switching defaults to validate. Phone checkpoints are after A and C, with B covered alongside C. These decisions are plans, not implemented or tested behaviour. A new playthrough duration will come from testing; the performance target remains 60 fps on an iPhone 13 Pro Max.
+The accepted planning sequence proves movement, switching and following with three stand-ins first. It then adds one service barrier with alternative agile/strength actions and a regulator-and-transmitter round trip ending in a coastal water-crew call. Party A has a three-focused-session stop criterion, initial hold-and-diagnose recovery without automatic warps, and R1/RB/Q switching defaults to validate. Phone checkpoints are after A and C, with B covered alongside C. Party A movement and switching are implemented and tested as recorded in the [evidence](docs/party-a.md); B/C interactions remain planned. A new playthrough duration will come from testing; the performance target remains 60 fps on an iPhone 13 Pro Max.
 
 The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-in when testing the revised scope. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). Narrative proposals do not imply implemented interactions or approval of every detail.
 

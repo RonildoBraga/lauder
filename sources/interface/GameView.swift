@@ -15,22 +15,36 @@ struct GameView: View {
         content.camera = .virtual
         content.add(world.root)
         world.attach(
-          content.subscribe(to: PhysicsSimulationEvents.WillSimulate.self, on: world.root) {
+          content.subscribe(to: SceneEvents.Update.self) {
             [weak world] event in
             world?.step(deltaTime: event.deltaTime)
           }
         )
-        await world.load()
       }
       .realityViewCameraControls(.none)
       .ignoresSafeArea()
 
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 5) {
-          Text("Relay district").font(.headline)
-          Text("Explore the depot, then return.")
+          Text("\(world.session.leader.displayName) · \(world.session.leader.role)").font(.headline)
+          Text("Party A · Explore the depot, then return.")
             .font(.subheadline)
+          HStack(spacing: 8) {
+            ForEach(PartyMember.allCases, id: \.self) { member in
+              Text(member.displayName)
+                .font(.caption2)
+                .fontWeight(member == world.session.leader ? .bold : .regular)
+                .underline(member == world.session.leader)
+            }
+          }
+          Text(
+            "\(world.controls.switchButtonName) · Lead as \(world.session.leader.next.displayName)"
+          )
+          .font(.caption)
           Text(world.observation).font(.caption)
+          if let diagnostic = world.diagnostic {
+            Text("Party stopped: \(diagnostic)").font(.caption).foregroundStyle(.orange)
+          }
           Label(
             world.nearbyName.map { "Look at \($0)" } ?? "Look around",
             systemImage: world.controls.actionSymbol ?? "a.circle"
@@ -38,16 +52,11 @@ struct GameView: View {
           .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
           Text(world.controls.sourceName).font(.caption2)
             .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
-          if world.status == .ready && world.controls.status == .ready
+          if world.controls.status == .ready
             && world.controls.needsNeutralInput && !world.isPaused
           {
             Text("Centre the stick and release all buttons and keys to continue.")
               .font(.caption)
-          }
-          if case .loading = world.status {
-            ProgressView("Loading…")
-          } else if case .failed(let message) = world.status {
-            Text(message).font(.caption).foregroundStyle(.red)
           }
         }
         .frame(maxWidth: 290, alignment: .leading)
@@ -64,7 +73,7 @@ struct GameView: View {
       }
       .padding()
 
-      if world.status == .ready && world.controls.status != .ready {
+      if world.controls.status != .ready {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 12) {
           Text(world.controls.sourceName).font(.title2.bold())
@@ -75,7 +84,7 @@ struct GameView: View {
           Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 18)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else if world.status == .ready && world.isPaused {
+      } else if world.isPaused {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 16) {
           Text("Paused").font(.title2.bold())
