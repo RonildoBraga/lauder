@@ -1,7 +1,7 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 16 November 2026\
-**Status:** Three-character proposal for Claude and maintainer review before implementation. This replaces the previous solo walkthrough. Character names, skill assignments, dialogue and new control mappings are working proposals drawn from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines the staged checks; the full [Chapter One script](story/chapter-01.md) still needs its ensemble rewrite.
+**Status:** Three-character planning walkthrough consolidated on main. The maintainer accepted proceeding with the recommendations; Claude's confirmation of the latest refinements and architecture remains pending before code. Character biographies and dialogue are still working proposals drawn from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines the staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline without retaining the obsolete family/solo script.
 
 ## The game we are building
 
@@ -17,11 +17,11 @@ This walkthrough starts at Relay House after the East Span closure. The party re
 
 The build has one controlled character, a stationary Tomas stand-in, movement, collision, camera follow, observation prompts and Pause/Resume. It does not have the trio, follower behaviour, leader switching, skill interactions, collection, repair, mission dialogue, completion or Restart.
 
-The implementation sequence proposed for review is: **party movement and switching → one shared access problem → salvage, repair and contact**. Do not start the old solo Stage 3 from this document. Review and a later implementation assignment come first.
+The accepted planning sequence is: **party movement and switching → one shared access problem → salvage, repair and contact**. Do not start the old solo Stage 3 from this document. Confirmation of the latest architecture review and an implementation assignment come first.
 
 ## Readable controls and party feedback
 
-The following new mappings are proposals for review, alongside the existing movement/action/pause inputs:
+The following mappings are the initial planning defaults, to verify during Party A alongside the existing movement/action/pause inputs:
 
 | Intent | PS5 | Xbox | Simulator keyboard |
 |---|---|---|---|
@@ -34,7 +34,7 @@ There are no touch controls or clickable screen actions. Q replaces the earlier 
 
 Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
 
-Dialogue and Pause suspend switching and world movement. Existing release guidance and fresh-input recovery still apply after interruption, reconnection and pause transitions. The full command routing and ownership need to be resolved in the architecture review; these paragraphs define the proposed player experience.
+Dialogue and Pause suspend switching and world movement. Existing release guidance and fresh-input recovery still apply after interruption, reconnection and pause transitions. The [party architecture](architecture.md) records the proposed command routing and ownership; its latest independent review confirmation remains pending.
 
 ## 1. Three people with a reason to leave
 
@@ -54,7 +54,7 @@ These lines are a condensed proposal, not a biography. The objective becomes **F
 
 The player walks away with two companions following. An early open stretch offers space to try the switch button before an obstacle demands a specialty.
 
-The camera remains at the accepted elevated angle and follows the selected character. A switch makes the change of leader clear through the name, marker and camera target. The proposed follow method uses recorded, collision-resolved movement trails. Followers still check their own movement against scenery; the leader's path alone does not prove clearance at corners. Party members do not physically collide with each other, and trail spacing keeps their presentation readable.
+The camera remains at the accepted elevated angle and follows the selected character. A switch makes the change of leader clear through the name, marker and camera target. The initial follow method uses recorded, collision-resolved movement trails. Followers still check their own movement against scenery; the leader's path alone does not prove clearance at corners. Party members do not physically collide with each other, and trail spacing keeps their presentation readable.
 
 Initial Party A has no automatic teleport or regroup. A blocked follower holds safely and the failed route is recorded for correction. A simpler layout is the first remedy. If the bounded experiment reaches its stop criterion, a constrained out-of-view regroup can be discussed with the maintainer as an alternative; it is not an approved fallback or an implementation requirement.
 

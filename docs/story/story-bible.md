@@ -22,7 +22,7 @@ Miki, Lara and Tomas are the proposed playable trio. Their skills, enhancement h
 
 The previous draft established Miki as widowed, Nina as her daughter, Tomas as her father and Lara as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. Some may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
-The [older Chapter One script](chapter-01.md) still records the previous family/solo version and needs a separate script pass. The current [gameplay walkthrough](../gameplay-script.md) condenses the ensemble outline into a proposed party slice for review. Older chapter dialogue is not evidence that family roles remain settled.
+The [Chapter One page](chapter-01.md) links to the current outline and records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses the ensemble outline into the proposed party slice. The superseded family/solo script remains in Git history, rather than alongside the current narrative.
 
 ## Premise
 
@@ -260,4 +260,4 @@ Balance questions with answers, jokes, reliable actions and progress. Major conn
 
 Next settle the trio's identities, underlying relationships and enhancement specifics; rewrite the full Chapter One dialogue against those decisions. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
 
-The current build has one controlled character, stationary Tomas and observations. Following, switching, character-specific actions and the repair loop are not implemented. The [prototype plan](../prototype-plan.md) now proposes party movement/switching, one shared access problem and then the repair loop. It awaits Claude's review before implementation; the [architecture](../architecture.md) still needs reconciliation with the party proposal. This revision does not authorise implementation.
+The current build has one controlled character, stationary Tomas and observations. Following, switching, character-specific actions and the repair loop are not implemented. The [prototype plan](../prototype-plan.md) records the revised sequence and accepted planning defaults. The party [architecture](../architecture.md) is recorded in [merged PR #22](https://github.com/RonildoBraga/lauder/pull/22); independent Claude confirmation of its latest design remains pending before party code. This documentation consolidation does not start gameplay implementation.

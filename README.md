@@ -6,7 +6,7 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**The current build is a walkable graybox with one controlled character. Claude reviewed the three-character proposal in [PR #21](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122) and found no blocker to merging it as a labelled proposal. Before code, the follow/recovery policy, Party A stop criterion and separate architecture review must be settled. The documentation follow-ups remain for confirmation; no party implementation or merge is assigned.**
+**The current build is a walkable graybox with one controlled character. The scene fixes, ensemble story, walkthrough, prototype plan and party architecture are consolidated on main through PRs #20–#22. The maintainer accepted the recommended planning defaults and cleanup. Claude confirmed #20 and reviewed the earlier #21 proposal; his confirmation of the latest plan refinements and architecture remains pending before party code. Three-character gameplay is not implemented.**
 
 The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 
@@ -14,8 +14,8 @@ The technical direction is Swift, RealityKit and SwiftUI, targeting the current 
 
 - [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
 - [Gameplay script](docs/gameplay-script.md): proposed party controls, shared access problem, salvage, repair and coastal contact.
-- [Chapter One — A Place to Meet](docs/story/chapter-01.md): previous family script, awaiting the ensemble rewrite.
-- [Architecture](docs/architecture.md): Apple toolchain and earlier solo design, awaiting the party design pass.
+- [Chapter One — A Place to Meet](docs/story/chapter-01.md): index to the current outline and playable walkthrough; detailed dialogue remains a later writing pass.
+- [Architecture](docs/architecture.md): party ownership, input, following, camera, restart and later saving design.
 - [First playable prototype](docs/prototype-plan.md): party movement and switching first, then access and the repair loop, with staged checks.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
 - [Stage 2 evidence](docs/stage-2.md): controller decisions, simulator iteration and physical-device checks.
@@ -35,9 +35,9 @@ sources/
     character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
       Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
-tests/                        Asset import/rejection, movement and input-rule tests
+tests/                        Asset import/rejection, movement, input-rule and layout tests
 docs/                         Architecture, decisions, prototype plan and validation evidence
-  story/                      Story bible and Chapter One script
+  story/                      Story bible and Chapter One outline index
 scripts/                      Standard checks and the current character asset generator
 .github/                      Pull request template
 ```
@@ -48,7 +48,7 @@ For new art, group an asset's editable inputs, deliberate delivery exports and p
 
 ## First prototype
 
-The proposed sequence proves movement, switching and following with three stand-ins first. It then adds one service barrier with alternative agile/strength actions and a regulator-and-transmitter round trip ending in a coastal water-crew call. Following, switching, distinct abilities and the repair loop are not implemented. The revised scope, controls and interaction details await review; a new playthrough duration will come from testing. The initial performance target remains 60 fps on an iPhone 13 Pro Max.
+The accepted planning sequence proves movement, switching and following with three stand-ins first. It then adds one service barrier with alternative agile/strength actions and a regulator-and-transmitter round trip ending in a coastal water-crew call. Party A has a three-focused-session stop criterion, initial hold-and-diagnose recovery without automatic warps, and R1/RB/Q switching defaults to validate. Phone checkpoints are after A and C, with B covered alongside C. These decisions are plans, not implemented or tested behaviour. A new playthrough duration will come from testing; the performance target remains 60 fps on an iPhone 13 Pro Max.
 
 The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-in when testing the revised scope. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). Narrative proposals do not imply implemented interactions or approval of every detail.
 

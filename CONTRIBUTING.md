@@ -5,7 +5,7 @@ People and AI-assisted contributors are welcome. The project has a walkable Swif
 ## Before working
 
 Read the [README](README.md) and the documents relevant to the change:
-- [Story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md) for narrative work.
+- [Story bible](docs/story/story-bible.md) and [Chapter One outline index](docs/story/chapter-01.md) for narrative work.
 - [Architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md) for technical work.
 - [Gameplay script](docs/gameplay-script.md) for the proposed player experience and the distinction between current behaviour and planned interactions.
 - [AGENTS.md](AGENTS.md) when using a coding agent.
@@ -61,7 +61,7 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 
 Phone gameplay uses PS5 DualSense and Xbox through one GameController extended-gamepad input path: left stick moves, Cross/A acts and Options/Menu pauses/resumes. Both input methods supply the same gameplay intents. There are no virtual touch controls or clickable screen actions.
 
-At milestones, before merging playable features, run the affected controls, lifecycle and performance checks on the baseline iPhone 13 Pro Max with the supported controllers. Verify movement, collision, camera, action while moving, Pause/Resume, release/interruptions and disconnect/reconnect. Measure phone frame pacing for performance claims; simulator frame rate, battery and thermal behavior are not phone evidence. The foreground app keeps the screen awake, including when paused; normal idle locking resumes on leaving it. Record actual outcomes and remaining gaps in the [Stage 2 evidence](docs/stage-2.md).
+The accepted party plan has phone checkpoints after **Party A** and **Party C**, with B covered alongside C; use Simulator for everyday checks and intermediate PRs. Before declaring each milestone complete, use the baseline iPhone 13 Pro Max to verify its affected controls, movement/collision, camera, Pause/Resume, input release, interruptions and disconnect/reconnect. Measure frame pacing for performance claims. Earlier phone deferrals and the separate Xbox-hardware gap remain open until actual observations or a maintainer decision resolve them. Simulator timing is not phone evidence. The foreground game stays awake, including Pause, and normal idle locking resumes on leaving it. Record results and remaining gaps in the [Stage 2 evidence](docs/stage-2.md), following the [prototype plan](docs/prototype-plan.md).
 
 ## Git LFS and cloning
 
