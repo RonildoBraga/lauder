@@ -2,7 +2,7 @@
 
 **Date:** 16 November 2026\
 **Status:** Swift and RealityKit accepted. Architecture below is proposed for the first prototype.\
-**Scope:** Stage 1 is merged; Stage 2 movement and controls are in progress. Mission rules and persistence below remain planned.
+**Scope:** Movement and controls are implemented. The [gameplay script](gameplay-script.md) is under review; mission rules and persistence below remain planned.
 
 ## Decision and platform
 

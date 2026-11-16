@@ -1,12 +1,13 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. Stage 1 is merged; the project is developing Stage 2 of the first Swift/RealityKit prototype.
+People and AI-assisted contributors are welcome. The project has a walkable Swift/RealityKit graybox and is reviewing its gameplay script before implementing the salvage-and-repair loop.
 
 ## Before working
 
 Read the [README](README.md) and the documents relevant to the change:
 - [Story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md) for narrative work.
 - [Architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md) for technical work.
+- [Gameplay script](docs/gameplay-script.md) for the proposed player experience and the distinction between current behaviour and planned interactions.
 - [AGENTS.md](AGENTS.md) when using a coding agent.
 
 Distinguish agreed foundations from working proposals. For changes to the story foundations, engine, architecture or prototype scope, explain the proposal in an issue before investing in a large rewrite, unless an existing issue or maintainer assignment already describes that work.

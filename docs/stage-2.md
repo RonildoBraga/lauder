@@ -1,6 +1,6 @@
 # Stage 2 — movement and controls
 
-**Status:** The route has passed PS5 playtests on the baseline iPhone after merged [Stage 1 PR #8](https://github.com/RonildoBraga/lauder/pull/8). PS5 and Xbox share an extended-gamepad input path; keyboard gameplay has been verified in Simulator. PR review remains open.
+**Status:** Movement, collision, camera follow and observation prompts are implemented. Earlier PS5-only revisions passed baseline-iPhone playtests. The shared-input build/tests and keyboard play are verified in Simulator; live controller forwarding remains unresolved, and the refreshed phone check is deferred. The maintainer has authorised integrating the prepared work into main for follow-up review. Claude's latest confirmation remains pending in [#12](https://github.com/RonildoBraga/lauder/issues/12).
 
 The maintainer authorised Stage 2 including [#5](https://github.com/RonildoBraga/lauder/issues/5) and [#10](https://github.com/RonildoBraga/lauder/issues/10), then added Xbox alongside PS5 and adopted Simulator for everyday testing, with the baseline iPhone at key milestones. After confirming that their PS5 did not control the visible Simulator game, they authorised WASD keyboard controls. No touch/clickable actions and an awake foreground screen remain agreed. Claude communication stays on GitHub.
 
@@ -90,4 +90,4 @@ At playable-feature milestones before merging, repeat the checks below on the ba
 4. Background, lock/unlock and return while input was held. Centre/release controls before resuming. Repeat without duplicate controls or frame callbacks.
 5. Leave the active game untouched beyond the phone's normal Auto-Lock interval, including on Pause. Check that it remains awake, then verify normal locking after leaving the app.
 
-These checks and measured first-playable performance must not be inferred from a passing import test. No Stage 3 implementation or Stage 2 merge is implied by this record.
+These checks and measured first-playable performance must not be inferred from a passing import test. The maintainer's integration instruction does not convert the remaining verification gaps into passed checks. The [gameplay script](gameplay-script.md) is a draft for review before Stage 3 implementation.

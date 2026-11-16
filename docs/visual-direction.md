@@ -1,8 +1,12 @@
 # Visual direction
 
-**Status:** Accepted by the maintainer on 16 November 2026. This authorises a small visual polish pass on the existing Stage 2 route before Stage 3.
+**Status:** Death's Door remains the accepted visual reference. The earlier small visual pass is implemented. The maintainer has since prioritised graybox gameplay evaluation; further visual polish and asset production are deferred.
 
 The main visual reference is [Death's Door, by Acid Nerve / Devolver Digital](https://store.steampowered.com/app/894020/Deaths_Door/). Use its strong silhouettes, restrained detail and readable elevated composition as references for Lauder's own futuristic world. All geometry, colours and materials in this pass are original; no reference-game assets, traced environments or UI are copied.
+
+## Current priority
+
+Use the existing primitive scene, simple colours and animated stand-in to test the [proposed gameplay loop](gameplay-script.md). New game assets are not a prerequisite. Add only the feedback needed to understand actions and their results; retain the current presentation while the script is reviewed. The guidance below describes the earlier pass and a later visual direction, rather than a new art task.
 
 ## Apply to the current route
 
