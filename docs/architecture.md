@@ -2,11 +2,11 @@
 
 **Date:** 16 November 2026\
 **Status:** Swift and RealityKit accepted. Architecture below is proposed for the first prototype.\
-**Scope:** Planning only; no app project or implementation has been created.
+**Scope:** Stage 1 implementation is in progress. Gameplay and persistence below remain planned.
 
 ## Decision and platform
 
-Use **Swift + RealityKit** for gameplay and the 3D world, **SwiftUI** for the interface, and **Reality Composer Pro** for scene and asset authoring.
+Use **Swift + RealityKit** for gameplay and the 3D world, and **SwiftUI** for the interface. Build scenes in Swift and load USDZ assets directly, following the [maintainer's clarified code-first decision](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023).
 
 The accepted rationale, alternatives, costs and three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md).
 
@@ -29,14 +29,22 @@ Start with iPhone and landscape orientation. The initial performance baseline is
 | Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
 | Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
 
-These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it. A content bundle or package required by Apple's authoring tools is an asset-pipeline container, not a reason to split gameplay into internal frameworks. Verify the current Reality Composer Pro output during Stage 1 instead of assuming an older `.rkassets` package layout.
+These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it. Use app-bundled USDZ resources within the single app target.
+
+## Scene and asset authoring
+
+Compose the graybox from RealityKit entities in Swift: generated meshes, simple materials, lights, camera and collision shapes. Stage 1 needs only a few explicit placements. As the route and interactions are added in Stages 2–3, keep their positions, dimensions and stable interaction IDs in one small typed Swift layout definition that GameWorld consumes. Use the binding validation described below. No JSON schema, parser, custom scene format or editor framework is needed.
+
+Load character and prop USDZ files directly from the app bundle. Preserve editable inputs and deliberate exports with their provenance. The current [stand-in generator](../Lauder/Content/Character/README.md) emits a real rig and idle/walk clips without a GUI; it is a prototype asset tool, not a system for producing finished character art. Artist-made assets and specialist tools remain options when a concrete visual requirement needs them.
+
+Inspect the rendered scene in simulator screenshots and on the phone while iterating placements. Source review cannot prove route readability, collision, camera framing or touch comfort. Keep the prototype plan's physical-device checks and measured frame-rate gate.
 
 ## Swift conventions
 
 - Select **Swift 6 language mode** deliberately from the first source commit. It enables complete data-race checking; do not rely on an Xcode template's default language mode. Keep UI/session work main-actor isolated and make concurrency boundaries explicit. [Swift migration guidance](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/enabledataracesafety/)
 - Use **Swift Testing** for new unit tests. The physical-device checks in the prototype plan remain necessary. [Swift Testing](https://developer.apple.com/xcode/swift-testing/)
 - Use the toolchain's **`swift format`** and the repository's [`.swift-format`](../.swift-format): two-space indentation and a 100-column line length; other options use tool defaults. No third-party formatter or linter is needed.
-- When the app and its test target exist, publish **one reproducible build-and-test command** in AGENTS.md and CONTRIBUTING.md. There is no valid app build/test command yet.
+- Run **`./scripts/check`** for toolchain formatting, the shared Lauder scheme's build and its Swift Testing target. [Validation requirements](../CONTRIBUTING.md#validation)
 
 The first playable uses in-memory progress. The saving design below remains the target for later hardening; [the prototype plan](prototype-plan.md) separates those milestones.
 
@@ -97,7 +105,7 @@ GameWorld sets up and tears down its callbacks explicitly. Cancel unfinished loa
 
 The camera has a fixed elevated perspective, follows Miki and cannot rotate in the prototype. Use level layout and low obstacles to maintain visibility before adding an occlusion subsystem.
 
-Use Reality Composer Pro for composition, materials and animation. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
+Scene composition and the named animation library are configured in Swift for the first playable. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
 
 ## Saving and interruption
 
@@ -120,7 +128,7 @@ A corrupt or unsupported save must not be silently erased. Offer an explicit res
 
 ## Assets and checks
 
-Start with a graybox environment and one representative rigged placeholder with idle/walk animation. Verify the full import → composition → iPhone workflow early. Keep editable sources, delivery assets and asset provenance together; generated build caches stay out of source control.
+Start with a graybox environment and one representative rigged placeholder with idle/walk animation. Verify editable source → validated USDZ export → RealityKit loading and Swift composition → iPhone playback early. Keep editable sources, delivery assets and asset provenance together; generated build caches stay out of source control.
 
 Test rules and save round-trips independently of the rendered scene. Test controls, visibility, collisions, interruptions and sustained performance on the physical phone. The [prototype plan](prototype-plan.md) defines the exit criteria.
 

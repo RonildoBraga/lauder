@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Lint Swift, then build and test with the selected Apple toolchain."""
+
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+ROOT = Path(__file__).resolve().parent.parent
+PRIVATE_IDENTIFIER = re.compile(
+    r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
+    re.IGNORECASE,
+)
+
+
+def display(output):
+    output = PRIVATE_IDENTIFIER.sub("<device-id>", output)
+    team = os.environ.get("LAUDER_DEVELOPMENT_TEAM")
+    if team:
+        output = output.replace(team, "<signing-team>")
+    destination_id = re.search(r"(?:^|,)id=([^,]+)", os.environ.get("LAUDER_DESTINATION", ""))
+    if destination_id:
+        output = output.replace(destination_id[1], "<device-id>")
+    print(output, end="", flush=True)
+
+
+def run(command, log):
+    with log.open("w") as stream:
+        result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
+    display(log.read_text(errors="replace"))
+    if result.returncode:
+        raise SystemExit(result.returncode)
+
+
+def check_assets():
+    problems = []
+    for name in ("Idle", "Walk"):
+        relative = Path("Lauder/Content/Character") / f"{name}.usdz"
+        path = ROOT / relative
+        if not path.is_file():
+            problems.append(f"{relative} (missing)")
+            continue
+        with path.open("rb") as stream:
+            if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
+                problems.append(f"{relative} (Git LFS pointer)")
+    if problems:
+        raise SystemExit(
+            "Character assets are not downloaded:\n"
+            + "\n".join(f"- {problem}" for problem in problems)
+            + "\nInstall Git LFS, then run 'git lfs install' and 'git lfs pull' "
+            "from the repository root before rerunning ./scripts/check."
+        )
+
+
+def simulator_destination():
+    result = subprocess.run(
+        ["xcrun", "simctl", "list", "devices", "available", "--json"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        display(result.stderr)
+        raise SystemExit("Unable to list available iPhone simulators.")
+    candidates = []
+    for runtime, devices in json.loads(result.stdout)["devices"].items():
+        match = re.fullmatch(r"com\.apple\.CoreSimulator\.SimRuntime\.iOS-(\d+)-(\d+)(?:-(\d+))?", runtime)
+        if not match:
+            continue
+        version = tuple(int(value or 0) for value in match.groups())
+        if version < (27, 0, 0):
+            continue
+        for device in devices:
+            if device.get("isAvailable") and device["name"].startswith("iPhone"):
+                rank = (
+                    device["state"] != "Booted",
+                    tuple(-value for value in version),
+                    device["name"],
+                    device["udid"],
+                )
+                candidates.append((rank, device))
+    if not candidates:
+        raise SystemExit("Install an iOS 27 or later iPhone simulator runtime in Xcode first.")
+    device = min(candidates, key=lambda candidate: candidate[0])[1]
+    display(f"Testing on {device['name']} using an available iOS simulator.\n")
+    return f"platform=iOS Simulator,id={device['udid']}"
+
+
+def main():
+    check_assets()
+    output = Path(tempfile.mkdtemp(prefix="lauder-check-"))
+    try:
+        print("Checking Swift formatting.", flush=True)
+        run(
+            ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "Lauder", "LauderTests"],
+            output / "format.log",
+        )
+        destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()
+        command = [
+            "xcodebuild",
+            "-quiet",
+            "-project", "Lauder.xcodeproj",
+            "-scheme", "Lauder",
+            "-configuration", "Debug",
+            "-destination", destination,
+            "-derivedDataPath", str(output / "DerivedData"),
+            "-resultBundlePath", str(output / "Tests.xcresult"),
+            "-parallel-testing-enabled", "NO",
+            "test",
+        ]
+        if "platform=iOS Simulator" in destination:
+            command.append("CODE_SIGNING_ALLOWED=NO")
+        elif os.environ.get("LAUDER_DEVELOPMENT_TEAM"):
+            command.append("DEVELOPMENT_TEAM=" + os.environ["LAUDER_DEVELOPMENT_TEAM"])
+        print("Building and running Swift Testing tests.", flush=True)
+        run(command, output / "xcodebuild.log")
+    except BaseException:
+        print(
+            f"Check failed. Logs and any build/test results are retained locally at {output}.",
+            file=sys.stderr,
+        )
+        raise
+    shutil.rmtree(output)
+    print("Checks passed. Temporary build and test output removed.", flush=True)
+
+
+if __name__ == "__main__":
+    main()

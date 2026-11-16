@@ -6,6 +6,9 @@ xcuserdata/
 *.xcuserstate
 .swiftpm/
 
+# Local authoring experiments; runtime assets and editable sources live in Lauder/Content.
+.local/
+
 # Local configuration and signing material
 .env
 .env.*

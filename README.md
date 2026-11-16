@@ -6,9 +6,9 @@ Miki is travelling with her father to reunite with her daughter, Nina. Explorati
 
 ## Project status
 
-**Story and prototype planning. No playable app or Xcode project exists yet.**
+**Stage 1 is in progress: an iPhone asset preview, with an Xcode project and import test.**
 
-The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. The architecture and prototype scope are proposals for review before implementation.
+The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. The current preview checks a rigged stand-in and its idle/walk clips. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 
@@ -16,6 +16,7 @@ The technical direction is Swift, RealityKit and SwiftUI, targeting the current 
 - [Chapter One — A Place to Meet](story/chapter-01.md): the current scene and dialogue draft.
 - [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
 - [First playable prototype](docs/prototype-plan.md): a small Relay House salvage-and-repair loop with staged acceptance criteria.
+- [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
 
 Names, ages and details marked as proposals remain open for discussion. Miki is widowed; Nina is her daughter; Lara is a trusted friend; Tomas is the working name for Miki's father.
 
@@ -29,7 +30,7 @@ People and AI-assisted contributors are welcome. Useful contributions now includ
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md). Use issues for proposals and questions; maintainers review changes before merging. The project plans alone are not an assignment to start implementation.
 
-There is currently no application build or test command. Contribution validation should match the change, and reports must distinguish performed checks from proposed ones.
+With Xcode 27.2 selected, an iOS 27 or later iPhone simulator installed and LFS assets downloaded, run `./scripts/check` to check formatting, build and run the import test. Open `Lauder.xcodeproj` and the shared `Lauder` scheme for the diagnostic preview. See [validation and local signing](CONTRIBUTING.md#validation) before testing on your own phone.
 
 ## Licence
 

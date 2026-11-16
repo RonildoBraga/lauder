@@ -1,6 +1,6 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. The project is currently planning its story and first Swift/RealityKit prototype.
+People and AI-assisted contributors are welcome. The project is developing its story and Stage 1 of the first Swift/RealityKit prototype.
 
 ## Before working
 
@@ -32,17 +32,21 @@ Use GitHub issues and pull requests to exchange review findings so the maintaine
 
 ## Validation
 
-There is no app or Xcode project yet, so there is no application build/test command.
-
 For documentation changes, check relative links and consistency with the story and technical plan. Explain any assumptions or checks you could not perform.
 
-When Swift files exist, use the formatter shipped with the selected Xcode toolchain and the repository's `.swift-format` configuration:
+Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime. With Git LFS assets downloaded, run the standard validation command from the repository root:
 
 ```sh
-xcrun swift format lint --strict --recursive .
+./scripts/check
 ```
 
-This checks formatting; it does not build the app or verify device behaviour. Once an Xcode project exists, document one standard command for its build and unit tests, with the actual scheme and destination. Keep tests focused on meaningful behaviour and report device and toolchain details where relevant.
+The script first checks that the required USDZ assets exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
+
+It then runs the selected toolchain's `swift format` with the committed `.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
+
+The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDER_DESTINATION` can override the Xcode destination; `LAUDER_DEVELOPMENT_TEAM` supplies a signing team for a physical-device test. Configure your Apple account and signing locally in Xcode first; do not commit those values or device identifiers. The default simulator check does not need code signing.
+
+Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
 
 ## Git LFS and cloning
 
@@ -77,6 +81,6 @@ Submit original material or material you are entitled to contribute. For third-p
 
 Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. Keep generated build products and caches out of source control.
 
-Inspect the first Reality Composer Pro scene's actual package contents during Stage 1 before fixing its repository layout or adding more tracking rules. Keep its text source files reviewable and apply LFS to binary payloads as needed; do not assume a package is one opaque binary or invent an unverified export workflow now.
+The supported path generates editable USD sources and USDZ delivery assets, loads the USDZ files directly, and composes scenes in Swift. See the [engine decision](docs/decisions/0001-engine.md).
 
 Keep signing credentials, API keys, personal device identifiers, local account information, generated builds and caches out of the repository.

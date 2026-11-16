@@ -10,11 +10,15 @@ Lauder is Apple-only, with iPhone first, an elevated perspective camera and a sm
 
 ## Decision
 
-Use Swift and RealityKit for gameplay and the 3D world, SwiftUI for the interface, and Reality Composer Pro for scene and asset authoring. Use Xcode to build, sign, test and profile the iPhone app.
+Use Swift and RealityKit for gameplay and the 3D world, SwiftUI for the interface, and Xcode to build, sign, test and profile the iPhone app. The project is **code-first**, as [confirmed by the maintainer](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023).
+
+Assemble scenes in Swift. For planned Stages 2–3, use one small typed Swift layout definition for spawn, obstacles and interaction placements with stable IDs. GameWorld constructs the scene and validates bindings; mission rules remain separate.
+
+Load the USDZ character assets directly and construct the named idle/walk animation library in Swift. Apple supports [programmatic animation-library construction](https://developer.apple.com/documentation/realitykit/animationlibrarycomponent). The [asset pipeline](../../Lauder/Content/Character/README.md) records editable sources, regeneration and provenance; [Stage 1 evidence](../stage-1.md) records the performed import and device checks.
 
 RealityKit supports a fully virtual world with a perspective camera; this game does not need an AR session. Its existing rendering, animation, collision and character-controller capabilities suit the proposed scope without owning a rendering engine. Apple's [native game sample](https://developer.apple.com/documentation/realitykit/bringing-your-scenekit-projects-to-realitykit) demonstrates camera, character, touch-input and SwiftUI integration.
 
-Reality Composer Pro 3 provides scene composition and simulation, animation graphs, visual scripting, navigation meshes and behavior trees. Use only the features the prototype needs, and keep mission rules in Swift. [Current authoring tools](https://developer.apple.com/documentation/realitycomposerpro)
+Reality Composer Pro is excluded from the project by maintainer decision.
 
 ## Alternatives considered
 
@@ -31,7 +35,8 @@ These are scope and workflow judgments, not comparative performance benchmarks. 
 ## Costs and validation
 
 - The project is tied to Apple platforms and Apple's toolchain. A later non-Apple release would require substantial adaptation.
-- Current authoring features have toolchain and OS requirements. Reality Composer Pro 3 requires an Apple-silicon Mac with macOS 26.5 or later; its Xcode integration requires Xcode 27 or later. Individual runtime APIs must fit the agreed deployment target. [Release requirements](https://developer.apple.com/documentation/realitycomposerpro/reality-composer-pro-3-release-notes), [Xcode integration](https://developer.apple.com/documentation/realitycomposerpro/realitycomposerpro-essentials-linkingxcodeproject)
+- Code-based placement still needs inspection in the running app for readable routes, framing, occlusion and comfortable controls. Source review and asset-import tests cannot establish those qualities.
+- Individual RealityKit runtime APIs must fit the agreed deployment target.
 - The USD asset workflow must preserve the representative character's rig, idle/walk animation, materials and scale. Verify that pipeline before producing content. [Apple asset guidance](https://developer.apple.com/documentation/usd/creating-usd-files-for-apple-devices)
 - Framework choice does not prove touch usability, sustained performance or reliable saves. Those remain physical-device exit criteria in the [prototype plan](../prototype-plan.md).
 
