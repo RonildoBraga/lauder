@@ -1,6 +1,6 @@
 # Lauder — gameplay walkthrough
 
-**Status:** Draft for agreement before further gameplay implementation. The family, setting and broad direction come from the [story bible](story/story-bible.md). The walkthrough condenses the [Chapter One draft](story/chapter-01.md) into the [first playable](prototype-plan.md). New dialogue, presentation details and menu choices below are proposals, not additions to established story canon.
+**Status:** Previous solo walkthrough, awaiting the ensemble rewrite. The [story bible, draft 0.4](story/story-bible.md) supersedes its family assumptions and specifies three characters travelling together with switchable leadership and distinct skills. The solo trip, stationary Tomas and remote Lara below are retained as earlier mechanics/script reference, not the current party proposal. The [prototype plan](prototype-plan.md) also needs replanning before gameplay implementation resumes; new dialogue and menus below remain unapproved proposals.
 
 ## The game we are building
 

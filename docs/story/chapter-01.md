@@ -2,7 +2,7 @@
 
 **Game-script draft 0.3 — 16 November 2026 (Australia/Sydney)**
 
-The homecoming, transmitter objective, survival tone and family roles are agreed directions. Miki is widowed; Nina is her daughter from that marriage. Lara is Miki's friend. Tomas is the working name for Miki's living father. Ages, dialogue and detailed events remain working proposals. The cause and timing of her husband's death are left for later.
+**Superseded narrative draft:** The [story bible, draft 0.4](story-bible.md) now records the ensemble direction and a revised Chapter One outline. This script retains the earlier family relationships, solo salvage trip and remote Lara for reference; those assumptions need rewriting. All three playable characters now travel together. Do not use the dialogue below to settle the reopened family ties.
 
 ## Scene 1 — What fits in the bags
 

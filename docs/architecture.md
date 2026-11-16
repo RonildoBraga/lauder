@@ -1,8 +1,8 @@
 # Lauder — architecture
 
 **Date:** 16 November 2026\
-**Status:** Swift and RealityKit accepted. Architecture below is proposed for the first prototype.\
-**Scope:** Movement and controls are implemented. The [gameplay script](gameplay-script.md) is under review; mission rules and persistence below remain planned.
+**Status:** Swift and RealityKit accepted. The earlier solo-prototype design below awaits revision for the [three-character party direction](story/story-bible.md).\
+**Scope:** Single-character movement and controls are implemented. Leader switching, two followers and character-specific actions require a design pass before gameplay work resumes. Stationary Tomas, camera ownership, interaction routing and the solo save model below are earlier assumptions, not a party architecture. Mission rules and persistence remain planned; this story revision supplies no implementation.
 
 ## Decision and platform
 

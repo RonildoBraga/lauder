@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** The walkable scene is implemented. Graybox development is approved; review the gameplay-script draft before implementing Stage 3's salvage-and-repair loop. Scope split and Stage 1 stop criterion remain unchanged.\
+**Status:** Earlier solo-slice plan, awaiting revision for the [three-character ensemble](story/story-bible.md). The walkable scene exists; following, switching and character-specific actions do not. Graybox development remains approved, but the content budget, Stage 3 sequence and exit criteria below are not a sufficient plan for the new requirement. Replan before gameplay work resumes. The Stage 1 evidence and stop criterion remain historical records.\
 **Technical direction:** Swift + RealityKit, current stable iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
