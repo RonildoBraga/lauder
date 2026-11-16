@@ -67,7 +67,7 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 - Use stable Xcode and record its version and the SDK version before validating the asset workflow.
 - Create one app target and one Swift Testing unit-test target with the [Swift conventions](architecture.md#swift-conventions).
 - Follow the [asset contribution policy](../CONTRIBUTING.md#assets-and-attribution) before adding any model or scene.
-- Generate or obtain one properly sourced rigged character with idle/walk animation; preserve editable inputs, export steps and provenance. The [current scripted stand-in](../Sources/Content/Character/README.md) supplies this without a visual editor.
+- Generate or obtain one properly sourced rigged character with idle/walk animation; preserve editable inputs, export steps and provenance. The [current scripted stand-in](../sources/content/character/README.md) supplies this without a visual editor.
 - Build a small scene in Swift and load its character and animation USDZ files directly.
 - Build, sign and run on the baseline phone.
 

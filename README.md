@@ -25,13 +25,13 @@ Names, ages and details marked as proposals remain open for discussion. Miki is 
 
 ```text
 Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
-Sources/
-  App/                        App entry point, world ownership and bundle configuration
-  Interface/                  SwiftUI HUD, controller/keyboard input and input rules
-  World/                      RealityKit world, movement, asset loading and scene presentation
-  Content/
+sources/
+  app/                        App entry point, world ownership and bundle configuration
+  interface/                  SwiftUI HUD, controller/keyboard input and input rules
+  world/                      RealityKit world, movement, asset loading and scene presentation
+  content/
     PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
-    Character/                Current animated stand-in, editable sources and provenance
+    character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
       Idle.usdz, Walk.usdz    Validated delivery assets loaded by the game
 tests/                        Asset import/rejection, movement and input-rule tests
@@ -43,7 +43,7 @@ scripts/                      Standard checks and the current character asset ge
 
 Keep gameplay-independent presentation in `SceneStyle` and `SceneDressing`; the route and collision anchors remain in `PrototypeLayout`. Mission rules and persistence are planned, so their folders do not exist yet. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
-For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `Sources/Content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
+For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 
 ## First prototype
 
