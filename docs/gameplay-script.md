@@ -1,93 +1,130 @@
 # Lauder — gameplay walkthrough
 
-**Status:** Previous solo walkthrough, awaiting the ensemble rewrite. The [story bible, draft 0.4](story/story-bible.md) supersedes its family assumptions and specifies three characters travelling together with switchable leadership and distinct skills. The solo trip, stationary Tomas and remote Lara below are retained as earlier mechanics/script reference, not the current party proposal. The [prototype plan](prototype-plan.md) also needs replanning before gameplay implementation resumes; new dialogue and menus below remain unapproved proposals.
+**Date:** 16 November 2026 (Australia/Sydney)\
+**Status:** Three-character proposal for Claude and maintainer review before implementation. This replaces the previous solo walkthrough. Character names, skill assignments, dialogue and new control mappings are working proposals drawn from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines the staged checks; the full [Chapter One script](story/chapter-01.md) still needs its ensemble rewrite.
 
 ## The game we are building
 
-You play Miki, travelling with her father toward a reunion with her daughter Nina. Nina went ahead with Lara, Miki's trusted friend, under a family plan. Their separation is practical and temporary. Miki is widowed; her husband's death remains unexplained. Tomas is the working name for her own father.
+One human player directs three characters travelling together. The selected character leads; the other two follow through the same physical world. Switching changes who the player controls, not the group's progress, belongings or relationships.
 
-Their world is a ruined future. Advanced utilities survive among damaged buildings, stripped vehicles and places people still maintain. The full cause of the collapse remains uncertain. Miki's useful knowledge is local and practical: she notices a connection, checks a marking and asks who still depends on a machine before taking it apart.
+The proposed trio is Miki, who understands systems and careful salvage; Lara, who is agile and reads access routes; and Tomas, whose strength and load-handling experience offer another approach. Their abilities are understandable before the player knows their histories. Internal synthetic replacements and biological changes belong to the world, but this slice needs no medical exposition or visible machinery in anyone's body.
 
-The experience centres on exploration and purposeful salvage: understand a problem, read the place, find something useful, make a repair and gain a concrete step toward home. Survival gives those decisions weight. Light combat belongs to the broader vision, alongside opportunities to observe and avoid danger. Later mechanics should earn their place one at a time.
+They are crossing a ruined future in which safe water, maintained equipment and current route information matter. Their immediate reasons to cooperate are clear. Miki wants a viable route to the coastal settlement, Lara needs contact with its water crew, and Tomas needs reliable information for inland deliveries. Their deeper connections emerge through what they recognise and choose to do.
 
-## What exists, and what this walkthrough proposes
+This walkthrough starts at Relay House after the East Span closure. The party restores its transmitter by recovering one regulator from the nearby depot, then makes a concrete onward plan. The trip tests exploration, switching and cooperation without combat, a timer or survival meters. Its duration will be measured once the party can actually play the route; the earlier solo 3–5 minute estimate is not a party target.
 
-The current build lets Miki walk the route, collide with obstacles, use the service passage, inspect nearby landmarks and pause. Actions display observations. Collection, mission dialogue, repair, the family call, completion, Read plan and Restart are still planned.
+## What exists today
 
-The proposed playable aims for roughly **3–5 minutes**, including short conversations. It begins at Relay House, after the opening home departure and bridge closure. The longer Chapter One security-machine encounter and historical clues remain outside this slice. There is no countdown, hunger depletion, health system or combat here. Tomas stays at the shelter; he needs no movement or pathfinding.
+The build has one controlled character, a stationary Tomas stand-in, movement, collision, camera follow, observation prompts and Pause/Resume. It does not have the trio, follower behaviour, leader switching, skill interactions, collection, repair, mission dialogue, completion or Restart.
 
-Gray and coloured primitives are sufficient to agree on this experience. Use neutral ground, darker solid obstacles and restrained teal/blue utility markers; identify interactions with text as well as colour. A small amber indicator can communicate restored power without becoming a general “collect everything glowing” rule. These presentation choices are proposals. No downloaded art, engine change or required sound pass is needed.
+The implementation sequence proposed for review is: **party movement and switching → one shared access problem → salvage, repair and contact**. Do not start the old solo Stage 3 from this document. Review and a later implementation assignment come first.
 
-## 1. A reason to leave the shelter
+## Readable controls and party feedback
 
-Miki starts beside the relay shelter. Tomas and the transmitter are visible nearby; the route leads away toward the depot. Approaching Tomas offers **Talk**. The player uses Cross on PS5, A on Xbox, or E during Simulator testing.
+The following new mappings are proposals for review, alongside the existing movement/action/pause inputs:
 
-The conversation establishes three facts: their crossing is closed, they lack water for the long detour, and the relay can receive but cannot answer Lara and Nina. Tomas points out where compatible equipment used to be.
+| Intent | PS5 | Xbox | Simulator keyboard |
+|---|---|---|---|
+| Move the leader | Left stick | Left stick | WASD |
+| Act / advance a line / confirm a menu choice | Cross | A | E |
+| Cycle leader: Miki → Lara → Tomas → Miki | R1 | RB | Tab |
+| Pause / resume | Options | Menu | Escape |
 
-**Proposed condensed dialogue:**
+There are no touch controls or clickable screen actions. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently shaped or coloured stand-ins are sufficient, with text so colour alone carries no essential information. The current character asset may be reused where useful; no new art is a prerequisite.
 
-> **Tomas:** The depot used emergency sets like this. Check what's left.
+Switching is available while exploring, including during movement. Each character stays at their current location. The camera follows the new leader without rotating or jumping to a different district, the previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
+
+Dialogue and Pause suspend switching and world movement. Existing release guidance and fresh-input recovery still apply after interruption, reconnection and pause transitions. The full command routing and ownership need to be resolved in the architecture review; these paragraphs define the proposed player experience.
+
+## 1. Three people with a reason to leave
+
+Miki starts as leader beside the shelter's transmitter. Lara and Tomas are nearby and ready to travel. The keeper can be represented through labelled text; this slice does not require a fourth animated body.
+
+The briefing establishes that East Span is closed, the dry detour exceeds their water supply, and the shelter can hear the coastal operator but cannot answer. All three contribute to a plan:
+
+> **Miki:** The receiver works. The regulator cuts out when we transmit.
 >
-> **Miki:** I'll check the markings before I bring anything back.
-
-The objective becomes **Find a compatible regulator at the depot**. Tomas remains useful through preparing the repair test and gathering route information, rather than following Miki around.
-
-## 2. Read the street
-
-The player walks Miki between the shelter and depot, using the left stick or WASD. The elevated camera follows without rotating. A wreck and fallen panel make the district feel damaged, while the open walking surface remains easy to read.
-
-The pleasure should come from recognising a place and choosing a route through it. The player need not search every corner or collect unrelated scrap. A glance back should make the shelter recognisable for the return journey.
-
-## 3. Find another entrance
-
-The depot's front entrance is visibly blocked. Walking into the obstruction stops Miki without damage or a failure screen. Looking along the wall reveals the existing service opening and its simple markers.
-
-The player goes around and enters using ordinary movement. Finding the passage changes their understanding of the space. It does not ask for another key or fetch task. The opening must be readable without a developer explaining where to go.
-
-## 4. Take something with a purpose
-
-Inside the depot, one equipment housing contains the regulator. Near an accessible side, the prompt becomes **Take regulator**. Miki's brief text confirms that its markings match the relay's needs; this stands in for the chapter's longer inspection and removal sequence.
-
-Pressing the action takes the part once. It disappears from the housing, a small carried-part indicator appears, and the objective becomes **Return to Relay House**. Pressing again cannot award another part. From outside the wall, the player cannot take it merely because the object is close.
-
-## 5. Make the return matter
-
-Miki retraces the route. The space is familiar now, and the carried regulator gives the trip a clear purpose. There is no surprise enemy wave or second component requirement.
-
-At the transmitter, the prompt becomes **Repair**. One action completes this first repair: the regulator leaves the carried-part indicator and the equipment gains a visible **Ready** status. A small indicator changes; an optional sound may reinforce it, but text and the visible change must work alone.
-
-Trying earlier without the part gives a short explanation, such as **A compatible regulator is still needed**, and changes nothing. Repeating Repair after success cannot consume the part again. The new prompt is **Call**.
-
-## 6. Hear the people the journey is for
-
-The player starts the call at the repaired transmitter. Short, speaker-labelled text brings Lara and Nina into the scene without adding physical characters, portraits or voice acting. The action advances each line; the player controls the reading pace.
-
-The exchange confirms that Lara and Nina are safe at the coastal refuge. Miki and Tomas contribute current information from their side. Lara agrees to meet them at Old Lock with the water crew; Nina remains at the refuge.
-
-**Proposed condensed lines:**
-
-> **Lara:** Old Lock, tomorrow afternoon. I'll come with the water crew.
+> **Tomas:** The depot used emergency sets like this. There may be one in a protected bay.
 >
-> **Nina:** Grandad, did you bring my cup?
+> **Lara:** Then we check the side access. We come back together.
+
+These lines are a condensed proposal, not a biography. The objective becomes **Find a compatible regulator at the depot**. The player can initiate the briefing with any leader; Miki's technical observation is still her line.
+
+## 2. Learn the party on the street
+
+The player walks away with two companions following. An early open stretch offers space to try the switch button before an obstacle demands a specialty.
+
+The camera remains at the accepted elevated angle and follows the selected character. A switch makes the change of leader clear through the name, marker and camera target. The party takes real routes around wrecks and walls. Companions do not walk through scenery, push the leader away from an interaction or teleport across a blocked passage.
+
+Following should require little attention. The player should be reading the district, not repeatedly rescuing companions. If this short route cannot support reliable following, simplify its layout and retest before adding mission content. Do not hide the problem with another control mode or a formation menu.
+
+## 3. Open a way everyone can use
+
+The front entrance remains blocked. Following the wall reveals the existing service passage, now proposed to have one closed, movable barrier. Both useful approaches are visible from the street side:
+
+- Lara can **Reach latch**, representing a brief controlled reach/balance manoeuvre that releases the barrier.
+- Tomas can **Shift panel**, moving the same loose barrier from a stable grip.
+
+Either action opens the same ordinary ground passage for everyone. They are alternatives; the player does not need to perform both. The first graybox can use text and a simple change of pose or panel placement. It adds no free-jump, climbing control, physics lifting simulation or specialist-only navigation surface.
+
+With Miki leading, the hint explains that Lara can reach the release or Tomas can shift the panel. It does not silently make a companion perform an action from elsewhere. The player switches, approaches the appropriate accessible point and presses the action input.
+
+The action works only from its valid side and with the appropriate leader. From behind a wall or out of reach, it cannot open the gate. Once open, repeat requests do nothing. All three traverse the opening on the way in and out.
+
+This one access problem lets the player choose an approach. It avoids a compulsory sequence of agility, strength and technical locks.
+
+## 4. Salvage without cutting someone else's supply
+
+Inside the depot, a disconnected equipment housing contains the regulator. A separate maintained water bypass serves a block marked empty in an old transport record.
+
+Near the housing, Miki can **Inspect and take regulator**. Her inspection confirms compatibility and distinguishes the disconnected source from the live supply. Other leaders get a short explanation that Miki should inspect it. A correct action takes the part once, removes its visible stand-in and changes the objective to **Return to Relay House**.
+
+The part belongs to the party. Switching to Lara or Tomas keeps the carried-part indicator and objective; there is no transfer action or separate inventory for each person.
+
+The water connection stays intact. Its story beat is part of the inspection, not another pickup or branching resource system:
+
+> **Lara:** We kept that tap open for the people who stayed.
 >
-> **Tomas:** In my bag.
+> **Tomas:** That block was marked empty.
 >
-> **Nina:** Mum, there's a place for your bag beside mine.
+> **Lara:** Some people never left.
 
-The cup and the space for Miki's bag connect the useful repair to an ordinary family relationship. The call secures a meeting plan; the actual reunion lies ahead.
+The observation establishes continuing habitation and a piece of Lara's experience. It does not identify who caused the collapse or prove that Tomas knowingly abandoned anyone. The local explanation proposed in the [story bible](story/story-bible.md#author-knowledge-and-fair-disclosure) remains for review before this dialogue becomes game content.
 
-## 7. Finish, reread, try again
+## 5. Return together and make the repair
 
-Completion states what changed: **Transmitter restored. Meeting agreed at Old Lock.** The player can keep walking. The transmitter now offers **Read plan**, which repeats the meeting details without restarting the call or awarding progress again.
+The party retraces a recognisable route through its open passage. The player can change leaders for the return. There is no new enemy wave, second component or forced escort event.
 
-Options/Menu or Escape opens Pause. The proposed pause menu offers Resume and Restart; selection uses the stick or W/S, with the action input to confirm. Restart asks for confirmation, then returns Miki, the regulator and the transmitter to the beginning of this run. There are no clickable screen actions. This menu and Restart are proposed, not current features.
+At the transmitter, Miki can **Repair**. Without the regulator, the action explains what is missing and changes nothing. With it, one action consumes the shared carried part and changes the transmitter to **Ready**. A visible indicator and text communicate the result without relying on sound or finished art. Repeating the action cannot consume another part or advance the mission twice.
 
-Pause freezes world movement and world interactions; menu navigation and confirmation remain available. Returning from pause or interruption requires released controls before fresh movement is accepted. Stepping away from an interaction must prevent a stale prompt from repairing or collecting at a distance. A fresh launch starts a fresh run; checkpoints are later work.
+Lara and Tomas remain nearby as participants. A small exchange can credit their contributions without making them stand at fixed quest-giver positions. The regulator stays in the community transmitter.
 
-## Questions to settle before building the loop
+## 6. Make contact and secure an appointment
 
-- Does observing the service entrance and returning with one useful part feel satisfying without combat or a timer?
-- Does this short briefing and family call explain the purpose without slowing the walk excessively?
-- Are one carried-part indicator, a visible repair change and the proposed Pause/Restart menu enough feedback?
+Any leader can now **Call**. Short speaker-labelled text reaches the coastal operator and water crew; Miki, Lara and Tomas speak from Relay House. The selected leader does not replace another character's lines.
 
-After a first playtest, ask whether the player knew why they were leaving, found the passage without coaching and cared more about the repair after the call. Let those answers guide the next single addition, rather than treating more mechanics or finished art as the solution in advance.
+The party reports the closure. Information from both approaches supports a canal route with a water stop. They agree on Old Lock, the following afternoon, and the next radio appointment if a route fails.
+
+> **Coastal operator:** The crew can meet you at Old Lock tomorrow afternoon.
+>
+> **Lara:** We'll take the canal path. Keep the next check-in for us.
+>
+> **Tomas:** I'll mark the closure for anyone coming after us.
+
+Nina is part of the wider story, but this first prototype omits her dialogue until her underlying relationship is decided. The scene does not use family titles or an emergency involving her to supply motivation.
+
+The achievement is concrete: **Transmitter restored. Meeting agreed at Old Lock.** A brief reciprocal gesture or line can supply warmth while the full chapter develops its relationships further.
+
+## 7. Finish, reread, restart
+
+After the call the trio can keep walking and switching. Any leader can use **Read plan** at the transmitter to reread the meeting details without restarting the call or awarding progress.
+
+The proposed Pause menu contains Resume and Restart. Stick up/down or W/S selects; Cross/A/E confirms; Options/Menu/Escape resumes. Restart returns directly to the beginning of the slice without a second confirmation screen. These menu details are proposals for review, not current features.
+
+During dialogue, Pause preserves the current line; resuming returns there. Restart resets the whole run: all three positions, active leader Miki, follower state, closed service barrier, visible regulator, unrepaired radio, briefing, dialogue and objectives. It must not duplicate characters, scene subscriptions or callbacks. A fresh launch starts a new in-memory run; saved Continue is later work.
+
+## What we should learn from this slice
+
+Observe an unfamiliar player without explaining the route. Can they identify the leader, switch deliberately and move all three through the service passage? Does choosing Lara or Tomas feel useful? Do they understand why Miki inspects the part, who benefits from leaving the water supply alone and what the call achieved?
+
+The [prototype plan](prototype-plan.md) turns those questions into staged checks. Test the uncertain party behaviour first, then add the single access problem and the repair loop. More mechanics, backstory or finished art should follow evidence about what is enjoyable and unclear.

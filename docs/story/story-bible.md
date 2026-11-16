@@ -22,7 +22,7 @@ Miki, Lara and Tomas are the proposed playable trio. Their skills, enhancement h
 
 The previous draft established Miki as widowed, Nina as her daughter, Tomas as her father and Lara as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. Some may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
-The [older Chapter One script](chapter-01.md) and [gameplay walkthrough](../gameplay-script.md) still record the previous family/solo version and need a separate script pass. The chapter outline here is the current narrative proposal. Older dialogue is not evidence that family roles remain settled.
+The [older Chapter One script](chapter-01.md) still records the previous family/solo version and needs a separate script pass. The current [gameplay walkthrough](../gameplay-script.md) condenses the ensemble outline into a proposed party slice for review. Older chapter dialogue is not evidence that family roles remain settled.
 
 ## Premise
 
@@ -198,7 +198,7 @@ They agree to make the short salvage trip together. The keeper remains at the sh
 
 Front access is blocked. The group reads the depot and chooses an approach. The scene can demonstrate a useful leadership switch without requiring an obstacle for each skill.
 
-For example, Lara reaches a latch and opens the service passage for everyone. Tomas can help move a manageable frame; that second obstruction is optional scene design, not another required task. Miki checks the regulator and isolates the disconnected equipment containing it.
+The current walkthrough proposes two approaches to the same service barrier: Lara reaches its release latch, or Tomas shifts its loose panel from a stable grip. Either opens the passage for everyone; neither requires the other first. These are contextual actions represented simply in the graybox, not free climbing or a physics lifting system. Miki checks the regulator and isolates the disconnected equipment containing it.
 
 A maintained bypass supplies a neighbouring block marked empty in an old transport register. Inspection shows current use. Miki leaves that supply connected; the regulator comes from separate equipment. This decision belongs to ordinary salvage, not a new branching morality system.
 
@@ -258,6 +258,6 @@ Balance questions with answers, jokes, reliable actions and progress. Major conn
 - Each chapter delivers a concrete achievement. New information does not repeatedly erase routes, move destinations or undo trust merely to extend the journey.
 - People beyond the party have meaningful lives of their own.
 
-Next settle the trio's identities, underlying relationships and enhancement specifics; rewrite Chapter One dialogue and the playable walkthrough against those decisions. Map East Span, Relay House and Old Lock so water and timing remain credible.
+Next settle the trio's identities, underlying relationships and enhancement specifics; rewrite the full Chapter One dialogue against those decisions. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
 
-The current build has one controlled character, stationary Tomas and observations. Following, switching, character-specific actions and the repair loop are not implemented. The [prototype plan](../prototype-plan.md) and [architecture](../architecture.md) still describe the earlier solo slice and need replanning for the party requirement before gameplay work resumes. This revision does not authorise implementation.
+The current build has one controlled character, stationary Tomas and observations. Following, switching, character-specific actions and the repair loop are not implemented. The [prototype plan](../prototype-plan.md) now proposes party movement/switching, one shared access problem and then the repair loop. It awaits Claude's review before implementation; the [architecture](../architecture.md) still needs reconciliation with the party proposal. This revision does not authorise implementation.

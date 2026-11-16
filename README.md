@@ -6,17 +6,17 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**The current build is a walkable graybox with one controlled character. The [rewritten story bible](docs/story/story-bible.md) records the approved ensemble direction and proposes the trio and Chapter One details. The older scripts and solo prototype plan need revision before gameplay work resumes.**
+**The current build is a walkable graybox with one controlled character. The [story bible](docs/story/story-bible.md), [gameplay walkthrough](docs/gameplay-script.md) and [prototype plan](docs/prototype-plan.md) now describe the three-character proposal. Claude's review and a later implementation assignment come before gameplay work resumes.**
 
 The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. Scenes are built in Swift, with USDZ assets loaded directly. Phone controls are PS5 DualSense or Xbox: left stick to move, Cross/A to act and Options/Menu to pause/resume. In Simulator, use WASD, E and Escape respectively. There are no touch controls or clickable screen actions. The salvage-and-repair gameplay loop has not been implemented.
 
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
-- [Gameplay script](docs/gameplay-script.md): previous solo walkthrough, awaiting the ensemble rewrite.
+- [Gameplay script](docs/gameplay-script.md): proposed party controls, shared access problem, salvage, repair and coastal contact.
 - [Chapter One — A Place to Meet](docs/story/chapter-01.md): previous family script, awaiting the ensemble rewrite.
 - [Architecture](docs/architecture.md): Apple toolchain and earlier solo design, awaiting the party design pass.
-- [First playable prototype](docs/prototype-plan.md): earlier Relay House plan, awaiting the party scope revision.
+- [First playable prototype](docs/prototype-plan.md): party movement and switching first, then access and the repair loop, with staged checks.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
 - [Stage 2 evidence](docs/stage-2.md): controller decisions, simulator iteration and physical-device checks.
 
@@ -48,7 +48,7 @@ For new art, group an asset's editable inputs, deliberate delivery exports and p
 
 ## First prototype
 
-The existing solo plan describes a short regulator-and-transmitter round trip. The revised Chapter One keeps that purpose with the whole party travelling and contacting the coastal water crew. Following, switching, distinct abilities and the repair loop are not implemented. Replan the prototype around the party requirement before resuming gameplay work; no new duration or content budget is agreed yet. The initial performance target remains 60 fps on an iPhone 13 Pro Max.
+The proposed sequence proves movement, switching and following with three stand-ins first. It then adds one service barrier with alternative agile/strength actions and a regulator-and-transmitter round trip ending in a coastal water-crew call. Following, switching, distinct abilities and the repair loop are not implemented. The revised scope, controls and interaction details await review; a new playthrough duration will come from testing. The initial performance target remains 60 fps on an iPhone 13 Pro Max.
 
 The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-in when testing the revised scope. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). Narrative proposals do not imply implemented interactions or approval of every detail.
 

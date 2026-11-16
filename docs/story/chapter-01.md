@@ -2,7 +2,7 @@
 
 **Game-script draft 0.3 — 16 November 2026 (Australia/Sydney)**
 
-**Superseded narrative draft:** The [story bible, draft 0.4](story-bible.md) now records the ensemble direction and a revised Chapter One outline. This script retains the earlier family relationships, solo salvage trip and remote Lara for reference; those assumptions need rewriting. All three playable characters now travel together. Do not use the dialogue below to settle the reopened family ties.
+**Superseded narrative draft:** The [story bible, draft 0.4](story-bible.md) records the ensemble direction and revised Chapter One outline; the current [gameplay walkthrough](../gameplay-script.md) proposes its party slice. This full script retains the earlier family relationships, solo salvage trip and remote Lara for reference and still needs rewriting. All three playable characters now travel together. Do not use the dialogue below to settle the reopened family ties.
 
 ## Scene 1 — What fits in the bags
 

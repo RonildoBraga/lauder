@@ -5,7 +5,7 @@
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the documents relevant to the assigned task. The source of shared project decisions is this repository, not private assistant memory.
 
 - Narrative: [story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md).
-- Player experience: the current ensemble outline in the [story bible](docs/story/story-bible.md); the [gameplay script](docs/gameplay-script.md) records the previous solo version and awaits revision.
+- Player experience: the ensemble outline in the [story bible](docs/story/story-bible.md) and the current three-character [gameplay script](docs/gameplay-script.md), proposed for review before implementation.
 - Technical work: [architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md).
 
 Do not duplicate those documents here or silently turn a working proposal into an agreed fact.
@@ -14,7 +14,9 @@ Do not duplicate those documents here or silently turn a working proposal into a
 
 Stage 1 is merged. The maintainer has authorised integrating the prepared Stage 2, visual pass and project-organisation work into main, then reviewing the gameplay script before continuing implementation. The graybox approach is approved; the script's detailed dialogue and interaction flow remain a review draft. Stage 3 gameplay is still planned. An explicit later maintainer assignment authorises that work; do not request duplicate permission when it already supplies it.
 
-The maintainer subsequently approved an ensemble story and specified three playable characters travelling together, switching the controlled leader while the other two follow, with distinct skills and discreet synthetic/biological enhancements. The story bible records that direction and marks proposed identities, roles and relationships. Its earlier family assumptions are reopened. The older Chapter One, walkthrough, architecture and prototype scope require revision; do not implement their stationary-companion/remote-Lara setup as the new party design. The story-bible rewrite does not itself assign gameplay implementation.
+The maintainer subsequently approved an ensemble story and specified three playable characters travelling together, switching the controlled leader while the other two follow, with distinct skills and discreet synthetic/biological enhancements. The story bible records that direction and marks proposed identities, roles and relationships. Its earlier family assumptions are reopened. The walkthrough and prototype plan now propose the party sequence; the full Chapter One script and architecture still need reconciliation. Do not implement the older stationary-companion/remote-Lara setup as the party design.
+
+The current assignment is to update the walkthrough and prototype plan, then ask Claude to review before implementation. New control mappings, skill actions, command precedence and stage criteria are proposals for that review. No gameplay code or merge is assigned by this documentation task. Read Claude's findings and the maintainer's subsequent assignment before starting party work.
 
 The earlier [visual pass](docs/visual-direction.md) remains part of the current scene. Further art production and visual polish are deferred while the core loop is evaluated with simple shapes and colours. Do not turn the gameplay script's existence into an assignment to implement it.
 
