@@ -93,7 +93,8 @@ private struct ImportedCharacter {
       throw PreviewAssetError.missingRig(name)
     }
 
-    // RealityKit also imports aggregate scene/subtree clips. Select the authored USD clip.
+    // RealityKit also imports aggregate scene/subtree clips. This imported name is guarded
+    // by AssetLoadingTests; it is not a documented importer contract.
     var authoredClips: [(owner: Entity, path: [String], animation: AnimationResource)] = []
     for node in nodes {
       for animation in node.entity.availableAnimations

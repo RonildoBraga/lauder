@@ -6,7 +6,10 @@ No third-party Python packages or downloaded art. Requires macOS USD tools.
 
 import math
 from pathlib import Path
+import re
 import subprocess
+import tempfile
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -219,6 +222,56 @@ def SkelRoot "Character" (prepend references = @Character.usda@</Character>) {{
     return text + "    }\n}\n"
 
 
+def flattened_content(path):
+    result = subprocess.run(
+        ["/usr/bin/usdcat", "--flatten", "--skipSourceFileComment", str(path)],
+        check=True, capture_output=True, text=True,
+    )
+    # These Apple USD tools still emit the generated input-path documentation.
+    # Ignore only that block, retaining authored metadata and scene content.
+    return re.sub(
+        r'^    doc = """Generated from Composed Stage of root layer [^\n]*\n"""\n',
+        "", result.stdout, count=1, flags=re.MULTILINE,
+    )
+
+
+def export_matches(output, expected):
+    if not zipfile.is_zipfile(output):
+        return False
+    check = subprocess.run(
+        ["/usr/bin/usdchecker", "--arkit", "--strict", str(output)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    if check.returncode:
+        return False
+    try:
+        return flattened_content(output) == expected
+    except subprocess.CalledProcessError:
+        return False
+
+
+def export_clip(source, output):
+    expected = flattened_content(source)
+    if export_matches(output, expected):
+        print(f"{output.relative_to(ROOT)}: kept unchanged ({output.stat().st_size} bytes)")
+        return
+
+    # Packaging records ZIP timestamps. Validate a new candidate before replacing
+    # a stale/invalid export, and preserve matching exports to avoid LFS churn.
+    with tempfile.TemporaryDirectory(prefix=".character-export-", dir=ASSET) as directory:
+        candidate = Path(directory) / output.name
+        subprocess.run(
+            ["/usr/bin/usdzip", "--arkitAsset", str(source), str(candidate)], check=True,
+        )
+        subprocess.run(
+            ["/usr/bin/usdchecker", "--arkit", "--strict", str(candidate)], check=True,
+        )
+        if flattened_content(candidate) != expected:
+            raise RuntimeError(f"Packaged content differs from {source.name}; export left unchanged")
+        candidate.replace(output)
+    print(f"{output.relative_to(ROOT)}: exported ({output.stat().st_size} bytes)")
+
+
 def main():
     SOURCE.mkdir(parents=True, exist_ok=True)
     (SOURCE / "Character.usda").write_text(make_character(), encoding="utf-8")
@@ -228,9 +281,7 @@ def main():
         source.write_text(make_clip(clip), encoding="utf-8")
         subprocess.run(["/usr/bin/usdcat", "--loadOnly", str(source)], check=True)
         subprocess.run(["/usr/bin/usdchecker", "--strict", str(source)], check=True)
-        subprocess.run(["/usr/bin/usdzip", "--arkitAsset", str(source), str(output)], check=True)
-        subprocess.run(["/usr/bin/usdchecker", "--arkit", "--strict", str(output)], check=True)
-        print(f"{output.relative_to(ROOT)}: {output.stat().st_size} bytes")
+        export_clip(source, output)
     print(f"{len(JOINTS)} joints; {len(PARTS) * 8} vertices; {len(PARTS) * 6} quads")
 
 

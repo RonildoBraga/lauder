@@ -6,7 +6,7 @@ An original, deliberately simple humanoid for proving the character asset pipeli
 
 Created for Lauder with Codex assistance on 16 November 2026. The geometry, joint layout, colours and animation keyframes are original to this repository. No downloaded models, motion capture, textures, third-party art or legacy game assets were used. These original contributions use the repository's [MIT licence](../../../LICENSE).
 
-The editable authoring source is [generate-character.py](../../../scripts/generate-character.py), using only Python's standard library. The `source/` directory contains reviewable USDA layers. Make persistent changes in the generator: regeneration replaces its emitted USDA and USDZ files.
+The editable authoring source is [generate-character.py](../../../scripts/generate-character.py), using only Python's standard library. The `source/` directory contains reviewable USDA layers. Make persistent changes in the generator: regeneration updates its emitted USDA and replaces USDZ exports only when missing, invalid or different from the generated content.
 
 Technical references describe file formats and APIs; they are not sources of copied art:
 
@@ -24,7 +24,7 @@ Technical references describe file formats and APIs; they are not sources of cop
 | `Idle.usdz` | Self-contained delivery asset, containing `Idle.usdc` | 21,799 |
 | `Walk.usdz` | Self-contained delivery asset, containing `Walk.usdc` | 19,075 |
 
-USDA stays in ordinary Git; USDZ follows the repository's Git LFS rules. File sizes above describe the exports made with Apple USD Tools 0.25.11 and may change after an intentional regeneration.
+USDA stays in ordinary Git; USDZ follows the repository's Git LFS rules. File sizes above describe the exports made with Apple USD Tools 0.25.11 and may change when content or tools change.
 
 ## Geometry and animation contract
 
@@ -47,7 +47,11 @@ From the repository root on macOS, with the system USD tools available:
 python3 scripts/generate-character.py
 ```
 
-The script loads and validates each source with `usdcat --loadOnly` and `usdchecker --strict`, then packages it with `usdzip --arkitAsset` and checks the USDZ with `usdchecker --arkit --strict`. The packaging tool flattens the shared layer into each delivery asset; its composition-arc warning is expected. Each resulting package has one USDC entry and no external dependencies.
+The script loads and validates each source with `usdcat --loadOnly` and `usdchecker --strict`. It then checks an existing USDZ with `usdchecker --arkit --strict` and compares its flattened ASCII content with the generated source using `usdcat --flatten`. The comparison ignores only the tool-generated input-path documentation block. It includes the composed shared character layer, so geometry, rig, material and animation changes are detected.
+
+A valid matching export is reported as **kept unchanged** and its bytes are untouched. Missing, corrupt, stale or LFS-pointer outputs are rebuilt with `usdzip --arkitAsset`. The candidate is validated and compared before atomically replacing the old export; a failed candidate leaves the old export untouched. The packaging tool flattens the shared layer into each delivery asset; its composition-arc warning is expected. Each resulting package has one USDC entry and no external dependencies.
+
+The generated USDA text is deterministic for this generator. Fresh USDZ packaging is **not byte-for-byte reproducible**: ZIP timestamps can change the archive hash even when the embedded USDC is identical. Reproduction is checked through validated flattened content, not a new archive's hash. Repeating the command with unchanged content preserves the existing archive hashes and avoids unnecessary Git LFS revisions.
 
 Initial checks passed for both sources and exports. An independent check of the exported data also confirmed the bind/rest hierarchy, joint/weight array sizes, normalised weights and quaternions, outward face winding, stationary root, matching loop endpoints and sampled skinned bounds within the declared extent. The hosted Swift Testing import test also passes under Xcode 27.2. The maintainer confirmed visible idle/walk switching on the baseline iPhone; see the [session evidence](../../../docs/stage-1.md).
 

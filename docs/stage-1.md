@@ -6,7 +6,7 @@ Run a small scene and one representative rigged character with idle and walk ani
 
 ## Session 1 — 16 November 2026
 
-**Status:** The device/rig/idle-walk criterion has been demonstrated with direct USDZ loading. The latest diagnostic-panel layout check and PR review remain open.
+**Status:** The device/rig/idle-walk criterion and latest diagnostic-panel layout have been confirmed on the baseline iPhone. PR #8 remains unmerged.
 
 The maintainer [confirmed the code-first workflow](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023): Swift scene construction and direct USDZ loading. The three-session stop criterion is unchanged.
 
@@ -32,13 +32,14 @@ Personal account information, signing identifiers and device identifiers are int
 - Created an original 18-joint skinned stand-in, separate idle/walk USDZ exports, editable USDA layers and a standard-library Python generator. [Provenance and regeneration](../Lauder/Content/Character/README.md)
 - `./scripts/check` passed with Xcode 27.2 on an iPhone 17 simulator running iOS 27.0: formatting, build and the one hosted Swift Testing import test. Result bundle and detailed logs are retained locally outside Git.
 - Built a signed iPhone app with Xcode 27.2, installed and launched it on the baseline phone. A device screenshot showed the character, floor, landmark and loaded 18-joint rig. The maintainer then confirmed that both Walk and Idle visibly work when selected.
-- Moved the diagnostic panel to the upper-left after that observation so it does not cover the character's legs. The updated build and simulator import test pass, and the update is installed on the phone. Its automatic relaunch was blocked when the phone locked; that layout change has not been visually rechecked on the device.
+- Moved the diagnostic panel to the upper-left after that observation so it does not cover the character's legs. The updated build and simulator import test pass, and the update is installed on the phone. Its automatic relaunch was initially blocked when the phone locked. The maintainer subsequently reopened the preview and confirmed that the panel is readable, both animations work and the character's legs are unobstructed.
 - Fixed the initial import-test failure: RealityKit adds aggregate animation resources alongside the authored joint clip. The loader now validates the unique authored joint animation, its duration and the actual compatible skinned rigs.
 
-### Remaining Stage 1 review
+### Review and handoff
 
-- Visually recheck the latest upper-left diagnostic-panel placement on the baseline phone; its installation and build/test checks have passed.
-- Review PR #8 before merging or starting another stage. Approval of the authoring direction does not authorise either action.
+- Track review findings and responses in [PR #8](https://github.com/RonildoBraga/lauder/pull/8). Claude's [review at `ebb0e9f`](https://github.com/RonildoBraga/lauder/pull/8#issuecomment-6907436791) found no blockers and reproduced the simulator build/import test; follow-up changes need review as well.
+- Source-group evaluation, separating shared character loading and additional rejection-path tests are tracked for Stage 2 in [issue #10](https://github.com/RonildoBraga/lauder/issues/10), as recommended in that review.
+- Merging PR #8 or starting another stage remains the maintainer's decision. The confirmed device checks do not authorise either action.
 
 ### Deferred work and limits
 

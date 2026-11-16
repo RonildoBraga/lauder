@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -33,8 +34,27 @@ def run(command, log):
         result = subprocess.run(command, cwd=ROOT, stdout=stream, stderr=subprocess.STDOUT)
     display(log.read_text(errors="replace"))
     if result.returncode:
-        print(f"Check failed. Full output is retained locally at {log}.", file=sys.stderr)
         raise SystemExit(result.returncode)
+
+
+def check_assets():
+    problems = []
+    for name in ("Idle", "Walk"):
+        relative = Path("Lauder/Content/Character") / f"{name}.usdz"
+        path = ROOT / relative
+        if not path.is_file():
+            problems.append(f"{relative} (missing)")
+            continue
+        with path.open("rb") as stream:
+            if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
+                problems.append(f"{relative} (Git LFS pointer)")
+    if problems:
+        raise SystemExit(
+            "Character assets are not downloaded:\n"
+            + "\n".join(f"- {problem}" for problem in problems)
+            + "\nInstall Git LFS, then run 'git lfs install' and 'git lfs pull' "
+            "from the repository root before rerunning ./scripts/check."
+        )
 
 
 def simulator_destination():
@@ -71,32 +91,41 @@ def simulator_destination():
 
 
 def main():
+    check_assets()
     output = Path(tempfile.mkdtemp(prefix="lauder-check-"))
-    print("Checking Swift formatting.", flush=True)
-    run(
-        ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "Lauder", "LauderTests"],
-        output / "format.log",
-    )
-    destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()
-    command = [
-        "xcodebuild",
-        "-quiet",
-        "-project", "Lauder.xcodeproj",
-        "-scheme", "Lauder",
-        "-configuration", "Debug",
-        "-destination", destination,
-        "-derivedDataPath", str(output / "DerivedData"),
-        "-resultBundlePath", str(output / "Tests.xcresult"),
-        "-parallel-testing-enabled", "NO",
-        "test",
-    ]
-    if "platform=iOS Simulator" in destination:
-        command.append("CODE_SIGNING_ALLOWED=NO")
-    elif os.environ.get("LAUDER_DEVELOPMENT_TEAM"):
-        command.append("DEVELOPMENT_TEAM=" + os.environ["LAUDER_DEVELOPMENT_TEAM"])
-    print("Building and running Swift Testing tests.", flush=True)
-    run(command, output / "xcodebuild.log")
-    print(f"Checks passed. Local build and test results: {output}", flush=True)
+    try:
+        print("Checking Swift formatting.", flush=True)
+        run(
+            ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "Lauder", "LauderTests"],
+            output / "format.log",
+        )
+        destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()
+        command = [
+            "xcodebuild",
+            "-quiet",
+            "-project", "Lauder.xcodeproj",
+            "-scheme", "Lauder",
+            "-configuration", "Debug",
+            "-destination", destination,
+            "-derivedDataPath", str(output / "DerivedData"),
+            "-resultBundlePath", str(output / "Tests.xcresult"),
+            "-parallel-testing-enabled", "NO",
+            "test",
+        ]
+        if "platform=iOS Simulator" in destination:
+            command.append("CODE_SIGNING_ALLOWED=NO")
+        elif os.environ.get("LAUDER_DEVELOPMENT_TEAM"):
+            command.append("DEVELOPMENT_TEAM=" + os.environ["LAUDER_DEVELOPMENT_TEAM"])
+        print("Building and running Swift Testing tests.", flush=True)
+        run(command, output / "xcodebuild.log")
+    except BaseException:
+        print(
+            f"Check failed. Logs and any build/test results are retained locally at {output}.",
+            file=sys.stderr,
+        )
+        raise
+    shutil.rmtree(output)
+    print("Checks passed. Temporary build and test output removed.", flush=True)
 
 
 if __name__ == "__main__":
