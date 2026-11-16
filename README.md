@@ -1,0 +1,36 @@
+# Lauder
+
+An open-source, Apple-only survival exploration game about a homecoming through the ruins of a futuristic world.
+
+Miki is travelling with her father to reunite with her daughter, Nina. Exploration and purposeful salvage help them find a viable way across a world devastated by war and infrastructure failure. The full cause of the collapse remains uncertain.
+
+## Project status
+
+**Story and prototype planning. No playable app or Xcode project exists yet.**
+
+The technical direction is Swift, RealityKit and SwiftUI, targeting the current stable iOS generation, with iPhone first. The architecture and prototype scope are proposals for review before implementation.
+
+## Start here
+
+- [Story bible](story/story-bible.md): agreed foundations, characters, world and working timeline.
+- [Chapter One — A Place to Meet](story/chapter-01.md): the current scene and dialogue draft.
+- [Architecture](docs/architecture.md): responsibilities, state, saving and the Apple toolchain.
+- [First playable prototype](docs/prototype-plan.md): a small Relay House salvage-and-repair loop with staged acceptance criteria.
+
+Names, ages and details marked as proposals remain open for discussion. Miki is widowed; Nina is her daughter; Lara is a trusted friend; Tomas is the working name for Miki's father.
+
+## First prototype
+
+One short round trip: talk to Tomas, explore the depot, recover a regulator, repair the transmitter and contact Lara and Nina. Start with a small graybox environment and one representative animated character. The initial performance target is 60 fps on an iPhone 13 Pro Max.
+
+## Contribute
+
+People and AI-assisted contributors are welcome. Useful contributions now include story feedback, prototype-scope review, level-layout proposals, technical research and improvements to the documentation.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md). Use issues for proposals and questions; maintainers review changes before merging. The project plans alone are not an assignment to start implementation.
+
+There is currently no application build or test command. Contribution validation should match the change, and reports must distinguish performed checks from proposed ones.
+
+## Licence
+
+[MIT](LICENSE) applies to the repository's original code, story and documentation unless a file or directory explicitly states another licence. Third-party material retains its own licence and attribution notices.

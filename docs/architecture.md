@@ -1,0 +1,124 @@
+# Lauder — architecture
+
+**Date:** 16 November 2026\
+**Status:** Swift and RealityKit accepted. Architecture below is proposed for the first prototype.\
+**Scope:** Planning only; no app project or implementation has been created.
+
+## Decision and platform
+
+Use **Swift + RealityKit** for gameplay and the 3D world, **SwiftUI** for the interface, and **Reality Composer Pro** for scene and asset authoring.
+
+Interpret “latest iOS” as the current stable **iOS 27 family**. Proposed minimum deployment target: **iOS 27.0**. Build with the latest stable SDK and test on the latest stable patch. On the review date, Apple lists **iOS 27.2.1** and **Xcode 27.2** as released; iOS/Xcode 27.3 are beta. [Apple releases](https://developer.apple.com/news/releases/)
+
+Use the stable Xcode 27.2 toolchain for the first prototype. Record the actual editor, SDK, device and OS versions with the first device validation results.
+
+Start with iPhone and landscape orientation. The initial performance baseline is an **iPhone 13 Pro Max**, testing on the current stable iOS 27 release. Broader Apple device support can follow a working iPhone prototype.
+
+## Shape of the project
+
+**One Xcode app target**, one unit-test target, and ordinary feature folders. No internal package hierarchy or third-party dependencies are needed initially.
+
+| Part | Responsibility | Boundary |
+|---|---|---|
+| App composition | Creates the session, world and save store; owns launch, restart and teardown | Wiring and lifecycle |
+| Gameplay | Mission facts, progress transitions and simple dialogue definitions | Ordinary Swift values and rules; no RealityKit entities or SwiftUI views |
+| World | Loaded scene, Miki, movement, camera, collision and nearby interactions | RealityKit owns live spatial state |
+| Interface | Touch controls, objective, contextual button, dialogue and pause screen | Presents state and requests actions |
+| Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
+| Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
+
+These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it.
+
+## Runtime ownership
+
+- **GameSession** is the sole authority for mission progress. Keep its mutations on the main actor and expose coarse changes to the interface.
+- **GameWorld** owns the live RealityKit scene, transient movement input, entity references, asset load tasks and frame subscriptions.
+- **SaveStore** owns one local save file and serialises writes away from the frame loop.
+- The app composition owns stable instances of all three. SwiftUI view reevaluation must not recreate them.
+
+Mission state does not contain entities. The world does not keep a second inventory or an independent “radio repaired” flag.
+
+```mermaid
+flowchart LR
+    UI["SwiftUI controls and HUD"] -->|movement intent| W["GameWorld / RealityKit"]
+    UI -->|dialogue and menu commands| S["GameSession / rules"]
+    W -->|interaction request| S
+    S -->|accepted progress| W
+    S -->|display state| UI
+    S -->|checkpoint snapshot| P["SaveStore"]
+    P -->|restored progress| S
+    C["Scene and content"] --> W
+```
+
+## The prototype's state
+
+Use one small mission phase:
+
+**Briefing → Seeking regulator → Carrying regulator → Radio repaired → Meeting agreed**
+
+A successful conversation with Tomas starts the search. Taking the regulator changes the phase once. Repair requires that phase and consumes the carried part. Finishing the family call secures the meeting.
+
+For this one-item prototype, the carried-item indicator is derived from the phase. There is no separate inventory collection or generic quest system.
+
+Interactions have stable IDs such as `relay.tomas`, `depot.regulator` and `relay.transmitter`. GameWorld binds the authored scene objects to those IDs once at load. Missing or duplicate required bindings are reported during scene validation. Runtime UUIDs and display names are not save keys.
+
+### One interaction
+
+1. GameWorld identifies the accessible object within interaction range.
+2. The interface shows the available action: **Talk**, **Take**, **Repair** or **Call**.
+3. Pressing the contextual button rechecks current distance and accessibility in GameWorld before submitting a named gameplay command; a stale prompt cannot trigger a remote interaction.
+4. GameSession validates its phase and accepts or rejects it.
+5. The accepted state drives the objective, item visibility, radio appearance and checkpoint save.
+
+Repeated taps cannot award a second regulator or consume it twice. An unavailable repair gives a short explanation.
+
+After completion, the transmitter offers **Read plan**. It displays the agreed meeting details without restarting the mission or changing secured progress.
+
+Keep the prototype's dialogue as a short ordered set of text lines in one content definition. The existing story documents remain the narrative source. No dialogue graph, branching editor or Markdown-to-game generator is required.
+
+## Movement and presentation
+
+Use RealityKit's built-in character controller and collision behaviour. Continuous movement and camera work run through owned RealityKit simulation/frame callbacks using elapsed time.
+
+**RealityView.update is for state-driven scene changes, not the simulation loop.** Avoid a second timer-based simulation or publishing character transforms into SwiftUI every frame. Apple documents the relationship between SwiftUI state and RealityKit updates in its [integration guidance](https://developer.apple.com/videos/play/wwdc2025/274/).
+
+GameWorld sets up and tears down its callbacks explicitly. Cancel unfinished loads when restarting or leaving; a late load must not attach objects to a discarded scene.
+
+The camera has a fixed elevated perspective, follows Miki and cannot rotate in the prototype. Use level layout and low obstacles to maintain visibility before adding an occlusion subsystem.
+
+Use Reality Composer Pro for composition, materials and animation. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
+
+## Saving and interruption
+
+Save a small Codable snapshot containing a schema version and mission phase. Rebuild the world from that state.
+
+Use two authored safe spawn locations:
+- Before collection: Relay House.
+- Carrying the regulator: the depot exit, so the return trip remains.
+- After repair or completion: Relay House.
+
+The mission phase selects the spawn. No arbitrary pose, physics state or animation is serialised.
+
+Save after each meaningful phase change. A single ordered writer prevents an older snapshot overwriting a newer one. Restarting a run must invalidate old pending work. Report save failures rather than claiming progress is secured.
+
+Normal background/foreground pauses and resumes the live scene in place. Clear held touch input, stop simulation/animation progression while inactive, pause interaction, and reset frame timing on resume. After termination, Continue reconstructs the saved checkpoint. Do not depend on an application shutdown callback to save.
+
+If termination interrupts a conversation, replay that conversation from its checkpoint. Normal pause/resume keeps the current line in the live session; no dialogue cursor is added to the save format.
+
+A corrupt or unsupported save must not be silently erased. Offer an explicit restart while leaving the original file untouched until the player chooses.
+
+## Assets and checks
+
+Start with a graybox environment and one representative rigged placeholder with idle/walk animation. Verify the full import → composition → iPhone workflow early. Keep editable sources, delivery assets and asset provenance together; generated build caches stay out of source control.
+
+Test rules and save round-trips independently of the rendered scene. Test controls, visibility, collisions, interruptions and sustained performance on the physical phone. The [prototype plan](prototype-plan.md) defines the exit criteria.
+
+## Deliberately deferred
+
+Additional packages, custom rendering, generic inventory/crafting/quest frameworks, service locators, a global event bus, backend accounts, networking, cloud saves, monetisation, scene streaming and a broad UI automation suite.
+
+Navigation APIs are available for the chosen iOS generation, but stationary Tomas and a single controllable character do not yet require NPC pathfinding. Add it when a demonstrated interaction needs it.
+
+## Revisit after the first playable
+
+Use playtesting to decide the next survival pressure, first combat encounter, companion movement and visual target. Change the architecture only for a concrete requirement exposed by those additions.
