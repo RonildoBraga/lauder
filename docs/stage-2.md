@@ -30,7 +30,7 @@ The generated app plist merges typed Game Controllers support declarations from 
 
 The maintainer requested a slightly wider, more top-down action-RPG view. The camera offset is now `[5.25, 10, 8.4]` from the same follow target, replacing `[5, 7.5, 8]`: about 17% farther away and 45.3° above the ground instead of 38.5°. The 42° perspective field of view and horizontal direction are unchanged, so the screen-relative stick axes stay the same. The standard physical-iPhone check passed all five tests for this change, and the maintainer accepted the framing while moving, with Miki and the route clear.
 
-The reusable [character loader](../sources/world/CharacterAsset.swift) is separate from the removed diagnostic preview. Rejection tests reuse real imported mesh/animation data to verify incompatible bindings and a skinned model without its authored clip; no extra binary fixtures are needed. The [folder-group decision and membership checks](stage-2-project-groups.md) record the project changes for #10.
+The Stage 2 [character loader](../tests/support/CharacterAsset.swift), now preserved as a test-only fixture, is separate from the removed diagnostic preview. Rejection tests reuse real imported mesh/animation data to verify incompatible bindings and a skinned model without its authored clip; no extra binary fixtures are needed. The [folder-group decision and membership checks](stage-2-project-groups.md) record the project changes for #10.
 
 ## Validation record
 

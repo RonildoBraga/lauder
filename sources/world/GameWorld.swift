@@ -7,7 +7,6 @@ import simd
 @Observable
 final class GameWorld {
   static let obstacleGroup = CollisionGroup(rawValue: 1 << 4)
-  private static let floorGroup = CollisionGroup(rawValue: 1 << 5)
 
   let root = Entity()
   let controls = GameControls()
@@ -53,7 +52,7 @@ final class GameWorld {
       )
       entity.name = box.name
       entity.position = box.position
-      makeSolid(entity, size: box.size)
+      if box.id != .ground { makeSolid(entity, size: box.size) }
       root.addChild(entity)
     }
     addLandmarks(style: style)
@@ -247,7 +246,7 @@ final class GameWorld {
       CollisionComponent(
         shapes: [.generateBox(size: size)],
         filter: CollisionFilter(
-          group: entity.name == "ground" ? Self.floorGroup : Self.obstacleGroup, mask: .all)))
+          group: Self.obstacleGroup, mask: .all)))
     entity.components.set(PhysicsBodyComponent(massProperties: .default, mode: .static))
   }
 }

@@ -31,7 +31,7 @@ Compose the graybox using generated meshes, simple materials, lights, camera and
 
 Party A uses three named, differently coloured primitive stand-ins. Replace the stationary Tomas landmark with his party body; the keeper briefing is text-only, without a fourth character rig. No new character models or animation are required. The completed rig/idle/walk proof remains recorded in [Stage 1](stage-1.md). Preserve editable sources, deliberate exports and provenance together; the [stand-in generator](../sources/content/character/README.md) is a prototype asset tool, not a finished-art pipeline.
 
-Scene composition and the named animation library remain Swift code. Do not add per-frame visual work, publish character transforms to SwiftUI, or require art production before evaluating the party.
+Scene composition remains Swift code. The preserved [test-only asset fixture](../tests/support/CharacterAsset.swift) validates the named animation library; Party A does not ship its loader in the app target. Do not add per-frame visual work, publish character transforms to SwiftUI, or require art production before evaluating the party.
 
 ## Swift conventions
 
@@ -51,9 +51,9 @@ Scene composition and the named animation library remain Swift code. Do not add 
 
 Use plain Swift session state and rules on the main actor, exposing only coarse changes to the interface. The carried-regulator indicator is derived from the mission phase, not stored on a leader or duplicated in the world. There are no separate member inventories.
 
-**GameWorld owns spatial state:** a body reference for each stable member ID, their actual positions, follower trails/cursors, one camera, scene bindings, playback where present, load cancellation and one simulation subscription. It reads the active leader from the session. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
+**GameWorld owns spatial state:** a body reference for each stable member ID, their actual positions, follower trails/cursors, one camera, scene bindings and one owned scene-update subscription. It reads the active leader from the session. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
 
-**GameControls owns device attachment and raw sampling.** Pure InputRules owns the transformation of raw values plus prior input-rule state into intents and next rule state. Neither keeps an independent pause/dialogue policy. Remove the current GameWorld pause authority and GameControls pause copy when migrating to the session; do not leave synchronized competing modes.
+**GameControls owns device attachment and raw sampling.** Pure InputRules owns the transformation of raw values plus prior input-rule state into intents and next rule state. Neither keeps an independent pause/dialogue policy. `GameSession` now owns the exploring/Pause mode; `GameWorld` reads it and `GameControls` receives it when resolving input. Planned dialogue extends that same authority.
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,7 @@ The owned world update coordinates this sequence. Rules do not retain RealityKit
 
 ## Input and command routing
 
-Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Existing mappings are left stick/WASD movement, Cross/A/E action and Options/Menu/Escape Pause. **Initial switching defaults:** R1/RB, read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), or **Q** in Simulator. Q replaces the earlier Tab proposal; switch delivery and comfort have not been tested. There are no touch controls or clickable screen actions.
+Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Existing mappings are left stick/WASD movement, Cross/A/E action and Options/Menu/Escape Pause. **Initial switching defaults:** R1/RB, read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), or **Q** in Simulator. Q replaces the earlier Tab proposal. Q delivery was checked in Simulator; R1 and the switching camera/HUD were confirmed in the short baseline phone check. Xbox RB hardware delivery remains unverified. There are no touch controls or clickable screen actions.
 
 Extend InputRules with switch-button state and explicit previous-button/edge state instead of adding another edge detector in GameWorld. Tests cover:
 
@@ -88,11 +88,11 @@ Continue using one owned RealityKit scene update with elapsed time. **RealityVie
 
 Party A samples input and advances plain body transforms through one owned `SceneEvents.Update` subscription. Static scenery queries do not require an active rigid-body simulation; the earlier physics-only subscription stopped delivering input updates when the all-static scene idled.
 
-All three initial stand-ins use the same circular footprint and check scenery, including closed barriers. Party A uses plain body transforms and a shared RealityKit sphere sweep against the scenery group, so party members are excluded from the query. The first live character-controller implementation reported peer contacts despite exclusion filters; construction tests alone did not establish runtime behaviour. Keep this execution detail limited to the existing flat floor: body height is fixed, the ground is excluded from horizontal obstacle sweeps, and a wall slide receives its own second sweep. The query sphere has the common body radius and runs at the authored obstacle plane; all current floor-standing blockers must cross that plane. Contact geometry determines and validates travel along the requested segment, rather than accepting an oversized distance value from the tested query runtime. Slopes, steps and vertical traversal are outside this experiment. Trail spacing provides best-effort visual separation; temporary overlap on reversals is a graybox trade-off, not a separation guarantee. See the [Party A record](party-a.md) for actual route results.
+All three initial stand-ins use the same circular footprint and check scenery, including closed barriers. Party A uses plain body transforms and a shared RealityKit sphere sweep against the scenery group, so party members are excluded from the query. The first live character-controller implementation reported peer contacts despite exclusion filters; construction tests alone did not establish runtime behaviour. Keep this execution detail limited to the existing flat floor: body height is fixed, the ground is render-only without a collider, and a wall slide receives its own second sweep. The query sphere has the common body radius and runs at the authored obstacle plane; all current floor-standing blockers must cross that plane. Contact geometry determines and validates travel along the requested segment, rather than accepting an oversized distance value from the tested query runtime. Slopes, steps and vertical traversal are outside this experiment. Trail spacing provides best-effort visual separation; temporary overlap on reversals is a graybox trade-off, not a separation guarantee. See the [Party A record](party-a.md) for actual route results.
 
 Use a bounded recorded-path trail with retained route connections and per-member cursors, as specified in [ADR 0002](decisions/0002-party-following.md). A leader's recorded path is useful evidence of travel, not proof of follower clearance. Each follower still moves through collision-checked world space; corners, reversals, switching and a changed barrier can invalidate an assumed connection.
 
-The camera keeps the accepted elevated offset and field of view and follows the session's selected leader. On switching, ease the target from the current camera target to the new leader over a proposed **0.25 seconds**, tunable in playtests. Preserve the offset/orientation and world positions; another switch starts from the current interpolated target. Freeze transition progress when the world is frozen. This is an easing proposal, not a tested comfort result.
+The camera keeps the accepted elevated offset and field of view and follows the session's selected leader. On switching, ease the target from the current camera target to the new leader over **0.25 seconds**, tunable in playtests. Preserve the offset/orientation and world positions; another switch starts from the current interpolated target. Freeze transition progress when the world is frozen. The short Simulator and baseline phone checks confirmed readable leader changes and camera/HUD framing; longer-session comfort and other layouts remain unverified.
 
 ## The prototype's state
 

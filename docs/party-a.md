@@ -1,7 +1,7 @@
 # Party A — three-character movement
 
 **Date:** 17 November 2026\
-**Status:** Focused work session 1 completed the implementation and Simulator route proof. The baseline phone route/control/recovery checks and short performance sample are now recorded below; the maintainer deferred remaining manual tests. [PR #24](https://github.com/RonildoBraga/lauder/pull/24) remains unmerged. Party implementation is authorised by the maintainer's instruction to continue regardless of Claude's response, recorded in [#13](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6917260783). This overrides the earlier documentation wait gate; it does not waive the plan's validation or phone checkpoint.
+**Status:** Focused work session 1 completed the implementation and Simulator route proof. The baseline phone route/control/recovery checks and short performance sample are now recorded below; the maintainer deferred remaining manual tests. The maintainer has authorised merging [PR #24](https://github.com/RonildoBraga/lauder/pull/24) after the final cleanup and checks. Party implementation is authorised by the maintainer's instruction to continue regardless of Claude's response, recorded in [#13](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6917260783). This overrides the earlier documentation wait gate; it does not waive the plan's validation or phone checkpoint.
 
 ## Scope
 
@@ -39,7 +39,7 @@ The loop uses one `SceneEvents.Update` subscription, cancelled on teardown, so i
 
 A signed **Release** build of `fc53d52` (version 0.1.0, build 1) built with Xcode 27.2 / iPhoneOS SDK 27.2 was installed and launched on the baseline **iPhone 13 Pro Max / iOS 27.2.1**, connected over USB. A live device preview showed all three stand-ins and the PS5 source, Cross, R1 and Options prompts. Installation, rendering and controller recognition are directly verified. The maintainer subsequently confirmed actual left-stick movement/release, R1 cycling through Miki/Lara/Tomas, both followers and clear camera/HUD during warm-up.
 
-The maintainer also confirmed moving switches, whole-party Pause, ignored paused movement/R1, correct resumption after centring/release, controller disconnect/reconnect and background plus lock/unlock recovery without stuck movement. These are user-reported physical checks of this build. The maintainer confirmed completing the unpaused service-passage → depot → return route during the timed recording, switching leaders with both followers and no party diagnostic. The 75-second physical-device capture saved successfully and its results follow. Remaining manual tests, including the awake-screen/normal-lock timing check, were deferred at the maintainer's request: “We dont need to do all these tests now”. This is a deferral, not a passed observation. No merge or Party B implementation is assigned by this installation.
+The maintainer also confirmed moving switches, whole-party Pause, ignored paused movement/R1, correct resumption after centring/release, controller disconnect/reconnect and background plus lock/unlock recovery without stuck movement. These are user-reported physical checks of this build. The maintainer confirmed completing the unpaused service-passage → depot → return route during the timed recording, switching leaders with both followers and no party diagnostic. The 75-second physical-device capture saved successfully and its results follow. Remaining manual tests, including the awake-screen/normal-lock timing check, were deferred at the maintainer's request: “We dont need to do all these tests now”. This is a deferral, not a passed observation. The installation did not itself assign a merge or Party B; the later merge/cleanup instruction is recorded below.
 
 ## Phone performance sample
 
@@ -65,3 +65,14 @@ These are instrument-reported aggregate display-pacing statistics. The trace's p
 - Manual Simulator round trip under every leader, reversals, switching at the passage, Pause/Resume and fresh input recovery.
 - No automatic teleport; diagnostic/capacity holds must be reported, not hidden.
 - At the accepted Party A milestone, phone controller/camera/lifecycle observations and measured frame pacing. Simulator results do not satisfy this checkpoint; Xbox hardware and older deferred checks remain distinct.
+
+## Merge and cleanup — 17 November 2026
+
+The maintainer instructed: “Merge and commit everything and delete any left over or dead code or anything that is no longer needed”. This authorises integrating Party A into main with the confirmed cleanup; it does not start Party B or revoke the remaining test deferrals.
+
+- Moved the unused production asset validator unchanged into `tests/support`. The USD sources, deliberate exports, generator, provenance and real import/rejection checks remain.
+- Removed the ground's unqueried collider and its collision group. The ground remains visible, and every queried blocker retains the same geometry and obstacle group. Scene tests cover that boundary.
+- Updated the active architecture and moved-file references. Historical Stage 1/2 evidence remains historical.
+- Removed confirmed generated preview/device build caches and the DerivedData from two failed check runs. Preserved the tested signed Release app/dSYM, manifests, traces, metric exports, installation/launch receipts and failed-test result bundles/logs, with private before/after checksum receipts.
+
+The recorded phone results above apply to `fc53d52`; the cleanup does not claim another phone run. The final `./scripts/check` passed strict formatting, the shared-scheme build and Swift Testing after cleanup. All 115 local Markdown links and 18 anchors passed validation. About 590.3 MiB of net generated cache data was removed before private audit receipts; protected evidence checksums and the preserved app signature matched. No further phone tests are requested.

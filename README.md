@@ -8,7 +8,7 @@ The player switches between three characters while the other two follow. Their d
 
 **Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. The scope is: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages.**
 
-The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. Physical-controller validation of switching belongs to the Party A checkpoint.
+The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. PS5 switching is confirmed in the Party A phone check; Xbox hardware remains unverified.
 
 ## Start here
 
@@ -36,7 +36,8 @@ sources/
     character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
       Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
-tests/                        Asset import/rejection, movement, input-rule and layout tests
+tests/                        Party/session, asset import, movement, input and layout tests
+  support/                    Test-only asset validator; excluded from the app target
 docs/                         Architecture, decisions, prototype plan and validation evidence
   story/                      Story bible and Chapter One outline index
 scripts/                      Standard checks and the current character asset generator

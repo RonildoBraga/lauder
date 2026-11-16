@@ -20,14 +20,15 @@ struct PartySceneTests {
     }
     for box in PrototypeLayout.boxes {
       let entity = try #require(world.root.findEntity(named: box.name))
-      let collision = try #require(entity.components[CollisionComponent.self])
-      #expect(
-        collision.filter.group.intersection(GameWorld.obstacleGroup).isEmpty
-          == (box.id == .ground))
-      if box.id != .ground {
-        #expect(box.position.y - box.size.y / 2 <= PrototypeLayout.obstacleSweepHeight)
-        #expect(box.position.y + box.size.y / 2 >= PrototypeLayout.obstacleSweepHeight)
+      if box.id == .ground {
+        #expect(entity.components[CollisionComponent.self] == nil)
+        #expect(entity.components[PhysicsBodyComponent.self] == nil)
+        continue
       }
+      let collision = try #require(entity.components[CollisionComponent.self])
+      #expect(!collision.filter.group.intersection(GameWorld.obstacleGroup).isEmpty)
+      #expect(box.position.y - box.size.y / 2 <= PrototypeLayout.obstacleSweepHeight)
+      #expect(box.position.y + box.size.y / 2 >= PrototypeLayout.obstacleSweepHeight)
     }
     #expect(world.root.findEntity(named: "relay.tomas") == nil)
     #expect(world.root.findEntity(named: "relay.transmitter") != nil)

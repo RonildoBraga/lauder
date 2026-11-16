@@ -2,8 +2,6 @@ import Foundation
 import RealityKit
 import Testing
 
-@testable import Lauder
-
 @MainActor
 struct AssetLoadingTests {
   @Test

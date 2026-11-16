@@ -57,6 +57,6 @@ Initial checks passed for both sources and exports. An independent check of the 
 
 ## Approved code-first path
 
-The game bundles the validated USDZ files directly. `CharacterAsset` loads and validates them; `GameWorld` owns playback and composes the scene in Swift. The original Stage 1 diagnostic preview has been removed. All editable inputs needed to reproduce the current runtime assets are in this directory and the generator.
+Party A uses primitive stand-ins and does not load or play these clips. The validated USDZ files remain bundled for the preserved import/rejection checks in the [test-only CharacterAsset fixture](../../../tests/support/CharacterAsset.swift); the loader no longer ships in the app target. `GameWorld` composes the current scene in Swift. The original Stage 1 diagnostic preview has been removed. All editable inputs needed to reproduce the delivery assets remain in this directory and the generator.
 
 This follows the [approved code-first direction](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) and [engine decision](../../../docs/decisions/0001-engine.md).
