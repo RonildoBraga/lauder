@@ -8,7 +8,7 @@
 
 Use **Swift + RealityKit** for gameplay and the 3D world, **SwiftUI** for the interface, and **Reality Composer Pro** for scene and asset authoring.
 
-The accepted rationale, alternatives, costs and three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md). This preparation does not start Stage 1; it requests Claude's review first.
+The accepted rationale, alternatives, costs and three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md).
 
 Interpret “latest iOS” as the current stable **iOS 27 family**. Proposed minimum deployment target: **iOS 27.0**. Build with the latest stable SDK and test on the latest stable patch. On the review date, Apple lists **iOS 27.2.1** and **Xcode 27.2** as released; iOS/Xcode 27.3 are beta. [Apple releases](https://developer.apple.com/news/releases/)
 

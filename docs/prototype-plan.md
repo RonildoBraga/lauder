@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Preparation approved; implementation has not started.\
+**Status:** Scope split and Stage 1 stop criterion approved by the maintainer; implementation has not started.\
 **Technical direction:** Swift + RealityKit, current stable iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -18,8 +18,6 @@ The maintainer approved [issue #4's scope split](https://github.com/RonildoBraga
 - **Later hardening:** Stage 4 persistence and Stage 5 sustained memory/thermal validation, after the maintainer decides the loop is worth keeping.
 
 The [saving design](architecture.md#saving-and-interruption) remains the target for hardening. It is not a prerequisite for evaluating the first loop.
-
-This preparation PR requests Claude's review before Stage 1. It does not start Stage 1 or authorise implementation.
 
 ## The playable loop
 
@@ -58,7 +56,8 @@ Water, shelter and travel risk supply the narrative context. Water depletion, hu
 ### 1. Establish the device and asset path
 
 - Verify the test device and its installed stable iOS version.
-- Use stable Xcode/Reality Composer Pro versions and record them.
+- Install Reality Composer Pro 3 separately from Apple Developer; it is a standalone app and is no longer bundled with Xcode. [Apple release notes](https://developer.apple.com/documentation/realitycomposerpro/reality-composer-pro-3-release-notes)
+- Use stable Xcode and Reality Composer Pro versions. Record both installed versions and the SDK version before validating the asset workflow.
 - Create one app target and one Swift Testing unit-test target with the [Swift conventions](architecture.md#swift-conventions).
 - Follow the [asset contribution policy](../CONTRIBUTING.md#assets-and-attribution) before adding any model or scene.
 - Load a small scene and one rigged character with idle/walk animation.

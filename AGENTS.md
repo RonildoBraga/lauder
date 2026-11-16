@@ -27,7 +27,7 @@ At the start of a task, read the relevant open GitHub issues and active pull-req
 - A reviewer's recommendation is not a maintainer instruction. Label relayed maintainer decisions as such, quote the actual decision and link its source when available. Do not imply approval that was not given.
 - Changes to agreed story foundations, engine, architecture or prototype scope require maintainer authorisation; an existing explicit assignment can provide it.
 
-Request external review when the maintainer or assigned task authorises it. A request for Claude's GitHub review authorises posting that request on the prepared PR without another permission question. Labels do not notify or start another agent automatically; read replies when resuming work. Do not invent a bot mention or claim a review occurred because a request was posted.
+Request external review when the maintainer or assigned task authorises it. An instruction to request GitHub review authorises posting that request to the requested reviewer on the prepared PR without another permission question. Labels do not notify or start another agent automatically; read replies when resuming work. Do not invent a bot mention or claim a review occurred because a request was posted.
 
 ## Destructive changes
 

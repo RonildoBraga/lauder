@@ -22,5 +22,7 @@
 *.aif filter=lfs diff=lfs merge=lfs -text
 *.aiff filter=lfs diff=lfs merge=lfs -text
 
-# Do not blanket-track small PNG/JPEG images or mixed-format USD files.
-# Add a specific path for a large texture or binary .usd after inspection.
+# Repository policy: PNG/JPEG and other binary image/texture files without a format-wide rule
+# larger than 1 MiB (1,048,576 bytes) need an explicit-path LFS rule before commit.
+# PNG/JPEG files at or below that size stay in ordinary Git. This is not a GitHub limit.
+# Inspect mixed-format .usd files separately; binary .usd needs a path rule at any size.
