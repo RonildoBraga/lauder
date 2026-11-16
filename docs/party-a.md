@@ -35,6 +35,12 @@ The loop uses one `SceneEvents.Update` subscription, cancelled on teardown, so i
 - No automatic warp/regroup, skill barrier, mission, dialogue, repair or Restart was implemented. Capacity, disconnected-route and follower-stall holds have rule tests; nominal route checks did not trigger them.
 - The baseline iPhone controller/camera/lifecycle run and measured frame pacing are pending. Xbox hardware and previously deferred Stage 2 checks remain unverified; Simulator keyboard results do not close them.
 
+## Phone checkpoint — 17 November 2026
+
+A signed **Release** build of `fc53d52` (version 0.1.0, build 1) built with Xcode 27.2 / iPhoneOS SDK 27.2 was installed and launched on the baseline **iPhone 13 Pro Max / iOS 27.2.1**, connected over USB. A live device preview showed all three stand-ins and the PS5 source, Cross, R1 and Options prompts. Installation, rendering and controller recognition are verified; these observations alone do not establish input delivery, following, lifecycle recovery or performance.
+
+The phone is ready for warm-up and an active-play performance capture; the maintainer's warm-up result is awaited. Control/route observations, interruptions, disconnect/reconnect, awake-screen behaviour and measured frame pacing remain pending. No merge or Party B implementation is assigned by this installation.
+
 ## Milestone checklist
 
 - Standard formatting/build/Swift Testing, including input/session, trail bounds/connectivity and scene collision setup.

@@ -110,3 +110,9 @@ At playable-feature milestones before merging, repeat the checks below on the ba
 5. Leave the active game untouched beyond the phone's normal Auto-Lock interval, including on Pause. Check that it remains awake, then verify normal locking after leaving the app.
 
 These checks and measured first-playable performance must not be inferred from a passing import test. The maintainer's integration instruction does not convert the remaining verification gaps into passed checks. The [gameplay script](gameplay-script.md) is a draft for review before Stage 3 implementation.
+
+## Party A phone checkpoint — 17 November 2026
+
+A signed Release build of `fc53d52` (version 0.1.0, build 1), using Xcode 27.2 / SDK 27.2, built successfully and was installed and launched on iPhone 13 Pro Max / iOS 27.2.1. The live phone preview showed three stand-ins and PS5/Cross/R1/Options prompts. This proves installation, rendering and recognition; physical input delivery and performance are separate checks.
+
+The current session is in progress in the [Party A record](party-a.md#phone-checkpoint--17-november-2026). User control observations, lifecycle/reconnection, awake-screen behaviour and measured frame pacing are pending. The earlier PR #11 deferral remains historical, and Xbox hardware plus walking-cadence calibration remain unverified.
