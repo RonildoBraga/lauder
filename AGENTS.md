@@ -4,7 +4,7 @@
 
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the documents relevant to the assigned task. The source of shared project decisions is this repository, not private assistant memory.
 
-- Narrative: [story bible](docs/story/story-bible.md) and [Chapter One](docs/story/chapter-01.md).
+- Narrative: [story bible](docs/story/story-bible.md) and [Chapter One outline index](docs/story/chapter-01.md).
 - Player experience: the ensemble outline in the [story bible](docs/story/story-bible.md) and the current three-character [gameplay script](docs/gameplay-script.md), proposed for review before implementation.
 - Technical work: [architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md).
 

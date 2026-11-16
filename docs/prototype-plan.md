@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party prototype proposal for Claude's documentation review and maintainer agreement before implementation. The approved direction is one human player controlling three characters together, switching the leader while two companions follow. The proposed cast, roles, controls and milestones below remain review choices. The current build has one controlled character, stationary Tomas and observations; party movement, specialist actions and the repair loop are not implemented.\
+**Status:** Party plan consolidated on main with the maintainer's instruction to proceed with the recommendations. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints are accepted planning defaults. Claude's confirmation of the latest refinements and architecture remains pending before code. Cast biographies and dialogue remain working proposals. The current build has one controlled character, stationary Tomas and observations; party movement, specialist actions and the repair loop are not implemented.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -33,11 +33,11 @@ Nina-specific dialogue is excluded from this prototype while kinship remains und
 
 ## Review before implementation
 
-Claude [reviewed this proposal at `fe9af2d`](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122): nothing blocked merging it as a labelled proposal, but B1–B3 must be settled before code. These follow-ups require confirmation; they are not an implementation assignment. Use focused implementation PRs with review before merge only after that assignment.
+Claude [reviewed this proposal at `fe9af2d`](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122): nothing blocked merging it as a labelled proposal, but B1–B3 had to be settled before code. The follow-up architecture is recorded in [PR #22](https://github.com/RonildoBraga/lauder/pull/22), now merged alongside #20 and #21 at the maintainer's request. Latest independent confirmation remains pending; merging the documents does not start party runtime work. Use focused implementation PRs after that confirmation and an implementation assignment.
 
-Prepare and review a separate short architecture PR before Party A code. It must settle a single authority for mode, leader identity and shared progress; input routing and edge rules; three world bodies; the follow/recovery policy; and easing the camera to a new leader. Before B, record the per-interaction approach, eligible characters, prompt and collision data. Before C, record in-place restart and teardown rules. Existing solo ownership and save assumptions are not automatically accepted. Carry forward the [updated B1–B3 discussion](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6916287544).
+The [architecture](architecture.md) and [following ADR](decisions/0002-party-following.md) record the proposed single authority for mode/leader/progress, input edge rules, three bodies, recovery and camera easing. Confirm the A decisions before code; refine the recorded interaction data before B and exact in-place restart/teardown steps before C. Existing solo ownership/save assumptions are superseded. Carry forward the [B1–B3 discussion](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6916287544).
 
-Proposed B1 decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and world collision checks for every body. Exclude party members from physical collision with each other, retain scenery collision, and use spacing for readable separation. Keep equal controller footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture PR must make trail rebasing and bounds concrete.
+Initial B1 planning decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and world collision checks for every body. Exclude party members from physical collision with each other, retain scenery collision, and use spacing for readable separation. Keep equal controller footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture and ADR record trail rebasing and bounds for confirmation before code.
 
 Initial recovery is **hold and diagnose**, not an automatic warp: stop the blocked follower safely, record the failing route and correct the trail or simplify the authored layout. At the stop review, a constrained out-of-view regroup may be proposed separately. It would require explicit maintainer agreement, safe placement on the same currently reachable/open route, and both origin and destination outside the current camera view including a switch transition. It could never move the active leader or bypass a closed barrier. None of that fallback is approved or required for initial Party A.
 
@@ -50,7 +50,7 @@ Initial recovery is **hold and diagnose**, not an automatic warp: stop the block
 | Cycle leader Miki → Lara → Tomas | R1 / RB | Q |
 | Pause / Resume | Options / Menu | Escape |
 
-These switching mappings are proposals, not implemented controls. Q replaces the Tab proposal to avoid focus navigation; verify actual delivery in Simulator during Party A. There are no touch controls or clickable screen actions.
+These switching mappings are accepted initial defaults, not implemented controls. Q replaces the Tab proposal to avoid focus navigation; verify actual delivery in Simulator during Party A. There are no touch controls or clickable screen actions.
 
 - Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
 - A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
@@ -92,9 +92,9 @@ Use three clearly named, differently coloured primitive stand-ins on the existin
 
 **Exit:** The whole party completes the round trip under every leader, with predictable collision and readable camera behaviour. Record stuck, separated or obscured cases and fix the bounded route before adding content.
 
-### Party A stop criterion — proposed
+### Party A stop criterion
 
-Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. This proposed budget needs agreement before Party A starts; it does not alter the completed Stage 1 criterion.
+Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. The maintainer accepted this budget when proceeding with the recommendations; it applies when Party A is assigned and does not alter the completed Stage 1 criterion.
 
 ## Party B — prove alternative specialist actions
 
@@ -144,7 +144,7 @@ Use a **manual Simulator playtest checklist**, not an implied automated renderin
 
 Run the relevant subset at A, B and C; items for later stages do not block the earlier movement experiment. Pure rule tests alone cannot establish these spatial behaviours.
 
-Propose **two milestone phone sessions**, using the **iPhone 13 Pro Max**: one at the end of Party A for switching/following/controller feel, interruptions and measured frame pacing; one at the end of Party C for the complete loop and the [deferred #18 checks](https://github.com/RonildoBraga/lauder/issues/18). Party B uses everyday Simulator checks and is covered on the phone with C. Review intermediate PRs independently; keep their phone-dependent exit unclaimed until the relevant session. Agree this schedule with the maintainer before implementation; this documentation task requests no phone session. The earlier deferral and separate Xbox-hardware gap remain recorded, not passed or silently waived.
+Use **two milestone phone sessions**, on the **iPhone 13 Pro Max**: one at the end of Party A for switching/following/controller feel, interruptions and measured frame pacing; one at the end of Party C for the complete loop and the [deferred #18 checks](https://github.com/RonildoBraga/lauder/issues/18). Party B uses everyday Simulator checks and is covered on the phone with C. Review intermediate PRs independently; keep their phone-dependent exit unclaimed until the relevant session. The maintainer accepted this schedule when proceeding with the recommendations; this consolidation task requests no phone session. The earlier deferral and separate Xbox-hardware gap remain recorded, not passed or silently waived.
 
 The target remains **60 fps** on that phone, measured during representative party play before declaring the first playable proven. Record the build, conditions and results; adjust scope or budget if missed. Simulator timing and previous solo phone checks are not party performance evidence. Keep the foreground game awake, including Pause, and restore normal idle locking when inactive.
 

@@ -97,6 +97,8 @@ Validation on 16 November 2026:
 
 ## Everyday Simulator and milestone phone checks
 
+Consolidation validation on 16 November 2026: after integrating PRs #20–#22, `./scripts/check` passed with Xcode 27.2 on the iPhone 17 Simulator, covering strict formatting, build and Swift Testing, including the layout checks. The consolidation cleanup changes documentation only. This is no new phone, physical-controller, party-following or performance evidence; those gaps remain as recorded above.
+
 Run formatting, build and Swift Testing with `./scripts/check` on Simulator during everyday development. In Device Hub, enable **Capture Keyboard**, click the game preview to focus it, and use WASD, E and a short Escape press; holding Escape releases keyboard capture. Check movement release and Pause/Resume while playing the route. Controller enumeration alone does not prove physical stick/button delivery; use keyboard play for this setup until forwarding is verified.
 
 At playable-feature milestones before merging, repeat the checks below on the baseline iPhone. [Issue #18](https://github.com/RonildoBraga/lauder/issues/18) consolidates the deferred shared-input, release guidance, visual-pass, gait and Xbox checks for the first-playable phone milestone; it does not request another session now. Check actual device performance and Bluetooth/lifecycle behaviour on the phone; Simulator timing does not establish them. The earlier phone results above apply to the recorded PS5 revisions, not automatically to later input changes.

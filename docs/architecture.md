@@ -1,7 +1,7 @@
 # Lauder — architecture
 
 **Date:** 16 November 2026\
-**Status:** Swift and RealityKit accepted. The party design below is proposed in response to [Claude's PR #21 review, B1/B3](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122), for review and maintainer agreement before implementation.\
+**Status:** Swift and RealityKit accepted. This party design was consolidated through [PR #22](https://github.com/RonildoBraga/lauder/pull/22) at the maintainer's request. Initial planning defaults are accepted, while Claude's confirmation of the latest B1/B3 proposal remains pending before code.\
 **Scope:** The current app has one moving character, stationary Tomas, observation prompts and Pause/Resume. GameSession, three-body following, switching, specialist interactions, mission rules, Restart and persistence are not implemented. The [walkthrough](gameplay-script.md) and [prototype plan](prototype-plan.md) define the proposed party experience; this document does not authorise code or settle the cast's open relationships.
 
 ## Decision and platform
@@ -70,7 +70,7 @@ The owned world update coordinates this sequence. Rules do not retain RealityKit
 
 ## Input and command routing
 
-Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Existing mappings are left stick/WASD movement, Cross/A/E action and Options/Menu/Escape Pause. **Proposed switching:** R1/RB, read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), or **Q** in Simulator. Q replaces the earlier Tab proposal; switch delivery and comfort have not been tested. There are no touch controls or clickable screen actions.
+Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Existing mappings are left stick/WASD movement, Cross/A/E action and Options/Menu/Escape Pause. **Initial switching defaults:** R1/RB, read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), or **Q** in Simulator. Q replaces the earlier Tab proposal; switch delivery and comfort have not been tested. There are no touch controls or clickable screen actions.
 
 Extend InputRules with switch-button state and explicit previous-button/edge state instead of adding another edge detector in GameWorld. Tests cover:
 
@@ -134,7 +134,7 @@ Save meaningful changes with one ordered atomic writer. Restart invalidates olde
 
 Party A adds pure tests for input precedence, session modes/leadership and trail advancement/rebasing; manual Simulator route checks cover real collision, turns, reversals, camera easing and switching to each separated member. B adds layout eligibility/approach and shared-gate checks. C adds the full progression, dialogue and repeated in-place Restart checks. Unit tests do not prove the rendered route.
 
-Use Simulator keyboard input for everyday iteration. Live PS5 input did not work in the tested Simulator setup; enumeration does not prove delivery. The revised proposal is a phone checkpoint after **Party A** and another after **Party C**, with B's controls checked alongside C. It awaits maintainer agreement, preserves [#18's earlier deferral](https://github.com/RonildoBraga/lauder/issues/18), and requests no phone session now. Record controller/lifecycle observations and measured frame pacing; neither the solo phone checks nor Simulator timing prove party performance. Sustained 15–20 minute thermal/memory checks remain later hardening.
+Use Simulator keyboard input for everyday iteration. Live PS5 input did not work in the tested Simulator setup; enumeration does not prove delivery. The accepted checkpoint schedule is after **Party A** and **Party C**, with B checked alongside C. It preserves [#18's earlier deferral](https://github.com/RonildoBraga/lauder/issues/18) and requests no phone session now. Record controller/lifecycle observations and measured frame pacing; neither the solo phone checks nor Simulator timing prove party performance. Sustained 15–20 minute thermal/memory checks remain later hardening.
 
 ## Deliberately deferred
 
@@ -142,4 +142,4 @@ Finished character art/animation, free jumping/climbing, formation orders, separ
 
 ## Revisit after the first playable
 
-Use the plan's proposed Party A stop review if following is unreliable. First reconsider trail handling and the bounded layout; any navigation replacement or automatic regroup requires a deliberate review. Add the next survival pressure, combat encounter or visual requirement only when a concrete playtest need warrants it.
+Use the plan's Party A stop review if following is unreliable. First reconsider trail handling and the bounded layout; any navigation replacement or automatic regroup requires a deliberate review. Add the next survival pressure, combat encounter or visual requirement only when a concrete playtest need warrants it.
