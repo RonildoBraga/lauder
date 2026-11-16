@@ -48,6 +48,21 @@ The reusable [character loader](../Lauder/World/CharacterAsset.swift) is separat
 - After adding keyboard input, the standard Simulator check passed all five tests again. In the visible landscape game, Codex exercised W/A/S/D movement, observed stopping after release, used E beside the transmitter and Tomas to display their different observations, and used Escape to pause/resume. Holding D while paused did not move the character. Immediately held input after resume stayed gated until release and a fresh press. Device Hub's **Capture Keyboard** was enabled for this test and switched off afterward. Keyboard focus changes, the latest phone milestone checks and physical Xbox gameplay remain unverified.
 - The maintainer subsequently confirmed the Simulator keyboard build works, responding “That works” after the live check above (implementation revision `c1534f6`).
 
+## PR #11 review follow-ups
+
+[Claude's review at `ba4f69e`](https://github.com/RonildoBraga/lauder/pull/11#issuecomment-6910683848) found no blocking code defects and recorded the remaining items in [#12](https://github.com/RonildoBraga/lauder/issues/12). The response is:
+
+- **M1, phone validation:** The maintainer explicitly deferred another phone check: “I dont want to do tests on the phone so often so we can disregard that for now”. This is an exception for the current PR, not fresh phone evidence. No phone installation or new physical-controller playtest was performed for these changes. Simulator remains the everyday test path; future phone milestones remain in the plan.
+- **M2, input rules:** [InputRules](../Lauder/Interface/InputRules.swift) now resolves plain raw values and the pause/release state without reading hardware. Four [regression tests](../LauderTests/InputRulesTests.swift), including both pause-button sources, cover opposing held keys, release and fresh input after resume, pause delivery with movement/action masked while paused, and keyboard priority over the stick. Device reads and connection ownership stay in GameControls.
+- **L1, release guidance:** The coarse release-gate state is observable. A ready input source waiting for release now shows the centring/release hint, including on Pause. An absent input device shows only the connection message.
+- **L2, walking animation:** Deferred to the next visual playtest. The in-place stand-in has no calibrated travel speed or foot-contact metadata, so the estimated stride speed does not justify changing the accepted 2.6 m/s movement pace. Analog movement currently varies translation without varying walk cadence; later calibration should inspect full/partial-speed foot contact and adjust the existing animation playback speed or the placeholder clip. No gait improvement is claimed here.
+- **L3, layout values:** Landmark dimensions, Tomas geometry/offsets, service markers and interaction radius now live in PrototypeLayout. Movement and input gating use its single dead-zone constant. All numeric values, placements and camera framing are unchanged.
+- **L4, ownership:** LauderApp owns the stable GameWorld instance and passes it into GameView. No session/restart system is introduced.
+
+The follow-up passed `./scripts/check` on the iPhone 17 / iOS 27.0 Simulator with Xcode 27.2 / SDK 27.2: strict formatting, build, the existing five tests and the new input-rule tests. A live Device Hub check also exercised movement, E observations and Escape Pause/Resume on the updated build, then restored keyboard capture off. These checks do not establish phone performance or controller forwarding. Claude's confirmation of the follow-up commit remains pending.
+
+[Issue #13](https://github.com/RonildoBraga/lauder/issues/13) retains the later interaction-reachability and command-routing design notes. This response does not start Stage 3.
+
 ## Everyday Simulator and milestone phone checks
 
 Run formatting, build and Swift Testing with `./scripts/check` on Simulator during everyday development. In Device Hub, enable **Capture Keyboard** and use WASD, E and a short Escape press; holding Escape releases keyboard capture. Check movement release and Pause/Resume while playing the route. Controller enumeration alone does not prove physical stick/button delivery; use keyboard play for this setup until forwarding is verified.

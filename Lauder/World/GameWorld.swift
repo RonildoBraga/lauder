@@ -206,7 +206,8 @@ final class GameWorld {
         < simd_distance_squared($1.position, player.position * [1, 0, 1])
     }
     let point = closest.flatMap {
-      simd_distance($0.position, player.position * [1, 0, 1]) < 2.3 ? $0 : nil
+      simd_distance($0.position, player.position * [1, 0, 1]) < PrototypeLayout.interactionRadius
+        ? $0 : nil
     }
     if nearby?.id != point?.id {
       nearby = point
@@ -219,19 +220,20 @@ final class GameWorld {
       let entity: ModelEntity
       if point.id == .tomas {
         entity = ModelEntity(
-          mesh: .generateBox(size: [0.45, 1.3, 0.35]),
+          mesh: .generateBox(size: PrototypeLayout.tomasBodySize),
           materials: [SimpleMaterial(color: .systemBrown, isMetallic: false)]
         )
-        entity.position = point.position + [0, 0.75, 0]
+        entity.position = point.position + PrototypeLayout.tomasBodyOffset
         let head = ModelEntity(
-          mesh: .generateSphere(radius: 0.18),
+          mesh: .generateSphere(radius: PrototypeLayout.tomasHeadRadius),
           materials: [SimpleMaterial(color: .systemBrown, isMetallic: false)]
         )
-        head.position = [0, 0.8, 0]
+        head.position = PrototypeLayout.tomasHeadOffset
         entity.addChild(head)
-        makeSolid(entity, size: [0.5, 1.5, 0.5])
+        makeSolid(entity, size: PrototypeLayout.tomasCollisionSize)
       } else {
-        let size: SIMD3<Float> = point.id == .transmitter ? [0.8, 1, 0.6] : [0.5, 0.5, 0.5]
+        let size =
+          point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
         entity = ModelEntity(
           mesh: .generateBox(size: size),
           materials: [SimpleMaterial(color: .systemCyan, isMetallic: true)]
@@ -242,12 +244,12 @@ final class GameWorld {
       entity.name = point.id.rawValue
       root.addChild(entity)
     }
-    for z: Float in [-5.1, -3.9] {
+    for position in PrototypeLayout.serviceMarkerPositions {
       let marker = ModelEntity(
-        mesh: .generateBox(size: [1.2, 0.025, 0.12]),
+        mesh: .generateBox(size: PrototypeLayout.serviceMarkerSize),
         materials: [UnlitMaterial(color: .systemCyan)]
       )
-      marker.position = [3.4, 0.02, z]
+      marker.position = position
       root.addChild(marker)
     }
   }

@@ -12,22 +12,16 @@ final class GameControls {
     case ready
   }
 
-  struct Input: Sendable {
-    let movement: SIMD2<Float>
-    let actionPressed: Bool
-    let pausePressed: Bool
-
-    static let neutral = Input(movement: .zero, actionPressed: false, pausePressed: false)
-  }
+  typealias Input = InputRules.Input
 
   private(set) var status = Status.inactive
   private(set) var actionSymbol: String?
   private(set) var sourceName = "Connect a controller or keyboard"
   private(set) var pauseButtonName = "Menu"
+  private(set) var needsNeutralInput = true
 
   @ObservationIgnored private var isActive = false
   @ObservationIgnored private var isPaused = false
-  @ObservationIgnored private var needsNeutralInput = true
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
@@ -59,45 +53,31 @@ final class GameControls {
     func pressed(_ code: GCKeyCode) -> Bool {
       keyboard?.button(forKeyCode: code)?.isPressed ?? false
     }
-    let left = pressed(.keyA)
-    let right = pressed(.keyD)
-    let up = pressed(.keyW)
-    let down = pressed(.keyS)
-    let keyboardAction = pressed(.keyE)
-    let keyboardPause = pressed(.escape)
-    let hasMovementKey = left || right || up || down
-    let hasKeyboardInput = hasMovementKey || keyboardAction || keyboardPause
-    let stick = SIMD2(
-      gamepad?.leftThumbstick.xAxis.value ?? 0,
-      gamepad?.leftThumbstick.yAxis.value ?? 0
+    let raw = InputRules.Raw(
+      stick: SIMD2(
+        gamepad?.leftThumbstick.xAxis.value ?? 0,
+        gamepad?.leftThumbstick.yAxis.value ?? 0
+      ),
+      controllerAction: gamepad?.buttonA.isPressed ?? false,
+      controllerPause: gamepad?.buttonMenu.isPressed ?? false,
+      left: pressed(.keyA), right: pressed(.keyD),
+      up: pressed(.keyW), down: pressed(.keyS),
+      keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape)
     )
-    let movement =
-      hasMovementKey
-      ? SIMD2<Float>(
-        Float(right ? 1 : 0) - Float(left ? 1 : 0),
-        Float(up ? 1 : 0) - Float(down ? 1 : 0)) : stick
-    let actionPressed = keyboardAction || (gamepad?.buttonA.isPressed ?? false)
-    let pausePressed = keyboardPause || (gamepad?.buttonMenu.isPressed ?? false)
-    if hasKeyboardInput {
+    let deadZone = PrototypeLayout.movementDeadZone
+    if raw.hasKeyboardInput {
       showKeyboard()
     } else if let gamepad,
-      simd_length_squared(stick) > 0.15 * 0.15 || actionPressed || pausePressed
+      simd_length_squared(raw.stick) > deadZone * deadZone
+        || raw.controllerAction || raw.controllerPause
     {
       showController(gamepad)
     }
-    if needsNeutralInput {
-      if simd_length_squared(stick) <= 0.15 * 0.15,
-        !hasKeyboardInput, !actionPressed, !pausePressed
-      {
-        needsNeutralInput = false
-      }
-      return .neutral
-    }
-    return Input(
-      movement: isPaused ? .zero : movement,
-      actionPressed: !isPaused && actionPressed,
-      pausePressed: pausePressed
+    let result = InputRules.resolve(
+      raw, isPaused: isPaused, needsNeutralInput: needsNeutralInput
     )
+    needsNeutralInput = result.needsNeutralInput
+    return result.input
   }
 
   private func observeControllers() {

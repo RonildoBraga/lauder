@@ -6,7 +6,7 @@ enum Movement {
   ) -> SIMD3<Float> {
     guard input.x.isFinite, input.y.isFinite else { return .zero }
     let magnitude = simd_length(input)
-    let deadZone: Float = 0.15
+    let deadZone = PrototypeLayout.movementDeadZone
     guard magnitude > deadZone else { return .zero }
     let forward = simd_normalize(SIMD3(-cameraOffset.x, 0, -cameraOffset.z))
     let right = SIMD3(-forward.z, 0, forward.x)

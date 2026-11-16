@@ -6,7 +6,7 @@ import UIKit
 @MainActor
 struct GameView: View {
   @Environment(\.scenePhase) private var scenePhase
-  @State private var world = GameWorld()
+  let world: GameWorld
 
   var body: some View {
     ZStack(alignment: .top) {
@@ -57,16 +57,19 @@ struct GameView: View {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 12) {
           Text(world.controls.sourceName).font(.title2.bold())
-          Text("Centre the stick and release all buttons and keys to continue.")
         }
         .padding(28)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else if world.isPaused {
+      } else if world.status == .ready && (world.isPaused || world.controls.needsNeutralInput) {
         Color.black.opacity(0.45).ignoresSafeArea()
         VStack(spacing: 16) {
-          Text("Paused").font(.title2.bold())
-          Text("Press \(world.controls.pauseButtonName) to resume.")
+          Text(world.isPaused ? "Paused" : "Release controls to continue").font(.title2.bold())
+          if world.controls.needsNeutralInput {
+            Text("Centre the stick and release all buttons and keys to continue.")
+          } else {
+            Text("Press \(world.controls.pauseButtonName) to resume.")
+          }
         }
         .padding(28)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
