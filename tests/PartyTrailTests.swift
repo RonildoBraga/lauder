@@ -316,14 +316,156 @@ struct PartyTrailTests {
     #expect(party.trail.diagnostic == nil)
   }
 
+  @Test
+  func slowCurvedMovementUsesCheckedDistanceSamplesRatherThanOneNodePerFrame() {
+    let spawns = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.map {
+        let position = PrototypeLayout.spawn(for: $0)
+        return ($0, SIMD2(position.x, position.z))
+      })
+    var party = RouteCheck(positions: spawns)
+    for frame in 0..<2000 {
+      var checks = 0
+      let angle = Float(frame) * 0.001
+      party.step(
+        leader: .miki, delta: 0.001 * SIMD2(sin(angle), -cos(angle)),
+        followerDistance: 2.6 / 60,
+        canTraverse: { from, to in
+          checks += 1
+          #expect(simd_distance(from, to) > 0.00001)
+          #expect(simd_distance(from, to) <= 0.080001)
+          return true  // An empty world clears the whole proposed chord.
+        })
+      #expect(checks <= 3)
+      #expect(party.trail.diagnostic == nil)
+      #expect(party.trail.nodeCount <= 512)
+      #expect(party.trail.retainedLength <= 64)
+    }
+    #expect(simd_distance(party.positions[.miki]!, spawns[.miki]!) > 1)
+
+    // Selecting the rear member retains its position; the others retrace connected samples.
+    let rear = party.positions[.tomas]!
+    party.step(leader: .tomas, delta: .zero, canTraverse: { _, _ in true })
+    #expect(simd_distance(party.positions[.tomas]!, rear) < 0.00001)
+    for _ in 0..<600 {
+      party.step(leader: .tomas, delta: [0, 0.001], canTraverse: { _, _ in true })
+      #expect(party.trail.diagnostic == nil)
+      #expect(party.trail.nodeCount <= 512)
+    }
+    #expect(party.positions[.tomas]!.y > rear.y + 0.5)
+  }
+
+  @Test
+  func aBlockedCheckedChordPreservesTheRecordedBend() {
+    let angle: Float = 0.03
+    let first = SIMD2(cos(angle), -sin(angle))
+    let bend = SIMD2<Float>(1 / cos(angle), 0)
+    let last = SIMD2(cos(angle), sin(angle))
+    var party = RouteCheck(positions: [
+      .miki: first, .lara: first - [0, 0.8], .tomas: first - [0, 1.6],
+    ])
+    party.step(leader: .miki, delta: bend - first, followerDistance: 0)
+    party.step(leader: .miki, delta: last - bend, followerDistance: 0)
+    var checks = 0
+    let reverse = party.step(
+      leader: .tomas, delta: .zero,
+      canTraverse: { from, to in
+        checks += 1
+        // The original legs are tangent to this expanded circular obstacle. Their chord
+        // crosses its interior, so the world rejects coalescing even this gentle bend.
+        let edge = to - from
+        let amount = min(max(-simd_dot(from, edge) / simd_length_squared(edge), 0), 1)
+        return simd_length(from + amount * edge) >= 0.99999
+      })
+    #expect(checks > 0)
+    #expect(reverse[.miki]!.x > 0)
+    #expect(reverse[.miki]!.y < 0)
+    #expect(party.trail.diagnostic == nil)
+  }
+
+  @Test
+  func clearanceAttemptsAreBoundedAndRotatePastRejectedSamples() {
+    var party = RouteCheck()
+    for frame in 0..<20 {
+      let angle = Float(frame) * 0.01
+      party.step(
+        leader: .miki, delta: 0.01 * SIMD2(cos(angle), sin(angle)), followerDistance: 0)
+    }
+    let before = party.trail.nodeCount
+    var starts: [SIMD2<Float>] = []
+    let clearance: (SIMD2<Float>, SIMD2<Float>) -> Bool = { from, _ in
+      starts.append(from)
+      return from.x > 0.025
+    }
+    party.step(leader: .miki, delta: .zero, followerDistance: 0, canTraverse: clearance)
+    #expect(starts.count == 3)
+    #expect(starts.allSatisfy { $0.x <= 0.025 })
+    #expect(party.trail.nodeCount == before)
+    starts.removeAll()
+    party.step(leader: .miki, delta: .zero, followerDistance: 0, canTraverse: clearance)
+    #expect(!starts.isEmpty)
+    #expect(starts.count <= 3)
+    #expect(starts[0].x > 0.025)
+    #expect(party.trail.nodeCount < before)
+    #expect(party.trail.diagnostic == nil)
+  }
+
+  @Test
+  func occupiedAndPendingCursorsAreNeverCoalesced() {
+    var party = RouteCheck(positions: [
+      .miki: [0, 0], .lara: [0.03, 0], .tomas: [0.06, 0.001],
+    ])
+    var checks = 0
+    party.step(
+      leader: .miki, delta: .zero,
+      canTraverse: { _, _ in
+        checks += 1
+        return true
+      })
+    #expect(checks == 0)
+    #expect(party.trail.nodeCount == 3)
+    _ = party.trail.prepareStep(
+      leader: .miki, leaderDelta: [0.001, 0], maximumFollowerDistance: 0.1)
+    let unresolved = party.trail.prepareStep(
+      leader: .miki, leaderDelta: .zero, maximumFollowerDistance: 0.1,
+      canTraverse: { _, _ in
+        checks += 1
+        return true
+      })
+    #expect(checks == 0)
+    #expect(unresolved.isEmpty)
+    #expect(party.trail.diagnostic == .unresolvedStep)
+  }
+
+  @Test
+  func anOutAndBackDoesNotOfferAZeroLengthReplacementChord() {
+    var party = RouteCheck()
+    party.step(leader: .miki, delta: [0.01, 0], followerDistance: 0)
+    party.step(leader: .miki, delta: [-0.01, 0], followerDistance: 0)
+    var checks = 0
+    party.step(
+      leader: .miki, delta: .zero, followerDistance: 0,
+      canTraverse: { from, to in
+        checks += 1
+        #expect(simd_distance(from, to) > 0.00001)
+        return true
+      })
+    #expect(checks == 0)
+    #expect(party.trail.nodeCount == 3)
+    #expect(party.trail.diagnostic == nil)
+  }
+
   private struct RouteCheck {
     var positions: [PartyMember: SIMD2<Float>]
     var trail: PartyTrail
 
-    init(limits: PartyTrail.Limits = .init()) {
-      let positions: [PartyMember: SIMD2<Float>] = [
-        .miki: [0, 0], .lara: [0, 0.8], .tomas: [0, 1.6],
-      ]
+    init(
+      limits: PartyTrail.Limits = .init(), positions supplied: [PartyMember: SIMD2<Float>]? = nil
+    ) {
+      let positions: [PartyMember: SIMD2<Float>] =
+        supplied ?? [
+          .miki: [0, 0], .lara: [0, 0.8], .tomas: [0, 1.6],
+        ]
       self.positions = positions
       trail = PartyTrail(
         spawns: PartyMember.allCases.map { ($0, positions[$0]!) }, limits: limits)
@@ -331,10 +473,12 @@ struct PartyTrailTests {
 
     @discardableResult
     mutating func step(
-      leader: PartyMember, delta: SIMD2<Float>, followerDistance: Float = 0.1
+      leader: PartyMember, delta: SIMD2<Float>, followerDistance: Float = 0.1,
+      canTraverse: ((SIMD2<Float>, SIMD2<Float>) -> Bool)? = nil
     ) -> [PartyMember: SIMD2<Float>] {
       let deltas = trail.prepareStep(
-        leader: leader, leaderDelta: delta, maximumFollowerDistance: followerDistance)
+        leader: leader, leaderDelta: delta, maximumFollowerDistance: followerDistance,
+        canTraverse: canTraverse)
       for (member, movement) in deltas { positions[member]! += movement }
       trail.observe(positions: positions, deltaTime: 1 / 30)
       return deltas

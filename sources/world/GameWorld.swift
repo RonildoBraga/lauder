@@ -137,7 +137,10 @@ final class GameWorld {
     let leaderDelta = SIMD2(direction.x, direction.z) * PrototypeLayout.speed * dt
     let deltas = trail.prepareStep(
       leader: session.leader, leaderDelta: leaderDelta,
-      maximumFollowerDistance: PrototypeLayout.speed * dt)
+      maximumFollowerDistance: PrototypeLayout.speed * dt,
+      canTraverse: { [self] from, to in
+        sweep(from: from, to: to)?.isEmpty == true
+      })
     let message = trail.diagnostic.map { String(describing: $0) }
     if diagnostic != message { diagnostic = message }
     if !trail.holdsAllMovement {
@@ -146,20 +149,10 @@ final class GameWorld {
         let horizontal = deltas[member] ?? .zero
         let start = SIMD2(body.position.x, body.position.z)
         let resolved = PartyMotion.resolve(start: start, delta: horizontal) { [self] from, to in
-          guard let scene = root.scene else {
+          guard let hits = sweep(from: from, to: to) else {
             return PartyMotion.Hit(distance: 0, normal: .zero)
           }
-          let height = PrototypeLayout.obstacleSweepHeight
-          guard
-            let hit = scene.convexCast(
-              convexShape: bodyShape,
-              fromPosition: [from.x, height, from.y],
-              fromOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
-              toPosition: [to.x, height, to.y],
-              toOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
-              query: .nearest, mask: Self.obstacleGroup, relativeTo: root
-            ).first
-          else { return nil }
+          guard let hit = hits.first else { return nil }
           return PartyMotion.footprintHit(
             from: from, to: to, point: hit.position, normal: hit.normal,
             radius: PrototypeLayout.characterRadius)
@@ -178,6 +171,20 @@ final class GameWorld {
         nearby?.observation
         ?? "The front entrance is blocked. The whole party can use the side passage."
     }
+  }
+
+  // Both movement and trail simplification use the same complete footprint query.
+  // A missing scene is unavailable clearance, not an empty (clear) result.
+  private func sweep(from: SIMD2<Float>, to: SIMD2<Float>) -> [CollisionCastHit]? {
+    guard let scene = root.scene else { return nil }
+    let height = PrototypeLayout.obstacleSweepHeight
+    return scene.convexCast(
+      convexShape: bodyShape,
+      fromPosition: [from.x, height, from.y],
+      fromOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+      toPosition: [to.x, height, to.y],
+      toOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
+      query: .nearest, mask: Self.obstacleGroup, relativeTo: root)
   }
 
   private var positions: [PartyMember: SIMD2<Float>] {

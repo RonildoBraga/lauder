@@ -1,7 +1,7 @@
 import simd
 
 /// A small, connected record of movement the world has actually resolved.
-/// The caller owns leadership and collision checking; this value never invents a connector.
+/// The caller owns leadership and collision checking; this value never adds an unchecked connector.
 struct PartyTrail {
   struct Limits {
     var maximumNodeCount = 512
@@ -42,6 +42,9 @@ struct PartyTrail {
   private static let positionTolerance: Float = 0.00001
   private static let resolvedMovementAllowance: Float = 0.003
   private static let maximumStepDistance: Float = 0.12
+  private static let maximumSampleSpan: Float = 0.08
+  private static let minimumSampleTurnCosine = cos(Float(0.1))
+  private static let maximumClearanceChecks = 3
   private let limits: Limits
   private var nodes: [Int: Node] = [:]
   private var cursors: [PartyMember: Int] = [:]
@@ -50,6 +53,7 @@ struct PartyTrail {
   private var pending: [PartyMember: Request] = [:]
   private var stalledTime: [PartyMember: Float] = [:]
   private var nextID = 0
+  private var nextCoalescingID = 0
 
   private(set) var diagnostic: Diagnostic?
   var holdsAllMovement: Bool { diagnostic != nil }
@@ -184,7 +188,8 @@ struct PartyTrail {
   /// Reserve the complete party step before the world moves any body. A capacity hold returns
   /// no movement, including for the leader. Targets always lie on the next connected edge.
   mutating func prepareStep(
-    leader: PartyMember, leaderDelta: SIMD2<Float>, maximumFollowerDistance: Float
+    leader: PartyMember, leaderDelta: SIMD2<Float>, maximumFollowerDistance: Float,
+    canTraverse: ((SIMD2<Float>, SIMD2<Float>) -> Bool)? = nil
   ) -> [PartyMember: SIMD2<Float>] {
     guard !holdsAllMovement else { return [:] }
     guard pending.isEmpty else {
@@ -192,6 +197,7 @@ struct PartyTrail {
       return [:]
     }
     pruneUnusedRoute()
+    coalesceShortSamples(canTraverse: canTraverse)
     guard let head = cursors[leader], Self.isFinite(leaderDelta),
       maximumFollowerDistance.isFinite, maximumFollowerDistance >= 0
     else {
@@ -401,6 +407,47 @@ struct PartyTrail {
           }
         }
       }
+    }
+  }
+
+  /// Reduce short, gentle samples only after a world sweep clears their entire replacement
+  /// chord. Never remove an occupied cursor or alter an outstanding movement promise.
+  private mutating func coalesceShortSamples(
+    canTraverse: ((SIMD2<Float>, SIMD2<Float>) -> Bool)?
+  ) {
+    guard let canTraverse else { return }
+    let occupied = Set(cursors.values)
+    let ids = nodes.keys.sorted()
+    guard !ids.isEmpty else { return }
+    let first = ids.firstIndex { $0 >= nextCoalescingID } ?? 0
+    var checks = 0
+    for offset in 0..<ids.count {
+      let id = ids[(first + offset) % ids.count]
+      guard !occupied.contains(id), let node = nodes[id], node.neighbours.count == 2 else {
+        continue
+      }
+      let neighbours = node.neighbours.sorted()
+      let start = nodes[neighbours[0]]!.position
+      let end = nodes[neighbours[1]]!.position
+      let incoming = start - node.position
+      let outgoing = end - node.position
+      let span = simd_length(incoming) + simd_length(outgoing)
+      let scale = simd_length(incoming) * simd_length(outgoing)
+      guard span <= Self.maximumSampleSpan, scale > 0,
+        simd_distance(start, end) > Self.positionTolerance,
+        -simd_dot(incoming, outgoing) >= scale * Self.minimumSampleTurnCosine
+      else { continue }
+
+      // Advance after rejected queries too, so blocked old corners cannot starve new samples.
+      nextCoalescingID = id + 1
+      checks += 1
+      if canTraverse(start, end) {
+        nodes[neighbours[0]]!.neighbours.remove(id)
+        nodes[neighbours[1]]!.neighbours.remove(id)
+        nodes.removeValue(forKey: id)
+        connect(neighbours[0], neighbours[1])
+      }
+      if checks == Self.maximumClearanceChecks { break }
     }
   }
 

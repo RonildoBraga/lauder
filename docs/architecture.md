@@ -92,6 +92,8 @@ All three initial stand-ins use the same circular footprint and check scenery, i
 
 Use a bounded recorded-path trail with retained route connections and per-member cursors, as specified in [ADR 0002](decisions/0002-party-following.md). A leader's recorded path is useful evidence of travel, not proof of follower clearance. Each follower still moves through collision-checked world space; corners, reversals, switching and a changed barrier can invalidate an assumed connection.
 
+To avoid filling the trail with tiny analog turns, GameWorld supplies full-segment footprint clearance for short, gentle simplification candidates. PartyTrail may replace only unoccupied degree-two nodes, with no pending movement, within the ADR's distance/turn bounds and three-query step budget. Candidate rotation prevents blocked bends from monopolising that budget. Missing clearance fails closed; the node/length limits and capacity diagnostic remain unchanged. Followers still sweep every actual movement step.
+
 The camera keeps the accepted elevated offset and field of view and follows the session's selected leader. On switching, ease the target from the current camera target to the new leader over **0.25 seconds**, tunable in playtests. Preserve the offset/orientation and world positions; another switch starts from the current interpolated target. Freeze transition progress when the world is frozen. The short Simulator and baseline phone checks confirmed readable leader changes and camera/HUD framing; longer-session comfort and other layouts remain unverified.
 
 ## The prototype's state
