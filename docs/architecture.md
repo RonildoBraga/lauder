@@ -1,147 +1,145 @@
 # Lauder — architecture
 
 **Date:** 16 November 2026\
-**Status:** Swift and RealityKit accepted. The earlier solo-prototype design below awaits reconciliation with the [party prototype plan](prototype-plan.md), now proposed for Claude's review.\
-**Scope:** Single-character movement and controls are implemented. The current [walkthrough](gameplay-script.md) proposes leader switching, two followers and character-specific actions. Stationary Tomas, Miki-only camera ownership, interaction routing and the solo save model below are earlier assumptions, not a party architecture. The plan requires ownership and lifecycle decisions to be recorded before their implementation PR. This documentation task supplies no gameplay implementation.
+**Status:** Swift and RealityKit accepted. The party design below is proposed in response to [Claude's PR #21 review, B1/B3](https://github.com/RonildoBraga/lauder/pull/21#issuecomment-6916286122), for review and maintainer agreement before implementation.\
+**Scope:** The current app has one moving character, stationary Tomas, observation prompts and Pause/Resume. GameSession, three-body following, switching, specialist interactions, mission rules, Restart and persistence are not implemented. The [walkthrough](gameplay-script.md) and [prototype plan](prototype-plan.md) define the proposed party experience; this document does not authorise code or settle the cast's open relationships.
 
 ## Decision and platform
 
-Use **Swift + RealityKit** for gameplay and the 3D world, and **SwiftUI** for the interface. Build scenes in Swift and load USDZ assets directly, following the [maintainer's clarified code-first decision](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023).
+Use **Swift + RealityKit** for gameplay and the 3D world, and **SwiftUI** for the interface. Build scenes in Swift and load USDZ assets directly, following the [maintainer's code-first decision](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023). The accepted rationale, alternatives and unchanged three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md).
 
-The accepted rationale, alternatives, costs and three-session Stage 1 stop criterion are in [ADR 0001](decisions/0001-engine.md).
-
-Interpret “latest iOS” as the current stable **iOS 27 family**. Proposed minimum deployment target: **iOS 27.0**. Build with the latest stable SDK and test on the latest stable patch. On the review date, Apple lists **iOS 27.2.1** and **Xcode 27.2** as released; iOS/Xcode 27.3 are beta. [Apple releases](https://developer.apple.com/news/releases/)
-
-Use the stable Xcode 27.2 toolchain for the first prototype. Record the actual editor, SDK, device and OS versions with the first device validation results.
-
-Start with iPhone and landscape orientation. The initial performance baseline is an **iPhone 13 Pro Max**, testing on the current stable iOS 27 release. Broader Apple device support can follow a working iPhone prototype.
+The project targets **iOS 27.0 or later**, iPhone first, in landscape. Use stable Xcode 27.2 / SDK 27.2 and record the actual toolchain, OS and build with validation results. The initial performance baseline is **iPhone 13 Pro Max**, with a measured 60 fps target. Broader Apple-device support follows a working iPhone prototype. See the [recorded toolchain and device evidence](stage-1.md); a target is not a performance result.
 
 ## Shape of the project
 
-**One Xcode app target**, one unit-test target, and ordinary feature folders. No internal package hierarchy or third-party dependencies are needed initially.
+Keep **one app target**, one Swift Testing target and ordinary feature folders. No package hierarchy, third-party dependency, custom ECS or new rendering layer is needed.
 
-| Part | Responsibility | Boundary |
+| Part | Proposed responsibility | Boundary |
 |---|---|---|
-| App composition | Creates the session, world and save store; owns launch, restart and teardown | Wiring and lifecycle |
-| Gameplay | Mission facts, progress transitions and simple dialogue definitions | Ordinary Swift values and rules; no RealityKit entities or SwiftUI views |
-| World | Loaded scene, Miki, movement, camera, collision and nearby interactions | RealityKit owns live spatial state |
-| Interface | Gamepad/Simulator keyboard input, objective, action prompt, dialogue and pause presentation | Presents state and supplies input snapshots |
-| Persistence | Versioned checkpoint snapshots and ordered atomic file writes | Stores values, never scene/entity graphs |
-| Content | Scene, models, animation, materials and small authored definitions | Presentation and stable identifiers |
+| App composition | Own stable session/world instances and launch/teardown | SwiftUI reevaluation does not recreate them |
+| GameSession | Mode, active leader and shared mission facts; accept/reject commands | Plain Swift values and rules, no entities or views |
+| GameWorld | Three bodies, camera, collision, following, scene effects and owned update/load work | RealityKit owns live spatial state |
+| Interface/input | Poll hardware, hold input-rule state, present coarse session/world state | Supplies intents; does not own a second gameplay mode |
+| Content | Typed layout, character/interaction IDs, approaches, prompts and delivery assets | Small authored definitions within the app |
+| Persistence, later | Versioned checkpoints and an ordered writer | Values, never entity graphs |
 
-These are folders and responsibilities within the app, rather than separate frameworks. Extract a shared component when a second actual use needs it. Use app-bundled USDZ resources within the single app target.
+These are responsibilities, not new frameworks or a requirement to create every folder immediately. Add GameSession for Party A; add interaction/progress rules with B/C and SaveStore only during later hardening.
 
 ## Scene and asset authoring
 
-Compose the graybox from RealityKit entities in Swift: generated meshes, simple materials, lights, camera and collision shapes. Stage 1 needs only a few explicit placements. As the route and interactions are added in Stages 2–3, keep their positions, dimensions and stable interaction IDs in one small typed Swift layout definition that GameWorld consumes. Use the binding validation described below. No JSON schema, parser, custom scene format or editor framework is needed.
+Compose the graybox using generated meshes, simple materials, lights, camera and collision shapes. Keep authored positions, dimensions and stable IDs in the existing small typed layout, rather than adding JSON, a parser or an editor framework.
 
-Load character and prop USDZ files directly from the app bundle. Preserve editable inputs and deliberate exports with their provenance. The current [stand-in generator](../sources/content/character/README.md) emits a real rig and idle/walk clips without a GUI; it is a prototype asset tool, not a system for producing finished character art. Artist-made assets and specialist tools remain options when a concrete visual requirement needs them.
+Party A uses three named, differently coloured primitive stand-ins. Replace the stationary Tomas landmark with his party body; the keeper briefing is text-only, without a fourth character rig. No new character models or animation are required. The completed rig/idle/walk proof remains recorded in [Stage 1](stage-1.md). Preserve editable sources, deliberate exports and provenance together; the [stand-in generator](../sources/content/character/README.md) is a prototype asset tool, not a finished-art pipeline.
 
-Iterate placements and gameplay in Simulator. At milestones, before merging playable features, verify the affected controls, lifecycle and performance on the baseline iPhone. Source review and simulator screenshots cannot prove phone control comfort or performance. Keep the prototype plan's physical-device checks and measured frame-rate gate.
+Scene composition and the named animation library remain Swift code. Do not add per-frame visual work, publish character transforms to SwiftUI, or require art production before evaluating the party.
 
 ## Swift conventions
 
-- Select **Swift 6 language mode** deliberately from the first source commit. It enables complete data-race checking; do not rely on an Xcode template's default language mode. Keep UI/session work main-actor isolated and make concurrency boundaries explicit. [Swift migration guidance](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/enabledataracesafety/)
-- Use **Swift Testing** for new unit tests. The physical-device checks in the prototype plan remain necessary. [Swift Testing](https://developer.apple.com/xcode/swift-testing/)
-- Use the toolchain's **`swift format`** and the repository's [`.swift-format`](../.swift-format): two-space indentation and a 100-column line length; other options use tool defaults. No third-party formatter or linter is needed.
-- Run **`./scripts/check`** for toolchain formatting, the shared Lauder scheme's build and its Swift Testing target. [Validation requirements](../CONTRIBUTING.md#validation)
-
-The first playable uses in-memory progress. The saving design below remains the target for later hardening; [the prototype plan](prototype-plan.md) separates those milestones.
+- Use **Swift 6 language mode** and complete data-race checking. Keep session/UI/world coordination main-actor isolated; concurrency boundaries must be explicit. [Swift migration guidance](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/enabledataracesafety/)
+- Use **Swift Testing** for rules and value-based trail tests. [Swift Testing](https://developer.apple.com/xcode/swift-testing/)
+- Use toolchain **`swift format`** with the committed [`.swift-format`](../.swift-format): two-space indentation, 100-column length and otherwise tool defaults.
+- Run **`./scripts/check`** for formatting, the shared scheme's build and tests. [Validation requirements](../CONTRIBUTING.md#validation)
 
 ## Runtime ownership
 
-- **GameSession** is the sole authority for mission progress. Keep its mutations on the main actor and expose coarse changes to the interface.
-- **GameWorld** owns the live RealityKit scene, transient movement input, entity references, asset load tasks and frame subscriptions.
-- **SaveStore** owns one local save file and serialises writes away from the frame loop.
-- The app composition owns stable instances of all three. SwiftUI view reevaluation must not recreate them.
+**GameSession is the sole authority** for:
 
-Mission state does not contain entities. The world does not keep a second inventory or an independent “radio repaired” flag.
+- Mode: exploring, dialogue or paused. Pausing records whether to resume exploring or the current dialogue; pauses do not nest or lose the dialogue cursor.
+- Active leader: one stable member ID, with proposed order Miki → Lara → Tomas.
+- Mission phase, introduced with Party C.
+- A separate `passageOpen` flag, introduced with Party B. Opening access is not a mission phase and either solution sets the same flag.
+
+Use plain Swift session state and rules on the main actor, exposing only coarse changes to the interface. The carried-regulator indicator is derived from the mission phase, not stored on a leader or duplicated in the world. There are no separate member inventories.
+
+**GameWorld owns spatial state:** a body reference for each stable member ID, their actual positions, follower trails/cursors, one camera, scene bindings, playback where present, load cancellation and one simulation subscription. It reads the active leader from the session. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
+
+**GameControls owns device attachment and raw sampling.** Pure InputRules owns the transformation of raw values plus prior input-rule state into intents and next rule state. Neither keeps an independent pause/dialogue policy. Remove the current GameWorld pause authority and GameControls pause copy when migrating to the session; do not leave synchronized competing modes.
 
 ```mermaid
 flowchart LR
-    I["Gamepad / Simulator keyboard input"] -->|input snapshot| W["GameWorld / RealityKit"]
-    UI["SwiftUI HUD"]
-    W -->|interaction request| S
-    S -->|accepted progress| W
-    S -->|display state| UI
-    S -->|checkpoint snapshot| P["SaveStore"]
-    P -->|restored progress| S
-    C["Scene and content"] --> W
+    H[GameControls hardware sample] --> R[InputRules: values and edge history]
+    S[GameSession: mode, leader, progress] -->|current mode| R
+    R -->|intents| S
+    W[GameWorld: bodies, trails, camera] -->|validated interaction request| S
+    S -->|leader and accepted state| W
+    S --> U[SwiftUI presentation]
+    C[Typed layout and content] --> W
 ```
 
-## The prototype's state
+The owned world update coordinates this sequence. Rules do not retain RealityKit entities, and the world does not keep a second leader, inventory or passage-open truth.
 
-Use one small mission phase:
+## Input and command routing
 
-**Briefing → Seeking regulator → Carrying regulator → Radio repaired → Meeting agreed**
+Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Existing mappings are left stick/WASD movement, Cross/A/E action and Options/Menu/Escape Pause. **Proposed switching:** R1/RB, read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), or **Q** in Simulator. Q replaces the earlier Tab proposal; switch delivery and comfort have not been tested. There are no touch controls or clickable screen actions.
 
-A successful conversation with Tomas starts the search. Taking the regulator changes the phase once. Repair requires that phase and consumes the carried part. Finishing the family call secures the meeting.
+Extend InputRules with switch-button state and explicit previous-button/edge state instead of adding another edge detector in GameWorld. Tests cover:
 
-For this one-item prototype, the carried-item indicator is derived from the phase. There is no separate inventory collection or generic quest system.
+1. Pause takes priority over other commands in the same sample. The session stores the resume mode and routes subsequent inputs accordingly.
+2. While exploring, a fresh switch edge cycles leadership and suppresses the same-sample action. Record that action's held state even when suppressed: it requires release and a fresh press before use.
+3. Held movement may continue on the new leader. Switching alone does not close the neutral-input gate.
+4. While in dialogue or Pause, switch edges are ignored and consumed, not queued. Action advances text or confirms the pause-menu choice; it cannot also interact with the world. Movement can navigate a menu only where explicitly defined, never move the bodies.
+5. Inactivity, input-source changes and Pause/Resume retain the release gate. All gameplay buttons, including switch, must be released and the stick centred before fresh input. Opposing held movement keys do not count as neutral.
 
-Interactions have stable IDs such as `relay.tomas`, `depot.regulator` and `relay.transmitter`. GameWorld binds the authored scene objects to those IDs once at load. Missing or duplicate required bindings are reported during scene validation. Runtime UUIDs and display names are not save keys.
-
-### One interaction
-
-1. GameWorld identifies the accessible object within interaction range.
-2. The interface shows the available action prompt: **Talk**, **Take**, **Repair** or **Call**.
-3. Pressing the action input (Cross/A, or E in Simulator) rechecks current distance and accessibility in GameWorld before submitting a named gameplay command; a stale prompt cannot trigger a remote interaction.
-4. GameSession validates its phase and accepts or rejects it.
-5. The accepted state drives the objective, item visibility, radio appearance and checkpoint save.
-
-Repeated presses cannot award a second regulator or consume it twice. An unavailable repair gives a short explanation.
-
-After completion, the transmitter offers **Read plan**. It displays the agreed meeting details without restarting the mission or changing secured progress.
-
-Keep the prototype's dialogue as a short ordered set of text lines in one content definition. The existing story documents remain the narrative source. No dialogue graph, branching editor or Markdown-to-game generator is required.
+GameSession decides what an allowed intent means for the current mode. World movement/following runs only when exploring, presented, active, ready, supplied with an available input source and past the neutral-input gate. This does not require nonzero movement: followers may settle along their routes while the leader stands still. Dialogue, Pause, input loss or a closed release gate freezes the whole party; input sampling needed for dialogue/menu/Pause remains available.
 
 ## Movement and presentation
 
-Use RealityKit's built-in character controller and collision behaviour. Continuous movement and camera work run through owned RealityKit simulation/frame callbacks using elapsed time.
+Continue using one owned RealityKit simulation update with elapsed time. **RealityView.update is for state-driven scene changes, not the simulation loop.** Do not add a timer or per-input tasks. Keep the existing cancellation, first-step timing reset and late-load protection.
 
-**RealityView.update is for state-driven scene changes, not the simulation loop.** Avoid a second timer-based simulation or publishing character transforms into SwiftUI every frame. Apple documents the relationship between SwiftUI state and RealityKit updates in its [integration guidance](https://developer.apple.com/videos/play/wwdc2025/274/).
+All three initial stand-ins use the same controller footprint and collide with the world, including closed barriers. Exclude party-member collisions from one another so companions cannot physically block the leader in the narrow opening. Trail spacing provides best-effort visual separation; temporary overlap on reversals is a graybox trade-off, not a claim that spacing guarantees separation. RealityKit exposes a character-controller [collision filter](https://developer.apple.com/documentation/realitykit/charactercontrollercomponent/collisionfilter); verify the intended world/party masks in the actual route tests.
 
-GameWorld sets up and tears down its callbacks explicitly. Cancel unfinished loads when restarting or leaving; a late load must not attach objects to a discarded scene.
+Use a bounded recorded-path trail with retained route connections and per-member cursors, as specified in [ADR 0002](decisions/0002-party-following.md). A leader's recorded path is useful evidence of travel, not proof of follower clearance. Each follower still moves through collision-checked world space; corners, reversals, switching and a changed barrier can invalidate an assumed connection.
 
-The camera has a fixed elevated perspective, follows Miki and cannot rotate in the prototype. Use level layout and low obstacles to maintain visibility before adding an occlusion subsystem.
+The camera keeps the accepted elevated offset and field of view and follows the session's selected leader. On switching, ease the target from the current camera target to the new leader over a proposed **0.25 seconds**, tunable in playtests. Preserve the offset/orientation and world positions; another switch starts from the current interpolated target. Freeze transition progress when the world is frozen. This is an easing proposal, not a tested comfort result.
 
-Phone gameplay uses one GameController extended-gamepad input path for PS5 DualSense and Xbox controllers. The left stick moves; with default mappings, logical `buttonA` is Cross/A for actions and `buttonMenu` is Options/Menu for Pause/Resume. Read the selected profile's `sfSymbolsName` for action glyphs, including system remapping. Simulator keyboard controls use WASD for movement, E for action and Escape for Pause/Resume. Both supply the same input snapshot to GameWorld; selection, pause input and neutral-input gating belong to the interface input owner. There are no virtual touch controls or clickable screen actions.
+## The prototype's state
 
-Use keyboard input for everyday Simulator iteration. A generic MFi profile was enumerated, but live PS5 stick input did not work in the tested setup, including with Device Hub visible; controller forwarding remains unresolved. Validate controller behavior, interruptions and performance on the iPhone at milestones before merging playable features. The [Stage 2 record](stage-2.md) separates simulator observations from physical checks. The foreground game keeps the screen awake, including Pause, and restores the idle timer when inactive.
+Proposed Party C mission phase:
 
-Scene composition and the named animation library are configured in Swift for the first playable. Mission and repair rules remain in Swift so there is one authority. RealityKit already supplies an entity/component model; no custom ECS framework is needed. [RealityKit systems](https://developer.apple.com/documentation/realitykit/implementing-systems-for-entities-in-a-scene)
+**Briefing → Seeking regulator → Carrying regulator → Radio repaired → Meeting agreed**
+
+The keeper's briefing starts the search with all three travellers present. Miki identifies/takes the regulator and later consumes it in the repair. Any leader can start the coastal water-crew call or use **Read plan** after completion. Finishing the call secures the appointment. Lara is local; no Nina-specific dialogue is required while relationships remain undecided.
+
+The separate passage flag survives every leader switch. Lara's latch and Tomas's panel action are alternative transitions from closed to open; after either succeeds, both requests are harmless. No second obstacle or skill tree is needed.
+
+### One interaction
+
+Before Party B, extend the typed layout's interaction definitions with stable action IDs, eligible member IDs, an authored accessible approach area, prompt/role-feedback text and the relevant collision dimensions. Put per-object collision data there instead of selecting it by ID in GameWorld; this absorbs [#19 L4](https://github.com/RonildoBraga/lauder/issues/19). Required IDs must exist once at load.
+
+1. GameWorld evaluates the actual active body's position against the interaction's approach area and current world accessibility.
+2. The HUD presents the active character's action or a suggestion to switch. No remote companion acts automatically.
+3. A fresh action rechecks active identity, approach, range, accessibility and relevant progress. An approach must be authored on the usable side of a wall; proximity alone is insufficient.
+4. GameSession validates mode, eligibility and phase/flag and accepts or rejects the named command.
+5. Accepted state changes project onto the static world: the barrier opens, the regulator disappears or the transmitter changes state. The world retains no independent progress flags.
+
+Tests cover stale prompts after movement/switching, both alternative methods independently, duplicate actions and repair without the part. Read plan leaves secured progress unchanged. Keep short ordered speaker-labelled text in content; no branching dialogue framework is required.
+
+## Restart and lifecycle
+
+Party C implements the proposed **in-place Restart** of the existing session/world. Reset mode to exploring, active leader to Miki, mission to briefing and passage to closed. Restore all three authored spawn positions, controller motion state, regulator visibility, unrepaired transmitter, dialogue/objective state and observation/prompt state. Clear/reseed trails, camera transition and input edge history; require neutral input before movement resumes.
+
+Restart does not attach a second simulation callback, rebuild the static scene or reload already available stand-ins. Invalidate unfinished run-specific effects or loads so late results cannot alter the reset run. Verify a single owned subscription and exactly three members across repeated restarts.
+
+Normal inactivity freezes the current scene and preserves session/dialogue progress. Clear held input and reset frame timing when returning. The foreground app remains awake, including Pause; restore the idle timer when inactive. Leaving the view cancels owned updates and unfinished loads. These rules extend the current lifecycle to all three bodies rather than creating a separate party lifecycle manager.
 
 ## Saving and interruption
 
-Save a small Codable snapshot containing a schema version and mission phase. Rebuild the world from that state.
+**Persistence is later hardening, not a first-playable dependency.** Create SaveStore then, rather than alongside Party A.
 
-Use two authored safe spawn locations:
-- Before collection: Relay House.
-- Carrying the regulator: the depot exit, so the return trip remains.
-- After repair or completion: Relay House.
+Use a versioned Codable checkpoint with mission phase, the independent passage flag, active member ID and an authored safe group-spawn ID. Derive the carried part from phase. Restore all three to a validated group placement on the correct reachable side of any closed barrier; define the checkpoint mapping before implementing saves. Do not serialise arbitrary transforms, trails, physics or animation state.
 
-The mission phase selects the spawn. No arbitrary pose, physics state or animation is serialised.
-
-Save after each meaningful phase change. A single ordered writer prevents an older snapshot overwriting a newer one. Restarting a run must invalidate old pending work. Report save failures rather than claiming progress is secured.
-
-Normal background/foreground pauses and resumes the live scene in place. Clear held input, stop simulation/animation progression while inactive, pause interaction, and reset frame timing on resume. After termination, Continue reconstructs the saved checkpoint. Do not depend on an application shutdown callback to save.
-
-If termination interrupts a conversation, replay that conversation from its checkpoint. Normal pause/resume keeps the current line in the live session; no dialogue cursor is added to the save format.
-
-A corrupt or unsupported save must not be silently erased. Offer an explicit restart while leaving the original file untouched until the player chooses.
+Save meaningful changes with one ordered atomic writer. Restart invalidates older writes. Report failures; a corrupt/unsupported save remains intact until the player explicitly chooses Restart. Termination during dialogue replays its checkpoint; ordinary Pause preserves the live line. Do not rely on a shutdown callback.
 
 ## Assets and checks
 
-Start with a graybox environment and one representative rigged placeholder with idle/walk animation. Verify editable source → validated USDZ export → RealityKit loading and Swift composition → iPhone playback early. Keep editable sources, delivery assets and asset provenance together; generated build caches stay out of source control.
+Party A adds pure tests for input precedence, session modes/leadership and trail advancement/rebasing; manual Simulator route checks cover real collision, turns, reversals, camera easing and switching to each separated member. B adds layout eligibility/approach and shared-gate checks. C adds the full progression, dialogue and repeated in-place Restart checks. Unit tests do not prove the rendered route.
 
-Test rules and save round-trips independently of the rendered scene. Test controls, visibility, collisions, interruptions and sustained performance on the physical phone. The [prototype plan](prototype-plan.md) defines the exit criteria.
+Use Simulator keyboard input for everyday iteration. Live PS5 input did not work in the tested Simulator setup; enumeration does not prove delivery. The revised proposal is a phone checkpoint after **Party A** and another after **Party C**, with B's controls checked alongside C. It awaits maintainer agreement, preserves [#18's earlier deferral](https://github.com/RonildoBraga/lauder/issues/18), and requests no phone session now. Record controller/lifecycle observations and measured frame pacing; neither the solo phone checks nor Simulator timing prove party performance. Sustained 15–20 minute thermal/memory checks remain later hardening.
 
 ## Deliberately deferred
 
-Additional packages, custom rendering, generic inventory/crafting/quest frameworks, service locators, a global event bus, backend accounts, networking, cloud saves, monetisation, scene streaming and a broad UI automation suite.
-
-RealityKit's [NavigationComponent](https://developer.apple.com/documentation/realitykit/navigationcomponent) is available on iOS 27 and later, but stationary Tomas and a single controllable character do not yet require NPC pathfinding. Add it when a demonstrated interaction needs it.
+Finished character art/animation, free jumping/climbing, formation orders, separate inventories, generic navigation/ECS/inventory/quest frameworks, additional packages, networking, cloud saves, monetisation and scene streaming. Ordinary following and switching are part of Party A, not deferred companion features.
 
 ## Revisit after the first playable
 
-Use playtesting to decide the next survival pressure, first combat encounter, companion movement and visual target. Change the architecture only for a concrete requirement exposed by those additions.
+Use the plan's proposed Party A stop review if following is unreliable. First reconsider trail handling and the bounded layout; any navigation replacement or automatic regroup requires a deliberate review. Add the next survival pressure, combat encounter or visual requirement only when a concrete playtest need warrants it.
