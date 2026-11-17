@@ -59,6 +59,8 @@ Use Simulator for everyday scene, gameplay and interface iteration. Keyboard con
 
 Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/Resume; holding Escape releases keyboard capture so you can use the Mac normally.
 
+For repeated **PosterBoard** startup crashes, see the [Simulator recovery record](docs/simulator-troubleshooting.md). The dedicated **iPhone 17 — Lauder** device is the current working testing environment; the original device retains its data.
+
 Phone gameplay supports PS5 DualSense/Xbox through one GameController extended-gamepad path and an optional touch path. Controllers use left stick, Cross/A, R1/RB and Options/Menu; touch uses a bottom-left analog stick, **Look**, **Next: name** and **Pause/Resume**. Touch is automatic without an extended controller. With one attached, the controller remains the default unless **Use touch controls** is selected; **Use controller** returns to it. The preference is in memory. Every path supplies shared InputRules intents; see the [touch-control record](docs/touch-controls.md).
 
 On source changes, cancel old touch captures and require neutral input. Pause keeps the touch surface mounted: even a finger resting at the stick centre must lift before the release gate clears. At an assigned phone checkpoint, check simultaneous stick/button touches, Pause with held fingers, cancellation and source changes on the physical phone. Earlier controller tests and single-pointer Simulator checks do not prove these behaviours on a new build.

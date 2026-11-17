@@ -23,13 +23,18 @@ Each control tracks its finger. Source changes and inactivity cancel captures th
 
 Button presses are latched until the next sample so quick taps are not lost between scene updates. Source/lifecycle cancellation clears pending presses; InputRules still decides whether an intent is permitted.
 
-## Validation pending
+## Validation
 
-- `./scripts/check` passed with Xcode 27.2: strict formatting, build and Swift Testing.
-- Simulator launch rendered the controller-mode HUD and **Use touch controls** button. Live touch layout/movement and manual keyboard checks are pending; launch alone does not establish them.
-- Desktop automation could not access the Simulator window. The maintainer deferred the live check until available and asked to complete the independent work first. This is a deferral, not a passed touch playtest.
-- Physical phone multi-touch, source changes and PS5/Xbox behaviour on this build: unverified. Earlier Party A phone results apply to their recorded revision, not this change.
+The earlier live-check deferral was lifted when the maintainer returned on 17 November 2026. Checks below apply to runtime **`b592e22`**, not the earlier Party A phone build.
 
-The existing phone-test deferrals remain in force. Single-pointer Simulator checks cannot prove simultaneous fingers or physical controller delivery.
+- `./scripts/check` passed again with Xcode 27.2 on the iPhone 17 / iOS 27.0 Simulator: strict formatting, build and Swift Testing.
+- Pointer-based Simulator play confirmed **Use touch controls**, a readable touch layout, stick movement and stopping on release, Look displaying the transmitter observation, and a held Next press selecting Lara only once. Pause froze play; movement, Look and Next were ignored while paused. Switching back to the controller interface and then touch while paused left the selected member unchanged; Resume accepted fresh movement. This verifies interface handoff, not physical gamepad delivery.
+- The keyboard smoke check confirmed movement, E observation, Q switching, Escape Pause/Resume and ignored paused movement. Keyboard capture was restored off afterward.
+- A signed **Release** build, version **0.1.0 (1)**, built with Xcode 27.2 / SDK 27.2, passed signature verification and was installed and launched on **iPhone 13 Pro Max / iOS 27.2.1**. Build/install receipts remain private.
+- The maintainer confirmed two-finger stick use alongside Look/Next, continued movement while using buttons, one switch per press, stopping on stick release, and clear controls/HUD. They also confirmed held/centred-finger Pause guidance, Resume after lifting all fingers, and background/foreground recovery without stale movement, replayed actions or stuck highlights. These are user-reported physical observations.
+
+Physical controller handoff and PS5/Xbox delivery on this revision were not tested. Cross-zone finger dragging was not separately observed on the phone. No new frame-pacing, thermal, battery or idle-timer timing measurement is claimed; earlier phone-test deferrals remain separate. The short input check does not replace those measurements or prove sustained play.
+
+The recurring Simulator PosterBoard startup failure was isolated separately. The [fresh testing device](simulator-troubleshooting.md) passed three boots, the standard check and a post-launch observation without that failure.
 
 The independently reported [wall-contact freeze in #25](https://github.com/RonildoBraga/lauder/issues/25) remains open; this input change does not change the collision resolver.

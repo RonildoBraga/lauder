@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. The touch-control option is separately authorised; build/tests pass and [manual touch validation is deferred by the maintainer](touch-controls.md#validation-pending). Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. Optional touch controls pass build/tests and Simulator checks, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation); the touch PR is not yet merged. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
