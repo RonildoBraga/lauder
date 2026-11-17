@@ -43,7 +43,7 @@ struct SceneStyle {
     }
   }
 
-  // Only visual children are scaled; collision-owning parents keep their original transforms.
+  // Only visual children are scaled; parent entities keep their authored layout transforms.
   func block(size: SIMD3<Float>, at position: SIMD3<Float>, material: any Material)
     -> ModelEntity
   {

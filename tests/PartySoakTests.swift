@@ -66,9 +66,10 @@ struct PartySoakTests {
         }
         // This oracle is independent of PartyMotion's sweep and obstacle conversion.
         let clearance = bounds.reduce(Float.infinity) { min($0, $1.distance(to: position)) }
-        guard clearance >= PrototypeLayout.characterRadius - 0.00001 else {
+        // The 2 mm skin must survive, not only non-penetration; 5 µm allows Float rounding.
+        guard clearance >= PrototypeLayout.characterRadius + PartyMotion.skin - 0.000005 else {
           Issue.record(
-            "seed \(seed), frame \(frame), \(members[index]): penetrating at \(position), clearance \(clearance)"
+            "seed \(seed), frame \(frame), \(members[index]): inside the skin at \(position), clearance \(clearance)"
           )
           return
         }

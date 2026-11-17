@@ -20,7 +20,9 @@ struct PartyMotion {
     let normal: Vector
   }
 
-  // Float body transforms can round a contact by a fraction of a micrometre.
+  // Float body transforms can round a contact by a fraction of a micrometre. This margin
+  // assumes the current layout, whose coordinates stay below 16 m; Float spacing doubles
+  // beyond that, so a larger level should revisit both tolerances.
   private static let clearanceTolerance = 0.000001
   private static let arithmeticTolerance = 0.000000000001
   private let obstacles: [Bounds]
