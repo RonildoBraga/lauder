@@ -7,7 +7,7 @@
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
 - Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
-- Three playable characters are present together. The player moves the active character; the other two remain companions in the same world. A button switches control and leadership to another member. The requested movement direction is a coordinated squad that finds useful positions, rather than companions copying every footstep.
+- Three playable characters are present together. The player moves the active character; the other two remain companions in the same world. A button switches control and leadership to another member. Companions follow the leader's recorded route, in encounters as elsewhere: the maintainer [decided on 17 November 2026](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943247165) to keep trail following rather than add companion navigation.
 - Each character has distinct capabilities that make different approaches useful, including agility and strength.
 - Chapter One centres on restoring a transmitter through exploration and purposeful salvage.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The cause and wider extent of the collapse remain uncertain.
@@ -18,7 +18,7 @@ The control description is understood as **one human player directing a party of
 
 ### What remains open
 
-Miki, Lara and Tomas are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
+Miki, Lara and Tomas are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. Nina is proposed as a supporting character outside that trio.
 
 The previous draft established Miki as widowed, Nina as her daughter, Tomas as her father and Lara as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. Some may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
@@ -56,7 +56,7 @@ These distinctions are not complete identities. All three can observe, talk, hel
 - Avoid repeating three obstacles each labelled for a different character. Switching should follow the player's reading of a place.
 - A specialist opening should ultimately admit the party. Lara might reach a latch to release access for the others; following her does not make them equally agile.
 - Companions should not repeatedly become stuck or need rescue to justify their presence. A narrow passage needs a credible group route before the scene is written around it.
-- Keep commands few and readable. The current leadership-switch controls are recorded in the [gameplay input contract](../gameplay-script.md#readable-controls-and-party-feedback); formation cycling, placement and regroup controls remain design proposals rather than implemented mappings. Skill trees and separate equipment systems are not prerequisites.
+- Keep commands few and readable. The current leadership-switch controls are recorded in the [gameplay input contract](../gameplay-script.md#readable-controls-and-party-feedback); route-spacing and any hold-fire controls remain design proposals rather than implemented mappings. Skill trees and separate equipment systems are not prerequisites.
 
 ### Combat identities
 
@@ -64,9 +64,9 @@ Each character should be useful as leader and capable of ordinary weapon defence
 
 In the proposed first combat experiment, companions provide basic weapon support while the player triggers only the active character's signature ability. They do not spend signatures automatically or require the player to manage three ability bars. Defending the group does not mean starting fights with neutral people, breaking a chosen non-combat approach or pursuing threats after a withdrawal order. Exact targeting, damage, timing and recovery rules require design review and playtesting.
 
-Personality can influence a companion's preferred nearby position and brief reactions: Miki looks for a clear view, Lara reads another safe angle, and Tomas considers the exposed approach. It must not create concealed disobedience, suicidal advances or repeated rescue chores. A command to regroup and leave takes priority over those preferences.
+Personality shows in brief reactions and in what a companion attends to: Miki watches for a clear shot, Lara for another way through, and Tomas for the exposed approach. It never moves a companion off the leader's route, and must not create concealed disobedience, suicidal advances or repeated rescue chores.
 
-Natural movement should seek reachable nearby destinations and respond to obstacles, with enough space for all three. **Close** for compact mutual support and **Spread** for more separation on open ground are the two proposed initial formations. Narrow passages temporarily compress the group, which expands again where space permits. Formation shape must yield to safe, credible group access; Lara's agility cannot justify taking a route her companions cannot use. Placement and regroup orders, directional-pad use and touch equivalents remain proposals. Their exact bindings, targeting method and navigation rules are not settled here.
+Companions follow the leader's recorded route, as in Party A. They are where the leader was moments earlier, so a covered approach keeps them covered only if the stretch behind the leader is covered too; encounter layouts must allow for that. Spacing along the route is the only formation: **Close** for compact support and **Spread** for more separation remain proposals for that spacing. Lara's agility cannot justify taking a route her companions cannot use. There are no placement or positioning orders and no companion navigation. Directional-pad use, touch equivalents and the targeting method are not settled here.
 
 ## Miki — understanding what still works
 
@@ -84,7 +84,7 @@ Her first important act is restraint: she leaves useful infrastructure intact be
 
 **Proposed combat identity — precision and disruption.** Miki carries a precision carbine suited to measured shots from a clear position. **Disrupt** uses a precise shot to interrupt one clearly telegraphed ranged attack at useful range, opening a brief window for a teammate to cross, fire or withdraw. It is a specific combat action, not universal hacking, control of every machine or knowledge acquired through an unexplained enhancement. The Quiet Yard proposal first demonstrates it against a visible security-unit wind-up; applicability to other threats remains to be defined.
 
-Her strength is reading a threat and making a deliberate opening. Being crowded or attacked from several directions exposes her limits; basic weapon fire still lets her defend herself. As a companion, she favours a reachable position with a clear view and supports the current fight without independently changing the group's plan. That preference reflects her careful inspection and desire for certainty. Learning to trust another person's timing can develop her character without making her mechanically unreliable.
+Her strength is reading a threat and making a deliberate opening. Being crowded or attacked from several directions exposes her limits; basic weapon fire still lets her defend herself. As a companion she follows the leader's route and fires when she has a clear shot, without independently changing the group's plan. Her care over a shot reflects her careful inspection and desire for certainty. Learning to trust another person's timing can develop her character without making her mechanically unreliable.
 
 ## Lara — finding a way through
 
@@ -104,7 +104,7 @@ The proposed depot discovery reveals that she once helped maintain water for peo
 
 **Proposed combat identity — mobility and useful angles.** Lara carries a light burst-fire weapon that supports movement between nearby safe positions. **Reposition** is a short move over reachable ground to gain another angle or disengage. It cannot cross a blocked passage, perform an unsupported leap or make her invulnerable. Its value comes from the ground and the threat's readable attention, rather than a hidden damage bonus for switching characters.
 
-She is strongest when she can move deliberately and use an opening; her light weapon has less stopping power against a close advance than Tomas's. Isolation or sustained exposure puts her at risk. As a companion, she prefers a nearby useful angle while staying within the group's support and obeying placement or withdrawal orders. Her tendency to carry route risks herself can appear in dialogue and choices, but it must not force the player to chase or rescue her. Biological coordination changes remain a possible explanation of capacity, not a settled biography or a substitute for route knowledge.
+She is strongest when she can move deliberately and use an opening; her light weapon has less stopping power against a close advance than Tomas's. Isolation or sustained exposure puts her at risk. As a companion she follows the leader's route and supports the fight from it; Reposition is hers to use only when she leads. Her tendency to carry route risks herself can appear in dialogue and choices, but it must not force the player to chase or rescue her. Biological coordination changes remain a possible explanation of capacity, not a settled biography or a substitute for route knowledge.
 
 ## Tomas — carrying his share
 
@@ -122,7 +122,7 @@ He sometimes masks worry with instructions. His arc involves accepting help and 
 
 **Proposed combat identity — close protection and space control.** Tomas carries a close-range scatter weapon. **Brace** steadies a controlled blast that briefly checks a nearby advancing threat, creating room at an approach or protecting a withdrawal. Unlike Miki's interruption of a telegraphed ranged attack, it addresses close pressure on a small area. It does not make his body bulletproof, create a shield from his replacement tissue or require teammates to stand behind him in every encounter.
 
-He is strongest where a close approach needs holding and weakest against distant pressure or threats reaching him from several sides. He remains a practical leader at ordinary travelling pace. As a companion, he favours a useful position near an exposed approach or teammate, without blocking the group's movement or ignoring a retreat. His care for deliveries and people makes protection personal; his arc also allows others to cover him. The origin and exact capacity of his possible internal replacements remain undecided.
+He is strongest where a close approach needs holding and weakest against distant pressure or threats reaching him from several sides. He remains a practical leader at ordinary travelling pace. As a companion he follows the leader's route and turns his weapon on whatever comes close, without blocking the group's movement or ignoring a retreat. His care for deliveries and people makes protection personal; his arc also allows others to cover him. The origin and exact capacity of his possible internal replacements remain undecided.
 
 ### How the trio complements itself
 

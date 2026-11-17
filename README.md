@@ -16,7 +16,7 @@ The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Sce
 
 - [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
 - [Gameplay script](docs/gameplay-script.md): proposed party controls, shared access problem, salvage, repair and coastal contact.
-- [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, pending design review.
+- [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, combat and retreat; reviewed, not assigned for implementation.
 - [Chapter One — A Place to Meet](docs/story/chapter-01.md): index to the current outline and playable walkthrough; detailed dialogue remains a later writing pass.
 - [Architecture](docs/architecture.md): party ownership, input, following, camera, restart and later saving design.
 - [First playable prototype](docs/prototype-plan.md): party movement and switching first, then access and the repair loop, with staged checks.
