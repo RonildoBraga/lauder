@@ -3,6 +3,10 @@ import Observation
 import RealityKit
 import simd
 
+#if DEBUG
+  import UIKit
+#endif
+
 @MainActor
 @Observable
 final class GameWorld {
@@ -30,6 +34,12 @@ final class GameWorld {
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
   /// Where each companion is heading in the latest step. Tests read it.
   @ObservationIgnored private(set) var companionTargets: [PartyMember: SIMD2<Float>] = [:]
+  #if DEBUG
+    /// A scripted Simulator playtest (`scripts/playtest`), started by the launch argument
+    /// `-LauderPlaytest <scenario>`. Debug builds only.
+    @ObservationIgnored private(set) var playtest: PlaytestRunner?
+    @ObservationIgnored private var targetMarkers: [PartyMember: Entity] = [:]
+  #endif
   @ObservationIgnored private var subscription: EventSubscription?
   @ObservationIgnored private var isPresented = false
   @ObservationIgnored private var isApplicationActive = false
@@ -91,6 +101,11 @@ final class GameWorld {
     }
     updateCamera(deltaTime: 0)
     updateNearby()
+    #if DEBUG
+      if let scenario = UserDefaults.standard.string(forKey: "LauderPlaytest") {
+        startPlaytest(scenario, style: style)
+      }
+    #endif
   }
 
   func attach(_ subscription: EventSubscription) {
@@ -117,6 +132,13 @@ final class GameWorld {
   func step(deltaTime: TimeInterval) {
     MainActor.preconditionIsolated()
     guard isPresented, isApplicationActive else { return }
+    #if DEBUG
+      if playtest != nil, let body = bodies[session.leader] {
+        playtest?.tick(dt: Float(deltaTime))
+        controls.scriptedRaw = playtest?.input(
+          leaderPosition: SIMD2(body.position.x, body.position.z), positions: positions)
+      }
+    #endif
     let input = controls.sample(mode: session.mode)
     if input.pausePressed {
       session.togglePause()
@@ -142,7 +164,15 @@ final class GameWorld {
       unsimulatedTime = 0
       return
     }
+    #if DEBUG
+      let started = DispatchTime.now().uptimeNanoseconds
+    #endif
     advanceParty(movement: input.movement, deltaTime: Float(deltaTime))
+    #if DEBUG
+      recordPlaytest(
+        dt: Float(deltaTime),
+        milliseconds: Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
+    #endif
     if input.actionPressed {
       observation =
         nearby?.observation
@@ -297,6 +327,53 @@ final class GameWorld {
       nearbyName = point?.name
     }
   }
+
+  #if DEBUG
+    /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
+    func startPlaytest(_ scenario: String, style: SceneStyle = SceneStyle()) {
+      guard let runner = PlaytestRunner(scenario: scenario) else {
+        observation =
+          "Unknown playtest \"\(scenario)\". Try: "
+          + PlaytestRunner.scenarioNames.joined(separator: ", ") + "."
+        return
+      }
+      playtest = runner
+      observation = runner.status
+      // Small discs at each companion's target, so screenshots show where they are heading.
+      for member in PartyMember.allCases {
+        let disc = ModelEntity(
+          mesh: .generateCylinder(height: 0.01, radius: 0.12), materials: [style.signal])
+        disc.isEnabled = false
+        root.addChild(disc)
+        targetMarkers[member] = disc
+      }
+    }
+
+    private func recordPlaytest(dt: Float, milliseconds: Double) {
+      guard playtest != nil else { return }
+      if playtest?.orientation == "unknown",
+        let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+      {
+        playtest?.orientation =
+          switch scene.effectiveGeometry.interfaceOrientation {
+          case .landscapeLeft: "landscapeLeft"
+          case .landscapeRight: "landscapeRight"
+          case .portrait, .portraitUpsideDown: "portrait"
+          default: "unknown"
+          }
+      }
+      playtest?.record(
+        PlaytestRunner.Frame(
+          dt: dt, leader: session.leader, positions: positions, targets: companionTargets,
+          warning: diagnostic, simulationMilliseconds: milliseconds))
+      for (member, disc) in targetMarkers {
+        let target = companionTargets[member]
+        disc.isEnabled = target != nil && member != session.leader
+        if let target { disc.position = [target.x, 0.012, target.y] }
+      }
+      if let status = playtest?.status, observation != status { observation = status }
+    }
+  #endif
 
   private func addLandmarks(style: SceneStyle) {
     for point in PrototypeLayout.points {
