@@ -1,8 +1,8 @@
 # ADR 0003 — squad movement
 
-**Status:** Proposed for the maintainer's review. Not accepted and not assigned for implementation. Once accepted and its first phase lands, it replaces the following method of [ADR 0002](0002-party-following.md).\
+**Status:** Accepted by the maintainer on 17 November 2026 ([“Accept, S1 first”](https://github.com/RonildoBraga/lauder/pull/32#issuecomment-6944093756)), including the five recommendations at the end. Phase S1 is assigned, before Party B; later phases are not. When S1 lands, it replaces the following method of [ADR 0002](0002-party-following.md).\
 **Date:** 17 November 2026\
-**Deciders:** Maintainer, pending review\
+**Deciders:** Maintainer\
 **Author:** Claude, continuing after the [handover in #30](https://github.com/RonildoBraga/lauder/issues/30)
 
 ## Context
@@ -130,7 +130,9 @@ Each phase is a separate assignment with its own pull request. S1 depends on #27
 
 Stop rule, as for Party A: if S1 is not reliable after three focused work sessions, stop and reassess with the maintainer rather than extending automatically.
 
-## For the maintainer
+## Decisions
+
+The maintainer [accepted these as recommended](https://github.com/RonildoBraga/lauder/pull/32#issuecomment-6944093756). They are kept here with their reasons.
 
 1. **Direction.** Accept this design, which replaces trail following with pathfinding and formation slots once S1 lands. Recommended.
 2. **Formations.** Close, Spread and Column as the first three. Recommended.
