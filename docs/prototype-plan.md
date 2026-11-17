@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. Optional touch controls pass build/tests and Simulator checks, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation); the touch PR is not yet merged. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -43,18 +43,18 @@ Initial recovery is **hold and diagnose**, not an automatic warp: stop the block
 
 ## Proposed input and interaction contract
 
-| Intent | PS5 / Xbox | Simulator |
-|---|---|---|
-| Move active character | Left stick | WASD |
-| Contextual action / advance text | Cross / A | E |
-| Cycle leader Miki → Lara → Tomas | R1 / RB | Q |
-| Pause / Resume | Options / Menu | Escape |
+| Intent | PS5 / Xbox | Touch | Keyboard |
+|---|---|---|---|
+| Move active character | Left stick | Bottom-left analog stick | WASD |
+| Contextual action / advance text | Cross / A | Look for the current observation; later contextual action | E |
+| Cycle leader Miki → Lara → Tomas | R1 / RB | Next: name | Q |
+| Pause / Resume | Options / Menu | Pause / Resume | Escape |
 
-These initial switching mappings are implemented in Party A. Q delivery was checked in Simulator and R1 on the baseline PS5-connected phone; Xbox RB uses the same input path but hardware delivery remains unverified. Q replaces the earlier Tab proposal to avoid focus navigation. There are no touch controls or clickable screen actions.
+These initial switching mappings are implemented in Party A. Q delivery was checked in Simulator and R1 on the baseline PS5-connected phone; Xbox RB uses the same input path but hardware delivery remains unverified. Q replaces the earlier Tab proposal to avoid focus navigation. The maintainer's [touch request](touch-controls.md#authorisation) supersedes the earlier no-touch decision. Touch is automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen. **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
 
 - Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
 - A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
-- Held movement may continue on the new leader. Switching alone does not close the neutral-input gate. Existing release requirements after interruption, reconnection and Pause/Resume remain.
+- Held movement may continue on the new leader, including a stick touch held alongside **Next: name**. Switching alone does not close the neutral-input gate. Source changes cancel old captures and require neutral input. After Pause, interruption or reconnection, all keys/buttons and fingers must release; a centred-stick finger still counts as held input.
 - Consume a switch edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts for the new leader.
 - Prompts describe what the active character can do from an accessible approach. On press, revalidate the active character, role, range, accessibility and current progress; a stale prompt cannot act through a wall or call a remote companion.
 - An unsuitable character receives a short explanation or a suggestion to switch. Do not automatically make the specialist perform the action elsewhere.
@@ -120,9 +120,9 @@ Tomas needs the coastal supply team to arrange future inland deliveries, so meet
 - Repair without the part explains what is missing and changes nothing. Repeated pickup, repair or call requests cannot award or consume progress twice.
 - Completion states what changed. **Read plan** repeats the meeting details without restarting the mission.
 - Keep dialogue and Pause controls distinct from world actions. Paused/dialogue input cannot move the party, switch leaders or trigger a nearby object.
-- A controller/keyboard-operated Restart resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
+- A Restart command through the selected input path resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
 
-**Exit:** An unfamiliar player with a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
+**Exit:** An unfamiliar player using touch or a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
 
 ## Verification and performance
 
@@ -138,7 +138,7 @@ Use a **manual Simulator playtest checklist**, not an implied automated renderin
 
 1. Complete shelter → depot → shelter with each leader; inspect both followers at turns and the opening.
 2. Reverse and switch beside obstacles and inside the passage; check world collision, trail rebasing, spacing and camera easing. Record any hold/stuck case rather than hiding it.
-3. Check Q delivery, switch while moving, simultaneous switch/action and release recovery after Pause or input interruption.
+3. Check keyboard and touch movement/action/switch/Pause, source selection, switch while moving, simultaneous commands and release recovery. Single-pointer checks cannot establish physical stick-plus-button multi-touch or held-finger recovery.
 4. From fresh runs, open the barrier with Lara and with Tomas. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
 5. Carry the part through leader changes, repair, call, reread and restart. Verify that dialogue/Pause controls do not act on nearby objects or duplicate world updates.
 

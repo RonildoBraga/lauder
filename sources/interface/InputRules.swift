@@ -13,6 +13,11 @@ enum InputRules {
     var keyboardAction = false
     var keyboardPause = false
     var keyboardSwitch = false
+    var touchStick: SIMD2<Float> = .zero
+    var touchIsTouching = false
+    var touchAction = false
+    var touchPause = false
+    var touchSwitch = false
 
     var hasMovementKey: Bool { left || right || up || down }
     var hasKeyboardInput: Bool {
@@ -40,9 +45,9 @@ enum InputRules {
   static func resolve(_ raw: Raw, mode: GameSession.Mode, state: State)
     -> (input: Input, state: State)
   {
-    let action = raw.keyboardAction || raw.controllerAction
-    let pause = raw.keyboardPause || raw.controllerPause
-    let cycle = raw.keyboardSwitch || raw.controllerSwitch
+    let action = raw.keyboardAction || raw.controllerAction || raw.touchAction
+    let pause = raw.keyboardPause || raw.controllerPause || raw.touchPause
+    let cycle = raw.keyboardSwitch || raw.controllerSwitch || raw.touchSwitch
     // Consume raw holds even when a gate, mode or higher-priority command suppresses them.
     var next = State(
       needsNeutralInput: state.needsNeutralInput,
@@ -52,6 +57,9 @@ enum InputRules {
       next.needsNeutralInput =
         simd_length_squared(raw.stick) > deadZone * deadZone
         || !raw.stick.x.isFinite || !raw.stick.y.isFinite
+        || raw.touchIsTouching
+        || simd_length_squared(raw.touchStick) > deadZone * deadZone
+        || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle
       return (.neutral, next)
     }
@@ -67,7 +75,8 @@ enum InputRules {
       raw.hasMovementKey
       ? SIMD2<Float>(
         Float(raw.right ? 1 : 0) - Float(raw.left ? 1 : 0),
-        Float(raw.up ? 1 : 0) - Float(raw.down ? 1 : 0)) : raw.stick
+        Float(raw.up ? 1 : 0) - Float(raw.down ? 1 : 0))
+      : raw.touchIsTouching ? raw.touchStick : raw.stick
     let switchEdge = cycle && !state.switchWasPressed
     return (
       Input(
