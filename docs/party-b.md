@@ -6,6 +6,8 @@
 
 ADR 0003's accepted order of work puts Party B after squad movement S1. On 18 November Claude asked, "Shall I start Party B now, or polish S1's overlaps first?" and the maintainer answered, "Yes". Claude took that as Party B and said so, leaving room for a correction. The scope is the [Party B section of the prototype plan](prototype-plan.md#party-b--prove-alternative-specialist-actions) and the [interaction design](architecture.md#one-interaction). The plan's phone checkpoints are after Party A and Party C, so Party B is checked in the Simulator and on the phone with Party C.
 
+Claude implemented and checked Party B, so nothing below is an independent review. The [README](../README.md) and [prototype plan](prototype-plan.md) own stage and review status.
+
 ## What changed
 
 - **Barrier:** a closed barrier now fills the 1.8 m service opening in the depot's west wall, so neither the leader nor the companions can enter the depot. The front entrance stays blocked.
