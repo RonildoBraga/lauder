@@ -8,7 +8,6 @@ import simd
 final class GameControls {
   enum Status: Equatable {
     case inactive
-    case waitingForInput
     case ready
   }
 
@@ -16,20 +15,31 @@ final class GameControls {
 
   private(set) var status = Status.inactive
   private(set) var actionSymbol: String?
-  private(set) var sourceName = "Connect a controller or keyboard"
-  private(set) var pauseButtonName = "Menu"
-  private(set) var switchButtonName = "Right shoulder"
+  private(set) var sourceName = "Touch controls"
+  private(set) var pauseButtonName = "Pause"
+  private(set) var switchButtonName = "Switch"
   private(set) var needsNeutralInput = true
+  private(set) var touchControlsEnabled = true
+  private(set) var hasController = false
+  private(set) var touchGeneration = 0
 
   @ObservationIgnored private var isActive = false
   @ObservationIgnored private var inputState = InputRules.State()
+  @ObservationIgnored private var touchInput = TouchInput()
+  @ObservationIgnored private var prefersTouch = false
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
+  #if DEBUG
+    /// Replaces hardware input while a Simulator playtest runs (Debug builds only). It still
+    /// passes through InputRules, so release gates, Pause and switch edges behave as for a player.
+    @ObservationIgnored var scriptedRaw: InputRules.Raw?
+  #endif
 
   func setActive(_ active: Bool) {
     guard active != isActive else { return }
     isActive = active
+    cancelTouches()
     if active {
       requireNeutralInput()
       observeControllers()
@@ -37,14 +47,52 @@ final class GameControls {
     } else {
       observations.forEach(NotificationCenter.default.removeObserver)
       observations.removeAll()
-      detachController()
+      controller = nil
+      gamepad = nil
+      hasController = false
+      requireNeutralInput()
       status = .inactive
     }
   }
 
   func requireNeutralInput() {
+    // Preserve held fingers on Pause: even a centred stick contact must be released.
     inputState = InputRules.State()
     if !needsNeutralInput { needsNeutralInput = true }
+  }
+
+  func useTouchControls() {
+    prefersTouch = true
+    guard !touchControlsEnabled else { return }
+    cancelTouches()
+    requireNeutralInput()
+    touchControlsEnabled = true
+    showTouch()
+  }
+
+  func useController() {
+    guard let gamepad else { return }
+    prefersTouch = false
+    guard touchControlsEnabled else { return }
+    cancelTouches()
+    requireNeutralInput()
+    touchControlsEnabled = false
+    showController(gamepad)
+  }
+
+  func setTouchStick(_ movement: SIMD2<Float>, isTouching: Bool, generation: Int) {
+    guard isActive, touchControlsEnabled else { return }
+    touchInput.setStick(movement, isTouching: isTouching, generation: generation)
+  }
+
+  func setTouchButton(_ button: TouchInput.Button, isPressed: Bool, generation: Int) {
+    guard isActive, touchControlsEnabled else { return }
+    touchInput.setButton(button, isPressed: isPressed, generation: generation)
+  }
+
+  private func cancelTouches() {
+    touchInput.cancel()
+    touchGeneration = touchInput.generation
   }
 
   // Buttons are fresh press intents; callers must not detect the same edges again.
@@ -54,22 +102,30 @@ final class GameControls {
     func pressed(_ code: GCKeyCode) -> Bool {
       keyboard?.button(forKeyCode: code)?.isPressed ?? false
     }
-    let raw = InputRules.Raw(
+    let touch = touchControlsEnabled ? touchInput.sample() : InputRules.Raw()
+    var raw = InputRules.Raw(
       stick: SIMD2(
-        gamepad?.leftThumbstick.xAxis.value ?? 0,
-        gamepad?.leftThumbstick.yAxis.value ?? 0
+        touchControlsEnabled ? 0 : gamepad?.leftThumbstick.xAxis.value ?? 0,
+        touchControlsEnabled ? 0 : gamepad?.leftThumbstick.yAxis.value ?? 0
       ),
-      controllerAction: gamepad?.buttonA.isPressed ?? false,
-      controllerPause: gamepad?.buttonMenu.isPressed ?? false,
-      controllerSwitch: gamepad?.rightShoulder.isPressed ?? false,
+      controllerAction: !touchControlsEnabled && (gamepad?.buttonA.isPressed ?? false),
+      controllerPause: !touchControlsEnabled && (gamepad?.buttonMenu.isPressed ?? false),
+      controllerSwitch: !touchControlsEnabled && (gamepad?.rightShoulder.isPressed ?? false),
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
-      keyboardSwitch: pressed(.keyQ)
+      keyboardSwitch: pressed(.keyQ),
+      touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
+      touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch
     )
+    #if DEBUG
+      if let scriptedRaw { raw = scriptedRaw }
+    #endif
     let deadZone = PrototypeLayout.movementDeadZone
     if raw.hasKeyboardInput {
       showKeyboard()
+    } else if touchControlsEnabled {
+      showTouch()
     } else if let gamepad,
       simd_length_squared(raw.stick) > deadZone * deadZone
         || raw.controllerAction || raw.controllerPause || raw.controllerSwitch
@@ -98,11 +154,13 @@ final class GameControls {
       center.addObserver(of: GCKeyboard.self, for: .didConnect) { [weak self] _ in
         guard let self, self.isActive else { return }
         self.requireNeutralInput()
+        self.cancelTouches()
         self.selectController()
       },
       center.addObserver(of: GCKeyboard.self, for: .didDisconnect) { [weak self] _ in
         guard let self, self.isActive else { return }
         self.requireNeutralInput()
+        self.cancelTouches()
         self.selectController()
       },
     ]
@@ -113,23 +171,22 @@ final class GameControls {
     let candidates = GCController.controllers().filter {
       $0 !== disconnected && $0.extendedGamepad != nil
     }
-    guard let selected = candidates.first(where: { $0 === controller }) ?? candidates.first,
-      let profile = selected.extendedGamepad
-    else {
-      detachController()
-      if GCKeyboard.coalesced?.keyboardInput != nil {
-        showKeyboard()
-        status = .ready
-      } else {
-        status = .waitingForInput
-      }
-      return
+    let selected = candidates.first(where: { $0 === controller }) ?? candidates.first
+    let profile = selected?.extendedGamepad
+    let useTouch = profile == nil || prefersTouch
+    if selected !== controller || useTouch != touchControlsEnabled {
+      cancelTouches()
+      requireNeutralInput()
     }
-    guard selected !== controller else { return }
-    detachController()
     controller = selected
     gamepad = profile
-    showController(profile)
+    hasController = profile != nil
+    touchControlsEnabled = useTouch
+    if useTouch {
+      showTouch()
+    } else if let profile {
+      showController(profile)
+    }
     status = .ready
   }
 
@@ -151,19 +208,15 @@ final class GameControls {
     showSource("Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q")
   }
 
+  private func showTouch() {
+    showSource("Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch")
+  }
+
   private func showSource(_ name: String, action: String?, pause: String, cycle: String) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
     if pauseButtonName != pause { pauseButtonName = pause }
     if switchButtonName != cycle { switchButtonName = cycle }
-  }
-
-  private func detachController() {
-    controller = nil
-    gamepad = nil
-    showSource(
-      "Connect a controller or keyboard", action: nil, pause: "Menu", cycle: "Right shoulder")
-    requireNeutralInput()
   }
 
   isolated deinit {

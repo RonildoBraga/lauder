@@ -6,11 +6,13 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. The scope is: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages.**
+**Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages. Optional touch controls are merged; the maintainer confirmed [phone multi-touch, Pause and recovery](docs/touch-controls.md#validation).**
+
+The [wall-contact freeze fix for #25](docs/wall-contact.md) and the [follower-spacing fix for #28](docs/follower-spacing.md) are merged. So is phase S1 of the accepted [squad movement design](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md): companions keep a Close formation, take their own routes and fall into single file in narrow places. After playing it on the baseline iPhone the maintainer reported “it looks good”; the [S1 record](docs/squad-s1.md) lists the checks still open, including phone timing. Debug builds can run [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests). TestFlight has not started: the upload was postponed during an App Store outage, and the build was installed on the phone directly.
 
 The maintainer has endorsed occasional combat supporting exploration and salvage, and assigned documentation of the trio's [combat identities](docs/story/story-bible.md#combat-identities) and [The Quiet Yard](docs/encounters/the-quiet-yard.md). Claude's review is addressed and the maintainer [agreed the character definitions](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774); the squad movement design comes next. Weapons, signature abilities and squad behaviour are working designs, with [review required before implementation](docs/prototype-plan.md#combat-design-review-gate). The encounter takes place after Chapter One and remains outside the current first playable. This documentation assignment starts no combat or formation implementation.
 
-The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. PS5 switching is confirmed in the Party A phone check; Xbox hardware remains unverified.
+The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Controller inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Touch controls appear without an attached extended controller: a bottom-left analog stick, **Look**, **Next: name** and **Pause/Resume**. An attached controller is preferred unless **Use touch controls** is selected; **Use controller** returns to it. The selection is not persisted across app launches. Simulator keyboard controls remain WASD, E, Q and Escape. The [touch-control decision](docs/touch-controls.md) supersedes the earlier no-touch rule; older PS5 phone results do not validate this new build.
 
 ## Start here
 
@@ -31,9 +33,9 @@ The proposed cast has Miki, Lara and Tomas as the playable trio and Nina as a su
 Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
 sources/
   app/                        App entry point, world ownership and bundle configuration
-  interface/                  SwiftUI HUD, controller/keyboard input and input rules
+  interface/                  HUD, controller/keyboard/touch input and shared input rules
   gameplay/                   Party identity and session-owned leadership/Pause
-  world/                      RealityKit bodies, recorded trails, camera and scene presentation
+  world/                      RealityKit bodies, squad movement, camera and scene presentation
   content/
     PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
     character/                Current animated stand-in, editable sources and provenance
@@ -43,11 +45,11 @@ tests/                        Party/session, asset import, movement, input and l
   support/                    Test-only asset validator; excluded from the app target
 docs/                         Architecture, decisions, prototype plan and validation evidence
   story/                      Story bible and Chapter One outline index
-scripts/                      Standard checks and the current character asset generator
+scripts/                      Standard checks, Simulator playtests, the character asset generator and the app icon
 .github/                      Pull request template
 ```
 
-Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party rules in GameSession/InputRules and bounded path bookkeeping in PartyTrail. Mission rules and persistence remain planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party rules in GameSession/InputRules and squad movement in NavigationGrid, SquadPlanner and CompanionMotor. Mission rules and persistence remain planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 

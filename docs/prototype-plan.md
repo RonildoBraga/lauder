@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls are merged, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation). The [#25 wall-contact correction](wall-contact.md), the [#28 follower-spacing fix](follower-spacing.md) and [squad movement phase S1](squad-s1.md) are merged; S1's remaining checks, including phone timing, are listed in its record. TestFlight has not started. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -37,24 +37,24 @@ Claude [reviewed the proposal at fe9af2d](https://github.com/RonildoBraga/lauder
 
 The [architecture](architecture.md) and [following ADR](decisions/0002-party-following.md) record the accepted single authority for mode/leader/progress, input edge rules, three bodies, recovery and camera easing. Implement and validate the accepted A decisions; refine the recorded interaction data before B and exact in-place restart/teardown steps before C. Existing solo ownership/save assumptions are superseded. Carry forward the [B1–B3 discussion](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6916287544).
 
-Initial B1 planning decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and world collision checks for every body. Exclude party members from physical collision with each other, retain scenery collision, and use spacing for readable separation. Keep equal circular footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture and ADR define the accepted trail connections and bounds to validate during Party A.
+Initial B1 planning decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and collision checks for every body. Exclude party members from one another's collision checks, retain scenery blocking, and use spacing for readable separation. Keep equal circular footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture and ADR define the accepted trail connections and bounds to validate during Party A.
 
 Initial recovery is **hold and diagnose**, not an automatic warp: stop the blocked follower safely, record the failing route and correct the trail or simplify the authored layout. At the stop review, a constrained out-of-view regroup may be proposed separately. It would require explicit maintainer agreement, safe placement on the same currently reachable/open route, and both origin and destination outside the current camera view including a switch transition. It could never move the active leader or bypass a closed barrier. None of that fallback is approved or required for initial Party A.
 
 ## Proposed input and interaction contract
 
-| Intent | PS5 / Xbox | Simulator |
-|---|---|---|
-| Move active character | Left stick | WASD |
-| Contextual action / advance text | Cross / A | E |
-| Cycle leader Miki → Lara → Tomas | R1 / RB | Q |
-| Pause / Resume | Options / Menu | Escape |
+| Intent | PS5 / Xbox | Touch | Keyboard |
+|---|---|---|---|
+| Move active character | Left stick | Bottom-left analog stick | WASD |
+| Contextual action / advance text | Cross / A | Look for the current observation; later contextual action | E |
+| Cycle leader Miki → Lara → Tomas | R1 / RB | Next: name | Q |
+| Pause / Resume | Options / Menu | Pause / Resume | Escape |
 
-These initial switching mappings are implemented in Party A. Q delivery was checked in Simulator and R1 on the baseline PS5-connected phone; Xbox RB uses the same input path but hardware delivery remains unverified. Q replaces the earlier Tab proposal to avoid focus navigation. There are no touch controls or clickable screen actions.
+These initial switching mappings are implemented in Party A. Q delivery was checked in Simulator and R1 on the baseline PS5-connected phone; Xbox RB uses the same input path but hardware delivery remains unverified. Q replaces the earlier Tab proposal to avoid focus navigation. The maintainer's [touch request](touch-controls.md#authorisation) supersedes the earlier no-touch decision. Touch is automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen. **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
 
 - Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
 - A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party or transfer an item between inventories.
-- Held movement may continue on the new leader. Switching alone does not close the neutral-input gate. Existing release requirements after interruption, reconnection and Pause/Resume remain.
+- Held movement may continue on the new leader, including a stick touch held alongside **Next: name**. Switching alone does not close the neutral-input gate. Source changes cancel old captures and require neutral input. After Pause, interruption or reconnection, all keys/buttons and fingers must release; a centred-stick finger still counts as held input.
 - Consume a switch edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts for the new leader.
 - Prompts describe what the active character can do from an accessible approach. On press, revalidate the active character, role, range, accessibility and current progress; a stale prompt cannot act through a wall or call a remote companion.
 - An unsuitable character receives a short explanation or a suggestion to switch. Do not automatically make the specialist perform the action elsewhere.
@@ -92,6 +92,20 @@ Use three clearly named, differently coloured primitive stand-ins on the existin
 
 **Exit:** The whole party completes the round trip under every leader, with predictable collision and readable camera behaviour. Record stuck, separated or obscured cases and fix the bounded route before adding content.
 
+### Assigned wall-contact correction
+
+The maintainer assigned the [#25 fix](wall-contact.md) and Claude review before merge or TestFlight. Resolve the flat-floor circular footprint continuously against the layout's axis-aligned rectangles in plain Swift: exact rounded corners, radius plus 2 mm normal skin even at unobstructed endpoints, and outward/tangent escape from existing overlap without idle snapping. Check both movement legs and the final start-to-end chord. Use the same geometry for complete trail-shortcut clearance, with no sliding or overlap recovery on shortcuts. RealityKit continues rendering; remove obsolete query/physics components without adding slopes or a physics/navigation system. Preserve trail bounds, diagnostics and correction guards.
+
+Build/tests, the 72-session Release acceptance matrix and rendered Simulator checks pass. Claude's review found no blocking issue; a phone milestone check for this resolver remains pending. The new record separates before-proof, automated/Simulator results and physical-device gaps; earlier Party A and touch phone observations do not validate this resolver. Party B and TestFlight have not started.
+
+### Follower-spacing correction
+
+The maintainer decided to fix [#28](https://github.com/RonildoBraga/lauder/issues/28) before TestFlight and authorised fixed simulation steps. Party movement now advances in whole 1/120 s steps inside the existing scene update, carrying the remainder, so trail edges and follower steps stay aligned when frame times vary. Follower speed, trail limits and `PartyTrail` reconciliation are unchanged. The [correction record](follower-spacing.md) holds the before/after measurements. Independent review and a phone check remain pending; the next phone milestone should include long runs without stopping.
+
+### Squad movement phase S1
+
+The maintainer [accepted ADR 0003](https://github.com/RonildoBraga/lauder/pull/32#issuecomment-6944093756) and assigned its phase S1 before Party B: **“Accept, S1 first”**. Companions now follow as a squad in the Close formation, choose their own routes around scenery and fall into single file in narrow places; `PartyTrail` is retired. The [S1 record](squad-s1.md) lists the [ADR's exit checks](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md#phases-and-checks) and what each result covers. After playing it on the baseline iPhone the maintainer reported “it looks good”; the observations listed in the record and the phone timing check remain open. This is the first of S1's three focused work sessions under the ADR's stop rule. Party B has not started.
+
 ### Party A stop criterion
 
 Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. The maintainer accepted this budget when proceeding with the recommendations; it applies when Party A is assigned and does not alter the completed Stage 1 criterion.
@@ -120,15 +134,16 @@ Tomas needs the coastal supply team to arrange future inland deliveries, so meet
 - Repair without the part explains what is missing and changes nothing. Repeated pickup, repair or call requests cannot award or consume progress twice.
 - Completion states what changed. **Read plan** repeats the meeting details without restarting the mission.
 - Keep dialogue and Pause controls distinct from world actions. Paused/dialogue input cannot move the party, switch leaders or trigger a nearby object.
-- A controller/keyboard-operated Restart resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
+- A Restart command through the selected input path resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
 
-**Exit:** An unfamiliar player with a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
+**Exit:** An unfamiliar player using touch or a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
 
 ## Verification and performance
 
 Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Add focused Swift Testing cases with the relevant implementation:
 
 - Leader cycling, mode restrictions, simultaneous switch/action priority and no held-action replay.
+- Exact authored collision/clearance regressions and fixed-seed whole-party runs, including wall grazing, reversals and leader switches; record #25 outcomes separately from earlier route checks.
 - Role validation, accessible approaches and revalidation after moving or switching.
 - Both barrier solutions independently, shared opening state and harmless requests after opening.
 - Shared part/progress surviving switches; repair without the part; duplicate requests; full pickup → repair → call progression.
@@ -137,8 +152,8 @@ Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for every
 Use a **manual Simulator playtest checklist**, not an implied automated rendering suite:
 
 1. Complete shelter → depot → shelter with each leader; inspect both followers at turns and the opening.
-2. Reverse and switch beside obstacles and inside the passage; check world collision, trail rebasing, spacing and camera easing. Record any hold/stuck case rather than hiding it.
-3. Check Q delivery, switch while moving, simultaneous switch/action and release recovery after Pause or input interruption.
+2. Reverse and switch beside obstacles and inside the passage; check world collision, companion routes, spacing and camera easing. Record any hold/stuck case rather than hiding it.
+3. Check keyboard and touch movement/action/switch/Pause, source selection, switch while moving, simultaneous commands and release recovery. Single-pointer checks cannot establish physical stick-plus-button multi-touch or held-finger recovery.
 4. From fresh runs, open the barrier with Lara and with Tomas. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
 5. Carry the part through leader changes, repair, call, reread and restart. Verify that dialogue/Pause controls do not act on nearby objects or duplicate world updates.
 

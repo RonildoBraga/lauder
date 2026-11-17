@@ -55,11 +55,31 @@ The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDE
 
 Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
 
-Use Simulator for everyday scene, gameplay and interface iteration with keyboard controls: WASD moves, E acts and Escape pauses/resumes. Live PS5 stick input has not worked in the tested Simulator setup, even with Device Hub visible. Generic MFi enumeration does not prove controller forwarding, so use the keyboard for Simulator playtests.
+Use Simulator for everyday scene, gameplay and interface iteration. Keyboard controls remain WASD movement, E action, Q leader switching and Escape Pause/Resume. The on-screen touch controls can also be exercised with a pointer, which does not establish physical multi-touch behaviour. Live PS5 stick input has not worked in the tested Simulator setup, even with Device Hub visible. Generic MFi enumeration does not prove controller forwarding, so use the keyboard for Simulator playtests.
 
 Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/Resume; holding Escape releases keyboard capture so you can use the Mac normally.
 
-Phone gameplay uses PS5 DualSense and Xbox through one GameController extended-gamepad input path: left stick moves, Cross/A acts and Options/Menu pauses/resumes. Both input methods supply the same gameplay intents. There are no virtual touch controls or clickable screen actions.
+### Scripted Simulator playtests
+
+`./scripts/playtest` plays scripted scenarios in the rendered app, so an agent or contributor can check behaviour without driving the game by hand:
+
+```bash
+./scripts/playtest
+```
+
+```bash
+./scripts/playtest route reversals
+```
+
+It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and prints each scenario's result: pass or fail with reasons, frame times, the party update's cost, body overlaps, slot keeping and the widest gap. It also cuts an upright still for every marked moment, such as a doorway or a reversal. Videos, stills, traces and summaries go to `.local/playtest/<time>/`, which Git ignores, or to `--output`. `--list` names the scenarios: `route`, `leaders`, `reversals`, `switches`, `walls` and `all`. They are defined in `sources/world/Playtest.swift`.
+
+The scenario input goes through the normal controls and input rules, and the HUD shows the step and result. Small discs mark where each companion is heading. The runner exists only in Debug builds, so phone and Release builds are unaffected. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Simulator frame times and Debug-build costs are not phone performance, and a scripted route does not replace a person playing.
+
+For repeated **PosterBoard** startup crashes, see the [Simulator recovery record](docs/simulator-troubleshooting.md). The dedicated **iPhone 17 — Lauder** device is the current working testing environment; the original device retains its data.
+
+Phone gameplay supports PS5 DualSense/Xbox through one GameController extended-gamepad path and an optional touch path. Controllers use left stick, Cross/A, R1/RB and Options/Menu; touch uses a bottom-left analog stick, **Look**, **Next: name** and **Pause/Resume**. Touch is automatic without an extended controller. With one attached, the controller remains the default unless **Use touch controls** is selected; **Use controller** returns to it. The preference is in memory. Every path supplies shared InputRules intents; see the [touch-control record](docs/touch-controls.md).
+
+On source changes, cancel old touch captures and require neutral input. Pause keeps the touch surface mounted: even a finger resting at the stick centre must lift before the release gate clears. At an assigned phone checkpoint, check simultaneous stick/button touches, Pause with held fingers, cancellation and source changes on the physical phone. Earlier controller tests and single-pointer Simulator checks do not prove these behaviours on a new build.
 
 The accepted party plan has phone checkpoints after **Party A** and **Party C**, with B covered alongside C; use Simulator for everyday checks and intermediate PRs. Before declaring each milestone complete, use the baseline iPhone 13 Pro Max to verify its affected controls, movement/collision, camera, Pause/Resume, input release, interruptions and disconnect/reconnect. Measure frame pacing for performance claims. Earlier phone deferrals and the separate Xbox-hardware gap remain open until actual observations or a maintainer decision resolve them. Simulator timing is not phone evidence. The foreground game stays awake, including Pause, and normal idle locking resumes on leaving it. Record results and remaining gaps in the [Stage 2 evidence](docs/stage-2.md), following the [prototype plan](docs/prototype-plan.md).
 
