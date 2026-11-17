@@ -145,7 +145,7 @@ The [prototype plan](prototype-plan.md) turns those questions into staged checks
 
 Exploration and salvage lead; occasional, tense encounters offer meaningful avoidance and withdrawal. The [story bible owns the combat identities](story/story-bible.md#combat-identities): Miki offers precision and disruption, Lara mobility and useful angles, and Tomas protection and close-range stopping power. All three carry a weapon in this future design and can defend themselves. Their existing inspection, route-reading and load-handling contributions continue between encounters. Weapons and signature abilities are working choices for review, not implemented equipment or settled balance.
 
-The future movement goal gives companions reachable nearby destinations and room to cooperate, rather than requiring them to repeat every footstep. Proposed **Close** and **Spread** formations change spacing; narrow passages compress the group automatically before it reforms. A proposed positioning order uses a visible destination and clear acknowledgement. A **Regroup** intent returns companions to supporting distance through traversable space, without a teleport. Individual placement, formation cycling, D-pad assignments and equivalent touch controls still need design review; the current input table above is not a combat mapping.
+The future movement goal gives companions reachable nearby destinations and room to cooperate, rather than requiring them to repeat every footstep. Proposed **Close** and **Spread** formations change spacing; narrow passages compress the group automatically before it reforms. A proposed positioning order uses a visible destination and clear acknowledgement. A **Regroup** intent returns companions to supporting distance through traversable space, without a teleport. Individual placement, formation cycling, D-pad assignments and equivalent touch controls are set out in the accepted [ADR 0003](decisions/0003-squad-movement.md); the current input table above is not a combat mapping.
 
 **Proposed input budget.** A starting point for review, not settled bindings. Each character's combat identity fits one signature button, so switching changes what that button does rather than adding buttons.
 
@@ -156,11 +156,11 @@ The future movement goal gives companions reachable nearby destinations and room
 | Leader's signature | Square | X | Signature |
 | Next / previous leader | R1 / L1 | RB / LB | Next, or tap a name |
 | Cycle formation | Triangle | Y | Formation |
-| Position companions | D-pad | D-pad | Designed with the movement system |
+| Position companions | D-pad | D-pad | Press and hold on the ground ([ADR 0003](decisions/0003-squad-movement.md#orders)) |
 | Look / act | Cross | A | Look |
 | Pause / resume | Options | Menu | Pause |
 
-Fire stays a deliberate press so that a quiet approach never starts a fight by accident; companions fire automatically only once a fight is under way. Touch has no D-pad, so its positioning gesture belongs to the movement design; candidates are pressing and holding on the ground, or a short menu on the Formation button. Five buttons around the right thumb is about the limit that stays comfortable on a phone, so a later addition should replace one rather than add a sixth. Simulator keyboard keys follow when these are implemented.
+Fire stays a deliberate press so that a quiet approach never starts a fight by accident; companions fire automatically only once a fight is under way. Touch has no D-pad; [ADR 0003](decisions/0003-squad-movement.md#orders) uses pressing and holding on the ground, which opens a small menu at the finger. Five buttons around the right thumb is about the limit that stays comfortable on a phone, so a later addition should replace one rather than add a sixth. Simulator keyboard keys follow when these are implemented.
 
 For the proposed first combat experiment, the player directs the current leader's attack and signature ability while companions use ordinary weapons and defensive positioning. Companions favour the group's immediate threats, useful weapon distance, clear firing lines and reachable cover. They do not initiate a fight with a visible patrol, pursue enemies far from the group or activate remote specialist interactions. Withdrawal takes priority over maintaining a firing position. Personality affects preferred positions without making orders unreliable. Switching preserves positions and changes the ability the player can trigger; it does not require a fixed Miki → Lara → Tomas combat sequence.
 

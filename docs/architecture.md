@@ -155,7 +155,7 @@ Use Simulator keyboard and single-pointer touch input for everyday iteration. Th
 
 Finished character art/animation, free jumping/climbing, formation orders, separate inventories, generic navigation/ECS/inventory/quest frameworks, additional packages, networking, cloud saves, monetisation and scene streaming. Ordinary following and switching are part of Party A, not deferred companion features.
 
-The [future squad/combat design](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) describe intended experiences for review. Their [design gate](prototype-plan.md#combat-design-review-gate) precedes an implementation assignment; they do not replace the current trail/collision design or define a new navigation or combat architecture.
+The [future squad/combat design](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) describe intended experiences for review. Their [design gate](prototype-plan.md#combat-design-review-gate) precedes an implementation assignment; they do not replace the current trail/collision design or define a new navigation or combat architecture. [ADR 0003](decisions/0003-squad-movement.md) sets out that navigation and formation design; it is accepted, and its phase S1 replaces the trail following described above when it lands.
 
 ## Revisit after the first playable
 
