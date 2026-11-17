@@ -58,9 +58,12 @@ struct PartySoakTests {
           return
         }
         let travel = simd_distance(previous[index], position)
-        // A carried fixed-step remainder can add at most one step to a frame.
+        // A carried fixed-step remainder can add at most one step to a frame, and a companion
+        // may catch up at a little more than the leader's speed.
+        let factor: Float =
+          members[index] == world.session.leader ? 1 : CompanionMotor.catchUpFactor
         let maximum =
-          PrototypeLayout.speed * (min(dt, 1 / 30) + GameWorld.simulationStep) + 0.003
+          PrototypeLayout.speed * factor * (min(dt, 1 / 30) + GameWorld.simulationStep) + 0.003
         guard travel <= maximum else {
           Issue.record(
             "seed \(seed), frame \(frame), \(members[index]): travel \(travel) exceeds \(maximum)")

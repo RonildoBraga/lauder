@@ -57,8 +57,8 @@ struct PartyMotion {
     let second = hit(from: contact, delta: slide, radius: radius)
     let candidate = contact + slide * (second?.fraction ?? 1)
 
-    // PartyTrail records a straight start→end edge, not the two movement legs. A slide
-    // around one box must not author a shortcut through a different box.
+    // Positions are recorded as straight start→end steps (the leader's route memory), not as
+    // the two movement legs. A slide around one box must not imply a cut through another.
     let connector = hit(from: origin, delta: candidate - origin, radius: radius)
     let result =
       connector.map { $0.fraction < 1 - Self.arithmeticTolerance } == true

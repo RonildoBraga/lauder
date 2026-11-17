@@ -1,6 +1,6 @@
 # ADR 0002 — bounded party following
 
-**Status:** Accepted for the bounded Party A experiment; collision method revised by the maintainer's #25 assignment\
+**Status:** Accepted for the bounded Party A experiment; collision method revised by the maintainer's #25 assignment. The following method is superseded by [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1; the no-teleport rule and the peer-collision policy below still apply\
 **Date:** 16 November 2026; collision revision 17 November 2026\
 **Deciders:** Maintainer
 

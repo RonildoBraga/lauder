@@ -102,6 +102,10 @@ Build/tests, the 72-session Release acceptance matrix and rendered Simulator che
 
 The maintainer decided to fix [#28](https://github.com/RonildoBraga/lauder/issues/28) before TestFlight and authorised fixed simulation steps. Party movement now advances in whole 1/120 s steps inside the existing scene update, carrying the remainder, so trail edges and follower steps stay aligned when frame times vary. Follower speed, trail limits and `PartyTrail` reconciliation are unchanged. The [correction record](follower-spacing.md) holds the before/after measurements. Independent review and a phone check remain pending; the next phone milestone should include long runs without stopping.
 
+### Squad movement phase S1
+
+The maintainer [accepted ADR 0003](https://github.com/RonildoBraga/lauder/pull/32#issuecomment-6944093756) and assigned its phase S1 before Party B: **“Accept, S1 first”**. Companions now follow as a squad in the Close formation, choose their own routes around scenery and fall into single file in narrow places; `PartyTrail` is retired. The [S1 record](squad-s1.md) lists the [ADR's exit checks](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md#phases-and-checks) and what each result covers. The maintainer's playtest in Simulator and on the baseline phone, including the party update's timing there, remains pending. This is the first of S1's three focused work sessions under the ADR's stop rule. Party B has not started.
+
 ### Party A stop criterion
 
 Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. The maintainer accepted this budget when proceeding with the recommendations; it applies when Party A is assigned and does not alter the completed Stage 1 criterion.
@@ -148,7 +152,7 @@ Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for every
 Use a **manual Simulator playtest checklist**, not an implied automated rendering suite:
 
 1. Complete shelter → depot → shelter with each leader; inspect both followers at turns and the opening.
-2. Reverse and switch beside obstacles and inside the passage; check world collision, trail rebasing, spacing and camera easing. Record any hold/stuck case rather than hiding it.
+2. Reverse and switch beside obstacles and inside the passage; check world collision, companion routes, spacing and camera easing. Record any hold/stuck case rather than hiding it.
 3. Check keyboard and touch movement/action/switch/Pause, source selection, switch while moving, simultaneous commands and release recovery. Single-pointer checks cannot establish physical stick-plus-button multi-touch or held-finger recovery.
 4. From fresh runs, open the barrier with Lara and with Tomas. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
 5. Carry the part through leader changes, repair, call, reread and restart. Verify that dialogue/Pause controls do not act on nearby objects or duplicate world updates.

@@ -54,3 +54,4 @@ All 24 rows of the matrix stay within 2.4 m after the change; the worst is 2.20 
 - Frame time no longer causes lag, but changes of speed can. When the leader speeds up after walking slowly along a curve, a follower crosses the short edges recorded meanwhile one per step and loses some distance until the leader slows or stops. This is the likely cause of the soak sessions above 2.4 m, which include slow walking and stops; it was not measured separately. Fixing it would change `PartyTrail`, which this assignment excludes.
 - Doubling the step rate at 60 Hz doubles the party update cost per frame. No phone performance result is claimed.
 - Independent review is pending; Claude both proposed and implemented this change.
+- Later: [phase S1 of the squad movement design](squad-s1.md) retired the trail, so the speed-change limit above no longer applies; frame-time independence still comes from this fixed step.
