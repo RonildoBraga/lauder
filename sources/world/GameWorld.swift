@@ -22,7 +22,14 @@ final class GameWorld {
   @ObservationIgnored private let camera = PerspectiveCamera()
   @ObservationIgnored private let motion = PartyMotion(
     radius: PrototypeLayout.characterRadius, obstacles: PrototypeLayout.obstacles)
-  @ObservationIgnored private var trail: PartyTrail
+  @ObservationIgnored private let grid = NavigationGrid.prototype
+  @ObservationIgnored private var route: RouteMemory
+  @ObservationIgnored private var planner: SquadPlanner
+  @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
+  @ObservationIgnored private var squadLeader: PartyMember
+  @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
+  /// Where each companion is heading in the latest step. Tests read it.
+  @ObservationIgnored private(set) var companionTargets: [PartyMember: SIMD2<Float>] = [:]
   @ObservationIgnored private var subscription: EventSubscription?
   @ObservationIgnored private var isPresented = false
   @ObservationIgnored private var isApplicationActive = false
@@ -38,10 +45,15 @@ final class GameWorld {
 
   init() {
     let members = PartyMember.allCases
-    trail = PartyTrail(
-      spawns: members.map {
-        let position = PrototypeLayout.spawn(for: $0)
-        return (member: $0, position: SIMD2(position.x, position.z))
+    // A mismatch with the session's leader is reconciled on the first step.
+    squadLeader = .miki
+    let start = PrototypeLayout.spawn(for: squadLeader)
+    route = RouteMemory(start: SIMD2(start.x, start.z))
+    // Companions spawn behind the leader along +z, so the formation starts facing -z.
+    planner = SquadPlanner(heading: [0, -1])
+    motors = Dictionary(
+      uniqueKeysWithValues: members.map {
+        ($0, CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: $0)))
       })
     cameraTarget = PrototypeLayout.spawn + [0, PrototypeLayout.characterHeight / 2 + 0.1, 0]
     root.name = "relay-district"
@@ -143,9 +155,8 @@ final class GameWorld {
   func advanceParty(movement: SIMD2<Float>, deltaTime: Float) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     let elapsed = min(deltaTime, 1 / 30)
-    // Equal steps record equal trail edges for a given stick input, so a follower's capped
-    // step lines up with the edge ahead whatever the display does (#28). The remainder,
-    // always under one step, carries to the next frame.
+    // Equal steps keep party movement independent of the display's frame times (#28). The
+    // remainder, always under one step, carries to the next frame.
     unsimulatedTime += elapsed
     while unsimulatedTime >= Self.simulationStep {
       unsimulatedTime -= Self.simulationStep
@@ -156,30 +167,91 @@ final class GameWorld {
   }
 
   private func simulateStep(movement: SIMD2<Float>, dt: Float) {
-    let actual = positions
-    trail.observe(positions: actual, deltaTime: dt)
+    if squadLeader != session.leader { changeLeader() }
+    let leader = session.leader
+    guard let leaderBody = bodies[leader] else { return }
     let direction = Movement.direction(
       for: movement, cameraOffset: PrototypeLayout.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PrototypeLayout.speed * dt
-    let deltas = trail.prepareStep(
-      leader: session.leader, leaderDelta: leaderDelta,
-      maximumFollowerDistance: PrototypeLayout.speed * dt,
-      canTraverse: { [self] from, to in motion.canTraverse(from: from, to: to) })
-    let message = trail.diagnostic.map { String(describing: $0) }
-    if diagnostic != message { diagnostic = message }
-    if !trail.holdsAllMovement {
-      for member in PartyMember.allCases {
-        guard let body = bodies[member] else { continue }
-        let horizontal = deltas[member] ?? .zero
-        let start = SIMD2(body.position.x, body.position.z)
-        let resolved = motion.resolve(start: start, delta: horizontal)
-        body.position = [resolved.x, PrototypeLayout.characterHeight / 2, resolved.y]
-        if simd_length_squared(horizontal) > 0.000001 {
-          visuals[member]?.orientation = simd_quatf(
-            angle: atan2(-horizontal.x, -horizontal.y), axis: [0, 1, 0])
-        }
-      }
+    let leaderStart = SIMD2(leaderBody.position.x, leaderBody.position.z)
+    let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
+    place(leader, at: leaderEnd)
+    if simd_length_squared(leaderDelta) > 0.000001 {
+      setYaw(leader, atan2(-leaderDelta.x, -leaderDelta.y))
     }
+    let leaderVelocity = (leaderEnd - leaderStart) / dt
+    route.record(leaderEnd)
+
+    // Companions choose their own routes to formation slots (ADR 0003); every movement is
+    // still resolved against the authored footprints.
+    let current = positions
+    let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { [motion] from, to in
+      motion.canTraverse(from: from, to: to)
+    }
+    let targets = planner.targets(
+      for: SquadPlanner.Input(
+        leader: leader, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
+        positions: current, route: route, dt: dt),
+      grid: grid, isClear: isClear)
+    companionTargets = targets
+    for member in PartyMember.allCases where member != leader {
+      guard let start = current[member], let target = targets[member],
+        var motor = motors[member]
+      else { continue }
+      let context = CompanionMotor.Context(
+        target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
+        others: current.compactMap { $0.key == member ? nil : $0.value },
+        speed: PrototypeLayout.speed, dt: dt)
+      let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
+      let end = motion.resolve(start: start, delta: delta)
+      motor.absorb(end - start, dt: dt)
+      motors[member] = motor
+      place(member, at: end)
+      turn(member, moved: end - start, dt: dt)
+    }
+    let stuck = PartyMember.allCases.first { $0 != leader && motors[$0]?.cannotReach == true }
+    let message = stuck.map { "\($0.displayName) can't reach you" }
+    if diagnostic != message { diagnostic = message }
+  }
+
+  private func changeLeader() {
+    let previous = squadLeader
+    let leader = session.leader
+    squadLeader = leader
+    if let body = bodies[leader] { route.reset(to: SIMD2(body.position.x, body.position.z)) }
+    planner.reset()
+    for member in [previous, leader] {
+      motors[member] = CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: member))
+    }
+    for member in PartyMember.allCases {
+      markers[member]?.isEnabled = member == leader
+    }
+  }
+
+  private func place(_ member: PartyMember, at point: SIMD2<Float>) {
+    bodies[member]?.position = [point.x, PrototypeLayout.characterHeight / 2, point.y]
+  }
+
+  /// Companions turn towards their movement, or to the formation's heading once settled, at a
+  /// limited rate so they never snap round.
+  private func turn(_ member: PartyMember, moved delta: SIMD2<Float>, dt: Float) {
+    let wanted: Float
+    if simd_length(delta) > 0.2 * dt {
+      wanted = atan2(-delta.x, -delta.y)
+    } else if motors[member]?.isSettled == true {
+      wanted = atan2(-planner.heading.x, -planner.heading.y)
+    } else {
+      return
+    }
+    let current = yaw[member] ?? wanted
+    let limit = 3 * Float.pi * dt
+    let change = max(-limit, min(limit, (wanted - current).remainder(dividingBy: 2 * .pi)))
+    setYaw(member, current + change)
+  }
+
+  private func setYaw(_ member: PartyMember, _ angle: Float) {
+    yaw[member] = angle
+    visuals[member]?.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
   }
 
   private var positions: [PartyMember: SIMD2<Float>] {

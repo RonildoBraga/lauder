@@ -10,6 +10,8 @@ The player switches between three characters while the other two follow. Their d
 
 The assigned [wall-contact freeze fix for #25](docs/wall-contact.md) passes build/tests, a 72-session Release acceptance matrix and rendered Simulator checks. Claude's review found no blocking issue; a phone milestone check for this resolver remains pending. The fix is not merged; TestFlight has not started. Earlier phone results remain tied to their recorded builds.
 
+Phase S1 of the accepted [squad movement design](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) replaces trail following: companions keep a Close formation, take their own routes and fall into single file in narrow places. It passes build/tests and Simulator soak runs; the [S1 record](docs/squad-s1.md) lists what remains, including the maintainer's playtest and a phone check. It is not merged.
+
 The authorised [follower-spacing fix for #28](docs/follower-spacing.md) advances party movement in fixed steps so followers keep their spacing when frame times vary. It passes build/tests and Simulator spacing and soak runs; it is not merged, has had no independent review and has no phone check yet.
 
 The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Controller inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Touch controls appear without an attached extended controller: a bottom-left analog stick, **Look**, **Next: name** and **Pause/Resume**. An attached controller is preferred unless **Use touch controls** is selected; **Use controller** returns to it. The selection is not persisted across app launches. Simulator keyboard controls remain WASD, E, Q and Escape. The [touch-control decision](docs/touch-controls.md) supersedes the earlier no-touch rule; older PS5 phone results do not validate this new build.
@@ -34,7 +36,7 @@ sources/
   app/                        App entry point, world ownership and bundle configuration
   interface/                  HUD, controller/keyboard/touch input and shared input rules
   gameplay/                   Party identity and session-owned leadership/Pause
-  world/                      RealityKit bodies, recorded trails, camera and scene presentation
+  world/                      RealityKit bodies, squad movement, camera and scene presentation
   content/
     PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
     character/                Current animated stand-in, editable sources and provenance
@@ -48,7 +50,7 @@ scripts/                      Standard checks and the current character asset ge
 .github/                      Pull request template
 ```
 
-Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party rules in GameSession/InputRules and bounded path bookkeeping in PartyTrail. Mission rules and persistence remain planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party rules in GameSession/InputRules and squad movement in NavigationGrid, SquadPlanner and CompanionMotor. Mission rules and persistence remain planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 

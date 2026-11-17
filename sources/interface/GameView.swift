@@ -45,7 +45,7 @@ struct GameView: View {
           }
           Text(world.observation).font(.caption)
           if let diagnostic = world.diagnostic {
-            Text("Party stopped: \(diagnostic)").font(.caption).foregroundStyle(.orange)
+            Text(diagnostic).font(.caption).foregroundStyle(.orange)
           }
           if !world.controls.touchControlsEnabled {
             Label(

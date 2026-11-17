@@ -15,7 +15,7 @@ This walkthrough starts at Relay House after the East Span closure. The party re
 
 ## What exists today
 
-Party A supplies three primitive stand-ins, session-owned leadership/Pause, leader cycling, collision-checked trail following and an eased camera target. The newly authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately. Observations remain the only action. Skill interactions, collection, repair, mission dialogue, completion and Restart are not included. See the session record for actual verification.
+Party A supplies three primitive stand-ins, session-owned leadership/Pause, leader cycling, collision-checked following and an eased camera target. Companions now follow as a squad in a Close formation ([ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. The newly authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately. Observations remain the only action. Skill interactions, collection, repair, mission dialogue, completion and Restart are not included. See the session record for actual verification.
 
 The accepted sequence is: **party movement and switching → one shared access problem → salvage, repair and contact**. Party A is assigned; the old solo Stage 3 is superseded. Add later stages only after the party movement checkpoint is established.
 
