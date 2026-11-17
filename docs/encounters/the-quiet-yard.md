@@ -1,7 +1,7 @@
 # The Quiet Yard
 
 **Date:** 17 November 2026\
-**Status:** Proposed encounter for design review, not implemented or assigned for implementation. Revised after [Claude's review](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6942990880); the maintainer's agreement is next. This is a future exercise outside the current Party A–C repair prototype; it does not add a fight to that slice.
+**Status:** Proposed encounter for design review, not implemented or assigned for implementation. Revised after [Claude's review](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6942990880). The maintainer [agreed the character definitions](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) it uses; the encounter itself remains a proposal. This is a future exercise outside the current Party A–C repair prototype; it does not add a fight to that slice.
 
 Read the proposed [combat identities](../story/story-bible.md#combat-identities), the current [gameplay walkthrough](../gameplay-script.md) and the [combat design review gate](../prototype-plan.md#combat-design-review-gate) alongside this scene. Character histories, final dialogue, control bindings and combat tuning remain proposals.
 

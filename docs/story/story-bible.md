@@ -1,7 +1,7 @@
 # Lauder — story bible, draft 0.5
 
 **Date:** 17 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The combat roles, weapons, abilities and encounter details below are working proposals, revised after Claude's review, for the maintainer to agree before the movement, formation and combat systems are designed. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation.
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The maintainer [agreed the combat identities](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) below on 17 November 2026 as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation.
 
 ## Agreed direction
 
@@ -301,6 +301,6 @@ Balance questions with answers, jokes, reliable actions and progress. Major conn
 - Each chapter delivers a concrete achievement. New information does not repeatedly erase routes, move destinations or undo trust merely to extend the journey.
 - People beyond the party have meaningful lives of their own.
 
-Next the maintainer agrees the combat identities and Quiet Yard proposal; the movement, formation and combat systems are designed after that. Settle the trio's identities, underlying relationships and enhancement specifics before the full Chapter One dialogue pass. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
+With the combat identities agreed, the next design step is the movement, formation and combat systems. Settle the trio's identities, underlying relationships and enhancement specifics before the full Chapter One dialogue pass. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
 
 The [Party A record](../party-a.md) tracks implementation and actual checks of three primitive characters, following, switching and camera behaviour. The maintainer assigned that work regardless of Claude's response; that earlier assignment does not authorise the new squad mechanics. The [prototype plan](../prototype-plan.md) owns the scope, review gates, control defaults and phone cadence. Character-specific interactions, mission dialogue and the repair loop remain later stages; the combat, formation and positioning designs above are not implemented by this writing pass.
