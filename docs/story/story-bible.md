@@ -1,13 +1,13 @@
 # Lauder — story bible, draft 0.5
 
 **Date:** 17 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The combat roles, weapons, abilities and encounter details below are working proposals for Claude's review before implementation. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation.
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The combat roles, weapons, abilities and encounter details below are working proposals, revised after Claude's review, for the maintainer to agree before the movement, formation and combat systems are designed. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation.
 
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
 - Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
-- Three playable characters are present together. The player moves the active character; the other two remain companions in the same world. A button switches control and leadership to another member. The requested movement direction is a coordinated squad that finds useful positions, rather than companions copying every footstep.
+- Three playable characters are present together. The player moves the active character; the other two remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
 - Each character has distinct capabilities that make different approaches useful, including agility and strength.
 - Chapter One centres on restoring a transmitter through exploration and purposeful salvage.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The cause and wider extent of the collapse remain uncertain.
@@ -62,7 +62,14 @@ These distinctions are not complete identities. All three can observe, talk, hel
 
 Each character should be useful as leader and capable of ordinary weapon defence. Their distinctions concern range, exposure, positioning and the situation they can improve, rather than an obligatory sequence of three specialist actions. Keep ordinary travel comfortable under every leader; Tomas should not make routine exploration slower simply because he has a stronger build.
 
-In the proposed first combat experiment, companions provide basic weapon support while the player triggers only the active character's signature ability. They do not spend signatures automatically or require the player to manage three ability bars. Defending the group does not mean starting fights with neutral people, breaking a chosen non-combat approach or pursuing threats after a withdrawal order. Exact targeting, damage, timing and recovery rules require design review and playtesting.
+In the proposed first combat experiment, companions provide basic weapon support while the player triggers only the active character's signature ability. They do not spend signatures automatically or require the player to manage three ability bars. Using another member's signature therefore means switching to them first, and the controls and threats must allow for that:
+
+- Every member is one press away: Previous and Next on a controller, Next or tapping a name on touch.
+- A threat's wind-up lasts long enough to switch and act; about 1.5 seconds is a starting value for playtests.
+- The HUD names who can answer a telegraph, such as “Miki can Disrupt”.
+- When a signature is pressed, assisted targeting prefers the threat it affects, such as the unit winding up for Disrupt.
+
+Defending the group does not mean starting fights with neutral people, breaking a chosen non-combat approach or pursuing threats after a withdrawal order. Exact targeting, damage, timing and recovery rules require design review and playtesting. Until health is designed, The Quiet Yard uses a [placeholder hit rule](../encounters/the-quiet-yard.md#placeholder-hit-rule) so that exposure and retreat can be tested.
 
 Personality can influence a companion's preferred nearby position and brief reactions: Miki looks for a clear view, Lara reads another safe angle, and Tomas considers the exposed approach. It must not create concealed disobedience, suicidal advances or repeated rescue chores. A command to regroup and leave takes priority over those preferences.
 
@@ -102,7 +109,7 @@ She reads footing and structure before committing her weight. Her agility appear
 
 The proposed depot discovery reveals that she once helped maintain water for people who stayed in an officially emptied block. She answers naturally when asked. Her knowledge reflects a particular experience, not proof of a secret role in the global collapse.
 
-**Proposed combat identity — mobility and useful angles.** Lara carries a light burst-fire weapon that supports movement between nearby safe positions. **Reposition** is a short move over reachable ground to gain another angle or disengage. It cannot cross a blocked passage, perform an unsupported leap or make her invulnerable. Its value comes from the ground and the threat's readable attention, rather than a hidden damage bonus for switching characters.
+**Proposed combat identity — mobility and useful angles.** Lara carries a light burst-fire weapon that supports movement between nearby safe positions. **Reposition** is a quick dash, at about twice running speed, to a point she can see on reachable ground a few metres away. A prepared shot is aimed where its target stood; the dash is quick enough to leave that line, which walking usually is not. That lets her cross a short exposed gap, reach another angle before a unit turns, or break away. It cannot cross a blocked passage, perform an unsupported leap or protect her once she stops in the open, and it needs a moment to recover before she can dash again. Its value comes from the ground and the threat's readable attention, rather than a hidden damage bonus for switching characters.
 
 She is strongest when she can move deliberately and use an opening; her light weapon has less stopping power against a close advance than Tomas's. Isolation or sustained exposure puts her at risk. As a companion, she prefers a nearby useful angle while staying within the group's support and obeying placement or withdrawal orders. Her tendency to carry route risks herself can appear in dialogue and choices, but it must not force the player to chase or rescue her. Biological coordination changes remain a possible explanation of capacity, not a settled biography or a substitute for route knowledge.
 
@@ -294,6 +301,6 @@ Balance questions with answers, jokes, reliable actions and progress. Major conn
 - Each chapter delivers a concrete achievement. New information does not repeatedly erase routes, move destinations or undo trust merely to extend the journey.
 - People beyond the party have meaningful lives of their own.
 
-Next review the combat identities and Quiet Yard proposal with Claude before assigning implementation. Settle the trio's identities, underlying relationships and enhancement specifics before the full Chapter One dialogue pass. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
+Next the maintainer agrees the combat identities and Quiet Yard proposal; the movement, formation and combat systems are designed after that. Settle the trio's identities, underlying relationships and enhancement specifics before the full Chapter One dialogue pass. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
 
 The [Party A record](../party-a.md) tracks implementation and actual checks of three primitive characters, following, switching and camera behaviour. The maintainer assigned that work regardless of Claude's response; that earlier assignment does not authorise the new squad mechanics. The [prototype plan](../prototype-plan.md) owns the scope, review gates, control defaults and phone cadence. Character-specific interactions, mission dialogue and the repair loop remain later stages; the combat, formation and positioning designs above are not implemented by this writing pass.

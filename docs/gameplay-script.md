@@ -147,6 +147,21 @@ Exploration and salvage lead; occasional, tense encounters offer meaningful avoi
 
 The future movement goal gives companions reachable nearby destinations and room to cooperate, rather than requiring them to repeat every footstep. Proposed **Close** and **Spread** formations change spacing; narrow passages compress the group automatically before it reforms. A proposed positioning order uses a visible destination and clear acknowledgement. A **Regroup** intent returns companions to supporting distance through traversable space, without a teleport. Individual placement, formation cycling, D-pad assignments and equivalent touch controls still need design review; the current input table above is not a combat mapping.
 
+**Proposed input budget.** A starting point for review, not settled bindings. Each character's combat identity fits one signature button, so switching changes what that button does rather than adding buttons.
+
+| Intent | PS5 | Xbox | Touch |
+|---|---|---|---|
+| Move | Left stick | Left stick | Analog stick |
+| Fire at the assisted target (hold) | R2 | RT | Fire |
+| Leader's signature | Square | X | Signature |
+| Next / previous leader | R1 / L1 | RB / LB | Next, or tap a name |
+| Cycle formation | Triangle | Y | Formation |
+| Position companions | D-pad | D-pad | Designed with the movement system |
+| Look / act | Cross | A | Look |
+| Pause / resume | Options | Menu | Pause |
+
+Fire stays a deliberate press so that a quiet approach never starts a fight by accident; companions fire automatically only once a fight is under way. Touch has no D-pad, so its positioning gesture belongs to the movement design; candidates are pressing and holding on the ground, or a short menu on the Formation button. Five buttons around the right thumb is about the limit that stays comfortable on a phone, so a later addition should replace one rather than add a sixth. Simulator keyboard keys follow when these are implemented.
+
 For the proposed first combat experiment, the player directs the current leader's attack and signature ability while companions use ordinary weapons and defensive positioning. Companions favour the group's immediate threats, useful weapon distance, clear firing lines and reachable cover. They do not initiate a fight with a visible patrol, pursue enemies far from the group or activate remote specialist interactions. Withdrawal takes priority over maintaining a firing position. Personality affects preferred positions without making orders unreliable. Switching preserves positions and changes the ability the player can trigger; it does not require a fixed Miki → Lara → Tomas combat sequence.
 
 **The Quiet Yard** is the [complete encounter script](encounters/the-quiet-yard.md), set on the onward journey toward Old Lock after Chapter One's transmitter repair and crew appointment. The party can leave optional filter components behind, retrieve them through a covered patrol gap, fight two security units, or retreat during an encounter. A recently maintained water pipe provides a local human clue whichever route the player chooses. The encounter neither adds a required regulator nor makes fighting a condition of restoring the transmitter.
