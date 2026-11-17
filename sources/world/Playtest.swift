@@ -1,0 +1,343 @@
+#if DEBUG
+  import Foundation
+  import simd
+
+  /// Scripted playtests for the Simulator, run by `scripts/playtest` (Debug builds only).
+  ///
+  /// A scenario drives the leader through the normal input path, so the rendered game, the
+  /// input rules and the real frame timing are all exercised. The runner records every
+  /// simulated frame and writes a trace and a summary into the app's Documents/playtest folder.
+  struct PlaytestRunner {
+    enum Step {
+      /// Steer the leader to a point; fails after 30 s.
+      case walk(SIMD2<Float>)
+      /// Hold the stick towards a world direction.
+      case push(SIMD2<Float>, seconds: Float)
+      case wait(seconds: Float)
+      case switchLeader
+      /// A named moment, for stills cut from the screen recording.
+      case mark(String)
+      case expectTogether(maxDistance: Float)
+      case expectInDepot
+    }
+
+    struct Frame {
+      let dt: Float
+      let leader: PartyMember
+      let positions: [PartyMember: SIMD2<Float>]
+      let targets: [PartyMember: SIMD2<Float>]
+      let warning: String?
+      let simulationMilliseconds: Double
+    }
+
+    struct Summary: Codable, Sendable {
+      struct Mark: Codable, Sendable {
+        let name: String
+        let seconds: Double
+      }
+      struct Timing: Codable, Sendable {
+        let mean: Double
+        let p99: Double
+        let max: Double
+      }
+      let scenario: String
+      /// The interface orientation, so stills cut from a portrait recording can be turned.
+      let orientation: String
+      let passed: Bool
+      let failures: [String]
+      let marks: [Mark]
+      let startedAt: Double
+      let seconds: Double
+      let frames: Int
+      let stepsCompleted: Int
+      let steps: Int
+      let frameMilliseconds: Timing
+      let simulationMilliseconds: Timing
+      let warningFrames: Int
+      let overlapFraction: Double
+      let withinSlotWhileMoving: Double
+      let worstLeaderGap: Double
+    }
+
+    static let scenarioNames = ["route", "leaders", "reversals", "switches", "walls", "all"]
+    static let walkTimeout: Float = 30
+
+    let name: String
+    private let steps: [Step]
+    private var index = 0
+    private var stepTime: Float = 0
+    private var elapsed: Float = 0
+    private var switchFrame = 0
+    private var startedAt: Date?
+    private var marks: [Summary.Mark] = []
+    private var failures: [String] = []
+    private var trace =
+      "t,dt,leader,miki_x,miki_z,lara_x,lara_z,tomas_x,tomas_z,"
+      + "miki_tx,miki_tz,lara_tx,lara_tz,tomas_tx,tomas_tz,warning\n"
+    private var frameTimes: [Double] = []
+    private var simulationTimes: [Double] = []
+    private var warningFrames = 0
+    private var overlapFrames = 0
+    private var movingSamples = 0
+    private var withinSlot = 0
+    private var worstGap: Float = 0
+    private var previousLeaderPosition: SIMD2<Float>?
+    private(set) var summary: Summary?
+    /// Set by the world from the window scene; recorded in the summary.
+    var orientation = "unknown"
+
+    init?(scenario: String) {
+      guard let steps = Self.steps(for: scenario) else { return nil }
+      name = scenario
+      self.steps = steps
+    }
+
+    var isFinished: Bool { summary != nil }
+
+    var status: String {
+      if let summary {
+        return summary.passed
+          ? "Playtest \(name) passed."
+          : "Playtest \(name) failed: \(summary.failures.count) issue(s)."
+      }
+      return "Playtest \(name): step \(min(index + 1, steps.count)) of \(steps.count)."
+    }
+
+    /// The raw input for this frame. The first half second is neutral, so the release gate
+    /// clears exactly as it does for a player.
+    mutating func input(leaderPosition: SIMD2<Float>, positions: [PartyMember: SIMD2<Float>])
+      -> InputRules.Raw
+    {
+      guard summary == nil else { return InputRules.Raw() }
+      if startedAt == nil { startedAt = Date() }
+      guard elapsed >= 0.5 else { return InputRules.Raw() }
+      while index < steps.count {
+        switch steps[index] {
+        case .walk(let target):
+          let offset = target - leaderPosition
+          if simd_length(offset) < 0.2 {
+            advance()
+            continue
+          }
+          if stepTime > Self.walkTimeout {
+            failures.append("did not reach \(Self.describe(target)) within 30 s")
+            advance()
+            continue
+          }
+          return InputRules.Raw(stick: Self.stick(towards: offset))
+        case .push(let direction, let seconds):
+          guard stepTime < seconds else {
+            advance()
+            continue
+          }
+          return InputRules.Raw(stick: Self.stick(towards: direction))
+        case .wait(let seconds):
+          guard stepTime < seconds else {
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .switchLeader:
+          // Press for one frame and release for one, so InputRules sees a fresh edge.
+          switchFrame += 1
+          if switchFrame == 1 { return InputRules.Raw(controllerSwitch: true) }
+          switchFrame = 0
+          advance()
+          return InputRules.Raw()
+        case .mark(let label):
+          marks.append(Summary.Mark(name: label, seconds: Double(elapsed)))
+          advance()
+        case .expectTogether(let maximum):
+          for (member, position) in positions
+          where simd_distance(position, leaderPosition) > maximum {
+            failures.append(
+              "\(member.displayName) was \(Self.metres(simd_distance(position, leaderPosition))) "
+                + "from the leader at \(Self.seconds(elapsed)) (allowed \(Self.metres(maximum)))")
+          }
+          advance()
+        case .expectInDepot:
+          for (member, position) in positions where !Self.isInDepot(position) {
+            failures.append(
+              "\(member.displayName) was outside the depot at \(Self.describe(position))")
+          }
+          advance()
+        }
+      }
+      finish()
+      return InputRules.Raw()
+    }
+
+    /// Record one rendered frame's elapsed time, before any simulation runs.
+    mutating func tick(dt: Float) {
+      guard summary == nil, startedAt != nil else { return }
+      elapsed += dt
+      stepTime += dt
+      frameTimes.append(Double(dt) * 1000)
+    }
+
+    /// Record the state after the party moved this frame.
+    mutating func record(_ frame: Frame) {
+      guard summary == nil, startedAt != nil else { return }
+      simulationTimes.append(frame.simulationMilliseconds)
+      if frame.warning != nil { warningFrames += 1 }
+      let members = PartyMember.allCases
+      var overlapping = false
+      for (index, first) in members.enumerated() {
+        for second in members.dropFirst(index + 1) {
+          guard let a = frame.positions[first], let b = frame.positions[second] else { continue }
+          if simd_distance(a, b) < 2 * PrototypeLayout.characterRadius { overlapping = true }
+        }
+      }
+      if overlapping { overlapFrames += 1 }
+      if let leader = frame.positions[frame.leader] {
+        let speed =
+          previousLeaderPosition.map { simd_distance($0, leader) / max(frame.dt, 0.0001) } ?? 0
+        previousLeaderPosition = leader
+        for member in members where member != frame.leader {
+          guard let position = frame.positions[member] else { continue }
+          worstGap = max(worstGap, simd_distance(position, leader))
+          if speed > 1, let target = frame.targets[member] {
+            movingSamples += 1
+            if simd_distance(position, target) <= 0.6 { withinSlot += 1 }
+          }
+        }
+      }
+      var row = "\(Self.decimal(elapsed)),\(Self.decimal(frame.dt)),\(frame.leader.rawValue)"
+      for member in members {
+        let point = frame.positions[member]
+        row += ",\(Self.decimal(point?.x)),\(Self.decimal(point?.y))"
+      }
+      for member in members {
+        let point = frame.targets[member]
+        row += ",\(Self.decimal(point?.x)),\(Self.decimal(point?.y))"
+      }
+      row += ",\(frame.warning == nil ? 0 : 1)\n"
+      trace += row
+    }
+
+    private mutating func advance() {
+      index += 1
+      stepTime = 0
+    }
+
+    private mutating func finish() {
+      guard summary == nil else { return }
+      let result = Summary(
+        scenario: name, orientation: orientation,
+        passed: failures.isEmpty && warningFrames == 0,
+        failures: failures
+          + (warningFrames > 0 ? ["a companion warning showed for \(warningFrames) frames"] : []),
+        marks: marks, startedAt: startedAt?.timeIntervalSince1970 ?? 0,
+        seconds: Double(elapsed), frames: simulationTimes.count, stepsCompleted: index,
+        steps: steps.count, frameMilliseconds: Self.timing(frameTimes),
+        simulationMilliseconds: Self.timing(simulationTimes), warningFrames: warningFrames,
+        overlapFraction: Double(overlapFrames) / Double(max(1, simulationTimes.count)),
+        withinSlotWhileMoving: Double(withinSlot) / Double(max(1, movingSamples)),
+        worstLeaderGap: Double(worstGap))
+      summary = result
+      write(result)
+    }
+
+    private func write(_ result: Summary) {
+      guard
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+          .first
+      else { return }
+      let folder = documents.appendingPathComponent("playtest/\(name)", isDirectory: true)
+      try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      try? trace.write(
+        to: folder.appendingPathComponent("trace.csv"), atomically: true, encoding: .utf8)
+      let encoder = JSONEncoder()
+      encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+      if let data = try? encoder.encode(result) {
+        try? data.write(to: folder.appendingPathComponent("summary.json"), options: .atomic)
+      }
+    }
+
+    // MARK: - Scenarios
+
+    private static let route: [Step] = [
+      .walk([2.5, 3]), .walk([2.5, -4.5]), .mark("doorway in"), .walk([5, -4.5]),
+      .walk([6.5, -3]), .wait(seconds: 2), .expectInDepot, .mark("in the depot"),
+      .walk([5, -4.5]), .mark("doorway out"), .walk([2.5, -4.5]), .walk([2.5, 3]),
+      .walk([-6, 3]), .wait(seconds: 2), .expectTogether(maxDistance: 2.5),
+      .mark("back on the street"),
+    ]
+
+    private static let reversals: [Step] = [
+      .walk([-4, 5]), .wait(seconds: 1),
+      .push([1, 0], seconds: 1.2), .mark("reversal 1"), .push([-1, 0], seconds: 1.2),
+      .mark("reversal 2"), .push([1, 0], seconds: 1.2), .mark("reversal 3"),
+      .push([-1, 0], seconds: 1.2), .mark("sharp turn"), .push([1, -1], seconds: 1),
+      .push([-1, 1], seconds: 1), .wait(seconds: 2), .expectTogether(maxDistance: 2.5),
+      .mark("settled after reversals"),
+    ]
+
+    private static let switches: [Step] = [
+      .walk([-4, 5]), .push([1, 0], seconds: 0.8), .switchLeader, .mark("switch while moving"),
+      .push([1, 0], seconds: 0.8), .switchLeader, .push([-1, 0], seconds: 0.8), .switchLeader,
+      .wait(seconds: 1), .switchLeader, .mark("switch while standing"), .wait(seconds: 2),
+      .expectTogether(maxDistance: 2.5), .mark("settled after switches"),
+    ]
+
+    private static let walls: [Step] = [
+      .walk([-10, 8.6]), .push([1, 0.15], seconds: 3), .mark("wall slide"), .wait(seconds: 1),
+      .walk([2.5, 3]), .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([9.3, -6.3]),
+      .push([1, -1], seconds: 1.5), .mark("depot corner"), .wait(seconds: 2),
+      .expectInDepot, .expectTogether(maxDistance: 2.5),
+    ]
+
+    static func steps(for scenario: String) -> [Step]? {
+      switch scenario {
+      case "route": route
+      case "leaders": route + [.switchLeader] + route + [.switchLeader] + route
+      case "reversals": reversals
+      case "switches": switches
+      case "walls": walls
+      case "all": route + reversals + switches + walls
+      default: nil
+      }
+    }
+
+    // MARK: - Helpers
+
+    /// Screen-relative stick axes for a world direction, as Movement interprets them.
+    static func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
+      guard simd_length(direction) > 0.0001 else { return .zero }
+      let toCamera = SIMD2(PrototypeLayout.cameraOffset.x, PrototypeLayout.cameraOffset.z)
+      let forward = -simd_normalize(toCamera)
+      let right = SIMD2(-forward.y, forward.x)
+      let unit = simd_normalize(direction)
+      return SIMD2(simd_dot(unit, right), simd_dot(unit, forward))
+    }
+
+    /// The depot's interior, inside its walls.
+    static func isInDepot(_ point: SIMD2<Float>) -> Bool {
+      point.x > 4.2 && point.x < 9.8 && point.y > -6.8 && point.y < -1.2
+    }
+
+    private static func timing(_ values: [Double]) -> Summary.Timing {
+      guard !values.isEmpty else { return Summary.Timing(mean: 0, p99: 0, max: 0) }
+      let sorted = values.sorted()
+      return Summary.Timing(
+        mean: sorted.reduce(0, +) / Double(sorted.count),
+        p99: sorted[Int(Double(sorted.count - 1) * 0.99)], max: sorted[sorted.count - 1])
+    }
+
+    private static func decimal(_ value: Float?) -> String {
+      value.map { String(format: "%.4f", $0) } ?? ""
+    }
+
+    private static func describe(_ point: SIMD2<Float>) -> String {
+      String(format: "(%.2f, %.2f)", point.x, point.y)
+    }
+
+    private static func metres(_ value: Float) -> String {
+      String(format: "%.2f m", value)
+    }
+
+    private static func seconds(_ value: Float) -> String {
+      String(format: "%.1f s", value)
+    }
+  }
+#endif

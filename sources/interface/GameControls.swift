@@ -30,6 +30,11 @@ final class GameControls {
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
+  #if DEBUG
+    /// Replaces hardware input while a Simulator playtest runs (Debug builds only). It still
+    /// passes through InputRules, so release gates, Pause and switch edges behave as for a player.
+    @ObservationIgnored var scriptedRaw: InputRules.Raw?
+  #endif
 
   func setActive(_ active: Bool) {
     guard active != isActive else { return }
@@ -98,7 +103,7 @@ final class GameControls {
       keyboard?.button(forKeyCode: code)?.isPressed ?? false
     }
     let touch = touchControlsEnabled ? touchInput.sample() : InputRules.Raw()
-    let raw = InputRules.Raw(
+    var raw = InputRules.Raw(
       stick: SIMD2(
         touchControlsEnabled ? 0 : gamepad?.leftThumbstick.xAxis.value ?? 0,
         touchControlsEnabled ? 0 : gamepad?.leftThumbstick.yAxis.value ?? 0
@@ -113,6 +118,9 @@ final class GameControls {
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch
     )
+    #if DEBUG
+      if let scriptedRaw { raw = scriptedRaw }
+    #endif
     let deadZone = PrototypeLayout.movementDeadZone
     if raw.hasKeyboardInput {
       showKeyboard()
