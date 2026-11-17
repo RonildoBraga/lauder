@@ -46,7 +46,7 @@ tests/                        Party/session, asset import, movement, input and l
   support/                    Test-only asset validator; excluded from the app target
 docs/                         Architecture, decisions, prototype plan and validation evidence
   story/                      Story bible and Chapter One outline index
-scripts/                      Standard checks and the current character asset generator
+scripts/                      Standard checks, the character asset generator and the placeholder app icon
 .github/                      Pull request template
 ```
 
