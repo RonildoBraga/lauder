@@ -58,7 +58,9 @@ struct PartySoakTests {
           return
         }
         let travel = simd_distance(previous[index], position)
-        let maximum = PrototypeLayout.speed * min(dt, 1 / 30) + 0.003
+        // A carried fixed-step remainder can add at most one step to a frame.
+        let maximum =
+          PrototypeLayout.speed * (min(dt, 1 / 30) + GameWorld.simulationStep) + 0.003
         guard travel <= maximum else {
           Issue.record(
             "seed \(seed), frame \(frame), \(members[index]): travel \(travel) exceeds \(maximum)")

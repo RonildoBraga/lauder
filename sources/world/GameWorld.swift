@@ -6,6 +6,9 @@ import simd
 @MainActor
 @Observable
 final class GameWorld {
+  /// Party movement advances in whole steps of this length inside the scene update.
+  static let simulationStep: Float = 1 / 120
+
   let root = Entity()
   let controls = GameControls()
   let session = GameSession()
@@ -29,6 +32,7 @@ final class GameWorld {
   @ObservationIgnored private var cameraTarget: SIMD3<Float>
   @ObservationIgnored private var cameraStart: SIMD3<Float>?
   @ObservationIgnored private var cameraElapsed: Float = 0
+  @ObservationIgnored private var unsimulatedTime: Float = 0
 
   var isPaused: Bool { session.isPaused }
 
@@ -121,7 +125,9 @@ final class GameWorld {
     }
     guard running else { return }
     guard !skipNextStep else {
+      // Time owed from before an interruption is not replayed afterwards.
       skipNextStep = false
+      unsimulatedTime = 0
       return
     }
     advanceParty(movement: input.movement, deltaTime: Float(deltaTime))
@@ -136,7 +142,20 @@ final class GameWorld {
   // Input availability, Pause and fresh-edge handling remain in step/InputRules.
   func advanceParty(movement: SIMD2<Float>, deltaTime: Float) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
-    let dt = min(deltaTime, 1 / 30)
+    let elapsed = min(deltaTime, 1 / 30)
+    // Equal steps record equal trail edges for a given stick input, so a follower's capped
+    // step lines up with the edge ahead whatever the display does (#28). The remainder,
+    // always under one step, carries to the next frame.
+    unsimulatedTime += elapsed
+    while unsimulatedTime >= Self.simulationStep {
+      unsimulatedTime -= Self.simulationStep
+      simulateStep(movement: movement, dt: Self.simulationStep)
+    }
+    updateCamera(deltaTime: elapsed)
+    updateNearby()
+  }
+
+  private func simulateStep(movement: SIMD2<Float>, dt: Float) {
     let actual = positions
     trail.observe(positions: actual, deltaTime: dt)
     let direction = Movement.direction(
@@ -161,8 +180,6 @@ final class GameWorld {
         }
       }
     }
-    updateCamera(deltaTime: dt)
-    updateNearby()
   }
 
   private var positions: [PartyMember: SIMD2<Float>] {
