@@ -5,6 +5,11 @@ struct PartyMotion {
   struct Box: Sendable {
     let minimum: SIMD2<Float>
     let maximum: SIMD2<Float>
+
+    func contains(_ point: SIMD2<Float>) -> Bool {
+      point.x >= minimum.x && point.x <= maximum.x && point.y >= minimum.y
+        && point.y <= maximum.y
+    }
   }
 
   static let skin: Float = 0.002

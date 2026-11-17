@@ -138,6 +138,11 @@ struct SquadMovementTests {
   @Test(arguments: PartyMember.allCases)
   func everyLeaderTakesThePartyThroughTheServiceOpeningAndBack(leader: PartyMember) throws {
     let world = GameWorld()
+    // Party B's barrier closes the passage until Lara releases the latch.
+    while world.session.leader != .lara { world.session.cycleLeader() }
+    try walk(world, through: [[2.5, 3], [3.2, -5]], label: "to the latch")
+    world.performAction()
+    try #require(world.session.passageOpen)
     while world.session.leader != leader { world.session.cycleLeader() }
     let inward: [SIMD2<Float>] = [[2.5, 3], [2.5, -4.5], [5, -4.5], [6.5, -3]]
     let outward: [SIMD2<Float>] = [[5, -4.5], [2.5, -4.5], [2.5, 3], [-6, 3]]

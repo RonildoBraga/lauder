@@ -9,7 +9,7 @@
   /// completed here would fail in `scripts/playtest` too, so the standard check catches it.
   @MainActor
   struct PlaytestTests {
-    @Test(arguments: ["route", "reversals", "switches", "walls"])
+    @Test(arguments: ["route", "panel", "closed", "reversals", "switches", "walls"])
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
       let world = GameWorld()
       var runner = try #require(PlaytestRunner(scenario: name))
@@ -18,9 +18,11 @@
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
         let raw = runner.input(
-          leaderPosition: position(world, world.session.leader), positions: positions(world))
-        // The rendered run sends this through InputRules; here a press is a switch.
+          leader: world.session.leader, leaderPosition: position(world, world.session.leader),
+          positions: positions(world), passageOpen: world.session.passageOpen)
+        // The rendered run sends these through InputRules; here a press acts directly.
         if raw.controllerSwitch { world.session.cycleLeader() }
+        if raw.controllerAction { world.performAction() }
         world.advanceParty(movement: raw.stick, deltaTime: dt)
         runner.record(
           PlaytestRunner.Frame(

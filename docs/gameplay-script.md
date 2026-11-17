@@ -1,7 +1,7 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 17 November 2026\
-**Status:** Three-character walkthrough, with Party A implementation assigned regardless of Claude's response. The [Party A record](party-a.md) tracks actual checks. Biographies, dialogue and B/C interactions remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
+**Status:** Three-character walkthrough, with Party A implementation assigned regardless of Claude's response. The [Party A record](party-a.md) tracks actual checks. Section 3's access problem is implemented as [Party B](party-b.md), awaiting review. Biographies, dialogue and B/C interactions remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
 
 The maintainer has endorsed the occasional-combat direction and assigned the [combat-role and Quiet Yard documentation](#future-squad-and-combat-design) for Claude's review before implementation. That separate design gate does not extend the earlier Party A implementation assignment.
 

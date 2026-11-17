@@ -119,7 +119,7 @@ The separate passage flag survives every leader switch. Lara's latch and Tomas's
 
 ### One interaction
 
-Before Party B, extend the typed layout's interaction definitions with stable action IDs, eligible member IDs, an authored accessible approach area, prompt/role-feedback text and the relevant collision dimensions. Put per-object collision data there instead of selecting it by ID in GameWorld; this absorbs [#19 L4](https://github.com/RonildoBraga/lauder/issues/19). Required IDs must exist once at load.
+Before Party B, extend the typed layout's interaction definitions with stable action IDs, eligible member IDs, an authored accessible approach area, prompt/role-feedback text and the relevant collision dimensions. [Party B](party-b.md) does this for the passage's two actions, in `PrototypeLayout.interactions`, with the barrier's footprint alongside; the observation points keep their existing definitions. Put per-object collision data there instead of selecting it by ID in GameWorld; this absorbs [#19 L4](https://github.com/RonildoBraga/lauder/issues/19). Required IDs must exist once at load.
 
 1. GameWorld evaluates the actual active body's position against the interaction's approach area and current world accessibility.
 2. The HUD presents the active character's action or a suggestion to switch. No remote companion acts automatically.
