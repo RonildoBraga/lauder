@@ -1,7 +1,9 @@
 # Lauder — gameplay walkthrough
 
-**Date:** 16 November 2026\
+**Date:** 17 November 2026\
 **Status:** Three-character walkthrough, with Party A implementation assigned regardless of Claude's response. The [Party A record](party-a.md) tracks actual checks. Biographies, dialogue and B/C interactions remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
+
+The maintainer has endorsed the occasional-combat direction and assigned the [combat-role and Quiet Yard documentation](#future-squad-and-combat-design) for Claude's review before implementation. That separate design gate does not extend the earlier Party A implementation assignment.
 
 ## The game we are building
 
@@ -138,3 +140,15 @@ During dialogue, Pause preserves the current line; resuming returns there. Resta
 Observe an unfamiliar player without explaining the route. Can they identify the leader, switch deliberately and move all three through the service passage? Does choosing Lara or Tomas feel useful? Do they understand why Miki inspects the part, who benefits from leaving the water supply alone and what the call achieved?
 
 The [prototype plan](prototype-plan.md) turns those questions into staged checks. Test the uncertain party behaviour first, then add the single access problem and the repair loop. More mechanics, backstory or finished art should follow evidence about what is enjoyable and unclear.
+
+## Future squad and combat design
+
+Exploration and salvage lead; occasional, tense encounters offer meaningful avoidance and withdrawal. The [story bible owns the combat identities](story/story-bible.md#combat-identities): Miki offers precision and disruption, Lara mobility and useful angles, and Tomas protection and close-range stopping power. All three carry a weapon in this future design and can defend themselves. Their existing inspection, route-reading and load-handling contributions continue between encounters. Weapons and signature abilities are working choices for review, not implemented equipment or settled balance.
+
+The future movement goal gives companions reachable nearby destinations and room to cooperate, rather than requiring them to repeat every footstep. Proposed **Close** and **Spread** formations change spacing; narrow passages compress the group automatically before it reforms. A proposed positioning order uses a visible destination and clear acknowledgement. A **Regroup** intent returns companions to supporting distance through traversable space, without a teleport. Individual placement, formation cycling, D-pad assignments and equivalent touch controls still need design review; the current input table above is not a combat mapping.
+
+For the proposed first combat experiment, the player directs the current leader's attack and signature ability while companions use ordinary weapons and defensive positioning. Companions favour the group's immediate threats, useful weapon distance, clear firing lines and reachable cover. They do not initiate a fight with a visible patrol, pursue enemies far from the group or activate remote specialist interactions. Withdrawal takes priority over maintaining a firing position. Personality affects preferred positions without making orders unreliable. Switching preserves positions and changes the ability the player can trigger; it does not require a fixed Miki → Lara → Tomas combat sequence.
+
+**The Quiet Yard** is the [complete encounter script](encounters/the-quiet-yard.md), set on the onward journey toward Old Lock after Chapter One's transmitter repair and crew appointment. The party can leave optional filter components behind, retrieve them through a covered patrol gap, fight two security units, or retreat during an encounter. A recently maintained water pipe provides a local human clue whichever route the player chooses. The encounter neither adds a required regulator nor makes fighting a condition of restoring the transmitter.
+
+This remains a paper design outside Parties A–C. The [combat design review gate](prototype-plan.md#combat-design-review-gate) owns the next step. No combat controls, formation AI, enemy behaviour, health, ammunition economy or weapon progression is implemented or authorised by these pages.

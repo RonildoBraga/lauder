@@ -144,6 +144,8 @@ Use Simulator keyboard input for everyday iteration. Live PS5 input did not work
 
 Finished character art/animation, free jumping/climbing, formation orders, separate inventories, generic navigation/ECS/inventory/quest frameworks, additional packages, networking, cloud saves, monetisation and scene streaming. Ordinary following and switching are part of Party A, not deferred companion features.
 
+The [future squad/combat design](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) describe intended experiences for review. Their [design gate](prototype-plan.md#combat-design-review-gate) precedes an implementation assignment; they do not replace the current trail/collision design or define a new navigation or combat architecture.
+
 ## Revisit after the first playable
 
 Use the plan's Party A stop review if following is unreliable. First reconsider trail handling and the bounded layout; any navigation replacement or automatic regroup requires a deliberate review. Add the next survival pressure, combat encounter or visual requirement only when a concrete playtest need warrants it.

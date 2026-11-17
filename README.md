@@ -8,12 +8,15 @@ The player switches between three characters while the other two follow. Their d
 
 **Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. The scope is: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages.**
 
+The maintainer has endorsed occasional combat supporting exploration and salvage, and assigned documentation of the trio's [combat identities](docs/story/story-bible.md#combat-identities) and [The Quiet Yard](docs/encounters/the-quiet-yard.md) for Claude's review. Weapons, signature abilities and squad behaviour are working designs, with [review required before implementation](docs/prototype-plan.md#combat-design-review-gate). The encounter takes place after Chapter One and remains outside the current first playable. This documentation assignment starts no combat or formation implementation.
+
 The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. PS5 switching is confirmed in the Party A phone check; Xbox hardware remains unverified.
 
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
 - [Gameplay script](docs/gameplay-script.md): proposed party controls, shared access problem, salvage, repair and coastal contact.
+- [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, pending design review.
 - [Chapter One — A Place to Meet](docs/story/chapter-01.md): index to the current outline and playable walkthrough; detailed dialogue remains a later writing pass.
 - [Architecture](docs/architecture.md): party ownership, input, following, camera, restart and later saving design.
 - [First playable prototype](docs/prototype-plan.md): party movement and switching first, then access and the repair loop, with staged checks.
