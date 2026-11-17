@@ -6,8 +6,6 @@ import simd
 @MainActor
 @Observable
 final class GameWorld {
-  static let obstacleGroup = CollisionGroup(rawValue: 1 << 4)
-
   let root = Entity()
   let controls = GameControls()
   let session = GameSession()
@@ -19,8 +17,8 @@ final class GameWorld {
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
   @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
   @ObservationIgnored private let camera = PerspectiveCamera()
-  @ObservationIgnored private let bodyShape = ShapeResource.generateSphere(
-    radius: PrototypeLayout.characterRadius)
+  @ObservationIgnored private let motion = PartyMotion(
+    radius: PrototypeLayout.characterRadius, obstacles: PrototypeLayout.obstacles)
   @ObservationIgnored private var trail: PartyTrail
   @ObservationIgnored private var subscription: EventSubscription?
   @ObservationIgnored private var isPresented = false
@@ -43,7 +41,6 @@ final class GameWorld {
       })
     cameraTarget = PrototypeLayout.spawn + [0, PrototypeLayout.characterHeight / 2 + 0.1, 0]
     root.name = "relay-district"
-    root.components.set(PhysicsSimulationComponent())
     let style = SceneStyle()
     for box in PrototypeLayout.boxes {
       let entity = ModelEntity(
@@ -52,7 +49,6 @@ final class GameWorld {
       )
       entity.name = box.name
       entity.position = box.position
-      if box.id != .ground { makeSolid(entity, size: box.size) }
       root.addChild(entity)
     }
     addLandmarks(style: style)
@@ -128,19 +124,28 @@ final class GameWorld {
       skipNextStep = false
       return
     }
-    guard deltaTime.isFinite, deltaTime > 0 else { return }
-    let dt = min(Float(deltaTime), 1 / 30)
+    advanceParty(movement: input.movement, deltaTime: Float(deltaTime))
+    if input.actionPressed {
+      observation =
+        nearby?.observation
+        ?? "The front entrance is blocked. The whole party can use the side passage."
+    }
+  }
+
+  // Production spatial update, also exercised by deterministic route/soak tests.
+  // Input availability, Pause and fresh-edge handling remain in step/InputRules.
+  func advanceParty(movement: SIMD2<Float>, deltaTime: Float) {
+    guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
+    let dt = min(deltaTime, 1 / 30)
     let actual = positions
     trail.observe(positions: actual, deltaTime: dt)
     let direction = Movement.direction(
-      for: input.movement, cameraOffset: PrototypeLayout.cameraOffset)
+      for: movement, cameraOffset: PrototypeLayout.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PrototypeLayout.speed * dt
     let deltas = trail.prepareStep(
       leader: session.leader, leaderDelta: leaderDelta,
       maximumFollowerDistance: PrototypeLayout.speed * dt,
-      canTraverse: { [self] from, to in
-        sweep(from: from, to: to)?.isEmpty == true
-      })
+      canTraverse: { [self] from, to in motion.canTraverse(from: from, to: to) })
     let message = trail.diagnostic.map { String(describing: $0) }
     if diagnostic != message { diagnostic = message }
     if !trail.holdsAllMovement {
@@ -148,15 +153,7 @@ final class GameWorld {
         guard let body = bodies[member] else { continue }
         let horizontal = deltas[member] ?? .zero
         let start = SIMD2(body.position.x, body.position.z)
-        let resolved = PartyMotion.resolve(start: start, delta: horizontal) { [self] from, to in
-          guard let hits = sweep(from: from, to: to) else {
-            return PartyMotion.Hit(distance: 0, normal: .zero)
-          }
-          guard let hit = hits.first else { return nil }
-          return PartyMotion.footprintHit(
-            from: from, to: to, point: hit.position, normal: hit.normal,
-            radius: PrototypeLayout.characterRadius)
-        }
+        let resolved = motion.resolve(start: start, delta: horizontal)
         body.position = [resolved.x, PrototypeLayout.characterHeight / 2, resolved.y]
         if simd_length_squared(horizontal) > 0.000001 {
           visuals[member]?.orientation = simd_quatf(
@@ -166,25 +163,6 @@ final class GameWorld {
     }
     updateCamera(deltaTime: dt)
     updateNearby()
-    if input.actionPressed {
-      observation =
-        nearby?.observation
-        ?? "The front entrance is blocked. The whole party can use the side passage."
-    }
-  }
-
-  // Both movement and trail simplification use the same complete footprint query.
-  // A missing scene is unavailable clearance, not an empty (clear) result.
-  private func sweep(from: SIMD2<Float>, to: SIMD2<Float>) -> [CollisionCastHit]? {
-    guard let scene = root.scene else { return nil }
-    let height = PrototypeLayout.obstacleSweepHeight
-    return scene.convexCast(
-      convexShape: bodyShape,
-      fromPosition: [from.x, height, from.y],
-      fromOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
-      toPosition: [to.x, height, to.y],
-      toOrientation: simd_quatf(ix: 0, iy: 0, iz: 0, r: 1),
-      query: .nearest, mask: Self.obstacleGroup, relativeTo: root)
   }
 
   private var positions: [PartyMember: SIMD2<Float>] {
@@ -234,9 +212,6 @@ final class GameWorld {
   private func addLandmarks(style: SceneStyle) {
     for point in PrototypeLayout.points {
       let entity = style.landmark(for: point)
-      let size =
-        point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
-      makeSolid(entity, size: size)
       entity.name = point.id.rawValue
       root.addChild(entity)
     }
@@ -248,12 +223,4 @@ final class GameWorld {
     }
   }
 
-  private func makeSolid(_ entity: Entity, size: SIMD3<Float>) {
-    entity.components.set(
-      CollisionComponent(
-        shapes: [.generateBox(size: size)],
-        filter: CollisionFilter(
-          group: Self.obstacleGroup, mask: .all)))
-    entity.components.set(PhysicsBodyComponent(massProperties: .default, mode: .static))
-  }
 }
