@@ -15,26 +15,26 @@ This walkthrough starts at Relay House after the East Span closure. The party re
 
 ## What exists today
 
-The Party A branch introduces three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB cycling, collision-checked trail following and an eased camera target. Observations remain the only action. Skill interactions, collection, repair, mission dialogue, completion and Restart are not included. See the session record for actual verification.
+Party A supplies three primitive stand-ins, session-owned leadership/Pause, leader cycling, collision-checked trail following and an eased camera target. The newly authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately. Observations remain the only action. Skill interactions, collection, repair, mission dialogue, completion and Restart are not included. See the session record for actual verification.
 
 The accepted sequence is: **party movement and switching → one shared access problem → salvage, repair and contact**. Party A is assigned; the old solo Stage 3 is superseded. Add later stages only after the party movement checkpoint is established.
 
 ## Readable controls and party feedback
 
-The following mappings are the initial planning defaults, to verify during Party A alongside the existing movement/action/pause inputs:
+The current input mappings use the same movement, action, switching and Pause rules. Later dialogue/menu behaviour in this table remains planned:
 
-| Intent | PS5 | Xbox | Simulator keyboard |
-|---|---|---|---|
-| Move the leader | Left stick | Left stick | WASD |
-| Act / advance a line / confirm a menu choice | Cross | A | E |
-| Cycle leader: Miki → Lara → Tomas → Miki | R1 | RB | Q |
-| Pause / resume | Options | Menu | Escape |
+| Intent | PS5 | Xbox | Touch | Keyboard |
+|---|---|---|---|---|
+| Move the leader | Left stick | Left stick | Bottom-left analog stick | WASD |
+| Act / advance a line / confirm a menu choice | Cross | A | Look for the current observation; later contextual action | E |
+| Cycle leader: Miki → Lara → Tomas → Miki | R1 | RB | Next: name | Q |
+| Pause / resume | Options | Menu | Pause / Resume | Escape |
 
-There are no touch controls or clickable screen actions. Q replaces the earlier Tab proposal to avoid using a focus-navigation key; actual delivery must still be verified in Simulator during Party A. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently shaped or coloured stand-ins are sufficient, with text so colour alone carries no essential information. The current character asset may be reused where useful; no new art is a prerequisite.
+The maintainer's [touch request](touch-controls.md#authorisation) supersedes the earlier no-touch decision. Touch appears automatically without an extended controller. With a controller attached, it remains the default unless the player chooses **Use touch controls**; **Use controller** returns to it. The selection is not persisted across app launches. Q remains the keyboard switch key. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently shaped or coloured stand-ins are sufficient, with text so colour alone carries no essential information. The current character asset may be reused where useful; no new art is a prerequisite.
 
 Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
 
-Pause suspends switching and world movement; dialogue will do the same when introduced in C. Release guidance and fresh-input recovery apply after interruption, reconnection and pause transitions. The [party architecture](architecture.md) records command routing and ownership.
+Pause suspends switching and world movement; dialogue will do the same when introduced in C. Release guidance and fresh-input recovery apply after source changes, interruption, reconnection and pause transitions. On touch, lift every finger before continuing, even one resting at the stick centre. The stick and buttons can be held together; Pause keeps their contacts tracked while gameplay is frozen. The [party architecture](architecture.md) records command routing and ownership.
 
 ## 1. Three people with a reason to leave
 

@@ -6,9 +6,9 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-**Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. The scope is: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages.**
+**Party A is implemented, with Simulator route proof and a baseline PS5 phone route/control/recovery check. A short phone sample averaged about 60 fps; remaining manual checks are deferred by the maintainer. The scope is: three primitive stand-ins, session-owned leadership/Pause, Q/R1/RB switching and recorded-trail following. The maintainer explicitly authorised proceeding regardless of Claude's response. See the [Party A record](docs/party-a.md) for actual checks and remaining gaps. Skill actions and the repair loop remain later stages. The maintainer has authorised an optional touch-control path; its build/tests pass, with [manual touch validation deferred by the maintainer](docs/touch-controls.md#validation-pending).**
 
-The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Phone inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Simulator uses WASD, E, Q and Escape. There are no touch controls or clickable screen actions. PS5 switching is confirmed in the Party A phone check; Xbox hardware remains unverified.
+The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while Party A uses primitives. Controller inputs are left stick to move, Cross/A to observe, R1/RB to cycle leader and Options/Menu to pause/resume. Touch controls appear without an attached extended controller: a bottom-left analog stick, **Look**, **Next: name** and **Pause/Resume**. An attached controller is preferred unless **Use touch controls** is selected; **Use controller** returns to it. The selection is not persisted across app launches. Simulator keyboard controls remain WASD, E, Q and Escape. The [touch-control decision](docs/touch-controls.md) supersedes the earlier no-touch rule; older PS5 phone results do not validate this new build.
 
 ## Start here
 
@@ -28,7 +28,7 @@ The proposed cast has Miki, Lara and Tomas as the playable trio and Nina as a su
 Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
 sources/
   app/                        App entry point, world ownership and bundle configuration
-  interface/                  SwiftUI HUD, controller/keyboard input and input rules
+  interface/                  HUD, controller/keyboard/touch input and shared input rules
   gameplay/                   Party identity and session-owned leadership/Pause
   world/                      RealityKit bodies, recorded trails, camera and scene presentation
   content/

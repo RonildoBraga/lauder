@@ -2,7 +2,9 @@
 
 **Status:** Movement, collision, camera follow and observation prompts are implemented. Earlier PS5-only revisions passed baseline-iPhone playtests. The shared-input build/tests and keyboard play are verified in Simulator; live controller forwarding remains unresolved, and the refreshed phone check is deferred. The prepared work is merged into main. Claude [confirmed the prior fixes and dispositions](https://github.com/RonildoBraga/lauder/issues/12#issuecomment-6914369450) and closed #12; the subsequent low-severity review is tracked in [#19](https://github.com/RonildoBraga/lauder/issues/19).
 
-The maintainer authorised Stage 2 including [#5](https://github.com/RonildoBraga/lauder/issues/5) and [#10](https://github.com/RonildoBraga/lauder/issues/10), then added Xbox alongside PS5 and adopted Simulator for everyday testing, with the baseline iPhone at key milestones. After confirming that their PS5 did not control the visible Simulator game, they authorised WASD keyboard controls. No touch/clickable actions and an awake foreground screen remain agreed. Claude communication stays on GitHub.
+**Later input decision:** The maintainer has now authorised [optional touch controls](touch-controls.md), superseding the earlier controller-only/no-touch rule. The statements and observations below describe those earlier revisions; they are not evidence for the new touch build.
+
+The maintainer authorised Stage 2 including [#5](https://github.com/RonildoBraga/lauder/issues/5) and [#10](https://github.com/RonildoBraga/lauder/issues/10), then added Xbox alongside PS5 and adopted Simulator for everyday testing, with the baseline iPhone at key milestones. After confirming that their PS5 did not control the visible Simulator game, they authorised WASD keyboard controls. At that stage, no touch/clickable actions and an awake foreground screen were agreed. Claude communication stays on GitHub.
 
 ## Input decision
 
@@ -103,10 +105,10 @@ Run formatting, build and Swift Testing with `./scripts/check` on Simulator duri
 
 At playable-feature milestones before merging, repeat the checks below on the baseline iPhone. [Issue #18](https://github.com/RonildoBraga/lauder/issues/18) consolidates the deferred shared-input, release guidance, visual-pass, gait and Xbox checks for the first-playable phone milestone; it does not request another session now. Check actual device performance and Bluetooth/lifecycle behaviour on the phone; Simulator timing does not establish them. The earlier phone results above apply to the recorded PS5 revisions, not automatically to later input changes.
 
-1. With each supported controller, confirm the source and action glyph; walk the route, enter the service opening and return. Check collision, framing and visible feet/ground contact.
-2. Hold movement while pressing Cross/A. Release the stick; motion must stop. Pause/Resume with Options/Menu; held input must not resume motion. Verify there are no clickable screen actions.
-3. Disconnect the selected controller with no other controller connected: the world must stop and show a connection message. Reconnect, centre/release input, and confirm control returns without stale movement.
-4. Background, lock/unlock and return while input was held. Centre/release controls before resuming. Repeat without duplicate controls or frame callbacks.
+1. With each selected input path, walk the route, enter the service opening and return. Check collision, framing and visible feet/ground contact. Controller checks retain the source/action glyph; touch checks use the visible stick and buttons.
+2. Hold movement while using action and leader switch: Cross/A and R1/RB on a controller, or **Look** and **Next: name** alongside the touch stick. Release movement and confirm stopping. Check Pause/Resume and require fresh input after all held controls release. On touch, a centred-stick finger must lift too.
+3. Disconnect the sole connected extended controller and check automatic touch availability. Reconnect and check the controller default unless touch was explicitly preferred. Exercise **Use touch controls** and **Use controller**; each source change must clear old captures and require neutral input without replaying an action.
+4. Background, lock/unlock and return while input was held. Lift all fingers and centre/release other controls before resuming. Check touch cancellation, simultaneous fingers and drags across zones on the physical phone; a Simulator pointer does not establish these behaviours. Repeat without duplicate controls or frame callbacks.
 5. Leave the active game untouched beyond the phone's normal Auto-Lock interval, including on Pause. Check that it remains awake, then verify normal locking after leaving the app.
 
 These checks and measured first-playable performance must not be inferred from a passing import test. The maintainer's integration instruction does not convert the remaining verification gaps into passed checks. The [gameplay script](gameplay-script.md) is a draft for review before Stage 3 implementation.
