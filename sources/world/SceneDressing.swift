@@ -38,7 +38,7 @@ enum SceneDressing {
   }
 
   private static func addPaving(using geometry: Geometry) {
-    // These shallow slabs sit above the floor without changing its collision surface.
+    // These shallow slabs are decoration above the floor, not authored movement obstacles.
     for x: Float in [-10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10] {
       geometry.box(
         "street-slab", size: [2.32, 0.012, 2.3], at: [x, 0.009, 3.35],

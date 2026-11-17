@@ -1,18 +1,18 @@
 import RealityKit
 import Testing
+import simd
 
 @testable import Lauder
 
 @MainActor
 struct PartySceneTests {
   @Test
-  func partyBodiesStayOutOfTheScenerySweep() throws {
+  func renderedSceneryAndMovementUseTheSameAuthoredFootprints() throws {
     let world = GameWorld()
     let bodies = try PartyMember.allCases.map { member in
       try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
     }
-    // Plain body transforms never enter a sweep against world colliders, so peer exclusion
-    // does not depend on CharacterController's runtime character-pair filtering.
+    // Peers, ground and decoration are excluded structurally from the authored obstacle list.
     for body in bodies {
       #expect(body.components[CharacterControllerComponent.self] == nil)
       #expect(body.components[CollisionComponent.self] == nil)
@@ -20,15 +20,30 @@ struct PartySceneTests {
     }
     for box in PrototypeLayout.boxes {
       let entity = try #require(world.root.findEntity(named: box.name))
-      if box.id == .ground {
-        #expect(entity.components[CollisionComponent.self] == nil)
-        #expect(entity.components[PhysicsBodyComponent.self] == nil)
-        continue
-      }
-      let collision = try #require(entity.components[CollisionComponent.self])
-      #expect(!collision.filter.group.intersection(GameWorld.obstacleGroup).isEmpty)
-      #expect(box.position.y - box.size.y / 2 <= PrototypeLayout.obstacleSweepHeight)
-      #expect(box.position.y + box.size.y / 2 >= PrototypeLayout.obstacleSweepHeight)
+      #expect(entity.components[CollisionComponent.self] == nil)
+      #expect(entity.components[PhysicsBodyComponent.self] == nil)
+      #expect(entity.position == box.position)
+      if box.id == .ground { continue }
+      let centre = SIMD2(box.position.x, box.position.z)
+      let half = SIMD2(box.size.x, box.size.z) / 2
+      #expect(
+        PrototypeLayout.obstacles.contains {
+          $0.minimum == centre - half && $0.maximum == centre + half
+        })
+    }
+    #expect(world.root.components[PhysicsSimulationComponent.self] == nil)
+    #expect(PrototypeLayout.obstacles.count == PrototypeLayout.boxes.count - 1 + 2)
+    for point in PrototypeLayout.points {
+      let entity = try #require(world.root.findEntity(named: point.id.rawValue))
+      let size =
+        point.id == .transmitter
+        ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
+      let centre = SIMD2(entity.position.x, entity.position.z)
+      let half = SIMD2(size.x, size.z) / 2
+      #expect(
+        PrototypeLayout.obstacles.contains {
+          $0.minimum == centre - half && $0.maximum == centre + half
+        })
     }
     #expect(world.root.findEntity(named: "relay.tomas") == nil)
     #expect(world.root.findEntity(named: "relay.transmitter") != nil)

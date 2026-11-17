@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. The implementation was assigned regardless of Claude's response. Optional touch controls pass build/tests and Simulator checks, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation); the touch PR is not yet merged. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track actual progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls pass build/tests and Simulator checks, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation); the touch PR is not yet merged. The assigned [#25 wall-contact correction](wall-contact.md) passes build/tests, a 72-session Release acceptance matrix and rendered Simulator checks; Claude's review and its phone milestone check remain pending, with no fix merge or TestFlight start yet. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -37,7 +37,7 @@ Claude [reviewed the proposal at fe9af2d](https://github.com/RonildoBraga/lauder
 
 The [architecture](architecture.md) and [following ADR](decisions/0002-party-following.md) record the accepted single authority for mode/leader/progress, input edge rules, three bodies, recovery and camera easing. Implement and validate the accepted A decisions; refine the recorded interaction data before B and exact in-place restart/teardown steps before C. Existing solo ownership/save assumptions are superseded. Carry forward the [B1–B3 discussion](https://github.com/RonildoBraga/lauder/issues/13#issuecomment-6916287544).
 
-Initial B1 planning decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and world collision checks for every body. Exclude party members from physical collision with each other, retain scenery collision, and use spacing for readable separation. Keep equal circular footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture and ADR define the accepted trail connections and bounds to validate during Party A.
+Initial B1 planning decisions: use bounded, recorded movement trails, with pure Swift path bookkeeping and collision checks for every body. Exclude party members from one another's collision checks, retain scenery blocking, and use spacing for readable separation. Keep equal circular footprints in the initial graybox so different visual silhouettes do not silently introduce new clearance requirements. Switching/reversals must preserve reachable routes rather than connect directly through walls. No navigation mesh or new package is the starting requirement; the architecture and ADR define the accepted trail connections and bounds to validate during Party A.
 
 Initial recovery is **hold and diagnose**, not an automatic warp: stop the blocked follower safely, record the failing route and correct the trail or simplify the authored layout. At the stop review, a constrained out-of-view regroup may be proposed separately. It would require explicit maintainer agreement, safe placement on the same currently reachable/open route, and both origin and destination outside the current camera view including a switch transition. It could never move the active leader or bypass a closed barrier. None of that fallback is approved or required for initial Party A.
 
@@ -92,6 +92,12 @@ Use three clearly named, differently coloured primitive stand-ins on the existin
 
 **Exit:** The whole party completes the round trip under every leader, with predictable collision and readable camera behaviour. Record stuck, separated or obscured cases and fix the bounded route before adding content.
 
+### Assigned wall-contact correction
+
+The maintainer assigned the [#25 fix](wall-contact.md) and Claude review before merge or TestFlight. Resolve the flat-floor circular footprint continuously against the layout's axis-aligned rectangles in plain Swift: exact rounded corners, radius plus 2 mm normal skin even at unobstructed endpoints, and outward/tangent escape from existing overlap without idle snapping. Check both movement legs and the final start-to-end chord. Use the same geometry for complete trail-shortcut clearance, with no sliding or overlap recovery on shortcuts. RealityKit continues rendering; remove obsolete query/physics components without adding slopes or a physics/navigation system. Preserve trail bounds, diagnostics and correction guards.
+
+Build/tests, the 72-session Release acceptance matrix and rendered Simulator checks pass. Claude's review and a phone milestone check for this resolver remain pending. The new record separates before-proof, automated/Simulator results and physical-device gaps; earlier Party A and touch phone observations do not validate this resolver. Party B and TestFlight have not started.
+
 ### Party A stop criterion
 
 Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. The maintainer accepted this budget when proceeding with the recommendations; it applies when Party A is assigned and does not alter the completed Stage 1 criterion.
@@ -129,6 +135,7 @@ Tomas needs the coastal supply team to arrange future inland deliveries, so meet
 Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Add focused Swift Testing cases with the relevant implementation:
 
 - Leader cycling, mode restrictions, simultaneous switch/action priority and no held-action replay.
+- Exact authored collision/clearance regressions and fixed-seed whole-party runs, including wall grazing, reversals and leader switches; record #25 outcomes separately from earlier route checks.
 - Role validation, accessible approaches and revalidation after moving or switching.
 - Both barrier solutions independently, shared opening state and harmless requests after opening.
 - Shared part/progress surviving switches; repair without the part; duplicate requests; full pickup → repair → call progression.

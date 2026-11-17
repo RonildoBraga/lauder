@@ -107,8 +107,8 @@ struct PartyTrail {
         return
       }
       guard let request = requests[member] else {
-        // Gravity/collision resolution can leave a submillimetre XZ residue even on a quiet
-        // body. Keep it separate from topology, bounded against the same exact cursor.
+        // Keep any numerical XZ residue separate from topology, bounded against the
+        // same exact cursor. A quiet body is otherwise unchanged by the flat-floor resolver.
         let residue = simd_distance(start, actual)
         if residue > Self.resolvedMovementAllowance {
           diagnostic = .disconnected(member)

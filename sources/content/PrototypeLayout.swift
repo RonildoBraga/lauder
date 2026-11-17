@@ -60,8 +60,6 @@ enum PrototypeLayout {
   static let cameraOffset: SIMD3<Float> = [5.25, 10, 8.4]
   static let characterHeight: Float = 1.7
   static let characterRadius: Float = 0.26
-  // All current obstacles cross this horizontal query plane; there is no vertical traversal.
-  static let obstacleSweepHeight: Float = 0.1
   static let speed: Float = 2.6
   static let movementDeadZone: Float = 0.15
   static let interactionRadius: Float = 2.3
@@ -123,4 +121,22 @@ enum PrototypeLayout {
       observation: "A regulator sits among the depot equipment."
     ),
   ]
+
+  // The flat-floor footprint comes from the same dimensions as the visible scenery.
+  // Ground, decorations and party members do not block horizontal movement.
+  static let obstacles: [PartyMotion.Box] =
+    boxes.filter { $0.id != .ground }.map {
+      footprint(position: $0.position, size: $0.size)
+    }
+    + points.map {
+      footprint(
+        position: $0.position,
+        size: $0.id == .transmitter ? transmitterSize : regulatorSize)
+    }
+
+  private static func footprint(position: SIMD3<Float>, size: SIMD3<Float>) -> PartyMotion.Box {
+    let centre = SIMD2(position.x, position.z)
+    let half = SIMD2(size.x, size.z) / 2
+    return PartyMotion.Box(minimum: centre - half, maximum: centre + half)
+  }
 }
