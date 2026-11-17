@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls pass build/tests and Simulator checks, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation); the touch PR is not yet merged. The maintainer has assigned the [#25 wall-contact correction](wall-contact.md); validation and Claude's review are pending, with no fix merge or TestFlight start yet. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls pass build/tests and Simulator checks, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation); the touch PR is not yet merged. The assigned [#25 wall-contact correction](wall-contact.md) passes build/tests, a 72-session Release acceptance matrix and rendered Simulator checks; Claude's review and its phone milestone check remain pending, with no fix merge or TestFlight start yet. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -96,7 +96,7 @@ Use three clearly named, differently coloured primitive stand-ins on the existin
 
 The maintainer assigned the [#25 fix](wall-contact.md) and Claude review before merge or TestFlight. Resolve the flat-floor circular footprint continuously against the layout's axis-aligned rectangles in plain Swift: exact rounded corners, radius plus 2 mm normal skin even at unobstructed endpoints, and outward/tangent escape from existing overlap without idle snapping. Check both movement legs and the final start-to-end chord. Use the same geometry for complete trail-shortcut clearance, with no sliding or overlap recovery on shortcuts. RealityKit continues rendering; remove obsolete query/physics components without adding slopes or a physics/navigation system. Preserve trail bounds, diagnostics and correction guards.
 
-Validation and review remain pending. The new record separates before-proof, automated/Simulator results and physical-device gaps; earlier Party A and touch phone observations do not validate this resolver. Party B and TestFlight have not started.
+Build/tests, the 72-session Release acceptance matrix and rendered Simulator checks pass. Claude's review and a phone milestone check for this resolver remain pending. The new record separates before-proof, automated/Simulator results and physical-device gaps; earlier Party A and touch phone observations do not validate this resolver. Party B and TestFlight have not started.
 
 ### Party A stop criterion
 
