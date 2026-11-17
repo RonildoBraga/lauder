@@ -19,6 +19,11 @@
       case mark(String)
       case expectTogether(maxDistance: Float)
       case expectInDepot
+      /// Switch until this member leads.
+      case lead(PartyMember)
+      /// Press the action for one frame.
+      case act
+      case expectPassage(open: Bool)
     }
 
     struct Frame {
@@ -59,7 +64,9 @@
       let worstLeaderGap: Double
     }
 
-    static let scenarioNames = ["route", "leaders", "reversals", "switches", "walls", "all"]
+    static let scenarioNames = [
+      "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "all",
+    ]
     static let walkTimeout: Float = 30
 
     let name: String
@@ -68,6 +75,7 @@
     private var stepTime: Float = 0
     private var elapsed: Float = 0
     private var switchFrame = 0
+    private var presses = 0
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -105,9 +113,10 @@
 
     /// The raw input for this frame. The first half second is neutral, so the release gate
     /// clears exactly as it does for a player.
-    mutating func input(leaderPosition: SIMD2<Float>, positions: [PartyMember: SIMD2<Float>])
-      -> InputRules.Raw
-    {
+    mutating func input(
+      leader: PartyMember, leaderPosition: SIMD2<Float>,
+      positions: [PartyMember: SIMD2<Float>], passageOpen: Bool
+    ) -> InputRules.Raw {
       guard summary == nil else { return InputRules.Raw() }
       if startedAt == nil { startedAt = Date() }
       guard elapsed >= 0.5 else { return InputRules.Raw() }
@@ -146,6 +155,7 @@
           return InputRules.Raw()
         case .mark(let label):
           marks.append(Summary.Mark(name: label, seconds: Double(elapsed)))
+          announce(label)
           advance()
         case .expectTogether(let maximum):
           for (member, position) in positions
@@ -159,6 +169,40 @@
           for (member, position) in positions where !Self.isInDepot(position) {
             failures.append(
               "\(member.displayName) was outside the depot at \(Self.describe(position))")
+          }
+          advance()
+        case .lead(let member):
+          if leader == member {
+            switchFrame = 0
+            presses = 0
+            advance()
+            continue
+          }
+          // One press, one release, then look again; three presses reach anyone.
+          switchFrame += 1
+          if switchFrame == 1 {
+            presses += 1
+            if presses > 3 {
+              failures.append("could not switch to \(member.displayName)")
+              switchFrame = 0
+              presses = 0
+              advance()
+              continue
+            }
+            return InputRules.Raw(controllerSwitch: true)
+          }
+          switchFrame = 0
+          return InputRules.Raw()
+        case .act:
+          switchFrame += 1
+          if switchFrame == 1 { return InputRules.Raw(controllerAction: true) }
+          switchFrame = 0
+          advance()
+          return InputRules.Raw()
+        case .expectPassage(let open):
+          if passageOpen != open {
+            failures.append(
+              "the passage was \(passageOpen ? "open" : "closed") at \(Self.seconds(elapsed))")
           }
           advance()
         }
@@ -220,6 +264,28 @@
       stepTime = 0
     }
 
+    /// Append the mark to marks.log as it happens, so `scripts/playtest` can take a screenshot
+    /// at that moment: "<seconds since 1970>\t<orientation>\t<name>".
+    private func announce(_ label: String) {
+      guard let folder = Self.folder(for: name) else { return }
+      try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let file = folder.appendingPathComponent("marks.log")
+      let line = "\(Date().timeIntervalSince1970)\t\(orientation)\t\(label)\n"
+      guard let data = line.data(using: .utf8) else { return }
+      if let handle = try? FileHandle(forWritingTo: file) {
+        handle.seekToEndOfFile()
+        handle.write(data)
+        try? handle.close()
+      } else {
+        try? data.write(to: file)
+      }
+    }
+
+    private static func folder(for scenario: String) -> URL? {
+      FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+        .appendingPathComponent("playtest/\(scenario)", isDirectory: true)
+    }
+
     private mutating func finish() {
       guard summary == nil else { return }
       let result = Summary(
@@ -239,11 +305,7 @@
     }
 
     private func write(_ result: Summary) {
-      guard
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-          .first
-      else { return }
-      let folder = documents.appendingPathComponent("playtest/\(name)", isDirectory: true)
+      guard let folder = Self.folder(for: name) else { return }
       try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
       try? trace.write(
         to: folder.appendingPathComponent("trace.csv"), atomically: true, encoding: .utf8)
@@ -256,12 +318,39 @@
 
     // MARK: - Scenarios
 
-    private static let route: [Step] = [
+    /// Lara opens the service passage from the latch approach (Party B).
+    private static let openWithLara: [Step] = [
+      .lead(.lara), .walk([2.5, 3]), .walk([3.2, -5]), .mark("at the latch"),
+      .wait(seconds: 1), .act,
+      .expectPassage(open: true), .mark("passage open"),
+    ]
+
+    /// Through the open passage into the depot and back to the street.
+    private static let roundTrip: [Step] = [
       .walk([2.5, 3]), .walk([2.5, -4.5]), .mark("doorway in"), .walk([5, -4.5]),
       .walk([6.5, -3]), .wait(seconds: 2), .expectInDepot, .mark("in the depot"),
       .walk([5, -4.5]), .mark("doorway out"), .walk([2.5, -4.5]), .walk([2.5, 3]),
       .walk([-6, 3]), .wait(seconds: 2), .expectTogether(maxDistance: 2.5),
       .mark("back on the street"),
+    ]
+
+    private static let route = openWithLara + roundTrip
+
+    /// Tomas opens the passage from the loose-panel approach instead.
+    private static let panel: [Step] = [
+      .lead(.tomas), .walk([2.5, 3]), .walk([3.2, -4]), .mark("at the panel"),
+      .wait(seconds: 1), .act,
+      .expectPassage(open: true), .walk([5, -4.2]), .walk([6.5, -3]), .wait(seconds: 2),
+      .expectInDepot, .mark("in the depot"),
+    ]
+
+    /// Miki cannot open the passage, and nor can Tomas from the latch.
+    private static let closed: [Step] = [
+      .lead(.miki), .walk([2.5, 3]), .walk([3.2, -5]), .mark("Miki at the latch"),
+      .wait(seconds: 1), .act, .expectPassage(open: false), .lead(.tomas), .walk([3.2, -5]),
+      .mark("Tomas at the latch"), .wait(seconds: 1), .act, .expectPassage(open: false),
+      .wait(seconds: 1.5),
+      .expectTogether(maxDistance: 2.5),
     ]
 
     private static let reversals: [Step] = [
@@ -280,21 +369,26 @@
       .expectTogether(maxDistance: 2.5), .mark("settled after switches"),
     ]
 
-    private static let walls: [Step] = [
-      .walk([-10, 8.6]), .push([1, 0.15], seconds: 3), .mark("wall slide"), .wait(seconds: 1),
-      .walk([2.5, 3]), .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([9.3, -6.3]),
-      .push([1, -1], seconds: 1.5), .mark("depot corner"), .wait(seconds: 2),
-      .expectInDepot, .expectTogether(maxDistance: 2.5),
-    ]
+    private static let walls: [Step] =
+      [.walk([-10, 8.6]), .push([1, 0.15], seconds: 3), .mark("wall slide"), .wait(seconds: 1)]
+      + openWithLara + [
+        .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([9.3, -6.3]),
+        .push([1, -1], seconds: 1.5), .mark("depot corner"), .wait(seconds: 2),
+        .expectInDepot, .expectTogether(maxDistance: 2.5),
+      ]
 
     static func steps(for scenario: String) -> [Step]? {
       switch scenario {
       case "route": route
-      case "leaders": route + [.switchLeader] + route + [.switchLeader] + route
+      case "panel": panel
+      case "closed": closed
+      case "leaders":
+        openWithLara + [.lead(.miki)] + roundTrip + [.lead(.lara)] + roundTrip
+          + [.lead(.tomas)] + roundTrip
       case "reversals": reversals
       case "switches": switches
       case "walls": walls
-      case "all": route + reversals + switches + walls
+      case "all": closed + route + reversals + switches + walls
       default: nil
       }
     }

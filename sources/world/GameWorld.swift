@@ -17,16 +17,23 @@ final class GameWorld {
   let controls = GameControls()
   let session = GameSession()
   private(set) var nearbyName: String?
-  private(set) var observation = "Walk the party through the service passage, then return."
+  private(set) var observation =
+    "The front entrance is blocked. Find a way through the service passage, then return."
   private(set) var diagnostic: String?
+  /// The leader's contextual action here, such as "Reach latch"; nil when there is none.
+  private(set) var actionName: String?
+  /// Role feedback at the closed passage, such as which member could open it.
+  private(set) var hint: String?
 
   @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
   @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
   @ObservationIgnored private let camera = PerspectiveCamera()
-  @ObservationIgnored private let motion = PartyMotion(
-    radius: PrototypeLayout.characterRadius, obstacles: PrototypeLayout.obstacles)
-  @ObservationIgnored private let grid = NavigationGrid.prototype
+  @ObservationIgnored private var motion = PartyMotion(
+    radius: PrototypeLayout.characterRadius,
+    obstacles: PrototypeLayout.obstacles(passageOpen: false))
+  @ObservationIgnored private var grid = NavigationGrid.forPassage(open: false)
+  @ObservationIgnored private var barrierParts: [Entity] = []
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
@@ -78,6 +85,11 @@ final class GameWorld {
       root.addChild(entity)
     }
     addLandmarks(style: style)
+    addBarrier(style: style)
+    // Every action the session can be asked for must be defined exactly once, checked at load.
+    for id in PrototypeLayout.ActionID.allCases { _ = PrototypeLayout.interaction(id) }
+    // Build the open-passage route grid while loading, not on the frame the passage opens.
+    _ = NavigationGrid.forPassage(open: true)
     SceneDressing.add(to: root, style: style)
     style.addLighting(to: root)
     camera.camera.fieldOfViewInDegrees = 42
@@ -136,7 +148,8 @@ final class GameWorld {
       if playtest != nil, let body = bodies[session.leader] {
         playtest?.tick(dt: Float(deltaTime))
         controls.scriptedRaw = playtest?.input(
-          leaderPosition: SIMD2(body.position.x, body.position.z), positions: positions)
+          leader: session.leader, leaderPosition: SIMD2(body.position.x, body.position.z),
+          positions: positions, passageOpen: session.passageOpen)
       }
     #endif
     let input = controls.sample(mode: session.mode)
@@ -173,11 +186,37 @@ final class GameWorld {
         dt: Float(deltaTime),
         milliseconds: Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
     #endif
-    if input.actionPressed {
-      observation =
-        nearby?.observation
-        ?? "The front entrance is blocked. The whole party can use the side passage."
+    if input.actionPressed { performAction() }
+  }
+
+  /// The leader's action press. Identity, approach and progress are checked afresh, so a
+  /// prompt left over from before a move or a switch cannot act.
+  func performAction() {
+    guard let body = bodies[session.leader] else { return }
+    let position = SIMD2(body.position.x, body.position.z)
+    if let interaction = PrototypeLayout.interactions.first(where: {
+      $0.approach.contains(position)
+    }) {
+      switch session.perform(interaction.id, by: session.leader) {
+      case .opened:
+        observation = interaction.result
+        openPassage()
+      case .alreadyOpen:
+        observation = "The passage is already open."
+      case .notEligible:
+        observation =
+          session.leader == .miki ? PrototypeLayout.barrierHint : interaction.suggestion
+      case .unavailable:
+        break
+      }
+      updateNearby()
+      return
     }
+    observation =
+      nearby?.observation
+      ?? (session.passageOpen
+        ? "The front entrance is blocked. The service passage is open."
+        : PrototypeLayout.barrierHint)
   }
 
   // Production spatial update, also exercised by deterministic route/soak tests.
@@ -218,11 +257,17 @@ final class GameWorld {
     let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { [motion] from, to in
       motion.canTraverse(from: from, to: to)
     }
+    // While the passage is closed, companions keep clear of the spots where Lara or Tomas
+    // must stand to open it.
+    let passageOpen = session.passageOpen
     let targets = planner.targets(
       for: SquadPlanner.Input(
         leader: leader, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         positions: current, route: route, dt: dt),
-      grid: grid, isClear: isClear)
+      grid: grid, isClear: isClear,
+      avoid: { point in
+        !passageOpen && PrototypeLayout.interactions.contains { $0.approach.contains(point) }
+      })
     companionTargets = targets
     for member in PartyMember.allCases where member != leader {
       guard let start = current[member], let target = targets[member],
@@ -315,6 +360,7 @@ final class GameWorld {
 
   private func updateNearby() {
     guard let player = bodies[session.leader] else { return }
+    updatePassagePrompt(at: SIMD2(player.position.x, player.position.z))
     let position = player.position * [1, 0, 1]
     let closest = PrototypeLayout.points.min {
       simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
@@ -374,6 +420,62 @@ final class GameWorld {
       if let status = playtest?.status, observation != status { observation = status }
     }
   #endif
+
+  /// The action prompt or role feedback for the active body at the closed passage.
+  private func updatePassagePrompt(at position: SIMD2<Float>) {
+    var name: String?
+    var feedback: String?
+    if !session.passageOpen {
+      if let interaction = PrototypeLayout.interactions.first(where: {
+        $0.approach.contains(position)
+      }) {
+        if interaction.member == session.leader {
+          name = interaction.name
+        } else {
+          // Miki explains both alternatives; the others point to the right person.
+          feedback =
+            session.leader == .miki ? PrototypeLayout.barrierHint : interaction.suggestion
+        }
+      } else {
+        let centre = SIMD2(PrototypeLayout.barrierPosition.x, PrototypeLayout.barrierPosition.z)
+        if simd_distance(position, centre) < PrototypeLayout.interactionRadius {
+          feedback = PrototypeLayout.barrierHint
+        }
+      }
+    }
+    if actionName != name { actionName = name }
+    if hint != feedback { hint = feedback }
+  }
+
+  /// Project the session's open passage onto the world: the barrier goes, and movement and
+  /// routes use the open layout.
+  private func openPassage() {
+    motion = PartyMotion(
+      radius: PrototypeLayout.characterRadius,
+      obstacles: PrototypeLayout.obstacles(passageOpen: true))
+    grid = NavigationGrid.forPassage(open: true)
+    for part in barrierParts { part.isEnabled = false }
+  }
+
+  /// The closed barrier, with a latch at its top for Lara and a loose panel at its foot for
+  /// Tomas, both visible from the street side.
+  private func addBarrier(style: SceneStyle) {
+    let position = PrototypeLayout.barrierPosition
+    let size = PrototypeLayout.barrierSize
+    let barrier = style.block(
+      size: size, at: position, material: style.material(for: .hazard))
+    barrier.name = "passage.barrier"
+    let latch = style.block(
+      size: [0.12, 0.12, 0.3], at: position + [-0.12, size.y / 2 + 0.06, -0.55],
+      material: style.signal)
+    latch.name = "passage.latch"
+    let panel = style.block(
+      size: [0.04, 0.45, 0.55], at: position + [-size.x / 2 - 0.02, -0.3, 0.5],
+      material: style.material(for: .depot))
+    panel.name = "passage.panel"
+    barrierParts = [barrier, latch, panel]
+    for part in barrierParts { root.addChild(part) }
+  }
 
   private func addLandmarks(style: SceneStyle) {
     for point in PrototypeLayout.points {

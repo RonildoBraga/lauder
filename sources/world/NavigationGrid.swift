@@ -87,16 +87,25 @@ struct NavigationGrid: Sendable {
     self.region = region
   }
 
-  /// The prototype's floor and blockers, with the body radius, 2 mm skin and a 3 cm margin.
-  static let prototype: NavigationGrid = {
+  /// The prototype's floor and fixed blockers, with the body radius, 2 mm skin and a 3 cm
+  /// margin. The service passage is open in this grid.
+  static let prototype = layout(PrototypeLayout.obstacles)
+  /// The same grid with Party B's barrier closing the service passage.
+  static let closedPassage = layout(PrototypeLayout.obstacles(passageOpen: false))
+
+  static func forPassage(open: Bool) -> NavigationGrid {
+    open ? prototype : closedPassage
+  }
+
+  private static func layout(_ obstacles: [PartyMotion.Box]) -> NavigationGrid {
     let ground = PrototypeLayout.box(.ground)
     let centre = SIMD2(ground.position.x, ground.position.z)
     let half = SIMD2(ground.size.x, ground.size.z) / 2
     return NavigationGrid(
       minimum: centre - half, maximum: centre + half, cellSize: 0.2,
       clearance: PrototypeLayout.characterRadius + PartyMotion.skin + 0.03,
-      tightWidth: 1.5, obstacles: PrototypeLayout.obstacles)
-  }()
+      tightWidth: 1.5, obstacles: obstacles)
+  }
 
   func isWalkable(_ point: SIMD2<Float>) -> Bool {
     index(of: point).map { walkable[$0] } ?? false

@@ -6,17 +6,23 @@ import simd
 struct TouchControls: UIViewRepresentable {
   let controls: GameControls
   let generation: Int
+  /// "Look", or the leader's contextual action such as "Reach latch".
+  let actionTitle: String
   let nextLeaderName: String
   let isPaused: Bool
 
   func makeUIView(context: Context) -> Surface {
     let view = Surface(controls: controls)
-    view.update(nextLeaderName: nextLeaderName, isPaused: isPaused, generation: generation)
+    view.update(
+      actionTitle: actionTitle, nextLeaderName: nextLeaderName, isPaused: isPaused,
+      generation: generation)
     return view
   }
 
   func updateUIView(_ uiView: Surface, context: Context) {
-    uiView.update(nextLeaderName: nextLeaderName, isPaused: isPaused, generation: generation)
+    uiView.update(
+      actionTitle: actionTitle, nextLeaderName: nextLeaderName, isPaused: isPaused,
+      generation: generation)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -66,10 +72,11 @@ struct TouchControls: UIViewRepresentable {
 
     required init?(coder: NSCoder) { nil }
 
-    func update(nextLeaderName: String, isPaused: Bool, generation: Int) {
+    func update(actionTitle: String, nextLeaderName: String, isPaused: Bool, generation: Int) {
       if self.generation != generation {
         reset()
       }
+      action.setTitle(actionTitle)
       cycle.setTitle("Next: \(nextLeaderName)")
       cycle.accessibilityLabel = "Lead as \(nextLeaderName)"
       pause.setTitle(isPaused ? "Resume" : "Pause")

@@ -27,7 +27,7 @@ struct GameView: View {
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 5) {
           Text("\(world.session.leader.displayName) · \(world.session.leader.role)").font(.headline)
-          Text("Party A · Explore the depot, then return.")
+          Text("Party B · Find a way into the depot, then return.")
             .font(.subheadline)
           HStack(spacing: 8) {
             ForEach(PartyMember.allCases, id: \.self) { member in
@@ -44,12 +44,15 @@ struct GameView: View {
             .font(.caption)
           }
           Text(world.observation).font(.caption)
+          if let hint = world.hint {
+            Text(hint).font(.caption).foregroundStyle(Color(red: 1, green: 0.84, blue: 0.6))
+          }
           if let diagnostic = world.diagnostic {
             Text(diagnostic).font(.caption).foregroundStyle(.orange)
           }
           if !world.controls.touchControlsEnabled {
             Label(
-              world.nearbyName.map { "Look at \($0)" } ?? "Look around",
+              world.actionName ?? world.nearbyName.map { "Look at \($0)" } ?? "Look around",
               systemImage: world.controls.actionSymbol ?? "a.circle"
             )
             .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
@@ -136,6 +139,7 @@ struct GameView: View {
       if world.controls.touchControlsEnabled {
         TouchControls(
           controls: world.controls, generation: world.controls.touchGeneration,
+          actionTitle: world.actionName ?? "Look",
           nextLeaderName: world.session.leader.next.displayName,
           isPaused: world.isPaused)
       }

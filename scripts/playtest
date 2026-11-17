@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run scripted playtests in the iOS Simulator and report what happened.
 
-Builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen, then
-collects the run's summary and trace and cuts a still for every marked moment. The scenarios
+Builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen,
+screenshots every marked moment as it happens, then collects the run's summary and trace. The scenarios
 live in sources/world/Playtest.swift. Results go to .local/playtest/<time>/ unless --output is
 given; that folder is ignored by Git.
 
@@ -26,7 +26,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent.parent
 BUNDLE = "com.ronildobraga.lauder"
-SCENARIOS = ["route", "leaders", "reversals", "switches", "walls", "all"]
+SCENARIOS = ["route", "panel", "closed", "leaders", "reversals", "switches", "walls", "all"]
 PRIVATE_IDENTIFIER = re.compile(
     r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
     re.IGNORECASE,
@@ -120,26 +120,25 @@ def documents(device):
     return Path(result.stdout.strip()) / "Documents/playtest"
 
 
-def stills(video, summary, recorded_at, folder):
-    if not shutil.which("ffmpeg"):
-        say("  ffmpeg not found; skipping stills.")
-        return []
-    saved = []
-    offset = summary["startedAt"] - recorded_at
-    # The Simulator records the display in portrait; turn landscape frames upright.
-    turn = {"landscapeRight": ["-vf", "transpose=2"], "landscapeLeft": ["-vf", "transpose=1"]}
-    rotation = turn.get(summary.get("orientation"), [])
-    for mark in summary["marks"]:
-        moment = max(0.0, offset + mark["seconds"] + 0.1)
-        name = re.sub(r"[^a-z0-9]+", "-", mark["name"].lower()).strip("-")
-        path = folder / f"{summary['scenario']}-{len(saved) + 1:02d}-{name}.jpg"
-        result = run([
-            "ffmpeg", "-loglevel", "error", "-y", "-ss", f"{moment:.2f}", "-i", str(video),
-            *rotation, "-frames:v", "1", "-q:v", "3", str(path),
-        ])
-        if result.returncode == 0:
-            saved.append(path)
-    return saved
+def capture(device, mark, number, scenario, folder):
+    """Screenshot the simulator now, turned upright for a landscape app."""
+    _, orientation, name = mark
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    path = folder / f"{scenario}-{number:02d}-{slug}.jpg"
+    raw = folder / f".{scenario}-{number:02d}.png"
+    if run(["xcrun", "simctl", "io", device, "screenshot", "--type=png", str(raw)]).returncode:
+        return None
+    # Screenshots normally follow the interface orientation already; turn one only if it came
+    # out in portrait while the app runs in landscape. sips rotates clockwise.
+    size = run(["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(raw)]).stdout
+    width = int(re.search(r"pixelWidth: (\d+)", size)[1]) if "pixelWidth" in size else 0
+    height = int(re.search(r"pixelHeight: (\d+)", size)[1]) if "pixelHeight" in size else 0
+    turn = []
+    if height > width:
+        turn = {"landscapeRight": ["-r", "270"], "landscapeLeft": ["-r", "90"]}.get(orientation, [])
+    result = run(["sips", "-s", "format", "jpeg", *turn, str(raw), "--out", str(path)])
+    raw.unlink(missing_ok=True)
+    return path if result.returncode == 0 else None
 
 
 def play(device, scenario, folder, timeout):
@@ -147,18 +146,37 @@ def play(device, scenario, folder, timeout):
     results = documents(device) / scenario
     shutil.rmtree(results, ignore_errors=True)
     video = folder / f"{scenario}.mp4"
-    recorder, recorded_at = start_recording(device, video)
+    images = []
+    recorder, _ = start_recording(device, video)
     say(f"Playing {scenario}.")
     try:
         launched = run(["xcrun", "simctl", "launch", device, BUNDLE, "-LauderPlaytest", scenario])
         if launched.returncode:
             raise SystemExit(f"Launch failed: {launched.stderr.strip()}")
         summary_file = results / "summary.json"
+        marks_file = results / "marks.log"
         deadline = time.time() + timeout
+        seen = 0
+
+        def capture_new_marks():
+            # Screenshot each marked moment as the app announces it.
+            nonlocal seen
+            if not marks_file.exists():
+                return
+            lines = [line.split("\t", 2) for line in marks_file.read_text().splitlines()]
+            for mark in lines[seen:]:
+                if len(mark) == 3:
+                    image = capture(device, mark, len(images) + 1, scenario, folder)
+                    if image:
+                        images.append(image)
+            seen = len(lines)
+
         while not summary_file.exists():
             if time.time() > deadline:
                 raise SystemExit(f"{scenario} did not finish within {timeout} s.")
-            time.sleep(1)
+            capture_new_marks()
+            time.sleep(0.1)
+        capture_new_marks()  # A mark in the last moments before the summary was written.
         time.sleep(1)  # Let the final frames reach the recording.
     finally:
         stop_recording(recorder)
@@ -166,7 +184,7 @@ def play(device, scenario, folder, timeout):
     summary = json.loads(summary_file.read_text())
     shutil.copy(summary_file, folder / f"{scenario}-summary.json")
     shutil.copy(results / "trace.csv", folder / f"{scenario}-trace.csv")
-    return summary, stills(video, summary, recorded_at, folder)
+    return summary, images
 
 
 def report(summary, images, folder):

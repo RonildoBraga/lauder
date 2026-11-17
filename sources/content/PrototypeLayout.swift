@@ -122,6 +122,56 @@ enum PrototypeLayout {
     ),
   ]
 
+  enum ActionID: String, CaseIterable, Sendable {
+    case reachLatch = "passage.reach-latch"
+    case shiftPanel = "passage.shift-panel"
+  }
+
+  /// A contextual action for one eligible member, usable only while the active body stands in
+  /// its approach area. Approaches are authored on the street side of the closed passage.
+  struct Interaction {
+    let id: ActionID
+    let name: String
+    let member: PartyMember
+    let approach: PartyMotion.Box
+    /// Shown when another member leads at this approach.
+    let suggestion: String
+    /// Shown when the action opens the passage.
+    let result: String
+  }
+
+  // Party B: one closed barrier fills the 1.8 m service opening in the depot's west wall.
+  // Either Lara's latch or Tomas's loose panel opens the same ordinary ground passage.
+  static let barrierPosition: SIMD3<Float> = [4, 0.55, -4.5]
+  static let barrierSize: SIMD3<Float> = [0.35, 1.1, 1.8]
+  static let barrierFootprint = footprint(position: barrierPosition, size: barrierSize)
+  static let barrierHint =
+    "The service passage is closed. Lara could reach the latch, or Tomas could shift the loose panel."
+
+  static let interactions: [Interaction] = [
+    Interaction(
+      id: .reachLatch, name: "Reach latch", member: .lara,
+      approach: PartyMotion.Box(minimum: [2.8, -5.35], maximum: [3.6, -4.65]),
+      suggestion: "Lara could reach the latch at the top of the barrier.",
+      result: "Lara reaches up and releases the latch. The passage is open for everyone."),
+    Interaction(
+      id: .shiftPanel, name: "Shift panel", member: .tomas,
+      approach: PartyMotion.Box(minimum: [2.8, -4.35], maximum: [3.6, -3.65]),
+      suggestion: "Tomas could shift the loose panel at the foot of the barrier.",
+      result: "Tomas braces and shifts the loose panel aside. The passage is open for everyone."),
+  ]
+
+  static func interaction(_ id: ActionID) -> Interaction {
+    let matches = interactions.filter { $0.id == id }
+    precondition(matches.count == 1, "Layout must contain exactly one \(id.rawValue) action.")
+    return matches[0]
+  }
+
+  /// Movement blockers for the current passage state.
+  static func obstacles(passageOpen: Bool) -> [PartyMotion.Box] {
+    passageOpen ? obstacles : obstacles + [barrierFootprint]
+  }
+
   // The flat-floor footprint comes from the same dimensions as the visible scenery.
   // Ground, decorations and party members do not block horizontal movement.
   static let obstacles: [PartyMotion.Box] =

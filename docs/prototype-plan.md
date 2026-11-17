@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls are merged, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation). The [#25 wall-contact correction](wall-contact.md), the [#28 follower-spacing fix](follower-spacing.md) and [squad movement phase S1](squad-s1.md) are merged; S1's remaining checks, including phone timing, are listed in its record. TestFlight has not started. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls are merged, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation). The [#25 wall-contact correction](wall-contact.md), the [#28 follower-spacing fix](follower-spacing.md) and [squad movement phase S1](squad-s1.md) are merged; S1's remaining checks, including phone timing, are listed in its record. TestFlight has not started. [Party B](party-b.md), the barrier that Lara or Tomas can open, passes build/tests and rendered Simulator playtests; it awaits review and merge, and a hand playtest. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies, dialogue and B/C interactions remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -111,6 +111,8 @@ The maintainer [accepted ADR 0003](https://github.com/RonildoBraga/lauder/pull/3
 Allow **three focused work sessions** to establish a reliable round trip under every leader, including switches and reversals at the service opening. Record each session's attempt and actual result. If that is still unreliable at the end of the third session, stop party implementation before adding B or C, document the blocker and reassess with the maintainer. Do not extend the budget automatically. Named alternatives are a simpler route/layout or a separately agreed constrained regroup policy. The maintainer accepted this budget when proceeding with the recommendations; it applies when Party A is assigned and does not alter the completed Stage 1 criterion.
 
 ## Party B — prove alternative specialist actions
+
+**Implemented, awaiting review.** The [Party B record](party-b.md) lists what was built and checked. Nobody has played it by hand yet.
 
 Add one closed barrier to the existing service passage. Lara can **Reach latch** from the ground, or Tomas can **Shift loose panel** from a stable grip. Each is a contextual action conveyed by brief text or a simple pose. No free jump, climbing mode, vertical control, simulated heavy-object physics or inaccessible follower ledge is needed.
 
