@@ -1,7 +1,7 @@
 # The Quiet Yard
 
 **Date:** 17 November 2026\
-**Status:** Proposed encounter for design review, not implemented or assigned for implementation. Claude has [reviewed it](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6942990880); companions keep trail following by [maintainer decision](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943247165). This is a future exercise outside the current Party A–C repair prototype; it does not add a fight to that slice.
+**Status:** Proposed encounter for design review, not implemented or assigned for implementation. Claude's review is pending. This is a future exercise outside the current Party A–C repair prototype; it does not add a fight to that slice.
 
 Read the proposed [combat identities](../story/story-bible.md#combat-identities), the current [gameplay walkthrough](../gameplay-script.md) and the [combat design review gate](../prototype-plan.md#combat-design-review-gate) alongside this scene. Character histories, final dialogue, control bindings and combat tuning remain proposals.
 
@@ -27,7 +27,7 @@ The party reaches the covered approach. One unit crosses a strip of sunlight; th
 >
 > **Miki:** We can leave them. Let’s look first.
 
-The player can continue along the towpath immediately, watch a patrol cycle from safety or enter the covered route. Companions do not start a fight because a unit is nearby. They follow the leader's route a short distance behind.
+The player can continue along the towpath immediately, watch a patrol cycle from safety or enter the covered route. Companions do not start a fight because a unit is nearby. They follow the chosen approach, leave room to reverse and avoid exposing themselves merely to fill a formation slot.
 
 The same detection rules apply to every party member. A visible companion can be noticed just as the leader can; switching does not make anyone disappear from a unit's attention. The layout and spacing must make the covered route credible for the whole party. This is observation and route choice, not a separate stealth minigame with crouching, noise meters or precision timing.
 
@@ -41,7 +41,7 @@ When a unit notices someone, its warning and preparation give the player a clear
 
 > **Lara:** Past the van, then behind that wall. There’s room for all of us.
 
-The player need not press a formation button to fit through the route. Companions walk the leader's route a short distance behind, so the crossing window must stay open long enough for the last of them, and the stretch behind the leader must be covered as well as the leader's own position.
+The player need not press a formation button to fit through the route. Companions temporarily compress their spacing when necessary, then settle into nearby clear positions. They do not copy every footstep or wander into sight to maintain an exact triangle. The crossing window must be broad enough for the whole party, not only the leader.
 
 At the case, the player switches to Miki and approaches to inspect the seals and confirm that they are usable before taking them. This is her salvage contribution, not a combat lock or a remote action by a companion elsewhere. The inspection and pickup are readable contextual actions; the player does not manually target individual seals or tiny machine components.
 
@@ -73,7 +73,7 @@ The tactical decision is where to stand and when to move, interrupt, hold or lea
 
 ## 4. Break contact
 
-Moving back towards the covered exit is enough to begin leaving. Companions follow the leader's route back, so no separate regroup order is needed: they stop pressing targets and can defend the withdrawal without resuming a chase. On a reversal the leader passes back through them, as in Party A, and they then follow. Switching to the member nearest the exit is another way to lead the retreat.
+Moving back towards the covered exit is enough to begin leaving. A proposed **Regroup** order can make that intention explicit: companions abandon attempts to finish a target, prioritise the exit and stay with the controlled character. They can defend the withdrawal without resuming a chase.
 
 The service wall supplies real protection. The clearly marked guard perimeter explains why the units do not pursue along the towpath. Both matter: crossing an invisible line must not make an exposed party invulnerable. Shots already in flight behave normally, and every member must actually reach cover and leave the guarded area.
 
@@ -105,4 +105,4 @@ This is a local sign of continuing human work. The security warning and repair d
 - Is the warning readable enough to permit backing off? Does retreat work after either collecting the seals or damaging a unit, without a chase restarting?
 - Can the player read the threat, cover, destination and party on a phone while using assisted aim and a small number of inputs?
 
-Companions follow the leader's route throughout. **Close/Spread** spacing, a possible hold-fire command and their D-pad and touch equivalents remain proposed controls, not settled bindings. Their design should serve these decisions rather than require a control for every behaviour. Health, ammunition, cooldown, upgrade and enhancement-resource systems are not settled by this screenplay. No implementation, build, device run or performance result is claimed.
+**Close/Spread**, a formation-cycle button, D-pad orders, Regroup and their touch equivalents remain proposed controls, not settled bindings. Their design should serve these decisions rather than require a control for every behaviour. Health, ammunition, cooldown, upgrade and enhancement-resource systems are not settled by this screenplay. No implementation, build, device run or performance result is claimed.
