@@ -59,12 +59,12 @@ Frame times still make no difference: rows with steady and uneven frame times gi
 | In open ground, each companion within 0.6 m of their slot 90% of the time | Passes for a straight full-speed run: `companionsKeepCloseSlotsBesideTheLeadersPathInOpenGround`. In random play the figure is lower; see Validation |
 | A settled companion does not move while the leader stands still | Passes: no movement at all over 5 s in `settledCompanionsStayStillWhileTheLeaderWaits` |
 | #25 and #31 soak batches: no stuck member, no penetration, nothing non-finite | Passes in the Simulator replay under Validation |
-| Maintainer playtest in Simulator, then the baseline phone with controller and touch | **Pending** |
+| Maintainer playtest in Simulator, then the baseline phone with controller and touch | **Partly done.** On 18 November the maintainer played a Release build on the baseline iPhone and reported: “it looks good”. Which inputs and situations were tried was not recorded, and a Simulator playtest was not separately reported |
 | Phone timing: party update under 1 ms per frame on average, no frame over 4 ms | **Pending**; only Mac Simulator timings exist |
 
 ## Limits
 
-- Simulator only, with synthetic input and a short rendered touch check. Nobody has played it by hand or on a phone, and only the maintainer's playtest can judge whether it feels natural.
+- Apart from the maintainer's short phone verdict above, the checks used the Simulator, synthetic input and a short rendered touch check. Reversals, switching and the doorway behaviour have not been reported on from the phone.
 - Overlaps are reduced, not removed: about 9–10% of frames in random play, mostly after sharp turns and switches.
 - Worst-moment spacing is larger than with the trail (up to about 3.4 m during reversals). The figure that #28 used, 2.4 m, was set for trail following; whether the new behaviour reads well is a playtest question.
 - Only the Close formation and following exist. Spread, Column, the formation button and orders are phases S2 and S3.
