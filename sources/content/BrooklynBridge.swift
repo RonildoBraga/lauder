@@ -116,9 +116,30 @@ enum BrooklynBridge {
       "manhattan-end", z: -112 ... -106, "The Manhattan end. The way into the city is barricaded."),
   ]
 
+  /// The stranger (M2). He waits unseen behind the car turned across the east roadway, steps
+  /// into the lane as Miki comes within about 10 m, and after her "Friendly!" opens fire. His
+  /// first shot is a deliberate miss. Miki can take cover behind the car to her left; the turned
+  /// car covers him from her right. His reach, like her carbine's, is about what the camera shows
+  /// ahead of her, so neither is hit from off screen.
+  static let stranger = Level.Hostile(
+    id: "stranger", name: "The stranger", hiddenAt: [9.4, 41.6], standAt: [7, 42], hits: 2,
+    windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true,
+    missLine: "He opened fire. Fire back, or take cover.")
+
+  /// The first fight, as Miki nears the first tower. A retry starts just outside its area.
+  static let strangerEncounter = Level.Encounter(
+    beat: .stranger, area: PartyMotion.Box(minimum: [-12, 47], maximum: [12, 52]),
+    retryAt: [6.5, 55.5], hostiles: [stranger],
+    cues: [
+      (0, .reveal(stranger.id)),
+      (0.6, .say(speaker: "Miki", line: "Friendly!")),
+      (1.6, .engage(stranger.id)),
+    ])
+
   static let level = Level(
     id: .brooklynBridge, ground: ground, boxes: structure + towers + vehicles + debris,
-    points: points, interactions: [], triggers: triggers, passage: nil,
+    points: points, interactions: [], triggers: triggers, encounters: [strangerEncounter],
+    startingAmmo: 12, passage: nil,
     // Miki crosses alone. Tom and Laura wait, hidden, where their scenes will be.
     party: [.miki],
     spawns: [.miki: [6.5, 116], .tom: [4.6, 12.5], .laura: [-7.6, -38]],

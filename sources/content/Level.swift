@@ -92,6 +92,45 @@ struct Level {
     let line: String
   }
 
+  /// Someone who fights in an encounter: where they wait unseen, where they step out to, how
+  /// many hits they take and the timing of their shots.
+  struct Hostile {
+    let id: String
+    let name: String
+    let hiddenAt: SIMD2<Float>
+    let standAt: SIMD2<Float>
+    let hits: Int
+    /// The visible aim before each shot, long enough to take cover or answer.
+    let windUp: Float
+    /// The pause after each shot before the next aim begins.
+    let recovery: Float
+    let range: Float
+    /// The first shot misses on purpose, so the opening teaches without punishing.
+    var firstShotMisses = false
+    /// Shown after that deliberate miss: how to answer it.
+    var missLine: String?
+  }
+
+  /// What happens at a moment after an encounter begins.
+  enum Cue {
+    /// A hostile steps out from where it waited.
+    case reveal(String)
+    /// A short line, shown without stopping play.
+    case say(speaker: String, line: String)
+    /// A hostile starts to fight.
+    case engage(String)
+  }
+
+  /// A fight that begins when the leader walks into its area: the story beat it starts, its
+  /// hostiles, its first moments, and where a retry places the leader, just outside the area.
+  struct Encounter {
+    let beat: GameSession.Beat
+    let area: PartyMotion.Box
+    let retryAt: SIMD2<Float>
+    let hostiles: [Hostile]
+    let cues: [(at: Float, cue: Cue)]
+  }
+
   /// How close a point of interest must be for a look to describe it.
   static let interactionRadius: Float = 2.3
 
@@ -102,6 +141,9 @@ struct Level {
   let points: [PointOfInterest]
   let interactions: [Interaction]
   let triggers: [Trigger]
+  var encounters: [Encounter] = []
+  /// Rounds for the leader's weapon when a run starts.
+  var startingAmmo = 0
   let passage: Passage?
   /// Who is in the party when a run starts, leader first.
   let party: [PartyMember]

@@ -24,6 +24,12 @@ final class GameWorld {
   private(set) var actionName: String?
   /// Role feedback, such as which member could act here.
   private(set) var hint: String?
+  /// A hostile winding up a shot, such as "The stranger is aiming."
+  private(set) var threat: String?
+  /// Whether the leader's weapon is drawn.
+  private(set) var weaponDrawn = false
+  /// How dark the screen is while an encounter starts again, from 0 to 1.
+  private(set) var fade: Float = 0
 
   @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
@@ -63,8 +69,27 @@ final class GameWorld {
   @ObservationIgnored private var cameraStart: SIMD3<Float>?
   @ObservationIgnored private var cameraElapsed: Float = 0
   @ObservationIgnored private var unsimulatedTime: Float = 0
+  // The level's fights (ADR 0004, M2).
+  @ObservationIgnored private let stage: EncounterStage
+  @ObservationIgnored private var fireHeld = false
+  @ObservationIgnored private var firePressPending = false
+  /// Where the current encounter's retry places the leader.
+  @ObservationIgnored private var retrySpot: SIMD2<Float>?
+  /// Time into an encounter's retry: the fade out, the reset, the fade back in.
+  @ObservationIgnored private var retryElapsed: Float?
+  /// How far the camera's target leans from the leader towards a fight, eased.
+  @ObservationIgnored private var cameraLean: SIMD2<Float> = .zero
+
+  static let retryFadeOut: Float = 0.6
+  static let retryFadeIn: Float = 0.4
+  /// How quickly the camera's lean follows a fight: about 95% of the way in a second.
+  static let cameraLeanRate: Float = 3
 
   var isPaused: Bool { session.isPaused }
+  /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
+  var showsWeapon: Bool { session.inEncounter || weaponDrawn }
+  /// Whether an encounter's retry is under way.
+  var isRetrying: Bool { retryElapsed != nil }
   /// The HUD's objective: the level's own, or Party C's mission at Relay House.
   var objective: String { level.objective ?? MissionScript.objective(session.phase) }
 
@@ -90,8 +115,9 @@ final class GameWorld {
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
     cameraTarget = Self.startingCameraTarget(level)
-    root.name = level.id.rawValue
     let style = SceneStyle()
+    stage = EncounterStage(level: level, style: style)
+    root.name = level.id.rawValue
     for box in [level.ground] + level.boxes {
       let entity: Entity =
         box.surface == .vehicle
@@ -114,9 +140,11 @@ final class GameWorld {
     if level.id == .relayHouse {
       addRelayHouseParts(style: style)
     }
+    root.addChild(stage.container)
     SceneDressing.add(to: root, style: style, level: level.id)
     style.addLighting(to: root)
     camera.camera.fieldOfViewInDegrees = 42
+    camera.name = "camera"
     root.addChild(camera)
     for member in PartyMember.allCases {
       let body = Entity()
@@ -132,6 +160,8 @@ final class GameWorld {
       markers[member] = marker
       root.addChild(body)
     }
+    // Miki carries the carbine; it shows while drawn.
+    visuals[.miki]?.addChild(stage.weaponProp)
     placeParty()
     showProgress()
     updateCamera(deltaTime: 0)
@@ -205,6 +235,11 @@ final class GameWorld {
     inputReady: Bool = true
   ) {
     respond(to: input, in: mode)
+    if retryElapsed != nil {
+      // An encounter is starting again; Pause holds the fade where it is.
+      if session.mode == .exploring { advanceRetry(deltaTime: deltaTime) }
+      return
+    }
     let running = session.mode == .exploring && inputReady && !controls.needsNeutralInput
     if running != wasRunning {
       wasRunning = running
@@ -220,7 +255,9 @@ final class GameWorld {
     #if DEBUG
       let started = DispatchTime.now().uptimeNanoseconds
     #endif
-    advanceParty(movement: input.movement, deltaTime: deltaTime)
+    advanceParty(
+      movement: input.movement, fireHeld: input.fireHeld, firePressed: input.firePressed,
+      deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
         dt: deltaTime,
@@ -308,6 +345,14 @@ final class GameWorld {
   /// beginning of a run. Nothing is rebuilt or reloaded.
   func restart() {
     session.restart()
+    stage.reset()
+    retryElapsed = nil
+    retrySpot = nil
+    fade = 0
+    threat = nil
+    weaponDrawn = false
+    fireHeld = false
+    firePressPending = false
     placeParty()
     squadLeader = session.leader
     route = RouteMemory(start: level.spawn(session.leader))
@@ -317,6 +362,7 @@ final class GameWorld {
     diagnostic = nil
     cameraStart = nil
     cameraElapsed = 0
+    cameraLean = .zero
     cameraTarget = Self.startingCameraTarget(level)
     unsimulatedTime = 0
     skipNextStep = true
@@ -344,13 +390,17 @@ final class GameWorld {
 
   // Production spatial update, also exercised by deterministic route/soak tests.
   // Input availability, Pause and fresh-edge handling remain in step/InputRules.
-  func advanceParty(movement: SIMD2<Float>, deltaTime: Float) {
+  func advanceParty(
+    movement: SIMD2<Float>, fireHeld: Bool = false, firePressed: Bool = false, deltaTime: Float
+  ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
+    self.fireHeld = fireHeld
+    if firePressed { firePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
-    // remainder, always under one step, carries to the next frame.
+    // remainder, always under one step, carries to the next frame. A retry stops the rest.
     unsimulatedTime += elapsed
-    while unsimulatedTime >= Self.simulationStep {
+    while unsimulatedTime >= Self.simulationStep, retryElapsed == nil {
       unsimulatedTime -= Self.simulationStep
       simulateStep(movement: movement, dt: Self.simulationStep)
     }
@@ -375,6 +425,10 @@ final class GameWorld {
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
+    if !level.encounters.isEmpty {
+      stepEncounter(leader: leader, at: leaderEnd, dt: dt)
+      if retryElapsed != nil { return }
+    }
 
     // Companions choose their own routes to formation slots (ADR 0003); every movement is
     // still resolved against the authored footprints.
@@ -413,13 +467,83 @@ final class GameWorld {
     if diagnostic != message { diagnostic = message }
   }
 
-  /// A trigger area shows its line the first time the leader walks into it in a run.
+  /// A trigger area shows its line the first time the leader walks into it in a run, and an
+  /// encounter's area begins its fight once its beat is next.
   private func checkTriggers() {
-    guard let body = bodies[session.leader] else { return }
+    guard retryElapsed == nil, let body = bodies[session.leader] else { return }
     let position = SIMD2(body.position.x, body.position.z)
     for trigger in level.triggers where trigger.area.contains(position) {
       if session.fire(trigger.id) { observation = trigger.line }
     }
+    for encounter in level.encounters where encounter.area.contains(position) {
+      if session.beginEncounter(encounter.beat) {
+        stage.begin(encounter)
+        retrySpot = encounter.retryAt
+      }
+    }
+  }
+
+  // MARK: - Fights
+
+  /// One step of the fight: the stage plays the encounter and fires the leader's weapon; the
+  /// world turns the leader, shows lines and the threat, and starts a retry after the last hit.
+  private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
+    let angle = yaw[leader] ?? 0
+    let outcome = stage.step(
+      dt: dt, leader: position, facing: SIMD2(-sin(angle), -cos(angle)), fireHeld: fireHeld,
+      firePressed: firePressPending, session: session)
+    firePressPending = false
+    if let facing = outcome.facing { setYaw(leader, atan2(-facing.x, -facing.y)) }
+    if let line = outcome.line { observation = line }
+    let threat = stage.aiming.flatMap { stage.hostiles[$0]?.spec.name }.map { "\($0) is aiming." }
+    if self.threat != threat { self.threat = threat }
+    if weaponDrawn != stage.isDrawn { weaponDrawn = stage.isDrawn }
+    if outcome.retry { retryElapsed = 0 }
+  }
+
+  /// The encounter starts again after the leader's last allowed hit: the screen fades out,
+  /// the fight is put back as it began with the leader just outside its area, and the screen
+  /// fades back in. Like Resume, play then waits for every control to be released.
+  private func advanceRetry(deltaTime: Float) {
+    guard let before = retryElapsed, deltaTime.isFinite, deltaTime > 0 else { return }
+    let elapsed = before + min(deltaTime, 1 / 30)
+    if before < Self.retryFadeOut, elapsed >= Self.retryFadeOut { performRetry() }
+    guard elapsed < Self.retryFadeOut + Self.retryFadeIn else {
+      retryElapsed = nil
+      fade = 0
+      skipNextStep = true
+      controls.requireNeutralInput()
+      return
+    }
+    retryElapsed = elapsed
+    fade =
+      elapsed < Self.retryFadeOut
+      ? elapsed / Self.retryFadeOut : 1 - (elapsed - Self.retryFadeOut) / Self.retryFadeIn
+  }
+
+  private func performRetry() {
+    session.retryEncounter()
+    stage.reset()
+    threat = nil
+    weaponDrawn = false
+    fireHeld = false
+    firePressPending = false
+    let leader = session.leader
+    let spot = retrySpot ?? level.spawn(leader)
+    place(leader, at: spot)
+    setYaw(leader, atan2(-level.heading.x, -level.heading.y))
+    squadLeader = leader
+    route = RouteMemory(start: spot)
+    planner = SquadPlanner(heading: level.heading)
+    motors = Self.freshMotors()
+    companionTargets = [:]
+    unsimulatedTime = 0
+    cameraStart = nil
+    cameraLean = .zero
+    cameraTarget = [spot.x, PartyBody.height / 2 + 0.1, spot.y]
+    updateCamera(deltaTime: 0)
+    updateNearby()
+    observation = "Try again."
   }
 
   private func changeLeader() {
@@ -482,7 +606,10 @@ final class GameWorld {
 
   private func updateCamera(deltaTime: Float) {
     guard let body = bodies[session.leader] else { return }
-    let target = body.position + [0, 0.1, 0]
+    // During a fight the target leans towards the threat, so both stay on screen.
+    let wanted = stage.cameraLean(leader: SIMD2(body.position.x, body.position.z))
+    cameraLean += (wanted - cameraLean) * min(1, deltaTime * Self.cameraLeanRate)
+    let target = body.position + [cameraLean.x, 0.1, cameraLean.y]
     if let start = cameraStart {
       cameraElapsed = min(0.25, cameraElapsed + deltaTime)
       let amount = cameraElapsed / 0.25
@@ -517,7 +644,9 @@ final class GameWorld {
       PlaytestRunner.Snapshot(
         leader: session.leader, party: session.party, positions: positions, mode: session.mode,
         phase: session.phase, passageOpen: session.passageOpen,
-        firedTriggers: session.firedTriggers.count)
+        firedTriggers: session.firedTriggers.count, beat: session.beat,
+        hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
+        retrying: isRetrying)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

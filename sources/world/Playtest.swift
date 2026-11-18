@@ -35,6 +35,13 @@
       case expectRestarted
       /// How many trigger areas have shown their line in this run.
       case expectTriggers(Int)
+      /// Hold Fire, which draws the weapon and then shoots at the assisted target.
+      case fire(seconds: Float)
+      case expectBeat(GameSession.Beat)
+      /// How many hostiles are down in this run.
+      case expectDefeated(Int)
+      /// How many hits the leader has taken in the current encounter.
+      case expectHits(Int)
     }
 
     /// What the runner can see of the game each frame.
@@ -46,6 +53,11 @@
       let phase: GameSession.Phase
       let passageOpen: Bool
       let firedTriggers: Int
+      let beat: GameSession.Beat
+      let hitsTaken: Int
+      let defeated: Int
+      let ammo: Int
+      let retrying: Bool
     }
 
     struct Frame {
@@ -88,7 +100,7 @@
 
     static let scenarioNames = [
       "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
-      "bridge-walk",
+      "bridge-walk", "first-fight", "fight-retry",
     ]
     static let walkTimeout: Float = 30
     /// How long each conversation line stays on screen before the next press.
@@ -291,7 +303,8 @@
           let start = Level.level(level)
           if snapshot.leader != start.party[0] || snapshot.party != start.party
             || snapshot.phase != .briefing || snapshot.passageOpen || snapshot.firedTriggers != 0
-            || snapshot.mode != .exploring
+            || snapshot.beat != .alone || snapshot.defeated != 0 || snapshot.hitsTaken != 0
+            || snapshot.ammo != start.startingAmmo || snapshot.mode != .exploring
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
@@ -309,6 +322,32 @@
           if snapshot.firedTriggers != count {
             failures.append(
               "\(snapshot.firedTriggers) trigger(s) had fired instead of \(count) "
+                + "at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .fire(let seconds):
+          guard stepTime < seconds else {
+            advance()
+            return InputRules.Raw()
+          }
+          return InputRules.Raw(controllerFire: true)
+        case .expectBeat(let beat):
+          if snapshot.beat != beat {
+            failures.append(
+              "the story was at \(snapshot.beat) instead of \(beat) at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .expectDefeated(let count):
+          if snapshot.defeated != count {
+            failures.append(
+              "\(snapshot.defeated) hostile(s) were down instead of \(count) "
+                + "at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .expectHits(let count):
+          if snapshot.hitsTaken != count {
+            failures.append(
+              "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count) "
                 + "at \(Self.seconds(elapsed))")
           }
           advance()
@@ -515,13 +554,15 @@
         .wait(seconds: 0.6), .talk, .expectPhase(.meetingAgreed), .mark("plan read"),
       ] + restartRun + [.talk, .expectPhase(.seekingRegulator), .mark("briefed again")]
 
-    /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1): up the east roadway
-    /// through the first tower, across the collapsed divider beside the jammed bus, then up the
-    /// west roadway through the second tower. Each trigger area shows its line once, then a
-    /// Restart returns her to the start with none fired.
+    /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1 and M2): up the east
+    /// roadway, past the stranger once he is down, through the first tower, across the collapsed
+    /// divider beside the jammed bus, then up the west roadway through the second tower. Each
+    /// trigger area shows its line once, then a Restart returns her to the start with none fired.
     private static let bridgeWalk: [Step] =
       [
-        .mark("start"), .walk([6.5, 66]), .mark("cars ahead"), .walk([6.5, 20]),
+        .mark("start"), .walk([6.5, 66]), .mark("cars ahead"), .walk([6.5, 51]),
+        .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1),
+        .mark("stranger down"), .walk([6.5, 20]),
         .mark("first tower"), .walk([6.5, -9]), .mark("mid-span"), .walk([6.5, -28]),
         .mark("blocked lanes"), .walk([-7, -31]), .mark("across the divider"),
         .walk([-7, -70]), .mark("second tower"), .walk([-7, -108]), .mark("Manhattan end"),
@@ -529,9 +570,35 @@
         .wait(seconds: 0.5),
       ] + restartRun + [.expectTriggers(0)]
 
-    /// The level a scenario plays: the bridge for `bridge-walk`, Relay House for the others.
+    /// Up to the stranger's area: his fight begins as Miki stops in the open lane.
+    private static let toTheStranger: [Step] = [
+      .mark("start"), .walk([6.5, 66]), .walk([6.5, 51]), .mark("Friendly!"),
+      .expectBeat(.stranger),
+    ]
+
+    /// The first fight (ADR 0004, M2): the stranger steps out, Miki calls "Friendly!", his first
+    /// shot misses on purpose, and two of her shots put him down before he fires again. Then a
+    /// Restart puts him back, unseen.
+    private static let firstFight: [Step] =
+      toTheStranger + [
+        .wait(seconds: 3.4), .mark("near miss"), .expectHits(0), .fire(seconds: 2),
+        .expectDefeated(1), .mark("stranger down"), .expectHits(0), .wait(seconds: 1),
+      ] + restartRun
+
+    /// Standing in the open: after the deliberate miss, three hits start the fight again with
+    /// Miki just outside the area and nothing lost. She walks back in and wins.
+    private static let fightRetry: [Step] =
+      toTheStranger + [
+        .wait(seconds: 7), .expectHits(1), .mark("hit"), .wait(seconds: 7.5),
+        .expectBeat(.alone), .expectHits(0), .expectDefeated(0), .mark("retry"),
+        .walk([6.5, 51]), .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2),
+        .expectDefeated(1), .mark("won after the retry"),
+      ]
+
+    /// The level a scenario plays: the bridge for the opening's, Relay House for the others.
     static func level(for scenario: String) -> Level.ID {
-      scenario == "bridge-walk" ? .brooklynBridge : .relayHouse
+      ["bridge-walk", "first-fight", "fight-retry"].contains(scenario)
+        ? .brooklynBridge : .relayHouse
     }
 
     static func steps(for scenario: String) -> [Step]? {
@@ -548,6 +615,8 @@
       case "mission": mission
       case "all": closed + route + reversals + switches + walls + restartRun + mission
       case "bridge-walk": bridgeWalk
+      case "first-fight": firstFight
+      case "fight-retry": fightRetry
       default: nil
       }
     }

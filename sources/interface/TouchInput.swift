@@ -4,7 +4,7 @@ import simd
 /// Gameplay edge detection and mode policy remain in InputRules.
 struct TouchInput {
   enum Button: Hashable {
-    case action, cycle, pause, restart
+    case action, cycle, pause, restart, fire
   }
 
   private(set) var generation = 0
@@ -34,7 +34,8 @@ struct TouchInput {
     return InputRules.Raw(
       touchStick: stick, touchIsTouching: isTouching,
       touchAction: pressed.contains(.action), touchPause: pressed.contains(.pause),
-      touchSwitch: pressed.contains(.cycle), touchRestart: pressed.contains(.restart))
+      touchSwitch: pressed.contains(.cycle), touchRestart: pressed.contains(.restart),
+      touchFire: pressed.contains(.fire))
   }
 
   /// Invalidate old captures immediately, before the next SwiftUI/UIKit update.

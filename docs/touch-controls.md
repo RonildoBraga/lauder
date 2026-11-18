@@ -14,6 +14,7 @@ The change adds an input option to the existing Party A scene. It adds no charac
 - With a controller attached, prefer it unless the player selects **Use touch controls**. **Use controller** returns to it. The preference is in memory and is not persisted across app launches.
 - Keep keyboard WASD/E/Q/Escape and the existing PS5/Xbox mappings. Touch **Look** requests the same intent as Cross/A/E. Later stages relabel it: the leader's action where there is one ([Party B](party-b.md)), **Continue** in a conversation and **Restart** while paused ([Party C](party-c.md)).
 - Support a stick finger alongside button fingers. Lift the stick finger to stop; all contacts must release before a neutral-input gate clears, even when the stick is centred.
+- [Opening M2](opening-m2.md) adds a **Fire** button beside the action button, shown during a fight or once the carbine is drawn. It requests the same intent as R2/RT/F and follows the same rules: a fresh press draws, a hold keeps firing, and its finger must lift before the gate clears. With it the layout has four buttons, within the [proposed five](gameplay-script.md#future-squad-and-combat-design).
 
 ## Input ownership
 

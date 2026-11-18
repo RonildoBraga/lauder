@@ -40,7 +40,23 @@ struct GameView: View {
                 .font(.caption2)
                 .fontWeight(member == world.session.leader ? .bold : .regular)
                 .underline(member == world.session.leader)
+              if world.session.inEncounter, member == world.session.leader {
+                // The placeholder hit rule: three hits, shown beside the name.
+                Text(hitPips).font(.caption2).foregroundStyle(threatColour)
+              }
             }
+          }
+          if world.showsWeapon {
+            HStack(spacing: 8) {
+              Text("Carbine · \(world.session.ammo)").font(.caption)
+              if !world.controls.touchControlsEnabled {
+                Text("\(world.controls.fireButtonName) · Fire").font(.caption)
+                  .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+              }
+            }
+          }
+          if let threat = world.threat {
+            Text(threat).font(.caption.bold()).foregroundStyle(threatColour)
           }
           // During a conversation its panel carries the text and the Continue hint; the result
           // of the step appears here once the conversation ends.
@@ -136,6 +152,11 @@ struct GameView: View {
         .allowsHitTesting(false)
       }
 
+      if world.fade > 0 {
+        // An encounter starting again after the last allowed hit.
+        Color.black.opacity(Double(world.fade)).ignoresSafeArea().allowsHitTesting(false)
+      }
+
       if world.controls.status != .ready {
         Color.black.opacity(0.45).ignoresSafeArea().allowsHitTesting(false)
         VStack(spacing: 12) {
@@ -199,6 +220,7 @@ struct GameView: View {
           controls: world.controls, generation: world.controls.touchGeneration,
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
+          showsFire: world.showsWeapon,
           mode: world.session.mode)
       }
     }
@@ -221,6 +243,15 @@ struct GameView: View {
     case .dialogue: "Continue"
     case .exploring: world.actionName ?? "Look"
     }
+  }
+
+  private var threatColour: Color { Color(red: 1, green: 0.45, blue: 0.38) }
+
+  /// The leader's hits left in this encounter, then those taken.
+  private var hitPips: String {
+    let taken = min(world.session.hitsTaken, GameSession.hitsAllowed)
+    return String(repeating: "●", count: GameSession.hitsAllowed - taken)
+      + String(repeating: "○", count: taken)
   }
 
   private var releaseGuidance: String {
