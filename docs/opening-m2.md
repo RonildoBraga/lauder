@@ -50,13 +50,27 @@ Claude implemented and checked M2, so nothing below is an independent review. Th
   - The first **Fire** press came too late: he landed three hits, and the retry put Miki back with the fight reset.
   - On the second try, holding **Fire** put him down with two rounds, and the camera settled back.
 
+## Phone playtest — 18 November 2026
+
+Claude built a signed Release build of PR #42 at `3cb982c` (version 0.1.0, build 1) with Xcode 27.2. It installed the build directly on the baseline iPhone 13 Pro Max, on iOS 27.2.1, without TestFlight. Claude suggested these checks, with someone new to the fight playing first if possible:
+
+1. The fight with touch.
+2. Cover behind the car on Miki's left.
+3. Three hits and the retry.
+4. Pause and Restart during the fight.
+5. The fight again with the PS5 controller, with R2 to fire.
+
+After playing it, the maintainer reported: **“It read well”**.
+
+That is the maintainer's summary; Claude observed nothing on the phone. It does not say who played, or whether touch, the controller or both were used. On its own, then, it does not show that a new player answers the stranger without help with each input. No frame pacing was measured.
+
 ## Limits
 
-- **The exit check needs a person.** M2's exit is that “a new player answers the stranger without help, with touch and with a controller; cover works for both sides”. Tests and scripted runs show that cover works for both sides. They cannot show that a new player reads the fight. That needs a playtest on the baseline iPhone with touch and with a controller. The ADR's stop rule applies: if the fight is not readable on the phone after three focused work sessions on M2, stop and reassess with the maintainer.
+- **The exit check.** M2's exit is that “a new player answers the stranger without help, with touch and with a controller; cover works for both sides”. Tests and scripted runs show that cover works for both sides. The maintainer's phone playtest read well, but who played and with which inputs is not recorded, so a new player's first unaided try with each input is still worth confirming. The ADR's stop rule, three focused work sessions on M2 for the fight to read on the phone, was not needed: the fight read well after the first session.
 - The timings and distances (the 1.5 s wind-up, the 1.4 s pause, the 14 m reach, the 3 m camera lean, the 0.35 s draw, 0.4 s between shots and 12 rounds) are starting values for playtests.
 - The stranger stands still once he has stepped out, and bodies do not block movement: Miki can walk through his stand-in.
 - Nothing holsters the carbine after the fight; it stays drawn and the HUD keeps showing it.
 - If Miki walks on without fighting, the fight stays open. He keeps firing while she is within reach and in sight, and the pips stay on the HUD. M3's ambush starts from his body, so the story cannot move on without the fight. On the west roadway the walkway's base covers both of them, so the fight cannot be fought from there.
 - There is no sound, muzzle flash, hit reaction or animation. A hit shows as a pip and a red tracer that reaches Miki.
-- The checks ran in the Simulator. Physical touch and controller play, and the phone's frame pacing with the fight, are unmeasured. The opening's planned phone checkpoint comes with M4.
+- Apart from the maintainer's playtest, the checks ran in the Simulator. The phone's frame pacing with the fight is unmeasured. The opening's planned phone checkpoint comes with M4.
 - TestFlight build 0.1.0 (1) predates M1 and M2.
