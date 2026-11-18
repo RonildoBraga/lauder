@@ -40,6 +40,8 @@ final class GameWorld {
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
+  /// Members lying hurt where they wait, until a scene stands them up (Laura, M4).
+  @ObservationIgnored private var lying: Set<PartyMember>
   /// Where each companion is heading in the latest step. Tests read it.
   @ObservationIgnored private(set) var companionTargets: [PartyMember: SIMD2<Float>] = [:]
   #if DEBUG
@@ -73,14 +75,18 @@ final class GameWorld {
   static let retryFadeIn: Float = 0.4
   /// How quickly the camera's lean follows a fight: about 95% of the way in a second.
   static let cameraLeanRate: Float = 3
+  /// How far a lying stand-in sits below a standing one, so it rests on the deck.
+  static let lyingDrop: Float = -0.67
 
   var isPaused: Bool { session.isPaused }
   /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
   var showsWeapon: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry is under way.
   var isRetrying: Bool { retryElapsed != nil }
-  /// The HUD's objective.
-  var objective: String { level.objective }
+  /// The HUD's objective: the level's own, until the story changes it.
+  var objective: String {
+    level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
+  }
 
   init(level: Level = BrooklynBridge.level) {
     self.level = level
@@ -90,6 +96,7 @@ final class GameWorld {
     // Build the route grid while loading, not on the first frame of play.
     grid = NavigationGrid(level: level)
     squadLeader = level.party[0]
+    lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
@@ -336,13 +343,15 @@ final class GameWorld {
   }
 
   /// Every body at its spawn point, facing the level's starting direction. Members who have
-  /// not joined yet stay hidden and out of the squad.
+  /// not joined yet stay out of the squad, and hidden unless they lie hurt where they wait. A
+  /// lying member lies across that direction, which the camera looks along, so the pose reads.
   private func placeParty() {
     let facing = atan2(-level.heading.x, -level.heading.y)
+    lying = level.lying
     for member in PartyMember.allCases {
       place(member, at: level.spawn(member))
-      setYaw(member, facing)
-      bodies[member]?.isEnabled = session.party.contains(member)
+      setYaw(member, lying.contains(member) ? facing - .pi / 2 : facing)
+      bodies[member]?.isEnabled = session.party.contains(member) || lying.contains(member)
     }
     showLeaderMarker()
   }
@@ -462,10 +471,14 @@ final class GameWorld {
     if let facing = outcome.facing { setYaw(leader, atan2(-facing.x, -facing.y)) }
     if let line = outcome.line { observation = line }
     for member in outcome.appeared { appear(member) }
+    for member in outcome.stood {
+      lying.remove(member)
+      showPose(member)
+    }
     if let shooter = outcome.shooter {
       setYaw(shooter.member, atan2(-shooter.facing.x, -shooter.facing.y))
     }
-    if let member = outcome.face { faceEachOther(leader, member) }
+    if let (first, second) = outcome.face { faceEachOther(first, second) }
     let threat = stage.threat
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != stage.isDrawn { weaponDrawn = stage.isDrawn }
@@ -584,7 +597,16 @@ final class GameWorld {
 
   private func setYaw(_ member: PartyMember, _ angle: Float) {
     yaw[member] = angle
-    visuals[member]?.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
+    showPose(member)
+  }
+
+  /// A member's facing, and whether they lie face down on the deck.
+  private func showPose(_ member: PartyMember) {
+    let facing = simd_quatf(angle: yaw[member] ?? 0, axis: [0, 1, 0])
+    let isLying = lying.contains(member)
+    visuals[member]?.orientation =
+      isLying ? facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]) : facing
+    visuals[member]?.position = isLying ? [0, Self.lyingDrop, 0] : .zero
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.

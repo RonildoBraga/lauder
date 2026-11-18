@@ -17,11 +17,11 @@ struct BridgeTests {
     #expect(world.objective == "Cross the bridge to Manhattan.")
     #expect(world.observation == BrooklynBridge.level.opening)
     #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
-    // Tom and Laura wait, hidden, where their scenes will be.
-    for member in [PartyMember.tom, .laura] {
-      let body = try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
-      #expect(!body.isEnabled)
-    }
+    // Tom waits hidden where his scene will be; Laura lies hurt in view at hers (M4).
+    #expect(try #require(world.root.findEntity(named: "party.tom")).isEnabled == false)
+    let laura = try #require(world.root.findEntity(named: "party.laura"))
+    #expect(laura.isEnabled && !world.session.party.contains(.laura))
+    #expect(position(world, .laura) == BrooklynBridge.level.spawn(.laura))
     #expect(try #require(world.root.findEntity(named: "party.miki")).isEnabled)
     // With nobody to switch to, Next changes nothing.
     world.session.cycleLeader()
@@ -153,7 +153,8 @@ struct BridgeTests {
     let level = BrooklynBridge.level
     #expect(layout.landmarks.map(\.name) == level.points.map(\.id))
     #expect(
-      layout.areas.map(\.name) == level.triggers.map(\.id) + ["stranger", "search.stranger"])
+      layout.areas.map(\.name)
+        == level.triggers.map(\.id) + ["stranger", "search.stranger", "laura.found", "help.laura"])
     #expect(
       layout.markers.map(\.name) == [
         "spawn.miki", "spawn.tom", "spawn.laura", "stranger.hidden", "stranger.stand",

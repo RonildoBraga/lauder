@@ -53,11 +53,38 @@ The maintainer assigned the third milestone: **“Yes, start M3”**.
 
 **Phone playtest.** Claude installed a Release build of `95bf857` on the baseline iPhone and uploaded TestFlight build 0.1.0 (2) from `ecb1031`, which differs only in its build number. After playing M3, the maintainer reported **“It played well”**, then [authorised the merge](https://github.com/RonildoBraga/lauder/pull/44#issuecomment-6975896955): **“Yes, merge both”**. Codex's automatic review found nothing; no independent review was requested. The summary does not say how often the scene was played or which inputs were used, and no frame pacing was measured.
 
+## M4 — Laura and the end of the opening
+
+The maintainer assigned the fourth milestone, **“Yes, start M4”**, and after the cleanup in #46 started it: **“Yes, merge and start”**.
+
+- **Laura lies hurt in view.** As ADR 0004 set out, her body is in the scene from the start, lying face down beside the car just past the gap in the divider, across the camera's view so the pose reads from above. She stays out of movement and the squad until she joins; M1 had hidden her.
+- **Found.** Once Tom has joined, walking onto the west roadway near her starts the *Laura found* beat. She calls out, "Please. Over here.", the camera leans most of the way towards her so that she shows clear of the HUD's panel, and Miki answers. The objective becomes "Help the woman between the cars." The first rendered run had her calling out from under the panel, lying along the camera's view where she looked as if she were standing; the camera's lean and the turned pose fixed both.
+- **Help.** Beside her the action reads **Help**, for whoever leads; a press while she is still calling out does nothing. It uses the medical kit from the stranger's body and begins a short scene that holds the leader: she stands, she and Miki turn to each other, and a four-line exchange gives her name. When it ends she joins, and Tom and Laura follow in the Close formation.
+- **The end of the opening.** Reaching the Manhattan end with all three stops the party for a three-line closing exchange, and the objective then reads "Manhattan, together." Without Laura the end does not start, and the objective keeps pointing to her.
+- **How it is built.**
+  - Four beats join the story: Laura found, helping her, with Laura, and arrived.
+  - A level can have members lying hurt where they wait, objectives that change from a beat on, and encounters with no hostiles, which end after their last cue. A scene can name a focus for the camera.
+  - A new cue stands a member up, and the cue that turns two people to each other now names both.
+  - Help is an interaction like Search; the session owns the kit, the beats and Laura joining.
+  - Restart puts Laura back on the deck, hurt, and resets everything else without adding entities.
+  - The `laura` and `opening` playtests join the others. A conversation that starts during a scripted walk ends that walk step, as the closing exchange does.
+
+**Checks.** `./scripts/check` passes with 106 Swift tests in 17 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 22 tests, including all six scenarios driven without rendering. The new tests cover:
+
+- Help offered only after Tom joins and Laura is found, doing nothing while she calls out, using the kit once;
+- the end starting only with all three;
+- Laura lying in view at the start;
+- the whole sequence in play: the call-out with the camera's lean and its return, the Help prompt, the scene holding the leader, Laura standing, the exchange, both companions following, the closing exchange, and Restart putting her back without adding entities.
+
+The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 steps in 92.9 s and `opening` 58 of 58 in 112.4 s. Frames averaged 16.7 ms, and the only frames over 34 ms were each run's first. While moving, the companions stayed within 0.6 m of their slots 88% and 93% of the time and never overlapped. The stills show Laura lying across the lane as she calls out, clear of the panel, then standing to face Miki, then the three together and “Manhattan, together.”. In Blender 5.3, Load shows Laura's two new areas, and Save with no edits finds nothing to change.
+
+**Still to do:** the opening's phone checkpoint, which M4's exit requires: controls with touch and with a controller, combat feel, Pause and recovery, and measured frame pacing on the baseline iPhone.
+
 ## Open across the opening
 
-- **The phone checkpoint** for controls, combat feel and frame pacing comes with M4. The bridge's frame pacing on the phone, with the fight and with Tom following, is unmeasured.
-- **The timings and distances** — the 1.5 s wind-up, the 1.4 s pause, the 14 m reach, the 3 m camera lean, the 0.35 s draw, 0.4 s between shots, 12 rounds, the loot and the 3.4 s the ambush holds Miki — are starting values for playtests. The lines are provisional.
+- **The phone checkpoint** for controls, combat feel and frame pacing is the part of M4 still to do. The bridge's frame pacing on the phone, with the fight and the party following, is unmeasured.
+- **The timings and distances** — the 1.5 s wind-up, the 1.4 s pause, the 14 m reach, the camera's leans, the 0.35 s draw, 0.4 s between shots, 12 rounds, the loot, and how long the scenes hold the party — are starting values for playtests. The lines are provisional.
 - **The stranger stands still** once he has stepped out, and bodies do not block movement. Nothing holsters the carbine after a fight. If Miki walks on without fighting, the stranger's fight stays open, and the story cannot move on without it.
-- **The attacker's strike is not built:** Tom always drops him first. Tom appears in place rather than stepping into view, and nobody walks during the scene. Companions do not fight on their own; Tom's shot is scripted.
+- **The attacker's strike is not built:** Tom always drops him first. Tom appears in place rather than stepping into view, and nobody walks during the scenes. Laura lies still rather than crawling, and stands up in place. Companions do not fight on their own; Tom's shot is scripted.
 - There is no sound, muzzle flash, hit reaction or animation.
 - The towers' upper parts and the cables' high sections are above the camera, so the bridge reads mostly at deck level.

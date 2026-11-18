@@ -47,12 +47,12 @@ The party uses three named, differently coloured primitive stand-ins. No new cha
 - Mode: exploring, dialogue or paused. Pausing records whether to resume exploring or the current dialogue; pauses do not nest or lose the dialogue cursor.
 - Who is in the party, in switching order, and the active leader among them. The bridge starts with Miki alone, and members join through the story; **Next** appears only when there is someone to switch to.
 - The trigger areas that have shown their line in this run.
-- The story's beat: Miki alone, the stranger, the ambush, then travelling with Tom. A beat begins only after the one before, once and while exploring. During a fight the session also holds the leader's hits, the carbine's rounds, the hostiles that are down and the checkpoint that a retry returns to. It holds the bodies searched and a small shared inventory with the medical kits, and adds a member to the party when the conversation that recruits them ends.
+- The story's beat: Miki alone, the stranger, the ambush, travelling with Tom, Laura found, helping her, travelling with Laura, and arriving at the Manhattan end. A beat begins only after the one before, once and while exploring. During a fight the session also holds the leader's hits, the carbine's rounds, the hostiles that are down and the checkpoint that a retry returns to. It holds the bodies searched and a small shared inventory with the medical kits, and adds a member to the party when the conversation that recruits them ends.
 - The current conversation and line, and the pause menu's choice.
 
 Use plain Swift session state and rules on the main actor, exposing only coarse changes to the interface. There are no separate member inventories, and the world keeps no progress flags of its own.
 
-**GameWorld owns spatial state:** a body reference for each stable member ID, hidden and out of movement until that member joins, their actual positions, companion routes and formation state, one camera, scene bindings and one owned scene-update subscription. It reads the active leader from the session. Its `EncounterStage` holds the hostiles' bodies and positions, their aim and shots, the assisted target and whether the carbine is drawn, and keeps no second copy of hits, rounds or who is down. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
+**GameWorld owns spatial state:** a body reference for each stable member ID, out of movement until that member joins and hidden until then unless the level has them lying hurt where they wait, their actual positions, companion routes and formation state, one camera, scene bindings and one owned scene-update subscription. It reads the active leader from the session. Its `EncounterStage` holds the hostiles' bodies and positions, their aim and shots, the assisted target and whether the carbine is drawn, and keeps no second copy of hits, rounds or who is down. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
 
 **GameControls owns device attachment and raw sampling.** Pure InputRules owns the transformation of raw values plus prior input-rule state into intents and next rule state. Neither keeps an independent pause/dialogue policy: `GameWorld` reads the mode from `GameSession`, and `GameControls` receives it when resolving input.
 
@@ -105,11 +105,11 @@ Companions move as a squad under [ADR 0003](decisions/0003-squad-movement.md), [
 
 A companion that stalls for a second re-plans; after three stalls they wait, the HUD names them, and they retry by themselves. The leader and the other companion keep moving, and nobody teleports. The planner places whoever is in the party with the leader: one companion or two.
 
-The camera keeps the level's elevated offset and field of view and follows the session's selected leader. The bridge's camera keeps the accepted height and distance but looks straight along the deck, so pushing up walks towards Manhattan. On switching, ease the target from the current camera target to the new leader over **0.25 seconds**, tunable in playtests; another switch starts from the current interpolated target, and the transition freezes with the world. During a fight the target leans from the leader towards the nearest hostile in the open, 40% of the way and at most 3 m, easing in and out over about a second, so both stay on screen; the bridge camera otherwise shows only about 10 m ahead. Restart and a fight's retry straighten it at once.
+The camera keeps the level's elevated offset and field of view and follows the session's selected leader. The bridge's camera keeps the accepted height and distance but looks straight along the deck, so pushing up walks towards Manhattan. On switching, ease the target from the current camera target to the new leader over **0.25 seconds**, tunable in playtests; another switch starts from the current interpolated target, and the transition freezes with the world. During a fight the target leans from the leader towards the nearest hostile in the open, 40% of the way and at most 3 m, easing in and out over about a second, so both stay on screen; the bridge camera otherwise shows only about 10 m ahead. While a scene with a focus plays, such as Laura calling out, it leans 80% of the way towards the focus, at most 7 m, so what the scene is about shows clear of the HUD's panel. Restart and a fight's retry straighten it at once.
 
 ## The opening
 
-The app opens on the **Brooklyn Bridge**: Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom and Laura's bodies wait, hidden, at the places their scenes will use.
+The app opens on the **Brooklyn Bridge**: Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom's body waits, hidden, where his scene will use it. Laura lies hurt in view at hers, face down beside a car, until her scene stands her up; she stays out of movement and the squad until she joins. The objective line changes as the story moves on.
 
 ### Interactions
 
@@ -117,7 +117,7 @@ An interaction is an entry in the level: a stable action ID, a name for the prom
 
 1. GameWorld evaluates the leader's actual position against the interaction's approach area, and the HUD shows the action's name where the session offers it.
 2. A fresh action press rechecks the leader, the approach and the session's progress, so a prompt left over from before a move or a switch cannot act.
-3. GameSession validates the mode and progress and accepts or rejects the named command. An accepted action can begin an encounter, as the search begins the ambush.
+3. GameSession validates the mode and progress and accepts or rejects the named command. An accepted action can begin an encounter, as the search begins the ambush and Help, which uses the shared medical kit, begins Laura's scene.
 
 ### Fights
 
@@ -132,7 +132,7 @@ The session's last allowed hit starts the retry. The screen fades out over 0.6 s
 
 ### Scenes
 
-A scene is an encounter that holds the leader still while its cues play and has no retry, because the leader cannot be hurt in it. The ambush is one. Searching the stranger's body begins it, and its cues, all played in the fixed step, do the following in order:
+A scene is an encounter that holds the leader still while its cues play and has no retry, because the leader cannot be hurt in it. An encounter can also have no hostiles at all, and then ends after its last cue. The ambush is a scene. Searching the stranger's body begins it, and its cues, all played in the fixed step, do the following in order:
 
 - step the attacker out from behind the van and set him running at Miki;
 - take the body's loot into the session's shared inventory;
@@ -141,7 +141,9 @@ A scene is an encounter that holds the leader still while its cues play and has 
 - turn Miki and Tom to each other;
 - start their exchange.
 
-A scene ends after its last cue, once its hostiles are down. What a conversation settles, such as Tom joining, takes effect when it ends, so Restart part-way through discards it. Pause holds a scene, and Restart cancels it. While a scene holds the leader, the world ignores movement, Fire and actions; Pause still works. Keep conversations as short, ordered, speaker-labelled text in content; no branching dialogue framework is required.
+Laura's scene follows the same pattern: Help begins it, she stands, she and Miki turn to each other, and their exchange ends with her joining. Reaching the Manhattan end with all three begins a last scene, a short closing exchange.
+
+A scene ends after its last cue, once its hostiles are down. What a conversation settles, such as Tom or Laura joining, takes effect when it ends, so Restart part-way through discards it. Pause holds a scene, and Restart cancels it. While a scene holds the leader, the world ignores movement, Fire and actions; Pause still works. Keep conversations as short, ordered, speaker-labelled text in content; no branching dialogue framework is required.
 
 ## Restart and lifecycle
 
@@ -150,7 +152,7 @@ Restart resets the existing session and world in place, chosen from the pause me
 1. The session resets: exploring, the level's starting party with its first member (Miki) leading, no trigger fired, the first story beat with no fight under way, full rounds, no hits, nobody down, no body searched and an empty inventory, no conversation, and the pause menu back on Resume.
 2. The world puts every body back on its level's spawn point, facing the level's starting direction, shows only the members in the party and marks the leader. Route memory restarts at the leader's spawn; the formation planner, each companion motor, the companion targets and the stall warning start afresh.
 3. The camera transition is cancelled and the camera target returns to the start. Owed simulation time is dropped and the next step is skipped.
-4. The encounter stage puts every hostile back unseen and holsters the carbine, members who have not joined are hidden again, and a scene or a retry in progress is cancelled with its fade.
+4. The encounter stage puts every hostile back unseen and holsters the carbine, members who have not joined are hidden again or lie hurt again where they wait, and a scene or a retry in progress is cancelled with its fade.
 5. The observation returns to the level's opening line, and the prompt and nearby landmark are recomputed. The input owner requires neutral input, as on Resume, so every button, key and finger must be released before anything moves.
 
 Restart does not attach a second simulation callback, rebuild the static scene, add entities or reload stand-ins. The run has no asynchronous effects or loads today, so nothing needs invalidating; one added later must check that it still belongs to the current run. Tests restart repeatedly and count every entity. The update subscription is attached only when the view appears, so Restart cannot add a second one.

@@ -219,7 +219,7 @@ The repaired set serves others as well as the party. It establishes contact and 
 **Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
 **Achievement:** Three strangers reach Manhattan together, each having helped another.
 
-The [decision record](../decisions/0004-brooklyn-bridge-opening.md) builds this in milestones: the bridge, the first fight, the ambush and Tom are built, and Laura follows. The dialogue remains to be written.
+The [decision record](../decisions/0004-brooklyn-bridge-opening.md) builds this in milestones: the bridge, the first fight, the ambush and Tom are built, and Laura's scene and the end of the opening are in review. The dialogue remains to be written.
 
 Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 

@@ -81,25 +81,68 @@ enum BrooklynBridge {
       (1.5, .loot(stranger.id)),
       (2.0, .appear(.tom)),
       (2.6, .shot(by: .tom, at: attacker.id)),
-      (3.0, .face(.tom)),
+      (3.0, .face(.miki, .tom)),
       (3.4, .talk(.metTom)),
     ],
     holdsLeader: true)
 
+  /// Laura (M4) lies hurt beside a car just past the gap in the divider. Once Tom has joined, the
+  /// party's approach finds her: she calls out, the camera leans towards her so that she shows
+  /// clear of the HUD, Miki answers, and Help is offered at her side.
+  static let lauraFound = Level.Encounter(
+    beat: .lauraFound, start: .area(layout.area(named: "laura.found")), retryAt: nil,
+    hostiles: [],
+    cues: [
+      (0.3, .say(speaker: "A woman", line: "Please. Over here.")),
+      (2.4, .say(speaker: "Miki", line: "Hold on. We're coming.")),
+    ],
+    focus: layout.marker(named: "spawn.laura"))
+
+  /// Helping Laura uses the medical kit from the stranger's body. Whoever leads can help.
+  static let helpLaura = Level.Interaction(
+    id: .helpLaura, name: "Help", approach: layout.area(named: "help.laura"),
+    result: "She gets the medical kit.", repeated: "She's on her feet now.",
+    early: "She needs a medical kit.")
+
+  /// A short scene that holds the leader: with the medical kit Laura stands, she and Miki turn
+  /// to each other, and the exchange that follows ends with Laura joining.
+  static let helping = Level.Encounter(
+    beat: .helpingLaura, start: .action(.helpLaura), retryAt: nil, hostiles: [],
+    cues: [
+      (1.5, .stand(.laura)),
+      (1.8, .face(.miki, .laura)),
+      (2.2, .talk(.metLaura)),
+    ],
+    holdsLeader: true)
+
+  /// The end of the opening (M4): the three reach the Manhattan end together, the party stops,
+  /// and a short exchange closes the slice.
+  static let arrival = Level.Encounter(
+    beat: .arrived, start: .area(layout.area(named: "manhattan-end")), retryAt: nil,
+    hostiles: [], cues: [(0.5, .talk(.arrival))], holdsLeader: true)
+
   static let level = Level(
     id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes, pieces: layout.pieces,
     points: points,
-    interactions: [searchStranger], triggers: triggers, encounters: [strangerEncounter, ambush],
+    interactions: [searchStranger, helpLaura], triggers: triggers,
+    encounters: [strangerEncounter, ambush, lauraFound, helping, arrival],
     startingAmmo: 12,
-    // Miki crosses alone. Tom and Laura wait, hidden, where their scenes will be.
+    // Miki crosses alone. Tom waits hidden where his scene will be, and Laura lies hurt at
+    // hers.
     party: [.miki],
     spawns: [
       .miki: layout.marker(named: "spawn.miki"), .tom: layout.marker(named: "spawn.tom"),
       .laura: layout.marker(named: "spawn.laura"),
     ],
+    lying: [.laura],
     heading: [0, -1], cameraOffset: cameraOffset, fieldOfView: layout.camera.fieldOfView,
     opening: "The Brooklyn end of the bridge. Manhattan is on the far side.",
     objective: "Cross the bridge to Manhattan.",
+    objectiveChanges: [
+      (.lauraFound, "Help the woman between the cars."),
+      (.withLaura, "Cross to Manhattan together."),
+      (.arrived, "Manhattan, together."),
+    ],
     lookAround: "Manhattan is ahead, across the bridge.",
     restartNote: "Restart begins a new run at the Brooklyn end.")
 

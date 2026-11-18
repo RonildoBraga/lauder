@@ -1,7 +1,7 @@
 import RealityKit
 import simd
 
-/// A level's fights and scripted scenes (ADR 0004, M2 and M3). It plays an encounter's cues,
+/// A level's fights and scripted scenes (ADR 0004, M2 to M4). It plays an encounter's cues,
 /// runs each hostile, fires the leader's weapon at the assisted target and shows what happens:
 /// the hostiles' bodies, their aim before each shot, the shots, the target marker and the drawn
 /// weapon. The session keeps the hits, the rounds, the loot and who is down; this keeps only
@@ -20,10 +20,12 @@ final class EncounterStage {
     var won = false
     /// Members who appeared in this step, such as Tom before his shot.
     var appeared: [PartyMember] = []
+    /// Members who stood up in this step, such as Laura once she is helped.
+    var stood: [PartyMember] = []
     /// A member who fired a scripted shot, and the direction they fired in.
     var shooter: (member: PartyMember, facing: SIMD2<Float>)?
-    /// The leader and this member turn to face each other.
-    var face: PartyMember?
+    /// Two members who turn to face each other.
+    var face: (PartyMember, PartyMember)?
   }
 
   /// How long a shot's tracer stays on screen.
@@ -34,6 +36,10 @@ final class EncounterStage {
   /// open, up to the limit, so the leader and the threat are both on screen.
   static let cameraLeanShare: Float = 0.4
   static let cameraLeanLimit: Float = 3
+  /// While a scene with a focus plays, such as Laura calling out, the camera leans most of the
+  /// way towards it, so it comes into view clear of the HUD whichever way the party approaches.
+  static let focusShare: Float = 0.8
+  static let focusLimit: Float = 7
 
   let weapon = Weapon.carbine
   /// Holds the hostiles, aim lines, shots and target marker; the world adds it to the scene.
@@ -150,6 +156,7 @@ final class EncounterStage {
           outcome.line = Self.describe(loot)
         }
       case .appear(let member): outcome.appeared.append(member)
+      case .stand(let member): outcome.stood.append(member)
       case .shot(let member, let id):
         guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
         showTracer(Self.tracer(member), from: from, to: state.position)
@@ -160,7 +167,7 @@ final class EncounterStage {
         let offset = state.position - from
         if simd_length(offset) > 0.001 { outcome.shooter = (member, simd_normalize(offset)) }
         outcome.line = "\(state.spec.name) is down."
-      case .face(let member): outcome.face = member
+      case .face(let first, let second): outcome.face = (first, second)
       case .talk(let conversation): _ = session.converse(conversation)
       }
     }
@@ -236,17 +243,30 @@ final class EncounterStage {
 
   private static func tracer(_ member: PartyMember) -> String { "member.\(member.rawValue)" }
 
-  /// Where the camera's target should lean from the leader: towards the nearest hostile that
-  /// has stepped out and is still standing, during a fight; otherwise nowhere.
+  /// Where the camera's target should lean from the leader: towards a scene's focus while it
+  /// plays, or towards the nearest hostile that has stepped out and is still standing, during a
+  /// fight; otherwise nowhere.
   func cameraLean(leader: SIMD2<Float>) -> SIMD2<Float> {
-    guard encounter != nil,
+    guard let encounter else { return .zero }
+    if let focus = encounter.focus {
+      return Self.lean(from: leader, towards: focus, share: Self.focusShare, limit: Self.focusLimit)
+    }
+    guard
       let nearest = hostiles.values.filter({ $0.isVisible && !$0.isDown }).min(by: {
         simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
       })
     else { return .zero }
-    let lean = (nearest.position - leader) * Self.cameraLeanShare
+    return Self.lean(
+      from: leader, towards: nearest.position, share: Self.cameraLeanShare,
+      limit: Self.cameraLeanLimit)
+  }
+
+  private static func lean(
+    from leader: SIMD2<Float>, towards point: SIMD2<Float>, share: Float, limit: Float
+  ) -> SIMD2<Float> {
+    let lean = (point - leader) * share
     let length = simd_length(lean)
-    return length > Self.cameraLeanLimit ? lean / length * Self.cameraLeanLimit : lean
+    return length > limit ? lean / length * limit : lean
   }
 
   // MARK: - Showing it
