@@ -133,8 +133,9 @@ struct Level {
     let retryAt: SIMD2<Float>?
     let hostiles: [Hostile]
     let cues: [(at: Float, cue: Cue)]
-    /// The leader stands still while the cues play, as in a short scripted scene.
-    var holdsLeader = false
+    /// The party stands still while the cues play, as in a short scripted scene: whoever leads
+    /// and the companions, so that only the cues place and turn anyone until it ends.
+    var holdsParty = false
     /// Where the camera leans while the cues play, so that what the scene is about comes into
     /// view, as it leans towards a hostile in a fight.
     var focus: SIMD2<Float>?

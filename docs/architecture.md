@@ -132,7 +132,7 @@ The session's last allowed hit starts the retry. The screen fades out over 0.6 s
 
 ### Scenes
 
-A scene is an encounter that holds the leader still while its cues play and has no retry, because the leader cannot be hurt in it. An encounter can also have no hostiles at all, and then ends after its last cue. The ambush is a scene. Searching the stranger's body begins it, and its cues, all played in the fixed step, do the following in order:
+A scene is an encounter that holds the party still while its cues play, whoever leads, so that only its cues place and turn anyone; switching leader during it moves no one. It has no retry, because the leader cannot be hurt in it. An encounter can also have no hostiles at all, and then ends after its last cue. The ambush is a scene. Searching the stranger's body begins it, and its cues, all played in the fixed step, do the following in order:
 
 - step the attacker out from behind the van and set him running at Miki;
 - take the body's loot into the session's shared inventory;
@@ -143,7 +143,7 @@ A scene is an encounter that holds the leader still while its cues play and has 
 
 Laura's scene follows the same pattern: Help begins it, she stands, she and Miki turn to each other, and their exchange ends with her joining. Reaching the Manhattan end with all three begins a last scene, a short closing exchange.
 
-A scene ends after its last cue, once its hostiles are down. What a conversation settles, such as Tom or Laura joining, takes effect when it ends, so Restart part-way through discards it. Pause holds a scene, and Restart cancels it. While a scene holds the leader, the world ignores movement, Fire and actions; Pause still works. Keep conversations as short, ordered, speaker-labelled text in content; no branching dialogue framework is required.
+A scene ends after its last cue, once its hostiles are down. What a conversation settles, such as Tom or Laura joining, takes effect when it ends, so Restart part-way through discards it. Pause holds a scene, and Restart cancels it. While a scene holds the party, the world ignores movement, Fire and actions; Pause still works. A conversation that a cue begins also ends the frame's remaining movement steps. Keep conversations as short, ordered, speaker-labelled text in content; no branching dialogue framework is required.
 
 ## Restart and lifecycle
 

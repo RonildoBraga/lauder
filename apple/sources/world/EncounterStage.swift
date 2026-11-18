@@ -54,8 +54,8 @@ final class EncounterStage {
   /// The HUD's warning, such as "The stranger is aiming."
   private(set) var threat: String?
 
-  /// Whether the leader stands still while a scripted scene plays.
-  var holdsLeader: Bool { encounter?.holdsLeader == true }
+  /// Whether the party stands still while a scripted scene plays, whoever leads.
+  var holdsParty: Bool { encounter?.holdsParty == true }
 
   private let specs: [String: Level.Hostile]
   private let obstacles: [PartyMotion.Box]

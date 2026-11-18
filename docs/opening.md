@@ -59,7 +59,7 @@ The maintainer assigned the fourth milestone, **“Yes, start M4”**, and after
 
 - **Laura lies hurt in view.** As ADR 0004 set out, her body is in the scene from the start, lying face down beside the car just past the gap in the divider, across the camera's view so the pose reads from above. She stays out of movement and the squad until she joins; M1 had hidden her.
 - **Found.** Once Tom has joined, walking onto the west roadway near her starts the *Laura found* beat. She calls out, "Please. Over here.", the camera leans most of the way towards her so that she shows clear of the HUD's panel, and Miki answers. The objective becomes "Help the woman between the cars." The first rendered run had her calling out from under the panel, lying along the camera's view where she looked as if she were standing; the camera's lean and the turned pose fixed both.
-- **Help.** Beside her the action reads **Help**, for whoever leads; a press while she is still calling out does nothing. It uses the medical kit from the stranger's body and begins a short scene that holds the leader: she stands, she and Miki turn to each other, and a four-line exchange gives her name. When it ends she joins, and Tom and Laura follow in the Close formation.
+- **Help.** Beside her the action reads **Help**, for whoever leads; a press while she is still calling out does nothing. It uses the medical kit from the stranger's body and begins a short scene that holds the party, whoever leads: she stands, she and Miki turn to each other, and a four-line exchange gives her name. When it ends she joins, and Tom and Laura follow in the Close formation.
 - **The end of the opening.** Reaching the Manhattan end with all three stops the party for a three-line closing exchange, and the objective then reads "Manhattan, together." Without Laura the end does not start, and the objective keeps pointing to her.
 - **How it is built.**
   - Four beats join the story: Laura found, helping her, with Laura, and arrived.
@@ -69,12 +69,13 @@ The maintainer assigned the fourth milestone, **“Yes, start M4”**, and after
   - Restart puts Laura back on the deck, hurt, and resets everything else without adding entities.
   - The `laura` and `opening` playtests join the others. A conversation that starts during a scripted walk ends that walk step, as the closing exchange does.
 
-**Checks.** `./scripts/check` passes with 106 Swift tests in 17 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 22 tests, including all six scenarios driven without rendering. The new tests cover:
+**Checks.** `./scripts/check` passes with 108 Swift tests in 17 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 22 tests, including all six scenarios driven without rendering. The new tests cover:
 
 - Help offered only after Tom joins and Laura is found, doing nothing while she calls out, using the kit once;
 - the end starting only with all three;
 - Laura lying in view at the start;
-- the whole sequence in play: the call-out with the camera's lean and its return, the Help prompt, the scene holding the leader, Laura standing, the exchange, both companions following, the closing exchange, and Restart putting her back without adding entities.
+- the whole sequence in play: the call-out with the camera's lean and its return, the Help prompt, the scene holding the party, Laura standing, the exchange, both companions following, the closing exchange, and Restart putting her back without adding entities;
+- after Copilot's review, Help with Tom leading, and the lead passing to Tom during the scene: everyone keeps their place, and Miki and Laura face each other for the exchange.
 
 The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 steps in 92.9 s and `opening` 58 of 58 in 112.4 s. Frames averaged 16.7 ms, and the only frames over 34 ms were each run's first. While moving, the companions stayed within 0.6 m of their slots 88% and 93% of the time and never overlapped. The stills show Laura lying across the lane as she calls out, clear of the panel, then standing to face Miki, then the three together and “Manhattan, together.”. In Blender 5.3, Load shows Laura's two new areas, and Save with no edits finds nothing to change.
 

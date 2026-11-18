@@ -278,7 +278,7 @@ final class GameWorld {
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
   /// prompt left over from before a move or a switch cannot act.
   func performAction() {
-    guard session.mode == .exploring, !stage.holdsLeader, let body = bodies[session.leader] else {
+    guard session.mode == .exploring, !stage.holdsParty, let body = bodies[session.leader] else {
       return
     }
     let position = SIMD2(body.position.x, body.position.z)
@@ -366,9 +366,10 @@ final class GameWorld {
     if firePressed { firePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
-    // remainder, always under one step, carries to the next frame. A retry stops the rest.
+    // remainder, always under one step, carries to the next frame. A retry, or a conversation a
+    // cue has just begun, stops the rest.
     unsimulatedTime += elapsed
-    while unsimulatedTime >= Self.simulationStep, retryElapsed == nil {
+    while unsimulatedTime >= Self.simulationStep, retryElapsed == nil, session.mode == .exploring {
       unsimulatedTime -= Self.simulationStep
       simulateStep(movement: movement, dt: Self.simulationStep)
     }
@@ -383,8 +384,10 @@ final class GameWorld {
     guard let leaderBody = bodies[leader] else { return }
     let motion = self.motion
     let grid = self.grid
-    // A scripted scene holds the leader where they stand.
-    let movement = stage.holdsLeader ? .zero : movement
+    // A scripted scene holds the party where they stand, whoever leads; only its cues place and
+    // turn anyone, and switching leader during it moves no one.
+    let held = stage.holdsParty
+    let movement = held ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
     let leaderStart = SIMD2(leaderBody.position.x, leaderBody.position.z)
@@ -398,6 +401,11 @@ final class GameWorld {
     if !level.encounters.isEmpty {
       stepEncounter(leader: leader, at: leaderEnd, dt: dt)
       if retryElapsed != nil { return }
+    }
+    // The hold lasts through the step whose cue ends the scene and begins its exchange.
+    if held || session.mode != .exploring {
+      companionTargets = [:]
+      return
     }
 
     // Companions choose their own routes to formation slots (ADR 0003); every movement is
@@ -456,7 +464,7 @@ final class GameWorld {
   /// Only Miki carries the carbine, and not while a scene holds her.
   private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
     let angle = yaw[leader] ?? 0
-    let armed = leader == .miki && !stage.holdsLeader
+    let armed = leader == .miki && !stage.holdsParty
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
         bodies[member].flatMap {

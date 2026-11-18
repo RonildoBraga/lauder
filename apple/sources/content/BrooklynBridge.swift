@@ -84,7 +84,7 @@ enum BrooklynBridge {
       (3.0, .face(.miki, .tom)),
       (3.4, .talk(.metTom)),
     ],
-    holdsLeader: true)
+    holdsParty: true)
 
   /// Laura (M4) lies hurt beside a car just past the gap in the divider. Once Tom has joined, the
   /// party's approach finds her: she calls out, the camera leans towards her so that she shows
@@ -113,13 +113,13 @@ enum BrooklynBridge {
       (1.8, .face(.miki, .laura)),
       (2.2, .talk(.metLaura)),
     ],
-    holdsLeader: true)
+    holdsParty: true)
 
   /// The end of the opening (M4): the three reach the Manhattan end together, the party stops,
   /// and a short exchange closes the slice.
   static let arrival = Level.Encounter(
     beat: .arrived, start: .area(layout.area(named: "manhattan-end")), retryAt: nil,
-    hostiles: [], cues: [(0.5, .talk(.arrival))], holdsLeader: true)
+    hostiles: [], cues: [(0.5, .talk(.arrival))], holdsParty: true)
 
   static let level = Level(
     id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes, pieces: layout.pieces,

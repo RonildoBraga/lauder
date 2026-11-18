@@ -130,6 +130,52 @@ struct LauraTests {
     #expect(count(world.root) == entities)
   }
 
+  @Test
+  func withTomLeadingHelpStillHoldsEveryoneAndTurnsMikiToLaura() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    joinTom(world)
+    findLaura(world)
+    // Tom leads to her and helps; Miki follows as a companion.
+    switchLeader(world)
+    #expect(world.session.leader == .tom)
+    walk(world, to: [-7, -37])
+    #expect(world.actionName == "Help")
+    world.performAction()
+    #expect(world.session.beat == .helpingLaura)
+    let mikiAt = position(world, .miki)
+    let tomAt = position(world, .tom)
+    // Despite the stick, nobody moves until the exchange, and then Miki and Laura face each other.
+    for _ in 0..<(60 * 3) where world.session.mode == .exploring {
+      world.advanceParty(movement: [1, 0], deltaTime: 1 / 60)
+    }
+    #expect(world.session.mode == .dialogue)
+    #expect(simd_distance(position(world, .miki), mikiAt) < 0.001)
+    #expect(simd_distance(position(world, .tom), tomAt) < 0.001)
+    #expect(faces(world, .miki, .laura) && faces(world, .laura, .miki))
+  }
+
+  @Test
+  func passingTheLeadToTomDuringHelpKeepsMikiFacingLaura() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    joinTom(world)
+    findLaura(world)
+    walk(world, to: [-7, -37])
+    world.performAction()
+    #expect(world.session.beat == .helpingLaura)
+    // Once the two have turned to each other, the lead passes to Tom before the exchange.
+    #expect(run(world, upTo: 2) { faces(world, .miki, .laura) })
+    #expect(world.session.mode == .exploring)
+    let mikiAt = position(world, .miki)
+    switchLeader(world)
+    #expect(world.session.leader == .tom)
+    for _ in 0..<60 where world.session.mode == .exploring {
+      world.advanceParty(movement: [1, 0], deltaTime: 1 / 60)
+    }
+    #expect(world.session.mode == .dialogue)
+    #expect(simd_distance(position(world, .miki), mikiAt) < 0.001)
+    #expect(faces(world, .miki, .laura))
+  }
+
   // MARK: - Helpers
 
   /// The session's way to Tom joining: the fight, the search and its loot, and the exchange.
@@ -158,6 +204,32 @@ struct LauraTests {
     #expect(run(world, upTo: 6) { world.session.mode == .dialogue })
     finishConversation(world)
     #expect(world.session.beat == .withTom)
+  }
+
+  /// From Tom joining, across the gap in the divider until Laura has called out.
+  private func findLaura(_ world: GameWorld) {
+    walk(world, to: [6.5, -28])
+    walk(world, to: [-6, -31])
+    walk(world, to: [-6.5, -33])
+    #expect(world.session.beat == .lauraFound)
+    #expect(run(world, upTo: 3) { !world.session.inEncounter })
+  }
+
+  /// One press of the switch control, as the controls deliver it.
+  private func switchLeader(_ world: GameWorld) {
+    let press = InputRules.Input(
+      movement: .zero, actionPressed: false, pausePressed: false, switchPressed: true)
+    world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
+  }
+
+  /// Whether one member's stand-in faces another, within about 8°.
+  private func faces(_ world: GameWorld, _ member: PartyMember, _ other: PartyMember) -> Bool {
+    guard let visual = world.root.findEntity(named: "party.\(member.rawValue)")?.children.first
+    else { return false }
+    let forward = visual.orientation.act([0, 0, -1])
+    let towards = position(world, other) - position(world, member)
+    guard simd_length(towards) > 0.01 else { return false }
+    return simd_dot(simd_normalize(SIMD2(forward.x, forward.z)), simd_normalize(towards)) > 0.99
   }
 
   /// A stand-in lying face down: its head points along the deck, and it rests on it.
