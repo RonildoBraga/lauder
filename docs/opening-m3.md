@@ -52,6 +52,12 @@ Claude implemented and checked M3, so nothing below is an independent review. Th
 - The first round's stills showed Tom under the HUD's panel, so he moved to the right. The final stills show the attacker down short of Miki, Tom standing past the van and the HUD showing Miki and Tom, then Tom beside her through the tower's arch.
 - In Blender 5.3, Load shows the layout's new area and markers, and Save with no edits finds nothing to change.
 
+## Phone playtest — 18 November 2026
+
+Claude installed a signed Release build of PR #44 at `95bf857` directly on the baseline iPhone 13 Pro Max, on iOS 27.2.1. It also uploaded TestFlight build 0.1.0 (2) from `ecb1031`, which differs only in its build number. The maintainer first opened an older Lauder app from their free personal team, a pre-bridge build under another app ID, and at their request Claude removed it from the phone. After playing M3, the maintainer reported: **“It played well”**.
+
+That is the maintainer's summary; Claude observed nothing on the phone. It does not say whether the scene was played more than once, how far Tom followed, or which inputs were used. No frame pacing was measured.
+
 ## Limits
 
 - The attacker's strike is not built. Tom always drops him first and the scene holds Miki, so it never comes up.
@@ -60,4 +66,4 @@ Claude implemented and checked M3, so nothing below is an independent review. Th
 - The medical kit is carried but not used until M4.
 - Companions do not fight on their own; Tom's shot is scripted, as ADR 0004 sets out.
 - The lines are provisional.
-- The checks ran in the Simulator. How the scene reads on the phone, and Tom's following there, are untested.
+- Apart from the maintainer's playtest, the checks ran in the Simulator. The phone's frame pacing with Tom following is unmeasured.
