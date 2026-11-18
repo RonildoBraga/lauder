@@ -44,7 +44,7 @@ enum PrototypeLayout {
     var name: String { id.rawValue }
   }
 
-  enum InteractionID: String {
+  enum InteractionID: String, CaseIterable {
     case transmitter = "relay.transmitter"
     case regulator = "depot.regulator"
   }
@@ -53,7 +53,16 @@ enum PrototypeLayout {
     let id: InteractionID
     let name: String
     let position: SIMD3<Float>
+    /// The visible block, which is also its collision footprint.
+    let size: SIMD3<Float>
     let observation: String
+    /// What a look shows once the mission reaches `changedAt`.
+    let changedAt: GameSession.Phase
+    let changedObservation: String
+
+    func observation(at phase: GameSession.Phase) -> String {
+      phase >= changedAt ? changedObservation : observation
+    }
   }
 
   static let spawn: SIMD3<Float> = [-8, 0, 3]
@@ -64,8 +73,6 @@ enum PrototypeLayout {
   static let movementDeadZone: Float = 0.15
   static let interactionRadius: Float = 2.3
 
-  static let transmitterSize: SIMD3<Float> = [0.8, 1, 0.6]
-  static let regulatorSize: SIMD3<Float> = [0.5, 0.5, 0.5]
   static let serviceMarkerSize: SIMD3<Float> = [1.2, 0.025, 0.12]
   static let serviceMarkerPositions: [SIMD3<Float>] = [[3.4, 0.02, -5.1], [3.4, 0.02, -3.9]]
 
@@ -113,31 +120,56 @@ enum PrototypeLayout {
 
   static let points: [PointOfInterest] = [
     PointOfInterest(
-      id: .transmitter, name: "Transmitter", position: [-10, 0, 1.5],
-      observation: "The transmitter needs a replacement part."
+      id: .transmitter, name: "Transmitter", position: [-10, 0, 1.5], size: [0.8, 1, 0.6],
+      observation: "The transmitter can receive but cannot answer.",
+      changedAt: .radioRepaired, changedObservation: "The transmitter is working again."
     ),
     PointOfInterest(
-      id: .regulator, name: "Regulator", position: [7, 0, -4.5],
-      observation: "A regulator sits among the depot equipment."
+      id: .regulator, name: "Regulator housing", position: [7, 0, -4.5], size: [0.5, 0.5, 0.5],
+      observation: "A regulator sits in a disconnected housing, beside a working water bypass.",
+      changedAt: .carryingRegulator,
+      changedObservation: "The housing is empty. The water bypass beside it is still connected."
     ),
   ]
+
+  static func point(_ id: InteractionID) -> PointOfInterest {
+    let matches = points.filter { $0.id == id }
+    precondition(matches.count == 1, "Layout must contain exactly one \(id.rawValue) point.")
+    return matches[0]
+  }
 
   enum ActionID: String, CaseIterable, Sendable {
     case reachLatch = "passage.reach-latch"
     case shiftPanel = "passage.shift-panel"
+    case hearBriefing = "relay.briefing"
+    case takeRegulator = "depot.take-regulator"
+    case repairTransmitter = "relay.repair"
+    case callCrew = "relay.call"
+    case readPlan = "relay.read-plan"
   }
 
-  /// A contextual action for one eligible member, usable only while the active body stands in
-  /// its approach area. Approaches are authored on the street side of the closed passage.
+  /// A contextual action, usable only while the active body stands in its approach area.
+  /// Approaches are authored on the usable side of any wall: the passage's on the street side,
+  /// the transmitter's inside the shelter and the regulator's inside the depot.
   struct Interaction {
     let id: ActionID
     let name: String
-    let member: PartyMember
+    /// The only member who can act here, or nil when any leader can.
+    let member: PartyMember?
     let approach: PartyMotion.Box
+    /// Companions keep clear of a small approach while its action is offered, so they cannot
+    /// stand where the leader must.
+    var keepClear = false
     /// Shown when another member leads at this approach.
-    let suggestion: String
-    /// Shown when the action opens the passage.
+    var suggestion = ""
+    /// Shown instead when Miki leads here, where she can explain the alternatives.
+    var mikiSuggestion: String?
+    /// Shown when the action succeeds.
     let result: String
+    /// Shown when the action has already succeeded.
+    var repeated = ""
+    /// Shown before the mission reaches the action.
+    var early = ""
   }
 
   // Party B: one closed barrier fills the 1.8 m service opening in the depot's west wall.
@@ -148,17 +180,52 @@ enum PrototypeLayout {
   static let barrierHint =
     "The service passage is closed. Lara could reach the latch, or Tomas could shift the loose panel."
 
+  /// Inside the shelter, around the transmitter, including where the party starts.
+  static let transmitterApproach = PartyMotion.Box(minimum: [-11.4, 0.5], maximum: [-7.6, 3.4])
+  /// Around the regulator's housing, inside the depot.
+  static let housingApproach = PartyMotion.Box(minimum: [5.6, -5.9], maximum: [8.4, -3.1])
+
   static let interactions: [Interaction] = [
     Interaction(
       id: .reachLatch, name: "Reach latch", member: .lara,
-      approach: PartyMotion.Box(minimum: [2.8, -5.35], maximum: [3.6, -4.65]),
+      approach: PartyMotion.Box(minimum: [2.8, -5.35], maximum: [3.6, -4.65]), keepClear: true,
       suggestion: "Lara could reach the latch at the top of the barrier.",
-      result: "Lara reaches up and releases the latch. The passage is open for everyone."),
+      mikiSuggestion: barrierHint,
+      result: "Lara reaches up and releases the latch. The passage is open for everyone.",
+      repeated: "The passage is already open."),
     Interaction(
       id: .shiftPanel, name: "Shift panel", member: .tomas,
-      approach: PartyMotion.Box(minimum: [2.8, -4.35], maximum: [3.6, -3.65]),
+      approach: PartyMotion.Box(minimum: [2.8, -4.35], maximum: [3.6, -3.65]), keepClear: true,
       suggestion: "Tomas could shift the loose panel at the foot of the barrier.",
-      result: "Tomas braces and shifts the loose panel aside. The passage is open for everyone."),
+      mikiSuggestion: barrierHint,
+      result: "Tomas braces and shifts the loose panel aside. The passage is open for everyone.",
+      repeated: "The passage is already open."),
+    // Party C. At the transmitter exactly one of these is offered in each phase.
+    Interaction(
+      id: .hearBriefing, name: "Talk to keeper", member: nil, approach: transmitterApproach,
+      result: "The party sets out to find a regulator at the depot.",
+      repeated: "The keeper has already explained the fault."),
+    Interaction(
+      id: .takeRegulator, name: "Take regulator", member: .miki, approach: housingApproach,
+      suggestion: "Miki should inspect the regulator before anyone takes it.",
+      result: "Miki takes the regulator. The water bypass stays connected.",
+      repeated: "The housing is empty. The water bypass beside it is still connected.",
+      early: "Talk to the keeper at the transmitter first."),
+    Interaction(
+      id: .repairTransmitter, name: "Repair", member: .miki, approach: transmitterApproach,
+      suggestion: "Miki can fit a regulator to the transmitter.",
+      result: "The transmitter is ready.",
+      repeated: "The transmitter is already repaired.",
+      early: "Talk to the keeper first."),
+    Interaction(
+      id: .callCrew, name: "Call", member: nil, approach: transmitterApproach,
+      result: "Transmitter restored. Meeting agreed at Old Lock.",
+      repeated: "The meeting at Old Lock is already agreed.",
+      early: "The transmitter cannot answer yet."),
+    Interaction(
+      id: .readPlan, name: "Read plan", member: nil, approach: transmitterApproach,
+      result: "Old Lock, tomorrow afternoon, by the canal path.",
+      early: "There is no plan to read yet."),
   ]
 
   static func interaction(_ id: ActionID) -> Interaction {
@@ -178,11 +245,7 @@ enum PrototypeLayout {
     boxes.filter { $0.id != .ground }.map {
       footprint(position: $0.position, size: $0.size)
     }
-    + points.map {
-      footprint(
-        position: $0.position,
-        size: $0.id == .transmitter ? transmitterSize : regulatorSize)
-    }
+    + points.map { footprint(position: $0.position, size: $0.size) }
 
   private static func footprint(position: SIMD3<Float>, size: SIMD3<Float>) -> PartyMotion.Box {
     let centre = SIMD2(position.x, position.z)

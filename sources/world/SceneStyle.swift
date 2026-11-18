@@ -33,6 +33,9 @@ struct SceneStyle {
     isMetallic: false)
   let warm = UnlitMaterial(color: UIColor(red: 1, green: 0.75, blue: 0.4, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
+  let water = SimpleMaterial(
+    color: UIColor(red: 0.29, green: 0.52, blue: 0.71, alpha: 1), roughness: 0.6,
+    isMetallic: false)
 
   func material(for surface: PrototypeLayout.Surface) -> SimpleMaterial {
     switch surface {
@@ -87,8 +90,7 @@ struct SceneStyle {
 
   func landmark(for point: PrototypeLayout.PointOfInterest) -> ModelEntity {
     let entity = ModelEntity()
-    let size =
-      point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
+    let size = point.size
     entity.position = point.position + [0, size.y / 2, 0]
     entity.addChild(block(size: size, at: .zero, material: metal))
     entity.addChild(
@@ -99,12 +101,10 @@ struct SceneStyle {
       entity.addChild(
         block(size: [0.48, 0.32, 0.025], at: [0, 0.12, 0.315], material: signal))
       entity.addChild(
-        block(size: [0.14, 0.04, 0.03], at: [-0.19, -0.16, 0.32], material: warm))
-      entity.addChild(
         block(size: [0.05, 0.9, 0.05], at: [0.28, 0.9, 0], material: metal))
-    } else {
-      entity.addChild(block(size: [0.3, 0.035, 0.28], at: [0, 0.27, 0], material: signal))
     }
+    // The transmitter's status light and the regulator itself change with the mission, so
+    // GameWorld adds them.
     return entity
   }
 

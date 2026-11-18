@@ -154,9 +154,7 @@ struct PartySoakTests {
       Bounds(position: $0.position, size: $0.size)
     }
     let landmarks = PrototypeLayout.points.map { point in
-      let size =
-        point.id == .transmitter ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
-      return Bounds(position: point.position, size: size)
+      Bounds(position: point.position, size: point.size)
     }
     return scenery + landmarks
   }

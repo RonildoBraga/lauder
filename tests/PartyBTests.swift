@@ -20,10 +20,10 @@ struct PartyBTests {
     session.togglePause()
     #expect(session.perform(.reachLatch, by: .lara) == .unavailable)
     session.togglePause()
-    #expect(session.perform(.reachLatch, by: .lara) == .opened)
+    #expect(session.perform(.reachLatch, by: .lara) == .done)
     #expect(session.passageOpen)
-    #expect(session.perform(.shiftPanel, by: .tomas) == .alreadyOpen)
-    #expect(session.perform(.reachLatch, by: .miki) == .alreadyOpen)
+    #expect(session.perform(.shiftPanel, by: .tomas) == .alreadyDone)
+    #expect(session.perform(.reachLatch, by: .miki) == .alreadyDone)
   }
 
   @Test
@@ -44,7 +44,9 @@ struct PartyBTests {
     #expect(NavigationGrid.forPassage(open: false).route(from: street, to: depot) == nil)
     #expect(NavigationGrid.forPassage(open: true).route(from: street, to: depot) != nil)
     // Both approaches are reachable on the street side while the barrier is closed.
-    for interaction in PrototypeLayout.interactions {
+    for interaction in [PrototypeLayout.ActionID.reachLatch, .shiftPanel].map(
+      PrototypeLayout.interaction)
+    {
       let centre = (interaction.approach.minimum + interaction.approach.maximum) / 2
       #expect(closed.canTraverse(from: centre, to: centre), "\(interaction.name)")
       #expect(NavigationGrid.forPassage(open: false).route(from: [-6, 3], to: centre) != nil)
@@ -55,7 +57,7 @@ struct PartyBTests {
   func eitherMethodOpensThePassageForTheWholeParty(action: PrototypeLayout.ActionID) throws {
     let world = GameWorld()
     let interaction = PrototypeLayout.interaction(action)
-    lead(world, interaction.member)
+    lead(world, try #require(interaction.member))
     try walk(world, to: [[2.5, 3], action == .reachLatch ? latch : panel])
     #expect(world.actionName == interaction.name)
     #expect(world.hint == nil)

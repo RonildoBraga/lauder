@@ -21,9 +21,27 @@
       case expectInDepot
       /// Switch until this member leads.
       case lead(PartyMember)
-      /// Press the action for one frame.
+      /// Press the action for one frame. While paused it confirms the menu's choice.
       case act
       case expectPassage(open: Bool)
+      /// Press the action to start a conversation, then once per line until play resumes.
+      case talk
+      case expectPhase(GameSession.Phase)
+      /// Press Pause for one frame.
+      case pause
+      /// Move the pause menu's choice: -1 up, 1 down.
+      case menu(Int)
+      /// Everyone back where a new run starts, with Miki leading and no progress.
+      case expectRestarted
+    }
+
+    /// What the runner can see of the game each frame.
+    struct Snapshot {
+      let leader: PartyMember
+      let positions: [PartyMember: SIMD2<Float>]
+      let mode: GameSession.Mode
+      let phase: GameSession.Phase
+      let passageOpen: Bool
     }
 
     struct Frame {
@@ -65,9 +83,11 @@
     }
 
     static let scenarioNames = [
-      "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "all",
+      "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
     ]
     static let walkTimeout: Float = 30
+    /// How long each conversation line stays on screen before the next press.
+    static let lineSeconds: Float = 0.6
 
     let name: String
     private let steps: [Step]
@@ -76,6 +96,8 @@
     private var elapsed: Float = 0
     private var switchFrame = 0
     private var presses = 0
+    private var sincePress: Float = 0
+    private var talking = false
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -113,13 +135,13 @@
 
     /// The raw input for this frame. The first half second is neutral, so the release gate
     /// clears exactly as it does for a player.
-    mutating func input(
-      leader: PartyMember, leaderPosition: SIMD2<Float>,
-      positions: [PartyMember: SIMD2<Float>], passageOpen: Bool
-    ) -> InputRules.Raw {
+    mutating func input(_ snapshot: Snapshot) -> InputRules.Raw {
       guard summary == nil else { return InputRules.Raw() }
       if startedAt == nil { startedAt = Date() }
       guard elapsed >= 0.5 else { return InputRules.Raw() }
+      let leader = snapshot.leader
+      let positions = snapshot.positions
+      let leaderPosition = positions[leader] ?? .zero
       while index < steps.count {
         switch steps[index] {
         case .walk(let target):
@@ -200,9 +222,78 @@
           advance()
           return InputRules.Raw()
         case .expectPassage(let open):
-          if passageOpen != open {
+          if snapshot.passageOpen != open {
             failures.append(
-              "the passage was \(passageOpen ? "open" : "closed") at \(Self.seconds(elapsed))")
+              "the passage was \(snapshot.passageOpen ? "open" : "closed") "
+                + "at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .talk:
+          if snapshot.mode == .dialogue { talking = true }
+          if talking, snapshot.mode == .exploring {
+            advance()
+            continue
+          }
+          if stepTime > 60 {
+            failures.append("a conversation did not finish within 60 s")
+            advance()
+            continue
+          }
+          if switchFrame == 1 {
+            switchFrame = 0
+            return InputRules.Raw()
+          }
+          // A press can land on the frame that resumes play after a conversation, which is not
+          // simulated, so an unanswered press is repeated a few times before it counts as a
+          // failure.
+          if !talking, presses >= 3, sincePress >= Self.lineSeconds {
+            failures.append(
+              "the action at \(Self.describe(leaderPosition)) started no conversation")
+            advance()
+            continue
+          }
+          if presses == 0 || sincePress >= Self.lineSeconds {
+            presses += 1
+            sincePress = 0
+            switchFrame = 1
+            return InputRules.Raw(controllerAction: true)
+          }
+          return InputRules.Raw()
+        case .expectPhase(let phase):
+          if snapshot.phase != phase {
+            failures.append(
+              "the mission was at \(snapshot.phase) instead of \(phase) "
+                + "at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .pause:
+          switchFrame += 1
+          if switchFrame == 1 { return InputRules.Raw(controllerPause: true) }
+          advance()
+          return InputRules.Raw()
+        case .menu(let direction):
+          // Down on the stick (negative y) moves the choice down the menu.
+          switchFrame += 1
+          if switchFrame == 1 {
+            return InputRules.Raw(stick: [0, direction > 0 ? -1 : 1])
+          }
+          advance()
+          return InputRules.Raw()
+        case .expectRestarted:
+          if snapshot.leader != .miki || snapshot.phase != .briefing || snapshot.passageOpen
+            || snapshot.mode != .exploring
+          {
+            failures.append(
+              "after Restart \(snapshot.leader.displayName) led, the mission was at "
+                + "\(snapshot.phase) and the passage was "
+                + (snapshot.passageOpen ? "open" : "closed"))
+          }
+          for (member, position) in positions {
+            let spawn = PrototypeLayout.spawn(for: member)
+            if simd_distance(position, SIMD2(spawn.x, spawn.z)) > 0.3 {
+              failures.append(
+                "\(member.displayName) was at \(Self.describe(position)) after Restart")
+            }
           }
           advance()
         }
@@ -216,6 +307,7 @@
       guard summary == nil, startedAt != nil else { return }
       elapsed += dt
       stepTime += dt
+      sincePress += dt
       frameTimes.append(Double(dt) * 1000)
     }
 
@@ -262,6 +354,9 @@
     private mutating func advance() {
       index += 1
       stepTime = 0
+      switchFrame = 0
+      presses = 0
+      talking = false
     }
 
     /// Append the mark to marks.log as it happens, so `scripts/playtest` can take a screenshot
@@ -377,6 +472,33 @@
         .expectInDepot, .expectTogether(maxDistance: 2.5),
       ]
 
+    /// Restart from the pause menu: Pause, down to Restart, confirm. The check comes before the
+    /// companions step into formation around Miki.
+    private static let restartRun: [Step] = [
+      .pause, .wait(seconds: 0.5), .menu(1), .wait(seconds: 0.3), .mark("restart chosen"),
+      .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
+    ]
+
+    /// Party C's loop from a fresh run: the briefing, Lara's latch, Miki's regulator, the return
+    /// with Tomas leading, the repair, Lara's call and the plan, then a Restart and a new briefing.
+    private static let mission: [Step] =
+      [
+        .mark("start"), .wait(seconds: 0.6), .act, .wait(seconds: 0.4), .mark("briefing"),
+        .talk, .expectPhase(.seekingRegulator), .mark("briefed"),
+      ]
+      + openWithLara + [
+        .lead(.miki), .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([6.2, -4.2]),
+        .mark("at the housing"), .wait(seconds: 0.6), .talk, .expectPhase(.carryingRegulator),
+        .mark("regulator taken"), .wait(seconds: 0.6),
+        .lead(.tomas), .walk([5, -4.5]), .walk([2.5, -4.5]), .walk([2.5, 3]),
+        .walk([-8.4, 2.4]), .wait(seconds: 1), .act, .mark("Tomas at the transmitter"),
+        .wait(seconds: 0.6), .expectPhase(.carryingRegulator),
+        .lead(.miki), .walk([-8.8, 2]), .talk, .expectPhase(.radioRepaired), .mark("repaired"),
+        .wait(seconds: 0.6), .lead(.lara), .walk([-9, 2.6]), .act, .wait(seconds: 0.4),
+        .mark("call"), .talk, .expectPhase(.meetingAgreed), .mark("meeting agreed"),
+        .wait(seconds: 0.6), .talk, .expectPhase(.meetingAgreed), .mark("plan read"),
+      ] + restartRun + [.talk, .expectPhase(.seekingRegulator), .mark("briefed again")]
+
     static func steps(for scenario: String) -> [Step]? {
       switch scenario {
       case "route": route
@@ -388,7 +510,8 @@
       case "reversals": reversals
       case "switches": switches
       case "walls": walls
-      case "all": closed + route + reversals + switches + walls
+      case "mission": mission
+      case "all": closed + route + reversals + switches + walls + restartRun + mission
       default: nil
       }
     }

@@ -1,7 +1,7 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 17 November 2026\
-**Status:** Three-character walkthrough, with Party A implementation assigned regardless of Claude's response. The [Party A record](party-a.md) tracks actual checks. Section 3's access problem is implemented as [Party B](party-b.md), awaiting review. Biographies, dialogue and B/C interactions remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
+**Status:** Three-character walkthrough, with Party A implementation assigned regardless of Claude's response. The [Party A record](party-a.md) tracks actual checks. Section 3's access problem is merged as [Party B](party-b.md). Sections 1 and 4–7 are merged as [Party C](party-c.md), with provisional dialogue. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
 
 The maintainer has endorsed the occasional-combat direction and assigned the [combat-role and Quiet Yard documentation](#future-squad-and-combat-design) for Claude's review before implementation. That separate design gate does not extend the earlier Party A implementation assignment.
 
@@ -17,18 +17,18 @@ This walkthrough starts at Relay House after the East Span closure. The party re
 
 ## What exists today
 
-Party A supplies three primitive stand-ins, session-owned leadership/Pause, leader cycling, collision-checked following and an eased camera target. Companions now follow as a squad in a Close formation ([ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. The newly authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately. Observations remain the only action. Skill interactions, collection, repair, mission dialogue, completion and Restart are not included. See the session record for actual verification.
+Party A supplies three primitive stand-ins, session-owned leadership/Pause, leader cycling, collision-checked following and an eased camera target. Companions now follow as a squad in a Close formation ([ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. The newly authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately. [Party B](party-b.md) adds the passage's latch and panel actions, and [Party C](party-c.md) the briefing, collection, repair, call, completion, **Read plan** and Restart. See their records for actual verification.
 
 The accepted sequence is: **party movement and switching → one shared access problem → salvage, repair and contact**. Party A is assigned; the old solo Stage 3 is superseded. Add later stages only after the party movement checkpoint is established.
 
 ## Readable controls and party feedback
 
-The current input mappings use the same movement, action, switching and Pause rules. Later dialogue/menu behaviour in this table remains planned:
+The current input mappings use the same movement, action, switching and Pause rules. Party C added the dialogue and pause-menu behaviour:
 
 | Intent | PS5 | Xbox | Touch | Keyboard |
 |---|---|---|---|---|
 | Move the leader | Left stick | Left stick | Bottom-left analog stick | WASD |
-| Act / advance a line / confirm a menu choice | Cross | A | Look for the current observation; later contextual action | E |
+| Act / advance a line / confirm a menu choice | Cross | A | Look, the leader's action, Continue in a conversation, or Restart while paused | E |
 | Cycle leader: Miki → Lara → Tomas → Miki | R1 | RB | Next: name | Q |
 | Pause / resume | Options | Menu | Pause / Resume | Escape |
 
@@ -36,7 +36,7 @@ The maintainer's [touch request](touch-controls.md#authorisation) supersedes the
 
 Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
 
-Pause suspends switching and world movement; dialogue will do the same when introduced in C. Release guidance and fresh-input recovery apply after source changes, interruption, reconnection and pause transitions. On touch, lift every finger before continuing, even one resting at the stick centre. The stick and buttons can be held together; Pause keeps their contacts tracked while gameplay is frozen. The [party architecture](architecture.md) records command routing and ownership.
+Pause and dialogue suspend switching and world movement. Release guidance and fresh-input recovery apply after source changes, interruption, reconnection and pause transitions. On touch, lift every finger before continuing, even one resting at the stick centre. The stick and buttons can be held together; Pause keeps their contacts tracked while gameplay is frozen. The [party architecture](architecture.md) records command routing and ownership.
 
 ## 1. Three people with a reason to leave
 
@@ -131,7 +131,7 @@ This can test a small moment of inclusion among the three adults. It does not pr
 
 After the call the trio can keep walking and switching. Any leader can use **Read plan** at the transmitter to reread the meeting details without restarting the call or awarding progress.
 
-The proposed Pause menu contains Resume and Restart. Stick up/down or W/S selects; Cross/A/E confirms; Options/Menu/Escape resumes. Restart returns directly to the beginning of the slice without a second confirmation screen. These menu details are proposals for review, not current features.
+The proposed Pause menu contains Resume and Restart. Stick up/down or W/S selects; Cross/A/E confirms; Options/Menu/Escape resumes. Restart returns directly to the beginning of the slice without a second confirmation screen. [Party C](party-c.md) implements this menu; it opens on Resume, and on touch the action button becomes **Restart** while paused.
 
 During dialogue, Pause preserves the current line; resuming returns there. Restart resets the whole run: all three positions, active leader Miki, follower state, closed service barrier, visible regulator, unrepaired radio, briefing, dialogue and objectives. It must not duplicate characters, scene subscriptions or callbacks. A fresh launch starts a new in-memory run; saved Continue is later work.
 

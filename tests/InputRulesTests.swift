@@ -119,10 +119,63 @@ struct InputRulesTests {
   func pausedSwitchAndActionAreConsumedRatherThanQueued() {
     var state = InputRules.State(needsNeutralInput: false)
     let held = InputRules.Raw(keyboardAction: true, keyboardSwitch: true)
-    #expect(sample(held, mode: .paused, state: &state) == .neutral)
+    // While paused the action confirms the menu's choice and the switch does nothing. Neither
+    // carries over into exploring.
+    let paused = sample(held, mode: .paused, state: &state)
+    #expect(paused.actionPressed)
+    #expect(!paused.switchPressed)
     #expect(sample(held, state: &state) == .neutral)
     #expect(sample(.init(), state: &state) == .neutral)
     #expect(sample(.init(keyboardSwitch: true), state: &state).switchPressed)
+  }
+
+  @Test
+  func aConversationTakesFreshActionPressesAndNothingElse() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let raw = InputRules.Raw(stick: [1, 0], controllerAction: true, controllerSwitch: true)
+    let first = sample(raw, mode: .dialogue, state: &state)
+    #expect(first.actionPressed)
+    #expect(!first.switchPressed)
+    #expect(first.movement == .zero)
+    // A held action shows no further line, and the held switch never reaches exploring.
+    #expect(sample(raw, mode: .dialogue, state: &state) == .neutral)
+    let after = sample(raw, state: &state)
+    #expect(!after.switchPressed)
+    #expect(!after.actionPressed)
+  }
+
+  @Test(arguments: [false, true])
+  func thePauseMenuMovesOnFreshUpAndDownPresses(keyboard: Bool) {
+    var state = InputRules.State(needsNeutralInput: false)
+    let down = keyboard ? InputRules.Raw(down: true) : InputRules.Raw(stick: [0, -1])
+    let up = keyboard ? InputRules.Raw(up: true) : InputRules.Raw(stick: [0, 1])
+    let moved = sample(down, mode: .paused, state: &state)
+    #expect(moved.menuMove == 1)
+    #expect(moved.movement == .zero)
+    #expect(sample(down, mode: .paused, state: &state).menuMove == 0)
+    #expect(sample(up, mode: .paused, state: &state).menuMove == -1)
+    #expect(sample(.init(), mode: .paused, state: &state).menuMove == 0)
+    // A sideways or shallow push does not move the choice.
+    #expect(sample(.init(stick: [0.9, -0.3]), mode: .paused, state: &state).menuMove == 0)
+  }
+
+  @Test
+  func aDirectionHeldWhenPausingDoesNotMoveTheMenu() {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(.init(controllerPause: true, down: true), state: &state).pausePressed)
+    #expect(sample(.init(down: true), mode: .paused, state: &state).menuMove == 0)
+  }
+
+  @Test
+  func theTouchRestartButtonActsOnlyInThePauseMenu() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let restart = InputRules.Raw(touchRestart: true)
+    #expect(sample(restart, state: &state) == .neutral)
+    #expect(sample(.init(), state: &state) == .neutral)
+    #expect(sample(restart, mode: .dialogue, state: &state) == .neutral)
+    #expect(sample(.init(), mode: .paused, state: &state) == .neutral)
+    #expect(sample(restart, mode: .paused, state: &state).restartPressed)
+    #expect(!sample(restart, mode: .paused, state: &state).restartPressed)
   }
 
   @Test
@@ -228,7 +281,10 @@ struct InputRulesTests {
     var state = InputRules.State(needsNeutralInput: false)
     let held = InputRules.Raw(
       touchStick: [0.5, 0], touchIsTouching: true, touchAction: true, touchSwitch: true)
-    #expect(sample(held, mode: .paused, state: &state) == .neutral)
+    let paused = sample(held, mode: .paused, state: &state)
+    #expect(paused.actionPressed)
+    #expect(!paused.switchPressed)
+    #expect(paused.movement == .zero)
     let resumed = sample(held, state: &state)
     #expect(resumed.movement == [0.5, 0])
     #expect(!resumed.actionPressed)
@@ -247,6 +303,7 @@ struct InputRulesTests {
     InputRules.Raw(touchAction: true),
     InputRules.Raw(touchPause: true),
     InputRules.Raw(touchSwitch: true),
+    InputRules.Raw(touchRestart: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()

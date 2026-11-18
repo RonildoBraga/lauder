@@ -27,8 +27,13 @@ struct GameView: View {
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 5) {
           Text("\(world.session.leader.displayName) · \(world.session.leader.role)").font(.headline)
-          Text("Party B · Find a way into the depot, then return.")
+          Text(MissionScript.objective(world.session.phase))
             .font(.subheadline)
+          if world.session.carriesRegulator {
+            // Derived from the mission phase: the part belongs to the party, not to a leader.
+            Label("Carrying the regulator", systemImage: "shippingbox.fill")
+              .font(.caption).foregroundStyle(Color(red: 0.62, green: 0.87, blue: 0.77))
+          }
           HStack(spacing: 8) {
             ForEach(PartyMember.allCases, id: \.self) { member in
               Text(member.displayName)
@@ -37,25 +42,32 @@ struct GameView: View {
                 .underline(member == world.session.leader)
             }
           }
-          if !world.controls.touchControlsEnabled {
+          // During a conversation its panel carries the text and the Continue hint; the result
+          // of the step appears here once the conversation ends.
+          let talking = world.session.mode == .dialogue
+          if !world.controls.touchControlsEnabled && !talking {
             Text(
               "\(world.controls.switchButtonName) · Lead as \(world.session.leader.next.displayName)"
             )
             .font(.caption)
           }
-          Text(world.observation).font(.caption)
-          if let hint = world.hint {
-            Text(hint).font(.caption).foregroundStyle(Color(red: 1, green: 0.84, blue: 0.6))
+          if !talking {
+            Text(world.observation).font(.caption)
+            if let hint = world.hint {
+              Text(hint).font(.caption).foregroundStyle(Color(red: 1, green: 0.84, blue: 0.6))
+            }
           }
           if let diagnostic = world.diagnostic {
             Text(diagnostic).font(.caption).foregroundStyle(.orange)
           }
           if !world.controls.touchControlsEnabled {
-            Label(
-              world.actionName ?? world.nearbyName.map { "Look at \($0)" } ?? "Look around",
-              systemImage: world.controls.actionSymbol ?? "a.circle"
-            )
-            .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+            if !talking {
+              Label(
+                world.actionName ?? world.nearbyName.map { "Look at \($0)" } ?? "Look around",
+                systemImage: world.controls.actionSymbol ?? "a.circle"
+              )
+              .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+            }
             Text(world.controls.sourceName).font(.caption2)
               .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
           }
@@ -103,6 +115,27 @@ struct GameView: View {
       }
       .padding()
 
+      if let line = world.session.currentLine {
+        // Pause keeps the conversation at this line; Resume returns to it.
+        VStack(alignment: .leading, spacing: 6) {
+          Text(line.speaker).font(.headline)
+          Text(line.text).fixedSize(horizontal: false, vertical: true)
+          if !world.controls.touchControlsEnabled {
+            Label("Continue", systemImage: world.controls.actionSymbol ?? "a.circle")
+              .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+          }
+        }
+        .frame(maxWidth: 400, alignment: .leading)
+        .padding(16)
+        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
+        .background(
+          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 14)
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .padding(.bottom, 20)
+        .allowsHitTesting(false)
+      }
+
       if world.controls.status != .ready {
         Color.black.opacity(0.45).ignoresSafeArea().allowsHitTesting(false)
         VStack(spacing: 12) {
@@ -117,14 +150,39 @@ struct GameView: View {
         .allowsHitTesting(false)
       } else if world.isPaused {
         Color.black.opacity(0.45).ignoresSafeArea().allowsHitTesting(false)
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
           Text("Paused").font(.title2.bold())
-          if world.controls.needsNeutralInput {
-            Text(releaseGuidance)
-          } else if world.controls.touchControlsEnabled {
-            Text("Tap Resume to continue.")
+          if world.controls.touchControlsEnabled {
+            Text("Tap Resume to continue, or Restart to begin a new run.")
           } else {
-            Text("Press \(world.controls.pauseButtonName) to resume.")
+            // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
+            VStack(spacing: 6) {
+              ForEach(GameSession.PauseChoice.allCases, id: \.self) { choice in
+                let chosen = choice == world.session.pauseChoice
+                Text(choice == .resume ? "Resume" : "Restart")
+                  .font(.headline)
+                  .frame(width: 180, height: 36)
+                  .background(
+                    chosen ? Color(red: 0.2, green: 0.33, blue: 0.33) : .clear,
+                    in: RoundedRectangle(cornerRadius: 8)
+                  )
+                  .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                      .stroke(chosen ? Color(red: 0.62, green: 0.87, blue: 0.77) : .clear)
+                  )
+              }
+            }
+            Text("Restart begins a new run from the keeper's briefing.").font(.caption)
+            HStack(spacing: 12) {
+              Text("Up or down to choose").font(.caption)
+              Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
+                .font(.caption)
+              Text("\(world.controls.pauseButtonName) · Resume").font(.caption)
+            }
+            .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+          }
+          if world.controls.needsNeutralInput {
+            Text(releaseGuidance).font(.caption)
           }
         }
         .padding(28)
@@ -139,9 +197,9 @@ struct GameView: View {
       if world.controls.touchControlsEnabled {
         TouchControls(
           controls: world.controls, generation: world.controls.touchGeneration,
-          actionTitle: world.actionName ?? "Look",
+          actionTitle: touchActionTitle,
           nextLeaderName: world.session.leader.next.displayName,
-          isPaused: world.isPaused)
+          mode: world.session.mode)
       }
     }
     .handlesGameControllerEvents(matching: .gamepad)
@@ -152,6 +210,16 @@ struct GameView: View {
     .onDisappear {
       world.stop()
       UIApplication.shared.isIdleTimerDisabled = false
+    }
+  }
+
+  /// The touch action button: Restart in the pause menu, Continue in a conversation, otherwise
+  /// the leader's action here or Look.
+  private var touchActionTitle: String {
+    switch world.session.mode {
+    case .paused: "Restart"
+    case .dialogue: "Continue"
+    case .exploring: world.actionName ?? "Look"
     }
   }
 
