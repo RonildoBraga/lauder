@@ -6,8 +6,8 @@ screenshots every marked moment as it happens, then collects the run's summary a
 live in sources/world/Playtest.swift. Results go to .local/playtest/<time>/ unless --output is
 given; that folder is ignored by Git.
 
-    ./scripts/playtest                 # every scenario in one run ("all")
-    ./scripts/playtest route reversals
+    ./scripts/playtest                 # every scenario, one after another
+    ./scripts/playtest first-fight ambush
     ./scripts/playtest --list
 """
 
@@ -26,10 +26,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent.parent
 BUNDLE = "com.ronildo.lauder"
-SCENARIOS = [
-    "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
-    "bridge-walk", "first-fight", "fight-retry", "ambush",
-]
+SCENARIOS = ["bridge-walk", "first-fight", "fight-retry", "ambush"]
 PRIVATE_IDENTIFIER = re.compile(
     r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
     re.IGNORECASE,
@@ -208,7 +205,7 @@ def report(summary, images, folder):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("scenarios", nargs="*", default=["all"], help="scenario names")
+    parser.add_argument("scenarios", nargs="*", default=SCENARIOS, help="scenario names")
     parser.add_argument("--output", type=Path, help="results folder (default .local/playtest/<time>)")
     parser.add_argument("--timeout", type=int, default=300, help="seconds allowed per scenario")
     parser.add_argument("--list", action="store_true", help="list scenarios and exit")

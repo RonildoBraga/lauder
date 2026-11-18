@@ -10,7 +10,6 @@ import simd
 /// (BrooklynBridgeLayout.swift), which Blender edits (ADR 0005). This file adds the words: what
 /// each place is called and what it says.
 enum BrooklynBridge {
-  static var deckWidth: Float { layout.ground.size.x }
   /// Where each tower's centre stands along the deck.
   static var brooklynTower: Float { layout.box(named: "brooklyn-tower-pier").position.z }
   static var manhattanTower: Float { layout.box(named: "manhattan-tower-pier").position.z }
@@ -61,7 +60,7 @@ enum BrooklynBridge {
 
   /// Searching the stranger once he is down (M3). It takes the time the ambush's cues give it.
   static let searchStranger = Level.Interaction(
-    id: .searchStranger, name: "Search", member: nil,
+    id: .searchStranger, name: "Search",
     approach: layout.area(named: "search.stranger"), result: "Miki searches the stranger.",
     repeated: "Nothing more on him.", early: "Not while he's standing.")
 
@@ -88,11 +87,10 @@ enum BrooklynBridge {
     holdsLeader: true)
 
   static let level = Level(
-    id: .brooklynBridge, ground: layout.ground, boxes: layout.boxes, pieces: layout.pieces,
+    id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes, pieces: layout.pieces,
     points: points,
     interactions: [searchStranger], triggers: triggers, encounters: [strangerEncounter, ambush],
     startingAmmo: 12,
-    passage: nil,
     // Miki crosses alone. Tom and Laura wait, hidden, where their scenes will be.
     party: [.miki],
     spawns: [

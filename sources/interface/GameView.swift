@@ -29,11 +29,6 @@ struct GameView: View {
           Text("\(world.session.leader.displayName) · \(world.session.leader.role)").font(.headline)
           Text(world.objective)
             .font(.subheadline)
-          if world.session.carriesRegulator {
-            // Derived from the mission phase: the part belongs to the party, not to a leader.
-            Label("Carrying the regulator", systemImage: "shippingbox.fill")
-              .font(.caption).foregroundStyle(Color(red: 0.62, green: 0.87, blue: 0.77))
-          }
           if world.session.medicalKits > 0 {
             // The party's small shared inventory (ADR 0004, M3).
             Label(
@@ -78,9 +73,6 @@ struct GameView: View {
           }
           if !talking {
             Text(world.observation).font(.caption)
-            if let hint = world.hint {
-              Text(hint).font(.caption).foregroundStyle(Color(red: 1, green: 0.84, blue: 0.6))
-            }
           }
           if let diagnostic = world.diagnostic {
             Text(diagnostic).font(.caption).foregroundStyle(.orange)

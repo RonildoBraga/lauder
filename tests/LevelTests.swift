@@ -3,17 +3,17 @@ import simd
 
 @testable import Lauder
 
-/// Both levels are well-formed content, and the navigation grid built from them matches the
-/// rule it is meant to apply.
+/// The bridge, and the yard that the squad-movement tests use, are well-formed content, and the
+/// navigation grid built from them matches the rule it is meant to apply.
 @MainActor
 struct LevelTests {
-  @Test(arguments: Level.ID.allCases)
-  func levelContentIsWellFormed(id: Level.ID) {
-    let level = Level.level(id)
-    #expect(level.id == id)
+  @Test(arguments: ["brooklyn-bridge", "test-yard"])
+  func levelContentIsWellFormed(name: String) {
+    let level = Self.level(named: name)
+    #expect(level.id == name)
     #expect(!level.party.isEmpty)
     let bounds = level.bounds
-    let obstacles = level.obstacles(passageOpen: false)
+    let obstacles = level.obstacles
     for member in PartyMember.allCases {
       let spawn = level.spawn(member)
       #expect(bounds.contains(spawn), "\(member.rawValue)")
@@ -39,15 +39,15 @@ struct LevelTests {
 
   /// Checking each obstacle against only the cells near it gives exactly the grid that testing
   /// every cell against every obstacle would.
-  @Test(arguments: Level.ID.allCases)
-  func gridMatchesTheClearanceRule(id: Level.ID) {
-    let level = Level.level(id)
-    let grid = NavigationGrid(level: level, passageOpen: false)
-    let obstacles = level.obstacles(passageOpen: false)
+  @Test(arguments: ["brooklyn-bridge", "test-yard"])
+  func gridMatchesTheClearanceRule(name: String) {
+    let level = Self.level(named: name)
+    let grid = NavigationGrid(level: level)
+    let obstacles = level.obstacles
     let clearance = PartyBody.radius + PartyMotion.skin + 0.03
     let origin = level.bounds.minimum + grid.cellSize / 2
-    // Every cell at Relay House; every seventh along each axis on the much larger bridge.
-    let stride = id == .relayHouse ? 1 : 7
+    // Every cell in the yard; every seventh along each axis on the much larger bridge.
+    let stride = name == TestYard.level.id ? 1 : 7
     for row in Swift.stride(from: 0, to: grid.rows, by: stride) {
       for column in Swift.stride(from: 0, to: grid.columns, by: stride) {
         let centre = origin + SIMD2(Float(column), Float(row)) * grid.cellSize
@@ -60,7 +60,7 @@ struct LevelTests {
   @Test
   func theBridgeConnectsBrooklynToManhattanThroughTheCollapsedDivider() throws {
     let level = BrooklynBridge.level
-    let grid = NavigationGrid(level: level, passageOpen: false)
+    let grid = NavigationGrid(level: level)
     let start = level.spawn(.miki)
     let end: SIMD2<Float> = [-7, -108]
     #expect(grid.region(at: start) != nil)
@@ -70,8 +70,7 @@ struct LevelTests {
     // far end, and the gap in the divider is open.
     let gap: SIMD2<Float> = [0, -30]
     #expect(grid.isWalkable(gap))
-    let motion = PartyMotion(
-      radius: PartyBody.radius, obstacles: level.obstacles(passageOpen: true))
+    let motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
     #expect(!motion.canTraverse(from: [7, -38], to: [7, -46]))
     // The arches are open on both roadways at both towers.
     for z in [BrooklynBridge.brooklynTower, BrooklynBridge.manhattanTower] {
@@ -80,16 +79,8 @@ struct LevelTests {
     }
   }
 
-  @Test
-  func relayHouseKeepsItsLayout() {
-    let level = RelayHouse.level
-    #expect(level.party == [.miki, .laura, .tom])
-    #expect(level.triggers.isEmpty)
-    #expect(level.passage != nil)
-    #expect(level.obstacles(passageOpen: true).count == RelayHouse.boxes.count - 1 + 2)
-    #expect(
-      level.obstacles(passageOpen: false).count == level.obstacles(passageOpen: true).count + 1)
-    #expect(level.objective == nil && level.lookAround == nil)
+  private static func level(named name: String) -> Level {
+    name == TestYard.level.id ? TestYard.level : BrooklynBridge.level
   }
 
   private func distance(from point: SIMD2<Float>, to box: PartyMotion.Box) -> Float {

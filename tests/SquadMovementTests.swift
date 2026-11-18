@@ -4,12 +4,12 @@ import simd
 
 @testable import Lauder
 
-/// ADR 0003 phase S1: natural following with the Close formation.
+/// ADR 0003 phase S1: natural following with the Close formation, in the test yard, which has the
+/// narrow opening that the bridge lacks.
 @MainActor
 struct SquadMovementTests {
-  private let grid = NavigationGrid(level: RelayHouse.level, passageOpen: true)
-  private let motion = PartyMotion(
-    radius: PartyBody.radius, obstacles: RelayHouse.obstacles)
+  private let grid = NavigationGrid(level: TestYard.level)
+  private let motion = PartyMotion(radius: PartyBody.radius, obstacles: TestYard.obstacles)
 
   @Test
   func walkableCellsKeepTheBodyClearOfScenery() {
@@ -23,15 +23,15 @@ struct SquadMovementTests {
       }
     }
     #expect(checked > 1_000)
-    #expect(!grid.isWalkable([-1.5, 1]), "the street wreck is blocked")
+    #expect(!grid.isWalkable([-1.5, 1]), "the wreck is blocked")
     #expect(grid.isWalkable([-8, 3]), "the spawn is walkable")
   }
 
   @Test
-  func aRouteIntoTheDepotUsesTheServiceOpening() throws {
+  func aRouteIntoTheRoomUsesItsOpening() throws {
     let start = SIMD2<Float>(2.5, -2)
     let goal = SIMD2<Float>(6, -2)
-    #expect(!motion.canTraverse(from: start, to: goal), "the depot's west wall is between them")
+    #expect(!motion.canTraverse(from: start, to: goal), "the room's west wall is between them")
     let cells = try #require(grid.route(from: start, to: goal))
     let route = NavigationGrid.straightened([start] + cells + [goal]) {
       motion.canTraverse(from: $0, to: $1)
@@ -70,8 +70,8 @@ struct SquadMovementTests {
   @Test
   func doorwaysAreTightAndOpenGroundIsNot() {
     #expect(grid.isWalkable([4, -4.5]))
-    #expect(!grid.isRoomy([4, -4.5]), "the service opening")
-    #expect(grid.isRoomy([-5, 5]), "the open street")
+    #expect(!grid.isRoomy([4, -4.5]), "the room's opening")
+    #expect(grid.isRoomy([-5, 5]), "open ground")
     #expect(grid.isRoomy([-5, 8.9]), "beside the long south wall")
   }
 
@@ -95,7 +95,7 @@ struct SquadMovementTests {
 
   @Test
   func companionsKeepCloseSlotsBesideTheLeadersPathInOpenGround() throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     var near = 0
     var samples = 0
     var offset: Float = 0
@@ -120,7 +120,7 @@ struct SquadMovementTests {
 
   @Test
   func settledCompanionsStayStillWhileTheLeaderWaits() {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     for _ in 0..<120 { world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60) }
     for _ in 0..<120 { world.advanceParty(movement: .zero, deltaTime: 1 / 60) }
     let settled = PartyMember.allCases.map { position(world, $0) }
@@ -136,13 +136,8 @@ struct SquadMovementTests {
   }
 
   @Test(arguments: PartyMember.allCases)
-  func everyLeaderTakesThePartyThroughTheServiceOpeningAndBack(leader: PartyMember) throws {
-    let world = GameWorld(level: RelayHouse.level)
-    // Party B's barrier closes the passage until Laura releases the latch.
-    while world.session.leader != .laura { world.session.cycleLeader() }
-    try walk(world, through: [[2.5, 3], [3.2, -5]], label: "to the latch")
-    world.performAction()
-    try #require(world.session.passageOpen)
+  func everyLeaderTakesThePartyThroughTheOpeningAndBack(leader: PartyMember) throws {
+    let world = GameWorld(level: TestYard.level)
     while world.session.leader != leader { world.session.cycleLeader() }
     let inward: [SIMD2<Float>] = [[2.5, 3], [2.5, -4.5], [5, -4.5], [6.5, -3]]
     let outward: [SIMD2<Float>] = [[5, -4.5], [2.5, -4.5], [2.5, 3], [-6, 3]]
@@ -151,9 +146,7 @@ struct SquadMovementTests {
     try wait(world, seconds: 2)
     for member in PartyMember.allCases {
       let body = position(world, member)
-      #expect(
-        body.x > 4.2 && body.y > -6.8 && body.y < -1.2,
-        "\(member) is inside the depot at \(body)")
+      #expect(TestYard.isInRoom(body), "\(member) is inside the room at \(body)")
     }
 
     try walk(world, through: outward, label: "out")
@@ -167,7 +160,7 @@ struct SquadMovementTests {
 
   @Test
   func switchingAtTheOuterWallKeepsEveryoneOnTheFloor() throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     try walk(world, through: [[-6, 8.9]], label: "to the south wall")
     for _ in 0..<60 { world.advanceParty(movement: stick(towards: [0, 1]), deltaTime: 1 / 60) }
     world.session.cycleLeader()
@@ -184,7 +177,7 @@ struct SquadMovementTests {
 
   @Test
   func aPreviousLeaderJoinsTheFormationAfterASwitch() throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     for _ in 0..<120 { world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60) }
     let previous = world.session.leader
     world.session.cycleLeader()
@@ -200,7 +193,7 @@ struct SquadMovementTests {
 
   /// Screen-relative stick axes for a world heading, as GameWorld consumes them.
   private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let toCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
+    let toCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
     let forward = -simd_normalize(toCamera)
     let right = SIMD2(-forward.y, forward.x)
     let unit = simd_normalize(direction)

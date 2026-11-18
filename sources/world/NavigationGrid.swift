@@ -100,14 +100,13 @@ struct NavigationGrid: Sendable {
     self.region = region
   }
 
-  /// The level's floor and blockers, with the body radius, 2 mm skin and a 3 cm margin, and the
-  /// passage's barrier while it is closed.
-  init(level: Level, passageOpen: Bool) {
+  /// The level's floor and blockers, with the body radius, 2 mm skin and a 3 cm margin.
+  init(level: Level) {
     let bounds = level.bounds
     self.init(
       minimum: bounds.minimum, maximum: bounds.maximum, cellSize: 0.2,
       clearance: PartyBody.radius + PartyMotion.skin + 0.03,
-      tightWidth: 1.5, obstacles: level.obstacles(passageOpen: passageOpen))
+      tightWidth: 1.5, obstacles: level.obstacles)
   }
 
   func isWalkable(_ point: SIMD2<Float>) -> Bool {

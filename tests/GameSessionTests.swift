@@ -6,7 +6,7 @@ import Testing
 struct GameSessionTests {
   @Test
   func startsExploringWithMiki() {
-    let session = GameSession(level: RelayHouse.level)
+    let session = GameSession(level: TestYard.level)
     #expect(session.mode == .exploring)
     #expect(!session.isPaused)
     #expect(session.leader == .miki)
@@ -14,7 +14,7 @@ struct GameSessionTests {
 
   @Test
   func leadershipCyclesThroughAllThreeMembers() {
-    let session = GameSession(level: RelayHouse.level)
+    let session = GameSession(level: TestYard.level)
     for expected in [PartyMember.laura, .tom, .miki, .laura] {
       session.cycleLeader()
       #expect(session.leader == expected)
@@ -23,7 +23,7 @@ struct GameSessionTests {
 
   @Test
   func pauseKeepsTheLeaderAndRejectsSwitching() {
-    let session = GameSession(level: RelayHouse.level)
+    let session = GameSession(level: TestYard.level)
     session.cycleLeader()
     session.togglePause()
     #expect(session.mode == .paused)
@@ -40,7 +40,7 @@ struct GameSessionTests {
 
   @Test
   func aHeldSwitchProducesOnlyOneLeadershipChange() {
-    let session = GameSession(level: RelayHouse.level)
+    let session = GameSession(level: TestYard.level)
     var state = InputRules.State(needsNeutralInput: false)
     func sample(_ raw: InputRules.Raw) {
       let result = InputRules.resolve(raw, mode: session.mode, state: state)

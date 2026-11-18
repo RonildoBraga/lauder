@@ -78,8 +78,7 @@ LEVELS = {
 }
 
 SURFACES = (
-    "ground", "concrete", "shelter", "depot", "hazard", "asphalt", "steel", "granite", "vehicle",
-    "metal", "river", "paint",
+    "concrete", "hazard", "asphalt", "steel", "granite", "vehicle", "metal", "river", "paint",
 )
 
 #: The height of the camera's target above the floor: a stand-in's centre, plus 0.1 m.
@@ -642,8 +641,7 @@ def _linear(red, green, blue):
 
 #: The game's colours (SceneStyle) for each surface and look, and for areas.
 COLOURS = {
-    "ground": (0.23, 0.31, 0.29), "concrete": (0.56, 0.57, 0.45), "shelter": (0.39, 0.48, 0.44),
-    "depot": (0.16, 0.25, 0.25), "hazard": (0.59, 0.33, 0.23), "asphalt": (0.27, 0.29, 0.29),
+    "concrete": (0.56, 0.57, 0.45), "hazard": (0.59, 0.33, 0.23), "asphalt": (0.27, 0.29, 0.29),
     "steel": (0.42, 0.48, 0.5), "granite": (0.66, 0.62, 0.54), "vehicle": (0.47, 0.38, 0.33),
     "metal": (0.16, 0.25, 0.25), "river": (0.13, 0.2, 0.24), "paint": (0.65, 0.68, 0.55),
     "glass": (0.14, 0.19, 0.21), "landmark": (0.16, 0.25, 0.25), "area": (1.0, 0.75, 0.4),

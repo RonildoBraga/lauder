@@ -24,7 +24,7 @@ struct CombatTests {
   /// On the bridge, the cars before the first tower give cover to both sides.
   @Test
   func carsBeforeTheFirstTowerGiveCoverBothWays() {
-    let obstacles = BrooklynBridge.level.obstacles(passageOpen: false)
+    let obstacles = BrooklynBridge.level.obstacles
     let stranger = BrooklynBridge.stranger.standAt
     // In the open lane where the fight begins, each can see the other.
     #expect(LineOfSight.isClear(from: [6.5, 51], to: stranger, obstacles: obstacles))

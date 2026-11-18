@@ -15,17 +15,17 @@ struct AmbushTests {
   func theSearchComesAfterTheFightAndBeginsTheAmbushOnce() {
     let session = GameSession(level: BrooklynBridge.level)
     #expect(!session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger, by: .miki) == .notYet)
+    #expect(session.perform(.searchStranger) == .notYet)
     #expect(session.beginEncounter(.stranger))
     session.defeat("stranger")
     // Not while the fight is still being settled.
     #expect(!session.offers(.searchStranger))
     session.endEncounter()
     #expect(session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger, by: .miki) == .done)
+    #expect(session.perform(.searchStranger) == .done)
     #expect(session.beat == .ambush && session.inEncounter)
     #expect(!session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger, by: .miki) == .alreadyDone)
+    #expect(session.perform(.searchStranger) == .alreadyDone)
     // The loot is taken once, when the search finishes.
     let loot = BrooklynBridge.stranger.loot ?? Level.Loot()
     #expect(loot.rounds > 0 && loot.medicalKits == 1)
@@ -44,7 +44,7 @@ struct AmbushTests {
       #expect(session.beginEncounter(.stranger))
       session.defeat("stranger")
       session.endEncounter()
-      #expect(session.perform(.searchStranger, by: .miki) == .done)
+      #expect(session.perform(.searchStranger) == .done)
       #expect(session.converse(.metTom))
       #expect(session.mode == .dialogue && session.party == [.miki])
       #expect(!session.converse(.metTom))
@@ -56,7 +56,7 @@ struct AmbushTests {
     #expect(session.beginEncounter(.stranger))
     session.defeat("stranger")
     session.endEncounter()
-    #expect(session.perform(.searchStranger, by: .miki) == .done)
+    #expect(session.perform(.searchStranger) == .done)
     #expect(session.converse(.metTom))
     for _ in MissionScript.lines(.metTom) { session.advanceDialogue() }
     #expect(session.mode == .exploring)
