@@ -40,6 +40,17 @@ extension Level {
       }
     }
 
+    /// The game camera: from its target, just above the leader, to the camera, and its
+    /// vertical field of view in degrees.
+    struct Camera: Sendable {
+      let offset: SIMD3<Float>
+      let fieldOfView: Float
+
+      static func camera(offset: SIMD3<Float>, fieldOfView: Float) -> Self {
+        Self(offset: offset, fieldOfView: fieldOfView)
+      }
+    }
+
     /// The floor, which blocks nothing.
     let ground: Box
     /// The scenery; every box blocks movement and sight with its footprint.
@@ -47,6 +58,9 @@ extension Level {
     let landmarks: [Landmark]
     let areas: [Area]
     let markers: [Marker]
+    /// Decoration that blocks nothing.
+    let pieces: [Piece]
+    let camera: Camera
 
     func box(named name: String) -> Box {
       guard let box = boxes.first(where: { $0.name == name }) else {
@@ -74,6 +88,31 @@ extension Level {
         preconditionFailure("The layout has no marker named \(name).")
       }
       return marker.position
+    }
+  }
+}
+
+extension Level {
+  /// Decoration that blocks nothing, such as the bridge's walkway and cables: a box, turned as
+  /// it needs. Blender edits pieces like everything else in a layout (ADR 0005).
+  struct Piece: Sendable {
+    let name: String
+    /// The centre.
+    let position: SIMD3<Float>
+    /// Along the piece's own axes.
+    let size: SIMD3<Float>
+    var rotation = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
+    let surface: Surface
+
+    /// A piece in a layout file, written briefly; `turn` is a quaternion as (x, y, z, w).
+    static func piece(
+      _ name: String, at position: SIMD3<Float>, size: SIMD3<Float>,
+      turn: SIMD4<Float> = [0, 0, 0, 1], surface: Surface
+    ) -> Self {
+      Self(
+        name: name, position: position, size: size,
+        rotation: simd_normalize(simd_quatf(ix: turn.x, iy: turn.y, iz: turn.z, r: turn.w)),
+        surface: surface)
     }
   }
 }

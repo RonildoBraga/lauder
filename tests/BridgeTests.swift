@@ -161,6 +161,28 @@ struct BridgeTests {
       ])
   }
 
+  /// The bridge's decoration and camera come from the layout file too: the game draws each
+  /// piece where the file puts it, turned as it says, and its camera takes the file's offset and
+  /// field of view.
+  @Test
+  func theGameDrawsThePiecesAndTheCameraFromTheLayoutFile() throws {
+    let layout = BrooklynBridge.layout
+    #expect(layout.pieces.count > 100)
+    #expect(Set(layout.pieces.map(\.name)).count == layout.pieces.count)
+    let level = BrooklynBridge.level
+    #expect(level.cameraOffset == layout.camera.offset)
+    #expect(level.fieldOfView == layout.camera.fieldOfView)
+    let world = GameWorld(level: level)
+    for piece in layout.pieces {
+      let entity = try #require(world.root.findEntity(named: "dressing.\(piece.name)"))
+      #expect(simd_distance(entity.position(relativeTo: nil), piece.position) < 0.001)
+      let turn = entity.orientation(relativeTo: nil).vector
+      #expect(abs(simd_dot(turn, piece.rotation.vector)) > 0.9999, "\(piece.name) is turned")
+    }
+    let camera = try #require(world.root.findEntity(named: "camera") as? PerspectiveCamera)
+    #expect(camera.camera.fieldOfViewInDegrees == layout.camera.fieldOfView)
+  }
+
   // MARK: - Helpers
 
   /// Steer the leader straight to a point, reporting each new line the HUD shows.

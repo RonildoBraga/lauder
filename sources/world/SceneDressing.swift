@@ -24,26 +24,26 @@ enum SceneDressing {
     }
   }
 
-  /// Decoration that blocks nothing: the level's authored boxes carry all collision.
-  static func add(to root: Entity, style: SceneStyle, level: Level.ID) {
+  /// Decoration that blocks nothing: the level's authored boxes carry all collision. Relay
+  /// House's is made here; a level with a layout file, such as the bridge, lists its pieces
+  /// there, and Blender edits them (ADR 0005).
+  static func add(to root: Entity, style: SceneStyle, level: Level) {
     let dressing = Entity()
     dressing.name = "scene-dressing"
     root.addChild(dressing)
     let geometry = Geometry(root: dressing, style: style)
-    switch level {
-    case .relayHouse:
+    if level.id == .relayHouse {
       addPaving(using: geometry)
       addWallCaps(using: geometry)
       addShelterDetails(using: geometry)
       addDepotDetails(using: geometry)
       addVegetationAndDebris(using: geometry)
       addWreckDetails(using: geometry)
-    case .brooklynBridge:
-      addRiver(using: geometry)
-      addLaneLines(using: geometry)
-      addTowerTops(using: geometry)
-      addWalkway(using: geometry)
-      addCables(using: geometry)
+    }
+    for piece in level.pieces {
+      geometry.box(
+        piece.name, size: piece.size, at: piece.position,
+        material: style.material(for: piece.surface), rotation: piece.rotation)
     }
   }
 
@@ -233,124 +233,10 @@ enum SceneDressing {
     }
   }
 
-  // MARK: - The Brooklyn Bridge
-
-  /// The river far below the deck, seen past the railings.
-  private static func addRiver(using geometry: Geometry) {
-    geometry.box(
-      "river", size: [400, 0.2, 500], at: [0, -30, 0], material: geometry.style.river)
-  }
-
-  /// A pale line down the middle of each roadway.
-  private static func addLaneLines(using geometry: Geometry) {
-    for x: Float in [-7.3, 7.3] {
-      geometry.box(
-        "lane-line", size: [0.12, 0.01, BrooklynBridge.deckLength - 2], at: [x, 0.006, 0],
-        material: geometry.style.wallCap)
-    }
-  }
-
-  /// Each tower's upper mass above the arches. It is above the camera, so it shows mostly in
-  /// the shadow it casts on the deck.
-  private static func addTowerTops(using geometry: Geometry) {
-    for z in [BrooklynBridge.brooklynTower, BrooklynBridge.manhattanTower] {
-      geometry.box(
-        "tower-top", size: [28.4, 12, BrooklynBridge.towerThickness],
-        at: [0, BrooklynBridge.archHeight + 6, z], material: geometry.style.granite)
-    }
-  }
-
-  /// The raised walkway above the divider, on posts. It is shown but cannot be walked on.
-  private static func addWalkway(using geometry: Geometry) {
-    let style = geometry.style
-    for divider in BrooklynBridge.layout.boxes where divider.name.hasPrefix("divider") {
-      let length = divider.size.z
-      let centre = divider.position.z
-      geometry.box(
-        "walkway", size: [5.4, 0.3, length], at: [0, 4.2, centre], material: style.steel)
-      for side: Float in [-1, 1] {
-        geometry.box(
-          "walkway-rail", size: [0.08, 0.9, length], at: [side * 2.66, 4.8, centre],
-          material: style.metal)
-        var z = centre - length / 2 + 6
-        while z < centre + length / 2 - 2 {
-          geometry.box(
-            "walkway-post", size: [0.25, 3.05, 0.25], at: [side * 2.1, 2.53, z],
-            material: style.metal)
-          z += 20
-        }
-      }
-    }
-  }
-
-  /// The main cables run from each end of the deck over both tower tops and sag between them;
-  /// vertical suspenders drop from them to the railings, and stays fan out from the towers.
-  private static func addCables(using geometry: Geometry) {
-    let style = geometry.style
-    let end = BrooklynBridge.deckLength / 2 - 1
-    let first = BrooklynBridge.brooklynTower
-    let second = BrooklynBridge.manhattanTower
-    let top: Float = 26
-    let lowest: Float = 3
-    let middle = (first + second) / 2
-    let halfSpan = (first - second) / 2
-    /// The cable's height above the deck at a point along it.
-    func height(at z: Float) -> Float {
-      if z > first { return top + (1.5 - top) * (z - first) / (end - first) }
-      if z < second { return top + (1.5 - top) * (second - z) / (end + second) }
-      let t = (z - middle) / halfSpan
-      return lowest + (top - lowest) * t * t
-    }
-    // Points along each cable, from the Brooklyn end to the Manhattan end.
-    let stations: [Float] =
-      (0..<3).map { end - Float($0) * (end - first) / 3 }
-      + (0...8).map { first - Float($0) * (first - second) / 8 }
-      + (1...3).map { second - Float($0) * (end + second) / 3 }
-    for x: Float in [-12.4, 12.4] {
-      for (from, to) in zip(stations, stations.dropFirst()) {
-        geometry.line(
-          "main-cable", from: [x, height(at: from), from], to: [x, height(at: to), to],
-          thickness: 0.22, material: style.metal)
-      }
-      var z = -end + 6
-      while z < end - 6 {
-        let rise = height(at: z) - 1.1
-        if rise > 0.6, abs(z - first) > 6, abs(z - second) > 6 {
-          geometry.box(
-            "suspender", size: [0.05, rise, 0.05], at: [x, 1.1 + rise / 2, z],
-            material: style.metal)
-        }
-        z += 12
-      }
-      for tower in [first, second] {
-        for direction: Float in [-1, 1] {
-          for reach: Float in [14, 28] {
-            geometry.line(
-              "stay", from: [x, top - 1, tower], to: [x, 1.1, tower + direction * reach],
-              thickness: 0.07, material: style.metal)
-          }
-        }
-      }
-    }
-  }
-
   @MainActor
   private struct Geometry {
     let root: Entity
     let style: SceneStyle
-
-    /// A thin box from one point to another, such as a cable.
-    func line(
-      _ name: String, from start: SIMD3<Float>, to end: SIMD3<Float>, thickness: Float,
-      material: any Material
-    ) {
-      let span = end - start
-      let length = simd_length(span)
-      guard length > 0.01 else { return }
-      box(
-        name, size: [thickness, thickness, length], at: (start + end) / 2, material: material,
-        rotation: simd_quatf(from: [0, 0, 1], to: span / length))
-    }
 
     func box(
       _ name: String, size: SIMD3<Float>, at position: SIMD3<Float>, material: any Material,

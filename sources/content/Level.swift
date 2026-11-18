@@ -11,6 +11,8 @@ struct Level {
 
   enum Surface: Sendable {
     case ground, concrete, shelter, depot, hazard, asphalt, steel, granite, vehicle
+    /// For decoration: rails, posts and cables, the river far below, and painted lines.
+    case metal, river, paint
   }
 
   /// Visible scenery. Every box blocks movement with its footprint; the ground is separate.
@@ -177,6 +179,8 @@ struct Level {
   /// The floor. It bounds the navigation grid and blocks nothing.
   let ground: Box
   let boxes: [Box]
+  /// Decoration that blocks nothing, such as the bridge's walkway and cables.
+  var pieces: [Piece] = []
   let points: [PointOfInterest]
   let interactions: [Interaction]
   let triggers: [Trigger]
@@ -192,6 +196,8 @@ struct Level {
   let heading: SIMD2<Float>
   /// From the camera's target to the camera.
   let cameraOffset: SIMD3<Float>
+  /// The camera's vertical field of view, in degrees.
+  var fieldOfView: Float = 42
   /// The first line a run shows.
   let opening: String
   /// The objective line, or nil where Party C's mission supplies it.

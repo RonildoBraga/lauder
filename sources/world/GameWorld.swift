@@ -141,9 +141,9 @@ final class GameWorld {
       addRelayHouseParts(style: style)
     }
     root.addChild(stage.container)
-    SceneDressing.add(to: root, style: style, level: level.id)
+    SceneDressing.add(to: root, style: style, level: level)
     style.addLighting(to: root)
-    camera.camera.fieldOfViewInDegrees = 42
+    camera.camera.fieldOfViewInDegrees = level.fieldOfView
     camera.name = "camera"
     root.addChild(camera)
     for member in PartyMember.allCases {

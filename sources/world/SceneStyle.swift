@@ -69,6 +69,9 @@ struct SceneStyle {
     case .steel: steel
     case .granite: granite
     case .vehicle: vehicleBody
+    case .metal: metal
+    case .river: river
+    case .paint: wallCap
     }
   }
 

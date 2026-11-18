@@ -6,21 +6,17 @@ import simd
 /// Vehicles stand where the later scenes need them: cover before the first tower, a van beside
 /// it, and a car on the west roadway near the gap.
 ///
-/// Where everything stands is in `layout` (BrooklynBridgeLayout.swift), which Blender edits
-/// (ADR 0005). This file adds the words: what each place is called and what it says.
+/// Where everything stands, the decoration and the camera are in `layout`
+/// (BrooklynBridgeLayout.swift), which Blender edits (ADR 0005). This file adds the words: what
+/// each place is called and what it says.
 enum BrooklynBridge {
-  /// The deck runs from the Brooklyn end at +z to the Manhattan end at -z.
-  static var deckLength: Float { layout.ground.size.z }
   static var deckWidth: Float { layout.ground.size.x }
   /// Where each tower's centre stands along the deck.
   static var brooklynTower: Float { layout.box(named: "brooklyn-tower-pier").position.z }
   static var manhattanTower: Float { layout.box(named: "manhattan-tower-pier").position.z }
-  static var towerThickness: Float { layout.box(named: "brooklyn-tower-pier").size.z }
-  /// The arches are tall enough for the camera to pass through them behind the party.
-  static var archHeight: Float { layout.box(named: "brooklyn-tower-pier").size.y }
   /// The camera keeps the accepted height and distance but looks straight along the deck, so
-  /// pushing up walks towards Manhattan.
-  static let cameraOffset: SIMD3<Float> = [0, 10, 9.9]
+  /// pushing up walks towards Manhattan. Blender edits it with the rest of the layout.
+  static var cameraOffset: SIMD3<Float> { layout.camera.offset }
 
   static let points: [Level.PointOfInterest] = [
     point(
@@ -92,7 +88,8 @@ enum BrooklynBridge {
     holdsLeader: true)
 
   static let level = Level(
-    id: .brooklynBridge, ground: layout.ground, boxes: layout.boxes, points: points,
+    id: .brooklynBridge, ground: layout.ground, boxes: layout.boxes, pieces: layout.pieces,
+    points: points,
     interactions: [searchStranger], triggers: triggers, encounters: [strangerEncounter, ambush],
     startingAmmo: 12,
     passage: nil,
@@ -102,7 +99,7 @@ enum BrooklynBridge {
       .miki: layout.marker(named: "spawn.miki"), .tom: layout.marker(named: "spawn.tom"),
       .laura: layout.marker(named: "spawn.laura"),
     ],
-    heading: [0, -1], cameraOffset: cameraOffset,
+    heading: [0, -1], cameraOffset: cameraOffset, fieldOfView: layout.camera.fieldOfView,
     opening: "The Brooklyn end of the bridge. Manhattan is on the far side.",
     objective: "Cross the bridge to Manhattan.",
     lookAround: "Manhattan is ahead, across the bridge.",
