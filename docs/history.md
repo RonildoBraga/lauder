@@ -1,6 +1,6 @@
 # Project history
 
-**Updated:** 18 November 2026
+**Updated:** 19 November 2026
 
 How Lauder reached the Brooklyn Bridge opening: what each finished stage built, what was checked on the phone, and what remains open. The [README](../README.md) and the [prototype plan](prototype-plan.md) own the current status, and the [opening record](opening.md) covers the bridge's milestones.
 
@@ -67,3 +67,9 @@ On 17 November the original iPhone 17 Simulator kept crashing in Apple's PosterB
 - The maintainer accepted [ADR 0004](decisions/0004-brooklyn-bridge-opening.md): the game opens with Miki alone on a greybox Brooklyn Bridge, and Relay House became a second level. The [opening record](opening.md) follows M1 to M3.
 - The maintainer chose Blender as the level editor ([ADR 0005](decisions/0005-blender-level-editor.md)), then moved the bridge's decoration and game camera into the layout file too.
 - **Relay House removed.** Asked whether to keep it, the maintainer answered **“Remove it”**. The level, Parties B and C's mechanics and lines, their tests and playtests, and its walkthrough are gone. The story bible keeps Relay House as a later scene. The squad-movement tests keep their coverage in a test-only yard with the old level's walls, because the bridge has no doorway narrow enough. The documents were consolidated at the same time, and the maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/46#issuecomment-6977143052): **“Yes, merge and start”**.
+
+## Folders by platform
+
+**19 November 2026.** Merged in [PR #48](https://github.com/RonildoBraga/lauder/pull/48).
+
+The maintainer asked for a folder for each platform and tool, so that later platforms, such as Android and Steam, can join without reorganising. The iPhone app's project, sources, tests and scripts moved to `apple/`, and the Blender level script to `blender/`; `./scripts/check` kept its name and checks every part. The maintainer approved the proposed tree, **“Yes, go ahead”**, and [authorised the merge](https://github.com/RonildoBraga/lauder/pull/48#issuecomment-6990053805): **“Yes, merge it”**. Records written before this, including the sections above, give the paths of their time.
