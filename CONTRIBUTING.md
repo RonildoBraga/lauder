@@ -85,16 +85,24 @@ The accepted party plan has phone checkpoints after **Party A** and **Party C**,
 
 ## Editing a level in Blender
 
-Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout, where everything stands, is `sources/content/BrooklynBridgeLayout.swift`, and Blender loads and saves it:
+Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration and the game camera. Blender loads and saves it:
 
 1. In Blender (checked with 5.3), open `scripts/blender/lauder_levels.py` in the Text Editor and press **Run Script**. A **Lauder** tab appears in the 3D Viewport's sidebar (press N).
-2. Check the **Repository** folder, which defaults to the folder the script came from, and press **Load**. The bridge appears in a **Lauder Brooklyn Bridge** collection: the deck, the boxes coloured by surface, the landmarks, the areas drawn as outlines, and the named markers. Loading again discards changes made in Blender.
-3. Move, resize, duplicate or delete boxes, and move areas and markers. Follow the game's rules:
-   - turn boxes only in quarter turns about the vertical;
+2. Check the **Repository** folder, which defaults to the folder the script came from, and press **Load**. The bridge appears in a **Lauder Brooklyn Bridge** collection:
+   - the deck, the boxes coloured by surface, the landmarks, the areas drawn as outlines and the named markers;
+   - the decoration's pieces, such as the walkway and the cables;
+   - the game camera.
+
+   Vehicles show the game's body and cabin, or windows, inside an outline of their box, and landmarks show their band. These details follow their box and are not saved. Loading again discards changes made in Blender.
+3. Move, resize, duplicate or delete boxes and pieces, and move areas and markers. Follow the game's rules:
+   - turn boxes only in quarter turns about the vertical; pieces may turn any way;
    - keep boxes and landmarks on the deck;
-   - give a new box a name of its own and one of the Lauder materials, which sets its surface.
-4. Press **Save**. It checks the game's rules and writes the file, or explains what to fix and writes nothing.
-5. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
+   - give a new box or piece a name of its own and one of the Lauder materials, which sets its surface.
+
+   Pieces block nothing and do not follow the boxes, so if you move a tower or a divider, move its top, walkway and cables with it. A new vehicle shows its details after you save and load again.
+4. To see the game's view, look through the camera (Numpad 0) and drag **camera-target** to where the leader would stand. The frame is the baseline iPhone's screen. Moving **game-camera** changes the game's camera offset, and its **Field of View**, in the camera's properties, changes the game's. Keep its **Sensor Fit** at Vertical.
+5. Press **Save**. It checks the game's rules and writes the file, or explains what to fix and writes nothing.
+6. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
 
 The file stays the source of truth. Its numbers can also be edited directly, keeping each entry's form, and the next Load picks them up. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the script's own tests, which need no Blender.
 

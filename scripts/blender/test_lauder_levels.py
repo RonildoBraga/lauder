@@ -5,7 +5,9 @@
 loading and saving a level in Blender (CONTRIBUTING).
 """
 
+import math
 from pathlib import Path
+import re
 import struct
 import sys
 import unittest
@@ -25,6 +27,10 @@ def single(value):
     return struct.unpack("f", struct.pack("f", value))[0]
 
 
+def singles(values):
+    return tuple(single(value) for value in values)
+
+
 def shapes_for(layout):
     """What Save would read from Blender after a Load of this layout, with no edits."""
     shapes = []
@@ -32,8 +38,8 @@ def shapes_for(layout):
     def block(name, role, centre, size, surface=None):
         cx, cy, cz = L.to_blender(centre)
         sx, sy, sz = L.size_to_blender(size)
-        low = tuple(single(value) for value in (cx - sx / 2, cy - sy / 2, cz - sz / 2))
-        high = tuple(single(value) for value in (cx + sx / 2, cy + sy / 2, cz + sz / 2))
+        low = singles((cx - sx / 2, cy - sy / 2, cz - sz / 2))
+        high = singles((cx + sx / 2, cy + sy / 2, cz + sz / 2))
         shapes.append(L.Shape(name, role, low, high, surface))
 
     block(layout.ground.name, "ground", layout.ground.position, layout.ground.size,
@@ -50,7 +56,41 @@ def shapes_for(layout):
     for marker in layout.markers:
         point = (single(marker.position[0]), single(-marker.position[1]), 0)
         shapes.append(L.Shape(marker.name, "marker", point, point))
+    for piece in layout.pieces:
+        centre = singles(L.to_blender(piece.position))
+        shapes.append(L.Shape(
+            piece.name, "piece", centre, centre, piece.surface, centre=centre,
+            size=singles(L.size_to_blender(piece.size)),
+            rotation=singles(L.rotation_to_blender(piece.rotation))))
     return shapes
+
+
+def camera_for(layout):
+    """What Save would read from the game camera's rig after a Load, with no edits: the camera
+    hangs from its target, which starts at Miki's spawn."""
+    spawn = next(m.position for m in layout.markers if m.name == BRIDGE.camera_target)
+    target = singles((spawn[0], -spawn[1], L.CAMERA_TARGET_HEIGHT))
+    hanging = singles(L.to_blender(layout.camera.offset))
+    camera = singles(t + h for t, h in zip(target, hanging))
+    offset = singles(c - t for c, t in zip(camera, target))
+    return L.CameraShape(offset, math.degrees(single(math.radians(layout.camera.field_of_view))))
+
+
+def turn(axis, degrees):
+    """A quaternion (w, x, y, z) turning by the angle about the axis."""
+    half = math.radians(degrees) / 2
+    length = math.sqrt(sum(value * value for value in axis))
+    return (math.cos(half),) + tuple(math.sin(half) * value / length for value in axis)
+
+
+def rotate(q, vector):
+    _, x, y, z = L._multiply(L._multiply(q, (0,) + tuple(vector)), L._conjugate(q))
+    return (x, y, z)
+
+
+def same_turn(a, b, tolerance=1e-7):
+    a, b = L._canonical(a), L._canonical(b)
+    return abs(sum(x * y for x, y in zip(a, b))) > 1 - tolerance
 
 
 class BridgeLayoutTests(unittest.TestCase):
@@ -58,13 +98,19 @@ class BridgeLayoutTests(unittest.TestCase):
         self.text = (ROOT / BRIDGE.path).read_text()
         self.layout = L.parse_layout(self.text)
 
+    def save(self, shapes, camera=None):
+        return L.layout_from_shapes(shapes, BRIDGE, self.layout, camera)
+
     def test_the_bridge_file_reads_and_writes_back_unchanged(self):
         self.assertEqual(L.emit_layout(self.layout, BRIDGE), self.text)
         self.assertEqual(self.layout.ground.name, "deck")
         self.assertIn("car-b4", [box.name for box in self.layout.boxes])
+        self.assertTrue(any(not L.is_identity(piece.rotation) for piece in self.layout.pieces))
+        self.assertTrue(any(L.is_identity(piece.rotation) for piece in self.layout.pieces))
+        self.assertIsNotNone(self.layout.camera)
 
     def test_a_load_and_save_with_no_edits_changes_nothing(self):
-        saved = L.layout_from_shapes(shapes_for(self.layout), BRIDGE, self.layout)
+        saved = self.save(shapes_for(self.layout), camera_for(self.layout))
         self.assertEqual(L.emit_layout(saved, BRIDGE), self.text)
 
     def test_a_quarter_turn_swaps_the_footprint(self):
@@ -74,8 +120,7 @@ class BridgeLayoutTests(unittest.TestCase):
         cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
         hx, hy = (x1 - x0) / 2, (y1 - y0) / 2
         car.minimum, car.maximum = (cx - hy, cy - hx, z0), (cx + hy, cy + hx, z1)
-        saved = L.layout_from_shapes(shapes, BRIDGE, self.layout)
-        turned = next(box for box in saved.boxes if box.name == "car-a1")
+        turned = next(box for box in self.save(shapes).boxes if box.name == "car-a1")
         self.assertAlmostEqual(turned.size[0], 4.6, places=4)
         self.assertAlmostEqual(turned.size[2], 2, places=4)
 
@@ -84,12 +129,12 @@ class BridgeLayoutTests(unittest.TestCase):
         car = next(shape for shape in shapes if shape.name == "car-b3")
         car.minimum = (car.minimum[0] + 1, car.minimum[1] - 2, car.minimum[2])
         car.maximum = (car.maximum[0] + 1, car.maximum[1] - 2, car.maximum[2])
-        text = L.emit_layout(L.layout_from_shapes(shapes, BRIDGE, self.layout), BRIDGE)
+        text = L.emit_layout(self.save(shapes), BRIDGE)
         self.assertIn('.box("car-b3", at: [5.6, 0.75, 50], size: [2, 1.5, 4.6]', text)
 
-    def check_refused(self, shapes, words):
+    def check_refused(self, shapes, words, camera=None):
         with self.assertRaises(L.LayoutError) as caught:
-            L.layout_from_shapes(shapes, BRIDGE, self.layout)
+            self.save(shapes, camera)
         self.assertIn(words, str(caught.exception))
 
     def test_an_angled_or_mirrored_box_is_refused(self):
@@ -127,29 +172,170 @@ class BridgeLayoutTests(unittest.TestCase):
     def test_new_boxes_are_added_and_cars_can_be_removed(self):
         shapes = [shape for shape in shapes_for(self.layout) if shape.name != "car-e2"]
         shapes.append(L.Shape("car-z1", "box", (1, 2, 0), (3, 6.6, 1.5), "vehicle"))
-        saved = L.layout_from_shapes(shapes, BRIDGE, self.layout)
+        saved = self.save(shapes)
         names = [box.name for box in saved.boxes]
         self.assertNotIn("car-e2", names)
         self.assertEqual(names[-1], "car-z1")
         self.assertEqual(saved.boxes[-1].position, (2, 0.75, -4.3))
 
     def test_an_entry_the_script_cannot_read_stops_the_load(self):
-        broken = self.text.replace('.box("car-a1", at:', '.box(name: "car-a1", at:')
-        with self.assertRaises(L.LayoutError):
-            L.parse_layout(broken)
-        short = self.text.replace("at: [9.6, 0.75, 100]", "at: [9.6, 100]")
-        with self.assertRaises(L.LayoutError):
-            L.parse_layout(short)
+        for broken in (
+            self.text.replace('.box("car-a1", at:', '.box(name: "car-a1", at:'),
+            self.text.replace("at: [9.6, 0.75, 100]", "at: [9.6, 100]"),
+            self.text.replace("turn: [", "turn: [0, ", 1),
+            self.text.replace("camera: .camera(", "", 1),
+        ):
+            with self.subTest(broken=broken[:0]), self.assertRaises(L.LayoutError):
+                L.parse_layout(broken)
 
     def test_long_entries_wrap_as_swift_format_does(self):
         box = L.Box("a-very-long-name-for-a-box-on-the-bridge", (-123.456, 0.75, 101.234),
                     (2.345, 1.5, 4.678), "vehicle")
-        layout = L.Layout(self.layout.ground, [box], [], [], [])
+        piece = L.Piece("a-very-long-name-for-a-piece-of-the-bridge", (-123.456, 7.25, 101.234),
+                        (0.22, 0.22, 35.616), "metal", (0.9933, 0.1154, 0, 0))
+        camera = L.Camera((0, 10, 9.9), 42)
+        layout = L.Layout(self.layout.ground, [box], [], [], [], [piece], camera)
         text = L.emit_layout(layout, BRIDGE)
         self.assertTrue(all(len(line) <= 100 for line in text.splitlines()))
-        self.assertEqual(L.parse_layout(text).boxes[0], box)
+        read = L.parse_layout(text)
+        self.assertEqual(read.boxes[0], box)
+        self.assertEqual(read.pieces[0], piece)
         self.assertIn("    landmarks: [],", text)
-        self.assertIn("    markers: [])", text)
+        self.assertIn("    markers: [],", text)
+        self.assertTrue(
+            text.endswith("    camera: .camera(offset: [0, 10, 9.9], fieldOfView: 42))\n}\n"))
+
+    def test_a_call_and_its_comma_stay_on_one_line_up_to_98_columns(self):
+        # As swift format does: a longer call followed by a comma is wrapped.
+        def piece(name):
+            return L.Piece(name, (12.4, 3.89, -10), (0.05, 5.58, 0.05), "metal")
+
+        layout = L.Layout(self.layout.ground, [], [], [], [],
+                          [piece("s" * 15), piece("s" * 16)], self.layout.camera)
+        lines = L.emit_layout(layout, BRIDGE).splitlines()
+        one = next(line for line in lines if '"' + "s" * 15 + '"' in line)
+        self.assertEqual((len(one), one.strip()[:7]), (98, '.piece('))
+        wrapped = lines.index(next(line for line in lines if '"' + "s" * 16 + '"' in line))
+        self.assertEqual(lines[wrapped - 1], "      .piece(")
+
+    # MARK: - Pieces
+
+    def test_rotations_convert_between_the_game_and_blender(self):
+        for q in (turn((0, 1, 0), 30), turn((1, 0, 0), -6.6), turn((0.3, -1, 2), 123)):
+            in_blender = L.rotation_to_blender(q)
+            self.assertTrue(same_turn(L.rotation_from_blender(in_blender), q))
+            for vector in ((1, 0, 0), (0, 1, 0), (0.2, -0.5, 3)):
+                expected = L.to_blender(rotate(q, vector))
+                for want, got in zip(expected, rotate(in_blender, L.to_blender(vector))):
+                    self.assertAlmostEqual(want, got, places=9)
+        # The game's vertical is Blender's: a turn about one is the same turn about the other.
+        self.assertTrue(same_turn(L.rotation_to_blender(turn((0, 1, 0), 30)), turn((0, 0, 1), 30)))
+
+    def test_a_turned_piece_is_saved_at_its_new_angle(self):
+        piece = next(p for p in self.layout.pieces if not L.is_identity(p.rotation))
+        shapes = shapes_for(self.layout)
+        shape = next(s for s in shapes if s.name == piece.name)
+        # Turned 30 degrees about Blender's vertical, as R Z 30 does.
+        shape.rotation = L._multiply(turn((0, 0, 1), 30), shape.rotation)
+        text = L.emit_layout(self.save(shapes, camera_for(self.layout)), BRIDGE)
+        saved = next(p for p in L.parse_layout(text).pieces if p.name == piece.name)
+        expected = L._multiply(turn((0, 1, 0), 30), L._canonical(piece.rotation))
+        self.assertTrue(same_turn(saved.rotation, expected))
+        self.assertEqual((saved.position, saved.size), (piece.position, piece.size))
+
+        def without(text):
+            return re.sub(r'\s*\.piece\(\s*"' + re.escape(piece.name) + r'"[^)]*\),', "", text)
+
+        self.assertEqual(without(text), without(self.text))
+
+    def test_a_small_turn_is_saved_and_kept(self):
+        # Half a degree about the vertical swings the ends of a long piece by metres.
+        piece = next(p for p in self.layout.pieces if L.is_identity(p.rotation))
+        shapes = shapes_for(self.layout)
+        shape = next(s for s in shapes if s.name == piece.name)
+        shape.rotation = L._multiply(turn((0, 0, 1), 0.5), shape.rotation)
+        text = L.emit_layout(self.save(shapes, camera_for(self.layout)), BRIDGE)
+        saved = next(p for p in L.parse_layout(text).pieces if p.name == piece.name)
+        self.assertFalse(L.is_identity(saved.rotation))
+        self.assertTrue(same_turn(saved.rotation, turn((0, 1, 0), 0.5)))
+        # Read and written again, as after editing the file by hand, the small turn stays.
+        self.assertEqual(L.emit_layout(L.parse_layout(text), BRIDGE), text)
+        # Only a turn too small for the file's four places is written as none.
+        self.assertFalse(L.is_identity(turn((1, 0, 0), 0.02)))
+        self.assertTrue(L.is_identity(turn((1, 0, 0), 0.005)))
+
+    def test_a_turn_is_written_only_for_a_turned_piece(self):
+        flat = L.Piece("slab", (1, 0.1, 2), (3, 0.2, 4), "concrete")
+        tilted = L.Piece("beam", (0, 3, -5), (0.2, 0.2, 6), "metal", (-0.5, 0.5, 0.5, 0.5))
+        layout = L.Layout(self.layout.ground, [], [], [], [], [flat, tilted], self.layout.camera)
+        text = L.emit_layout(layout, BRIDGE)
+        self.assertIn(
+            '.piece("slab", at: [1, 0.1, 2], size: [3, 0.2, 4], surface: .concrete),', text)
+        # Written as Swift's simd_quatf takes it, (x, y, z, w), and with w positive.
+        self.assertIn("turn: [-0.5, -0.5, -0.5, 0.5]", text)
+        read = L.parse_layout(text).pieces
+        self.assertEqual(read[0].rotation, L.IDENTITY)
+        self.assertEqual(read[1].rotation, (0.5, -0.5, -0.5, -0.5))
+
+    def test_a_turn_written_by_hand_survives_a_save_without_edits(self):
+        # Not unit length: the game normalises it, and Save leaves it as written.
+        beam = L.Piece("beam", (0, 3, -5), (0.2, 0.2, 6), "metal", (0.7, 0, 0.7, 0))
+        layout = L.Layout(self.layout.ground, self.layout.boxes, self.layout.landmarks,
+                          self.layout.areas, self.layout.markers, [beam], self.layout.camera)
+        text = L.emit_layout(layout, BRIDGE)
+        self.assertIn("turn: [0, 0.7, 0, 0.7]", text)
+        previous = L.parse_layout(text)
+        saved = L.layout_from_shapes(shapes_for(previous), BRIDGE, previous, camera_for(previous))
+        self.assertEqual(L.emit_layout(saved, BRIDGE), text)
+
+    def test_pieces_are_checked_like_boxes(self):
+        for change, words in (
+            (lambda shape: setattr(shape, "mirrored", True), "mirrored"),
+            (lambda shape: setattr(shape, "cuboid", False), "no longer a box"),
+            (lambda shape: setattr(shape, "surface", None), "no Lauder surface"),
+            (lambda shape: setattr(shape, "size", (0.2, 0, 6)), "flat"),
+            (lambda shape: setattr(shape, "name", shape.name + ".001"), "duplicate suffix"),
+        ):
+            with self.subTest(words=words):
+                shapes = shapes_for(self.layout)
+                change(next(shape for shape in shapes if shape.role == "piece"))
+                self.check_refused(shapes, words)
+
+    # MARK: - The game camera
+
+    def test_the_camera_is_saved_from_its_rig(self):
+        text = L.emit_layout(self.save(shapes_for(self.layout), L.CameraShape((0, -12, 8), 50)),
+                             BRIDGE)
+        self.assertIn("camera: .camera(offset: [0, 8, 12], fieldOfView: 50))", text)
+        # Without the rig, Save keeps the camera that the file has.
+        self.assertEqual(self.save(shapes_for(self.layout)).camera, self.layout.camera)
+        self.check_refused(shapes_for(self.layout), "field of view",
+                           L.CameraShape((0, -12, 8), 150))
+
+    # MARK: - The game's details
+
+    def check_parts(self, parts, expected):
+        self.assertEqual([part[0] for part in parts], [part[0] for part in expected])
+        for (_, centre, size, look), (_, want_centre, want_size, want_look) in zip(parts, expected):
+            self.assertEqual(look, want_look)
+            for got, want in zip(centre + size, want_centre + want_size):
+                self.assertAlmostEqual(got, want, places=6)
+
+    def test_vehicles_and_landmarks_get_the_games_details(self):
+        car = L.Box("car", (0, 0.75, 0), (2, 1.5, 4.6), "vehicle")
+        self.check_parts(L.details(car, "vehicle"), [
+            ("body", (0, -0.3375, 0), (2, 0.825, 4.6), "vehicle"),
+            ("cabin", (0, 0.4125, 0), (1.8, 0.675, 2.3), "glass"),
+        ])
+        truck = L.Box("truck", (0, 1.4, 0), (7, 2.8, 2.4), "vehicle")
+        self.check_parts(L.details(truck, "vehicle"), [
+            ("body", (0, 0, 0), (7, 2.8, 2.4), "vehicle"),
+            ("windows", (0, 0.7, 0), (6.3, 0.5, 2.42), "glass"),
+        ])
+        sign = L.Landmark("sign", (0, 0, 0), (1, 2, 0.5))
+        self.check_parts(L.details(sign, "landmark"), [
+            ("band", (0, -0.54, 0), (0.85, 0.3, 0.515), "paint"),
+        ])
 
 
 if __name__ == "__main__":
