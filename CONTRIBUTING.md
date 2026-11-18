@@ -83,6 +83,10 @@ On source changes, cancel old touch captures and require neutral input. Pause ke
 
 The accepted party plan has phone checkpoints after **Party A** and **Party C**, with B covered alongside C; use Simulator for everyday checks and intermediate PRs. Before declaring each milestone complete, use the baseline iPhone 13 Pro Max to verify its affected controls, movement/collision, camera, Pause/Resume, input release, interruptions and disconnect/reconnect. Measure frame pacing for performance claims. Earlier phone deferrals and the separate Xbox-hardware gap remain open until actual observations or a maintainer decision resolve them. Simulator timing is not phone evidence. The foreground game stays awake, including Pause, and normal idle locking resumes on leaving it. Record results and remaining gaps in the [Stage 2 evidence](docs/stage-2.md), following the [prototype plan](docs/prototype-plan.md).
 
+## TestFlight builds
+
+TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid team, which is passed at archive time with `DEVELOPMENT_TEAM` and kept out of the repository. Archive the Release configuration for `generic/platform=iOS` with automatic signing and `-allowProvisioningUpdates`, then upload with `xcodebuild -exportArchive` and an export-options file whose method is `app-store-connect` and destination `upload`. Each upload needs a build number not used before for its version, so raise `CURRENT_PROJECT_VERSION` first; 0.1.0 (1) is taken. Internal testers receive each build automatically. Upload only with the maintainer's go-ahead.
+
 ## Git LFS and cloning
 
 Install [Git LFS](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage) before cloning assets:
