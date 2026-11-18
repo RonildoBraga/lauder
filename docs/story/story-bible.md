@@ -1,7 +1,7 @@
 # Lauder — story bible, draft 0.5
 
 **Date:** 17 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The maintainer [agreed the combat identities](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) below on 17 November 2026 as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation.
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The maintainer [agreed the combat identities](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) below on 17 November 2026 as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The maintainer [accepted ADR 0004](../decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026: the game now opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers. This page's opening, premise, places and names are rewritten with milestone M1; until then they describe the Relay House slice.
 
 ## Agreed direction
 

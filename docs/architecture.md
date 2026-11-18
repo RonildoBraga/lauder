@@ -2,7 +2,7 @@
 
 **Date:** 16 November 2026\
 **Status:** Swift and RealityKit accepted. The party design was consolidated through [PR #22](https://github.com/RonildoBraga/lauder/pull/22); the maintainer has now assigned Party A regardless of Claude's response.\
-**Scope:** Party A implements primitive bodies, leadership/Pause, switching and camera follow. Companions follow as a squad under [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1, which replaced Party A's recorded trails. Its [session record](party-a.md) distinguishes verification from remaining work. [Party B](party-b.md) added the passage's specialist actions, and [Party C](party-c.md) the mission phases, dialogue, a pause menu and in-place Restart. Persistence remains later hardening; this design does not settle open relationships.
+**Scope:** Party A implements primitive bodies, leadership/Pause, switching and camera follow. Companions follow as a squad under [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1, which replaced Party A's recorded trails. Its [session record](party-a.md) distinguishes verification from remaining work. [Party B](party-b.md) added the passage's specialist actions, and [Party C](party-c.md) the mission phases, dialogue, a pause menu and in-place Restart. Persistence remains later hardening; this design does not settle open relationships. [ADR 0004](decisions/0004-brooklyn-bridge-opening.md), accepted on 18 November 2026, adapts this structure for the Brooklyn Bridge opening; its changes land with milestones M1 to M4.
 
 ## Decision and platform
 

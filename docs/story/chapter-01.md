@@ -1,6 +1,6 @@
 # Chapter One — A Place to Meet
 
-**Status:** The ensemble outline is current; a full dialogue script remains to be written.
+**Status:** [ADR 0004](../decisions/0004-brooklyn-bridge-opening.md), accepted on 18 November 2026, replaces this chapter's opening with the Brooklyn Bridge; the outline is rewritten with milestone M1. A full dialogue script remains to be written.
 
 - [Chapter One outline in the story bible](story-bible.md#chapter-one--a-place-to-meet): proposed events, character contributions and the chapter's achievement.
 - [Party gameplay walkthrough](../gameplay-script.md): the smaller Relay House–depot slice and what the player sees and does.
