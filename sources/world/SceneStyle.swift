@@ -32,6 +32,8 @@ struct SceneStyle {
     color: UIColor(red: 0.34, green: 0.46, blue: 0.47, alpha: 1), roughness: 1,
     isMetallic: false)
   let warm = UnlitMaterial(color: UIColor(red: 1, green: 0.75, blue: 0.4, alpha: 1))
+  /// Threats: a hostile's aim and shots, and the assisted target's marker.
+  let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
   let water = SimpleMaterial(
     color: UIColor(red: 0.29, green: 0.52, blue: 0.71, alpha: 1), roughness: 0.6,
@@ -108,20 +110,25 @@ struct SceneStyle {
   }
 
   func partyMember(_ member: PartyMember) -> Entity {
-    let visual = Entity()
-    let color: UIColor
-    let width: Float
     switch member {
-    case .miki:
-      color = UIColor(red: 0.25, green: 0.65, blue: 0.59, alpha: 1)
-      width = 0.38
-    case .laura:
-      color = UIColor(red: 0.9, green: 0.61, blue: 0.29, alpha: 1)
-      width = 0.31
-    case .tom:
-      color = UIColor(red: 0.38, green: 0.51, blue: 0.81, alpha: 1)
-      width = 0.49
+    case .miki: standIn(color: UIColor(red: 0.25, green: 0.65, blue: 0.59, alpha: 1), width: 0.38)
+    case .laura: standIn(color: UIColor(red: 0.9, green: 0.61, blue: 0.29, alpha: 1), width: 0.31)
+    case .tom: standIn(color: UIColor(red: 0.38, green: 0.51, blue: 0.81, alpha: 1), width: 0.49)
     }
+  }
+
+  /// A hostile's stand-in: the same shape as the party's, in a dark red that reads as a threat.
+  func hostile() -> Entity {
+    standIn(color: UIColor(red: 0.55, green: 0.18, blue: 0.17, alpha: 1), width: 0.4)
+  }
+
+  /// A carbine held at the right side, pointing ahead; shown while it is drawn.
+  func carbine() -> ModelEntity {
+    block(size: [0.07, 0.08, 0.55], at: [0.21, 0.08, -0.22], material: metal)
+  }
+
+  private func standIn(color: UIColor, width: Float) -> Entity {
+    let visual = Entity()
     let clothing = SimpleMaterial(color: color, roughness: 1, isMetallic: false)
     visual.addChild(block(size: [width, 0.72, 0.3], at: [0, 0.04, 0], material: clothing))
     let head = ModelEntity(mesh: unitSphere, materials: [wallCap])

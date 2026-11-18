@@ -31,7 +31,10 @@ struct BridgeTests {
 
   @Test
   func eachTriggerShowsItsLineOnceAlongTheCrossing() {
-    let world = GameWorld(level: BrooklynBridge.level)
+    // The lines alone: FirstFightTests plays the stranger's fight on the way.
+    var level = BrooklynBridge.level
+    level.encounters = []
+    let world = GameWorld(level: level)
     var seen: [String] = []
     let route: [SIMD2<Float>] = [
       [6.5, 66], [6.5, 20], [6.5, -9], [6.5, -28], [-7, -31], [-7, -70], [-7, -108],

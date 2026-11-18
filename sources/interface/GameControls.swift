@@ -18,6 +18,7 @@ final class GameControls {
   private(set) var sourceName = "Touch controls"
   private(set) var pauseButtonName = "Pause"
   private(set) var switchButtonName = "Switch"
+  private(set) var fireButtonName = "Fire"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -111,13 +112,14 @@ final class GameControls {
       controllerAction: !touchControlsEnabled && (gamepad?.buttonA.isPressed ?? false),
       controllerPause: !touchControlsEnabled && (gamepad?.buttonMenu.isPressed ?? false),
       controllerSwitch: !touchControlsEnabled && (gamepad?.rightShoulder.isPressed ?? false),
+      controllerFire: !touchControlsEnabled && (gamepad?.rightTrigger.isPressed ?? false),
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
-      keyboardSwitch: pressed(.keyQ),
+      keyboardSwitch: pressed(.keyQ), keyboardFire: pressed(.keyF),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
-      touchRestart: touch.touchRestart
+      touchRestart: touch.touchRestart, touchFire: touch.touchFire
     )
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
@@ -130,6 +132,7 @@ final class GameControls {
     } else if let gamepad,
       simd_length_squared(raw.stick) > deadZone * deadZone
         || raw.controllerAction || raw.controllerPause || raw.controllerSwitch
+        || raw.controllerFire
     {
       showController(gamepad)
     }
@@ -200,30 +203,35 @@ final class GameControls {
   private func showController(_ profile: GCExtendedGamepad) {
     if profile is GCDualSenseGamepad {
       showSource(
-        "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1")
+        "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
+        fire: "R2")
     } else if profile is GCXboxGamepad {
       showSource(
-        "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB")
+        "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
+        fire: "RT")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
-        cycle: "Right shoulder")
+        cycle: "Right shoulder", fire: "Right trigger")
     }
   }
 
   private func showKeyboard() {
-    showSource("Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q")
+    showSource("Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F")
   }
 
   private func showTouch() {
-    showSource("Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch")
+    showSource("Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire")
   }
 
-  private func showSource(_ name: String, action: String?, pause: String, cycle: String) {
+  private func showSource(
+    _ name: String, action: String?, pause: String, cycle: String, fire: String
+  ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
     if pauseButtonName != pause { pauseButtonName = pause }
     if switchButtonName != cycle { switchButtonName = cycle }
+    if fireButtonName != fire { fireButtonName = fire }
   }
 
   isolated deinit {

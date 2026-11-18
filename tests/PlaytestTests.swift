@@ -11,6 +11,7 @@
   struct PlaytestTests {
     @Test(arguments: [
       "route", "panel", "closed", "reversals", "switches", "walls", "mission", "bridge-walk",
+      "first-fight", "fight-retry",
     ])
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
       let world = GameWorld(level: Level.level(PlaytestRunner.level(for: name)))
