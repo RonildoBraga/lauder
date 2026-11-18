@@ -1,6 +1,6 @@
 # ADR 0004 — the Brooklyn Bridge opening
 
-**Status:** Proposed. Nothing is implemented; the decisions at the end are the maintainer's.\
+**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment and none is assigned yet, so nothing is implemented.\
 **Date:** 18 November 2026\
 **Deciders:** Maintainer\
 **Author:** Claude
@@ -43,9 +43,9 @@ The opening changes things the maintainer agreed earlier, so it needs an explici
 - It says **“Combat is occasional and light.”** The opening has two hostile encounters in its first minutes. That still fits if combat stays occasional afterwards.
 - The request names **Tom** and **Laura**; the documents and code use **Tomas** and **Lara**.
 - The agreed [combat identities](../story/story-bible.md#combat-identities) give Tomas a close-range scatter weapon, so his rescue shot comes from close by, unless his identity changes. Miki's precision carbine suits her first fight.
-- The prototype plan lists combat and health as outside the first playable, and its [combat design review gate](../prototype-plan.md#combat-design-review-gate) requires settled design choices and an explicit assignment before combat is built. This proposal is that design step.
+- The prototype plan lists combat and health as outside the first playable, and its [combat design review gate](../prototype-plan.md#combat-design-review-gate) requires settled design choices and an explicit assignment before combat is built. This record settles those choices; each milestone still needs its own assignment.
 
-## Proposal
+## Decision
 
 **Extend the existing structure: one owner for each fact, content as typed data, and systems in plain Swift that tests can run without rendering.** No engine change, ECS, third-party package, scripting language or level editor.
 
@@ -150,7 +150,7 @@ Final art and animation, the characters' backgrounds and relationships, final di
 
 ## Decisions
 
-Recommended answers first.
+The maintainer [accepted these as recommended](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778) on 18 November 2026. They are kept here as proposed.
 
 1. **Names.** Are Tom and Laura renames of Tomas and Lara? Recommended: yes, renamed in code and documents with M1.
 2. **Story foundations.** Replace the agreed opening (three travellers together, Chapter One's transmitter and the fictional places) with the bridge, strangers meeting and New York, and update the story bible and Chapter One outline with M1. Recommended.
