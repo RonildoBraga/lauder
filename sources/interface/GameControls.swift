@@ -116,7 +116,8 @@ final class GameControls {
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
       keyboardSwitch: pressed(.keyQ),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
-      touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch
+      touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
+      touchRestart: touch.touchRestart
     )
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
@@ -132,6 +133,12 @@ final class GameControls {
     {
       showController(gamepad)
     }
+    return resolve(raw, mode: mode)
+  }
+
+  /// Resolve one raw sample with this owner's edge history and release gate. Headless tests
+  /// call it directly to drive the same rules without hardware.
+  func resolve(_ raw: InputRules.Raw, mode: GameSession.Mode) -> Input {
     let result = InputRules.resolve(raw, mode: mode, state: inputState)
     inputState = result.state
     if needsNeutralInput != inputState.needsNeutralInput {

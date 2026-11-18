@@ -17,23 +17,30 @@ final class GameWorld {
   let controls = GameControls()
   let session = GameSession()
   private(set) var nearbyName: String?
-  private(set) var observation =
-    "The front entrance is blocked. Find a way through the service passage, then return."
+  private(set) var observation = MissionScript.opening
   private(set) var diagnostic: String?
   /// The leader's contextual action here, such as "Reach latch"; nil when there is none.
   private(set) var actionName: String?
-  /// Role feedback at the closed passage, such as which member could open it.
+  /// Role feedback, such as which member could act here.
   private(set) var hint: String?
 
   @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
   @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
   @ObservationIgnored private let camera = PerspectiveCamera()
-  @ObservationIgnored private var motion = PartyMotion(
+  // Movement and routes follow the session's passage flag; the world keeps no copy of it.
+  @ObservationIgnored private let closedMotion = PartyMotion(
     radius: PrototypeLayout.characterRadius,
     obstacles: PrototypeLayout.obstacles(passageOpen: false))
-  @ObservationIgnored private var grid = NavigationGrid.forPassage(open: false)
+  @ObservationIgnored private let openMotion = PartyMotion(
+    radius: PrototypeLayout.characterRadius,
+    obstacles: PrototypeLayout.obstacles(passageOpen: true))
+  // Scene parts that show the session's progress. They hold no progress of their own.
   @ObservationIgnored private var barrierParts: [Entity] = []
+  @ObservationIgnored private var regulatorPart: Entity?
+  @ObservationIgnored private var installedRegulator: Entity?
+  @ObservationIgnored private var faultLight: Entity?
+  @ObservationIgnored private var readyLight: Entity?
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
@@ -60,19 +67,21 @@ final class GameWorld {
 
   var isPaused: Bool { session.isPaused }
 
+  private var motion: PartyMotion { session.passageOpen ? openMotion : closedMotion }
+  private var grid: NavigationGrid { NavigationGrid.forPassage(open: session.passageOpen) }
+
+  private static let startingCameraTarget =
+    PrototypeLayout.spawn + [0, PrototypeLayout.characterHeight / 2 + 0.1, 0]
+
   init() {
     let members = PartyMember.allCases
     // A mismatch with the session's leader is reconciled on the first step.
     squadLeader = .miki
-    let start = PrototypeLayout.spawn(for: squadLeader)
-    route = RouteMemory(start: SIMD2(start.x, start.z))
+    route = RouteMemory(start: Self.spawnPoint(.miki))
     // Companions spawn behind the leader along +z, so the formation starts facing -z.
     planner = SquadPlanner(heading: [0, -1])
-    motors = Dictionary(
-      uniqueKeysWithValues: members.map {
-        ($0, CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: $0)))
-      })
-    cameraTarget = PrototypeLayout.spawn + [0, PrototypeLayout.characterHeight / 2 + 0.1, 0]
+    motors = Self.freshMotors()
+    cameraTarget = Self.startingCameraTarget
     root.name = "relay-district"
     let style = SceneStyle()
     for box in PrototypeLayout.boxes {
@@ -86,9 +95,13 @@ final class GameWorld {
     }
     addLandmarks(style: style)
     addBarrier(style: style)
-    // Every action the session can be asked for must be defined exactly once, checked at load.
+    // Every action and landmark the session can refer to must be defined exactly once, checked
+    // at load.
     for id in PrototypeLayout.ActionID.allCases { _ = PrototypeLayout.interaction(id) }
-    // Build the open-passage route grid while loading, not on the frame the passage opens.
+    for id in PrototypeLayout.InteractionID.allCases { _ = PrototypeLayout.point(id) }
+    // Build both route grids while loading, not on the first frame of play or the frame the
+    // passage opens.
+    _ = NavigationGrid.forPassage(open: false)
     _ = NavigationGrid.forPassage(open: true)
     SceneDressing.add(to: root, style: style)
     style.addLighting(to: root)
@@ -111,6 +124,7 @@ final class GameWorld {
       markers[member] = marker
       root.addChild(body)
     }
+    showProgress()
     updateCamera(deltaTime: 0)
     updateNearby()
     #if DEBUG
@@ -145,27 +159,26 @@ final class GameWorld {
     MainActor.preconditionIsolated()
     guard isPresented, isApplicationActive else { return }
     #if DEBUG
-      if playtest != nil, let body = bodies[session.leader] {
+      if playtest != nil {
         playtest?.tick(dt: Float(deltaTime))
-        controls.scriptedRaw = playtest?.input(
-          leader: session.leader, leaderPosition: SIMD2(body.position.x, body.position.z),
-          positions: positions, passageOpen: session.passageOpen)
+        controls.scriptedRaw = playtest?.input(playtestSnapshot)
       }
     #endif
-    let input = controls.sample(mode: session.mode)
-    if input.pausePressed {
-      session.togglePause()
-      controls.requireNeutralInput()
-    } else if input.switchPressed {
-      session.cycleLeader()
-      cameraStart = cameraTarget
-      cameraElapsed = 0
-      for member in PartyMember.allCases {
-        markers[member]?.isEnabled = member == session.leader
-      }
-      updateNearby()
-    }
-    let running = !session.isPaused && controls.status == .ready && !controls.needsNeutralInput
+    let mode = session.mode
+    let input = controls.sample(mode: mode)
+    update(
+      with: input, sampledIn: mode, deltaTime: Float(deltaTime),
+      inputReady: controls.status == .ready)
+  }
+
+  /// One frame after sampling: the command the input means in the mode it was sampled in, then
+  /// party movement while exploring, then the leader's action. Headless tests call it directly.
+  func update(
+    with input: InputRules.Input, sampledIn mode: GameSession.Mode, deltaTime: Float,
+    inputReady: Bool = true
+  ) {
+    respond(to: input, in: mode)
+    let running = session.mode == .exploring && inputReady && !controls.needsNeutralInput
     if running != wasRunning {
       wasRunning = running
       skipNextStep = true
@@ -180,32 +193,80 @@ final class GameWorld {
     #if DEBUG
       let started = DispatchTime.now().uptimeNanoseconds
     #endif
-    advanceParty(movement: input.movement, deltaTime: Float(deltaTime))
+    advanceParty(movement: input.movement, deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
-        dt: Float(deltaTime),
+        dt: deltaTime,
         milliseconds: Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
     #endif
-    if input.actionPressed { performAction() }
+    if mode == .exploring, input.actionPressed { performAction() }
+  }
+
+  /// Dialogue and Pause controls stay distinct from world actions: in those modes the action
+  /// press shows the next line or confirms the pause menu's choice, and nothing else.
+  private func respond(to input: InputRules.Input, in mode: GameSession.Mode) {
+    switch mode {
+    case .paused:
+      if input.pausePressed {
+        togglePause()
+      } else if input.restartPressed {
+        restart()
+      } else if input.actionPressed {
+        if session.pauseChoice == .restart { restart() } else { togglePause() }
+      } else if input.menuMove != 0 {
+        session.movePauseChoice(by: input.menuMove)
+      }
+    case .dialogue:
+      if input.pausePressed {
+        togglePause()
+      } else if input.actionPressed {
+        session.advanceDialogue()
+        // A finished conversation's step has just taken effect.
+        if session.mode != .dialogue {
+          showProgress()
+          updateNearby()
+        }
+      }
+    case .exploring:
+      if input.pausePressed {
+        togglePause()
+      } else if input.switchPressed {
+        session.cycleLeader()
+        cameraStart = cameraTarget
+        cameraElapsed = 0
+        for member in PartyMember.allCases {
+          markers[member]?.isEnabled = member == session.leader
+        }
+        updateNearby()
+      }
+    }
+  }
+
+  private func togglePause() {
+    session.togglePause()
+    controls.requireNeutralInput()
   }
 
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
   /// prompt left over from before a move or a switch cannot act.
   func performAction() {
-    guard let body = bodies[session.leader] else { return }
+    guard session.mode == .exploring, let body = bodies[session.leader] else { return }
     let position = SIMD2(body.position.x, body.position.z)
-    if let interaction = PrototypeLayout.interactions.first(where: {
-      $0.approach.contains(position)
-    }) {
+    let here = PrototypeLayout.interactions.filter { $0.approach.contains(position) }
+    // Several actions can share an approach; the one offered now comes first.
+    if let interaction = here.first(where: { session.offers($0.id) }) ?? here.first {
       switch session.perform(interaction.id, by: session.leader) {
-      case .opened:
+      case .done:
         observation = interaction.result
-        openPassage()
-      case .alreadyOpen:
-        observation = "The passage is already open."
+        showProgress()
+      case .alreadyDone:
+        observation = interaction.repeated
+      case .notYet:
+        observation = interaction.early
       case .notEligible:
-        observation =
-          session.leader == .miki ? PrototypeLayout.barrierHint : interaction.suggestion
+        observation = feedback(for: interaction)
+      case .missingPart:
+        observation = MissionScript.missingPart
       case .unavailable:
         break
       }
@@ -213,10 +274,38 @@ final class GameWorld {
       return
     }
     observation =
-      nearby?.observation
-      ?? (session.passageOpen
-        ? "The front entrance is blocked. The service passage is open."
-        : PrototypeLayout.barrierHint)
+      nearby?.observation(at: session.phase)
+      ?? MissionScript.guidance(session.phase, passageOpen: session.passageOpen)
+  }
+
+  /// Party C's in-place Restart: the same scene, bodies and update subscription, returned to
+  /// the beginning of a run. Nothing is rebuilt or reloaded.
+  func restart() {
+    session.restart()
+    for member in PartyMember.allCases {
+      place(member, at: Self.spawnPoint(member))
+      setYaw(member, 0)
+      markers[member]?.isEnabled = member == session.leader
+    }
+    squadLeader = session.leader
+    route = RouteMemory(start: Self.spawnPoint(session.leader))
+    planner = SquadPlanner(heading: [0, -1])
+    motors = Self.freshMotors()
+    companionTargets = [:]
+    diagnostic = nil
+    cameraStart = nil
+    cameraElapsed = 0
+    cameraTarget = Self.startingCameraTarget
+    unsimulatedTime = 0
+    skipNextStep = true
+    showProgress()
+    observation = MissionScript.opening
+    nearby = nil
+    nearbyName = nil
+    updateCamera(deltaTime: 0)
+    updateNearby()
+    // Like Resume, the new run waits for every button, key and finger to be released.
+    controls.requireNeutralInput()
   }
 
   // Production spatial update, also exercised by deterministic route/soak tests.
@@ -239,6 +328,8 @@ final class GameWorld {
     if squadLeader != session.leader { changeLeader() }
     let leader = session.leader
     guard let leaderBody = bodies[leader] else { return }
+    let motion = self.motion
+    let grid = self.grid
     let direction = Movement.direction(
       for: movement, cameraOffset: PrototypeLayout.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PrototypeLayout.speed * dt
@@ -254,20 +345,19 @@ final class GameWorld {
     // Companions choose their own routes to formation slots (ADR 0003); every movement is
     // still resolved against the authored footprints.
     let current = positions
-    let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { [motion] from, to in
+    let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { from, to in
       motion.canTraverse(from: from, to: to)
     }
     // While the passage is closed, companions keep clear of the spots where Lara or Tomas
     // must stand to open it.
-    let passageOpen = session.passageOpen
+    let keepClear = PrototypeLayout.interactions
+      .filter { $0.keepClear && session.offers($0.id) }.map(\.approach)
     let targets = planner.targets(
       for: SquadPlanner.Input(
         leader: leader, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         positions: current, route: route, dt: dt),
       grid: grid, isClear: isClear,
-      avoid: { point in
-        !passageOpen && PrototypeLayout.interactions.contains { $0.approach.contains(point) }
-      })
+      avoid: { point in keepClear.contains { $0.contains(point) } })
     companionTargets = targets
     for member in PartyMember.allCases where member != leader {
       guard let start = current[member], let target = targets[member],
@@ -360,7 +450,7 @@ final class GameWorld {
 
   private func updateNearby() {
     guard let player = bodies[session.leader] else { return }
-    updatePassagePrompt(at: SIMD2(player.position.x, player.position.z))
+    updatePrompt(at: SIMD2(player.position.x, player.position.z))
     let position = player.position * [1, 0, 1]
     let closest = PrototypeLayout.points.min {
       simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
@@ -375,6 +465,13 @@ final class GameWorld {
   }
 
   #if DEBUG
+    /// What a scripted playtest can see each frame.
+    var playtestSnapshot: PlaytestRunner.Snapshot {
+      PlaytestRunner.Snapshot(
+        leader: session.leader, positions: positions, mode: session.mode, phase: session.phase,
+        passageOpen: session.passageOpen)
+    }
+
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
     func startPlaytest(_ scenario: String, style: SceneStyle = SceneStyle()) {
       guard let runner = PlaytestRunner(scenario: scenario) else {
@@ -421,40 +518,55 @@ final class GameWorld {
     }
   #endif
 
-  /// The action prompt or role feedback for the active body at the closed passage.
-  private func updatePassagePrompt(at position: SIMD2<Float>) {
+  /// The action prompt or role feedback for the active body where it stands.
+  private func updatePrompt(at position: SIMD2<Float>) {
     var name: String?
     var feedback: String?
-    if !session.passageOpen {
-      if let interaction = PrototypeLayout.interactions.first(where: {
-        $0.approach.contains(position)
-      }) {
-        if interaction.member == session.leader {
-          name = interaction.name
-        } else {
-          // Miki explains both alternatives; the others point to the right person.
-          feedback =
-            session.leader == .miki ? PrototypeLayout.barrierHint : interaction.suggestion
-        }
+    if let interaction = PrototypeLayout.interactions.first(where: {
+      $0.approach.contains(position) && session.offers($0.id)
+    }) {
+      if session.isEligible(session.leader, for: interaction.id) {
+        name = interaction.name
       } else {
-        let centre = SIMD2(PrototypeLayout.barrierPosition.x, PrototypeLayout.barrierPosition.z)
-        if simd_distance(position, centre) < PrototypeLayout.interactionRadius {
-          feedback = PrototypeLayout.barrierHint
-        }
+        feedback = self.feedback(for: interaction)
+      }
+    } else if !session.passageOpen {
+      let centre = SIMD2(PrototypeLayout.barrierPosition.x, PrototypeLayout.barrierPosition.z)
+      if simd_distance(position, centre) < PrototypeLayout.interactionRadius {
+        feedback = PrototypeLayout.barrierHint
       }
     }
     if actionName != name { actionName = name }
     if hint != feedback { hint = feedback }
   }
 
-  /// Project the session's open passage onto the world: the barrier goes, and movement and
-  /// routes use the open layout.
-  private func openPassage() {
-    motion = PartyMotion(
-      radius: PrototypeLayout.characterRadius,
-      obstacles: PrototypeLayout.obstacles(passageOpen: true))
-    grid = NavigationGrid.forPassage(open: true)
-    for part in barrierParts { part.isEnabled = false }
+  /// For a leader who cannot act here: who can. At the passage Miki explains both ways.
+  private func feedback(for interaction: PrototypeLayout.Interaction) -> String {
+    session.leader == .miki
+      ? interaction.mikiSuggestion ?? interaction.suggestion : interaction.suggestion
+  }
+
+  /// Make the scene show the session's progress: the barrier, the regulator in its housing or
+  /// in the transmitter, and the transmitter's status light. Movement and routes read the
+  /// passage flag directly.
+  private func showProgress() {
+    for part in barrierParts { part.isEnabled = !session.passageOpen }
+    regulatorPart?.isEnabled = session.phase < .carryingRegulator
+    installedRegulator?.isEnabled = session.phase >= .radioRepaired
+    faultLight?.isEnabled = session.phase < .radioRepaired
+    readyLight?.isEnabled = session.phase >= .radioRepaired
+  }
+
+  private static func spawnPoint(_ member: PartyMember) -> SIMD2<Float> {
+    let spawn = PrototypeLayout.spawn(for: member)
+    return SIMD2(spawn.x, spawn.z)
+  }
+
+  private static func freshMotors() -> [PartyMember: CompanionMotor] {
+    Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.map {
+        ($0, CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: $0)))
+      })
   }
 
   /// The closed barrier, with a latch at its top for Lara and a loose panel at its foot for
@@ -483,6 +595,36 @@ final class GameWorld {
       entity.name = point.id.rawValue
       root.addChild(entity)
     }
+    // The transmitter's status light, amber until the repair, and the regulator Miki fits on top.
+    let transmitter = PrototypeLayout.point(.transmitter)
+    let light =
+      transmitter.position + [-0.19, transmitter.size.y / 2 - 0.16, transmitter.size.z / 2 + 0.02]
+    faultLight = addPart(
+      "relay.transmitter.fault", size: [0.14, 0.04, 0.03], at: light, material: style.warm,
+      style: style)
+    readyLight = addPart(
+      "relay.transmitter.ready", size: [0.14, 0.04, 0.03], at: light, material: style.signal,
+      style: style)
+    installedRegulator = addPart(
+      "relay.transmitter.regulator", size: [0.24, 0.12, 0.2],
+      at: transmitter.position + [-0.05, transmitter.size.y + 0.06, 0], material: style.signal,
+      style: style)
+    // The regulator on its disconnected housing, and the water bypass beside it that Miki
+    // leaves connected, running to the depot's back wall.
+    let housing = PrototypeLayout.point(.regulator)
+    regulatorPart = addPart(
+      "depot.regulator.part", size: [0.3, 0.12, 0.22],
+      at: housing.position + [0, housing.size.y + 0.06, 0], material: style.signal, style: style)
+    let wall = PrototypeLayout.box(.depotBack)
+    let start = housing.position.z - housing.size.z / 2
+    let end = wall.position.z + wall.size.z / 2
+    let x = housing.position.x + 0.15
+    _ = addPart(
+      "depot.water-bypass", size: [0.08, 0.08, start - end], at: [x, 0.04, (start + end) / 2],
+      material: style.water, style: style)
+    _ = addPart(
+      "depot.water-riser", size: [0.08, wall.size.y, 0.08], at: [x, wall.size.y / 2, end + 0.04],
+      material: style.water, style: style)
     for position in PrototypeLayout.serviceMarkerPositions {
       let marker = ModelEntity(
         mesh: .generateBox(size: PrototypeLayout.serviceMarkerSize), materials: [style.signal])
@@ -491,4 +633,13 @@ final class GameWorld {
     }
   }
 
+  private func addPart(
+    _ name: String, size: SIMD3<Float>, at position: SIMD3<Float>, material: any Material,
+    style: SceneStyle
+  ) -> Entity {
+    let part = style.block(size: size, at: position, material: material)
+    part.name = name
+    root.addChild(part)
+    return part
+  }
 }

@@ -2,7 +2,7 @@
 
 **Date:** 16 November 2026\
 **Status:** Swift and RealityKit accepted. The party design was consolidated through [PR #22](https://github.com/RonildoBraga/lauder/pull/22); the maintainer has now assigned Party A regardless of Claude's response.\
-**Scope:** Party A implements primitive bodies, leadership/Pause, switching and camera follow. Companions follow as a squad under [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1, which replaced Party A's recorded trails. Its [session record](party-a.md) distinguishes verification from remaining work. Specialist interactions, mission rules, dialogue, Restart and persistence remain later stages; this design does not settle open relationships.
+**Scope:** Party A implements primitive bodies, leadership/Pause, switching and camera follow. Companions follow as a squad under [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1, which replaced Party A's recorded trails. Its [session record](party-a.md) distinguishes verification from remaining work. [Party B](party-b.md) added the passage's specialist actions, and [Party C](party-c.md) the mission phases, dialogue, a pause menu and in-place Restart. Persistence remains later hardening; this design does not settle open relationships.
 
 ## Decision and platform
 
@@ -23,7 +23,7 @@ Keep **one app target**, one Swift Testing target and ordinary feature folders. 
 | Content | Typed layout, character/interaction IDs, approaches, prompts and delivery assets | Small authored definitions within the app |
 | Persistence, later | Versioned checkpoints and an ordered writer | Values, never entity graphs |
 
-These are responsibilities, not new frameworks or a requirement to create every folder immediately. Party A adds GameSession with exploring/paused modes and leadership only. Add dialogue/interaction/progress rules with B/C and SaveStore during later hardening.
+These are responsibilities, not new frameworks or a requirement to create every folder immediately. Party A added GameSession with exploring/paused modes and leadership, Party B the passage flag, and Party C the mission phase, the dialogue mode and the pause menu. SaveStore follows in later hardening.
 
 ## Scene and asset authoring
 
@@ -46,10 +46,11 @@ Scene composition remains Swift code. The preserved [test-only asset fixture](..
 
 - Mode: exploring, dialogue or paused. Pausing records whether to resume exploring or the current dialogue; pauses do not nest or lose the dialogue cursor.
 - Active leader: one stable member ID, with proposed order Miki → Lara → Tomas.
-- Mission phase, introduced with Party C.
+- Mission phase, added by Party C.
 - A separate `passageOpen` flag, introduced with Party B. Opening access is not a mission phase and either solution sets the same flag.
+- The current conversation and line, and the pause menu's choice.
 
-Use plain Swift session state and rules on the main actor, exposing only coarse changes to the interface. The carried-regulator indicator is derived from the mission phase, not stored on a leader or duplicated in the world. There are no separate member inventories.
+Use plain Swift session state and rules on the main actor, exposing only coarse changes to the interface. The carried-regulator indicator is derived from the mission phase, not stored on a leader or duplicated in the world. So are the regulator's place in the scene, the transmitter's status light and the objective line. The world shows them by projecting the phase onto fixed scene parts, and movement and routes read the passage flag directly, so the world keeps no progress flags of its own. There are no separate member inventories.
 
 **GameWorld owns spatial state:** a body reference for each stable member ID, their actual positions, companion routes and formation state, one camera, scene bindings and one owned scene-update subscription. It reads the active leader from the session. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
 
@@ -82,6 +83,8 @@ Keep explicit previous-button/edge state in InputRules instead of adding another
 4. While in dialogue or Pause, switch edges are ignored and consumed, not queued. Action advances text or confirms the pause-menu choice; it cannot also interact with the world. Movement can navigate a menu only where explicitly defined, never move the bodies.
 5. Inactivity, input-source changes and Pause/Resume retain the release gate. All gameplay buttons, including switch, must be released and the stick centred before fresh input. Opposing held movement keys do not count as neutral.
 
+**The minimal pause menu**, added by Party C, has two choices, **Resume** and **Restart**, and opens on Resume. A fresh up or down press, from W/S or the stick, chooses; the action confirms; Pause resumes directly. Restart takes effect at once, without a second confirmation. On touch, the action button reads **Restart** while paused and **Resume** stays at the top right. The action button keeps the intent it sent when its finger came down until that finger lifts, so a press that began before Pause cannot release as Restart. In a conversation the action button reads **Continue**, and Pause keeps the current line.
+
 GameSession decides what an allowed intent means for the current mode. World movement/following runs only when exploring, presented, active, ready, supplied with an available input source and past the neutral-input gate. This does not require nonzero movement: followers may settle along their routes while the leader stands still. Dialogue, Pause, input loss or a closed release gate freezes the whole party; input sampling needed for dialogue/menu/Pause remains available.
 
 ## Movement and presentation
@@ -109,17 +112,19 @@ The camera keeps the accepted elevated offset and field of view and follows the 
 
 ## The prototype's state
 
-Proposed Party C mission phase:
+Party C's mission phase, as implemented:
 
 **Briefing → Seeking regulator → Carrying regulator → Radio repaired → Meeting agreed**
 
-The keeper's briefing starts the search with all three travellers present. Miki identifies/takes the regulator and later consumes it in the repair. Any leader can start the coastal water-crew call or use **Read plan** after completion. Finishing the call secures the appointment. Lara is local; no Nina-specific dialogue is required while relationships remain undecided.
+The keeper's briefing starts the search with all three travellers present. Miki identifies/takes the regulator and later consumes it in the repair. Any leader can start the coastal water-crew call or use **Read plan** after completion. An accepted step starts its short conversation, and the phase advances when the conversation ends, so finishing the call secures the appointment. The world shows the new state at that moment; Restart part-way through a conversation discards its step. Read plan starts its conversation without changing the phase. Lara is local; no Nina-specific dialogue is required while relationships remain undecided.
 
 The separate passage flag survives every leader switch. Lara's latch and Tomas's panel action are alternative transitions from closed to open; after either succeeds, both requests are harmless. No second obstacle or skill tree is needed.
 
 ### One interaction
 
 Before Party B, extend the typed layout's interaction definitions with stable action IDs, eligible member IDs, an authored accessible approach area, prompt/role-feedback text and the relevant collision dimensions. [Party B](party-b.md) does this for the passage's two actions, in `PrototypeLayout.interactions`, with the barrier's footprint alongside; the observation points keep their existing definitions. Put per-object collision data there instead of selecting it by ID in GameWorld; this absorbs [#19 L4](https://github.com/RonildoBraga/lauder/issues/19). Required IDs must exist once at load.
+
+[Party C](party-c.md) adds five actions to the same list: **Talk to keeper**, **Call** and **Read plan** for any leader, and **Take regulator** and **Repair** for Miki. An action with no eligible member is open to every leader. The four transmitter actions share one approach inside the shelter, which includes where the party starts, and the session offers exactly one of them in each phase. The regulator's approach is inside the depot, so it is reachable only through the open passage. Where no action is offered, a press explains the first action there: already done, or not yet. The landmarks now carry their own size, so nothing selects per-object data by ID, and #19 L4 is addressed. Their observations change with the phase. Only the passage's small standing spots ask companions to keep clear.
 
 1. GameWorld evaluates the actual active body's position against the interaction's approach area and current world accessibility.
 2. The HUD presents the active character's action or a suggestion to switch. No remote companion acts automatically.
@@ -131,9 +136,15 @@ Tests cover stale prompts after movement/switching, both alternative methods ind
 
 ## Restart and lifecycle
 
-Party C implements the proposed **in-place Restart** of the existing session/world. Reset mode to exploring, active leader to Miki, mission to briefing and passage to closed. Restore all three authored spawn positions, body motion state, regulator visibility, unrepaired transmitter, dialogue/objective state and observation/prompt state. Clear/reseed trails, camera transition and input edge history; require neutral input before movement resumes.
+Party C implements the **in-place Restart** of the existing session and world, chosen from the pause menu through the selected input path. Its exact steps:
 
-Restart does not attach a second simulation callback, rebuild the static scene or reload already available stand-ins. Invalidate unfinished run-specific effects or loads so late results cannot alter the reset run. Verify a single owned subscription and exactly three members across repeated restarts.
+1. The session resets: exploring, Miki leading, the briefing phase, the passage closed, no conversation, and the pause menu back on Resume.
+2. The world puts all three bodies back on their authored spawn points, facing north as at launch, and marks Miki as leader. Route memory restarts at Miki's spawn; the formation planner, each companion motor, the companion targets and the stall warning start afresh.
+3. The camera transition is cancelled and the camera target returns to the start. Owed simulation time is dropped and the next step is skipped.
+4. The barrier, the regulator on its housing and the transmitter's amber light show again, projected from the reset session; movement and routes follow the closed passage because they read the session's flag.
+5. The observation returns to the opening line, and the prompt and nearby landmark are recomputed. The input owner requires neutral input, as on Resume, so every button, key and finger must be released before anything moves.
+
+Restart does not attach a second simulation callback, rebuild the static scene, add entities or reload already available stand-ins. The run has no asynchronous effects or loads today, so nothing needs invalidating; one added later must check that it still belongs to the current run. Tests restart three times and count every entity and the three party bodies. The update subscription is attached only when the view appears, so Restart cannot add a second one.
 
 Normal inactivity freezes the current scene and preserves session/dialogue progress. Clear held input and reset frame timing when returning. The foreground app remains awake, including Pause; restore the idle timer when inactive. Leaving the view cancels owned updates and unfinished loads. These rules extend the current lifecycle to all three bodies rather than creating a separate party lifecycle manager.
 
@@ -147,7 +158,7 @@ Save meaningful changes with one ordered atomic writer. Restart invalidates olde
 
 ## Assets and checks
 
-Party A adds pure tests for input precedence and session modes/leadership; S1 adds grid, route-memory and whole-party formation, stillness, switching and service-opening tests. The #25 correction adds exact collision regressions and fixed-seed whole-party route tests using the authored blockers; [its record](wall-contact.md) separates pending validation from earlier results. Manual Simulator checks still cover the rendered route, turns, reversals, camera easing and switching to each separated member. B adds layout eligibility/approach and shared-gate checks. C adds the full progression, dialogue and repeated in-place Restart checks. Unit tests do not prove the rendered route. Debug builds also contain scripted playtests that `scripts/playtest` runs in the rendered Simulator app; they feed scripted input through the normal controls and record traces, and are compiled out of Release builds.
+Party A adds pure tests for input precedence and session modes/leadership; S1 adds grid, route-memory and whole-party formation, stillness, switching and service-opening tests. The #25 correction adds exact collision regressions and fixed-seed whole-party route tests using the authored blockers; [its record](wall-contact.md) separates pending validation from earlier results. Manual Simulator checks still cover the rendered route, turns, reversals, camera easing and switching to each separated member. B adds layout eligibility/approach and shared-gate checks. C adds the full progression, dialogue, pause-menu and repeated in-place Restart checks, and a `mission` playtest scenario. Unit tests do not prove the rendered route. Debug builds also contain scripted playtests that `scripts/playtest` runs in the rendered Simulator app; they feed scripted input through the normal controls and record traces, and are compiled out of Release builds.
 
 Use Simulator keyboard and single-pointer touch input for everyday iteration. The [touch-control validation record](touch-controls.md#validation) distinguishes those checks, the maintainer's physical multi-touch/Pause/recovery observations and remaining controller/performance gaps. Live PS5 input did not work in the tested Simulator setup; enumeration does not prove delivery. The accepted checkpoint schedule is after **Party A** and **Party C**, with B checked alongside C. It preserves [#18's earlier deferral](https://github.com/RonildoBraga/lauder/issues/18). Record controller/lifecycle observations and measured frame pacing; neither the solo phone checks nor Simulator timing prove party performance. Sustained 15–20 minute thermal/memory checks remain later hardening.
 

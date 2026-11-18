@@ -12,7 +12,7 @@ The change adds an input option to the existing Party A scene. It adds no charac
 
 - Without an extended controller, show a fixed bottom-left analog stick and **Look**, **Next: name** and **Pause/Resume** controls.
 - With a controller attached, prefer it unless the player selects **Use touch controls**. **Use controller** returns to it. The preference is in memory and is not persisted across app launches.
-- Keep keyboard WASD/E/Q/Escape and the existing PS5/Xbox mappings. Touch **Look** currently requests the same observation as Cross/A/E.
+- Keep keyboard WASD/E/Q/Escape and the existing PS5/Xbox mappings. Touch **Look** requests the same intent as Cross/A/E. Later stages relabel it: the leader's action where there is one ([Party B](party-b.md)), **Continue** in a conversation and **Restart** while paused ([Party C](party-c.md)).
 - Support a stick finger alongside button fingers. Lift the stick finger to stop; all contacts must release before a neutral-input gate clears, even when the stick is centred.
 
 ## Input ownership

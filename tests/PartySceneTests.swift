@@ -35,9 +35,7 @@ struct PartySceneTests {
     #expect(PrototypeLayout.obstacles.count == PrototypeLayout.boxes.count - 1 + 2)
     for point in PrototypeLayout.points {
       let entity = try #require(world.root.findEntity(named: point.id.rawValue))
-      let size =
-        point.id == .transmitter
-        ? PrototypeLayout.transmitterSize : PrototypeLayout.regulatorSize
+      let size = point.size
       let centre = SIMD2(entity.position.x, entity.position.z)
       let half = SIMD2(size.x, size.z) / 2
       #expect(

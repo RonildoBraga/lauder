@@ -6,22 +6,23 @@ import simd
 struct TouchControls: UIViewRepresentable {
   let controls: GameControls
   let generation: Int
-  /// "Look", or the leader's contextual action such as "Reach latch".
+  /// "Look", the leader's contextual action such as "Reach latch", "Continue" in a
+  /// conversation, or "Restart" while paused.
   let actionTitle: String
   let nextLeaderName: String
-  let isPaused: Bool
+  let mode: GameSession.Mode
 
   func makeUIView(context: Context) -> Surface {
     let view = Surface(controls: controls)
     view.update(
-      actionTitle: actionTitle, nextLeaderName: nextLeaderName, isPaused: isPaused,
+      actionTitle: actionTitle, nextLeaderName: nextLeaderName, mode: mode,
       generation: generation)
     return view
   }
 
   func updateUIView(_ uiView: Surface, context: Context) {
     uiView.update(
-      actionTitle: actionTitle, nextLeaderName: nextLeaderName, isPaused: isPaused,
+      actionTitle: actionTitle, nextLeaderName: nextLeaderName, mode: mode,
       generation: generation)
   }
 
@@ -36,6 +37,10 @@ struct TouchControls: UIViewRepresentable {
     private let cycle = TouchZone()
     private let pause = TouchZone(title: "Pause")
     private var generation: Int?
+    private var mode = GameSession.Mode.exploring
+    /// What the action zone sent when its finger came down. Its release sends the same, even
+    /// if Pause changed the zone into Restart in between.
+    private var actionBinding = TouchInput.Button.action
 
     init(controls: GameControls) {
       self.controls = controls
@@ -60,9 +65,14 @@ struct TouchControls: UIViewRepresentable {
         self.controls.setTouchStick(
           movement, isTouching: isTouching, generation: generation)
       }
-      let buttons: [(TouchZone, TouchInput.Button)] = [
-        (action, .action), (cycle, .cycle), (pause, .pause),
-      ]
+      // In the pause menu the action zone is the Restart button.
+      action.changed = { [weak self] _, isPressed, generation in
+        guard let self else { return }
+        if isPressed { self.actionBinding = self.mode == .paused ? .restart : .action }
+        self.controls.setTouchButton(
+          self.actionBinding, isPressed: isPressed, generation: generation)
+      }
+      let buttons: [(TouchZone, TouchInput.Button)] = [(cycle, .cycle), (pause, .pause)]
       for (zone, button) in buttons {
         zone.changed = { [weak controls] _, isPressed, generation in
           controls?.setTouchButton(button, isPressed: isPressed, generation: generation)
@@ -72,17 +82,21 @@ struct TouchControls: UIViewRepresentable {
 
     required init?(coder: NSCoder) { nil }
 
-    func update(actionTitle: String, nextLeaderName: String, isPaused: Bool, generation: Int) {
+    func update(
+      actionTitle: String, nextLeaderName: String, mode: GameSession.Mode, generation: Int
+    ) {
+      self.mode = mode
       if self.generation != generation {
         reset()
       }
       action.setTitle(actionTitle)
       cycle.setTitle("Next: \(nextLeaderName)")
       cycle.accessibilityLabel = "Lead as \(nextLeaderName)"
-      pause.setTitle(isPaused ? "Resume" : "Pause")
-      // Keep every zone tracking while paused so held fingers must still be released.
-      for zone in [stick, action, cycle] {
-        zone.alpha = isPaused ? 0.55 : 1
+      pause.setTitle(mode == .paused ? "Resume" : "Pause")
+      // Keep every zone tracking while paused or talking so held fingers must still be
+      // released. The action zone stays bright: it continues a conversation or restarts.
+      for zone in [stick, cycle] {
+        zone.alpha = mode == .exploring ? 1 : 0.55
       }
     }
 
