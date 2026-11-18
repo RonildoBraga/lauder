@@ -34,6 +34,15 @@ struct GameView: View {
             Label("Carrying the regulator", systemImage: "shippingbox.fill")
               .font(.caption).foregroundStyle(Color(red: 0.62, green: 0.87, blue: 0.77))
           }
+          if world.session.medicalKits > 0 {
+            // The party's small shared inventory (ADR 0004, M3).
+            Label(
+              world.session.medicalKits == 1
+                ? "Medical kit" : "Medical kits · \(world.session.medicalKits)",
+              systemImage: "cross.case.fill"
+            )
+            .font(.caption).foregroundStyle(Color(red: 0.62, green: 0.87, blue: 0.77))
+          }
           HStack(spacing: 8) {
             ForEach(world.session.party, id: \.self) { member in
               Text(member.displayName)

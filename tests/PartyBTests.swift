@@ -28,8 +28,9 @@ struct PartyBTests {
 
   @Test
   func everyActionIsDefinedExactlyOnce() {
+    let all = Level.ID.allCases.flatMap { Level.level($0).interactions }
     for id in Level.ActionID.allCases {
-      #expect(RelayHouse.interactions.filter { $0.id == id }.count == 1, "\(id.rawValue)")
+      #expect(all.filter { $0.id == id }.count == 1, "\(id.rawValue)")
     }
   }
 

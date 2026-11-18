@@ -19,6 +19,10 @@ final class GameSession {
   /// The opening's story beats, in order (ADR 0004). Each begins once, after the one before.
   enum Beat: Int, CaseIterable, Comparable, Sendable {
     case alone, stranger
+    /// Searching the stranger's body begins the ambush (M3).
+    case ambush
+    /// After the exchange that follows Tom's shot, Tom travels with Miki.
+    case withTom
 
     static func < (lhs: Beat, rhs: Beat) -> Bool { lhs.rawValue < rhs.rawValue }
   }
@@ -36,7 +40,9 @@ final class GameSession {
   private struct Checkpoint {
     let beat: Beat
     let ammo: Int
+    let medicalKits: Int
     let defeated: Set<String>
+    let searched: Set<String>
     let hitsDealt: [String: Int]
   }
 
@@ -57,6 +63,8 @@ final class GameSession {
   private let startingParty: [PartyMember]
   private let startingAmmo: Int
   private let interactions: [Level.Interaction]
+  /// The beat each encounter-starting action begins, from the level's encounters.
+  private let beatStarted: [Level.ActionID: Beat]
   /// The story's progress on the bridge.
   private(set) var beat = Beat.alone
   /// Hits the leader has taken in the current encounter.
@@ -65,6 +73,10 @@ final class GameSession {
   private(set) var ammo: Int
   /// Hostiles defeated in this run.
   private(set) var defeated: Set<String> = []
+  /// Bodies searched in this run.
+  private(set) var searched: Set<String> = []
+  /// Medical kits in the party's small shared inventory.
+  private(set) var medicalKits = 0
   /// Hits dealt to hostiles still standing.
   private var hitsDealt: [String: Int] = [:]
   /// Set while an encounter is under way.
@@ -95,6 +107,11 @@ final class GameSession {
     startingAmmo = level.startingAmmo
     ammo = level.startingAmmo
     interactions = level.interactions
+    beatStarted = Dictionary(
+      level.encounters.compactMap { encounter in
+        if case .action(let action) = encounter.start { (action, encounter.beat) } else { nil }
+      },
+      uniquingKeysWith: { first, _ in first })
     party = level.party
     leader = level.party[0]
   }
@@ -154,7 +171,9 @@ final class GameSession {
     guard mode == .exploring, checkpoint == nil, next.rawValue == beat.rawValue + 1 else {
       return false
     }
-    checkpoint = Checkpoint(beat: beat, ammo: ammo, defeated: defeated, hitsDealt: hitsDealt)
+    checkpoint = Checkpoint(
+      beat: beat, ammo: ammo, medicalKits: medicalKits, defeated: defeated, searched: searched,
+      hitsDealt: hitsDealt)
     beat = next
     return true
   }
@@ -179,6 +198,30 @@ final class GameSession {
     return true
   }
 
+  /// A scripted takedown, such as Tom's shot: the hostile is down.
+  func defeat(_ hostile: String) {
+    guard mode == .exploring else { return }
+    hitsDealt[hostile] = nil
+    defeated.insert(hostile)
+  }
+
+  /// A downed hostile's body is searched and its loot taken: true the first time.
+  func search(_ body: String, loot: Level.Loot) -> Bool {
+    guard mode == .exploring, defeated.contains(body), searched.insert(body).inserted else {
+      return false
+    }
+    ammo += loot.rounds
+    medicalKits += loot.medicalKits
+    return true
+  }
+
+  /// A conversation that a scene starts, rather than an action: true if it began.
+  func converse(_ conversation: MissionScript.Conversation) -> Bool {
+    guard mode == .exploring else { return false }
+    tell(conversation)
+    return true
+  }
+
   /// The leader is hit; true on the last allowed hit, when the encounter must start again.
   func takeHit() -> Bool {
     guard mode == .exploring, inEncounter else { return false }
@@ -192,7 +235,9 @@ final class GameSession {
     guard let checkpoint else { return }
     beat = checkpoint.beat
     ammo = checkpoint.ammo
+    medicalKits = checkpoint.medicalKits
     defeated = checkpoint.defeated
+    searched = checkpoint.searched
     hitsDealt = checkpoint.hitsDealt
     hitsTaken = 0
     self.checkpoint = nil
@@ -214,6 +259,9 @@ final class GameSession {
     case .repairTransmitter: phase == .seekingRegulator || phase == .carryingRegulator
     case .callCrew: phase == .radioRepaired
     case .readPlan: phase == .meetingAgreed
+    case .searchStranger:
+      defeated.contains("stranger") && !searched.contains("stranger") && beat == .stranger
+        && !inEncounter
     }
   }
 
@@ -254,6 +302,12 @@ final class GameSession {
       // Reading the plan repeats the meeting details and changes no progress.
       guard phase == .meetingAgreed else { return .notYet }
       tell(.plan)
+    case .searchStranger:
+      // The search begins the ambush; the loot is taken when it finishes (ADR 0004, M3).
+      guard defeated.contains("stranger") else { return .notYet }
+      guard !searched.contains("stranger"), let beat = beatStarted[action],
+        beginEncounter(beat)
+      else { return .alreadyDone }
     }
     return .done
   }
@@ -267,6 +321,11 @@ final class GameSession {
     } else {
       if let pendingPhase { phase = pendingPhase }
       pendingPhase = nil
+      if conversation == .metTom {
+        // The exchange after Tom's shot ends with him joining (ADR 0004, M3).
+        recruit(.tom)
+        if beat == .ambush { beat = .withTom }
+      }
       self.conversation = nil
       lineIndex = 0
       mode = .exploring
@@ -285,6 +344,8 @@ final class GameSession {
     hitsTaken = 0
     ammo = startingAmmo
     defeated = []
+    searched = []
+    medicalKits = 0
     hitsDealt = [:]
     checkpoint = nil
     passageOpen = false

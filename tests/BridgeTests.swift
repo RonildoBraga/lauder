@@ -152,11 +152,12 @@ struct BridgeTests {
     // Each landmark, area and marker has its words or its part in BrooklynBridge.swift.
     let level = BrooklynBridge.level
     #expect(layout.landmarks.map(\.name) == level.points.map(\.id))
-    #expect(layout.areas.map(\.name) == level.triggers.map(\.id) + ["stranger"])
+    #expect(
+      layout.areas.map(\.name) == level.triggers.map(\.id) + ["stranger", "search.stranger"])
     #expect(
       layout.markers.map(\.name) == [
         "spawn.miki", "spawn.tom", "spawn.laura", "stranger.hidden", "stranger.stand",
-        "stranger.retry",
+        "stranger.retry", "attacker.hidden", "attacker.stand",
       ])
   }
 

@@ -50,11 +50,12 @@ enum BrooklynBridge {
   static let stranger = Level.Hostile(
     id: "stranger", name: "The stranger", hiddenAt: layout.marker(named: "stranger.hidden"),
     standAt: layout.marker(named: "stranger.stand"), hits: 2, windUp: 1.5, recovery: 1.4,
-    range: 14, firstShotMisses: true, missLine: "He opened fire. Fire back, or take cover.")
+    range: 14, firstShotMisses: true, missLine: "He opened fire. Fire back, or take cover.",
+    loot: Level.Loot(rounds: 6, medicalKits: 1))
 
   /// The first fight, as Miki nears the first tower. A retry starts just outside its area.
   static let strangerEncounter = Level.Encounter(
-    beat: .stranger, area: layout.area(named: "stranger"),
+    beat: .stranger, start: .area(layout.area(named: "stranger")),
     retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger],
     cues: [
       (0, .reveal(stranger.id)),
@@ -62,9 +63,38 @@ enum BrooklynBridge {
       (1.6, .engage(stranger.id)),
     ])
 
+  /// Searching the stranger once he is down (M3). It takes the time the ambush's cues give it.
+  static let searchStranger = Level.Interaction(
+    id: .searchStranger, name: "Search", member: nil,
+    approach: layout.area(named: "search.stranger"), result: "Miki searches the stranger.",
+    repeated: "Nothing more on him.", early: "Not while he's standing.")
+
+  /// The man who runs at Miki from behind the van while she searches (M3).
+  static let attacker = Level.Hostile(
+    id: "attacker", name: "The attacker", hiddenAt: layout.marker(named: "attacker.hidden"),
+    standAt: layout.marker(named: "attacker.stand"), hits: 1, attack: .charge(speed: 5))
+
+  /// The ambush (M3), a short scene that plays the same way every time: the search begins it
+  /// and holds Miki still. The attacker steps out from behind the van and runs at her; she
+  /// finishes the search; Tom appears and drops the attacker before he reaches her. They turn to
+  /// each other, and the exchange that follows ends with Tom joining.
+  static let ambush = Level.Encounter(
+    beat: .ambush, start: .action(.searchStranger), retryAt: nil, hostiles: [attacker],
+    cues: [
+      (0.2, .reveal(attacker.id)),
+      (0.6, .engage(attacker.id)),
+      (1.5, .loot(stranger.id)),
+      (2.0, .appear(.tom)),
+      (2.6, .shot(by: .tom, at: attacker.id)),
+      (3.0, .face(.tom)),
+      (3.4, .talk(.metTom)),
+    ],
+    holdsLeader: true)
+
   static let level = Level(
     id: .brooklynBridge, ground: layout.ground, boxes: layout.boxes, points: points,
-    interactions: [], triggers: triggers, encounters: [strangerEncounter], startingAmmo: 12,
+    interactions: [searchStranger], triggers: triggers, encounters: [strangerEncounter, ambush],
+    startingAmmo: 12,
     passage: nil,
     // Miki crosses alone. Tom and Laura wait, hidden, where their scenes will be.
     party: [.miki],

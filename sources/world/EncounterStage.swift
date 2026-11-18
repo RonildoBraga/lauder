@@ -1,11 +1,11 @@
 import RealityKit
 import simd
 
-/// A level's fights in the scene (ADR 0004, M2). It plays an encounter's cues, runs each
-/// hostile, fires the leader's weapon at the assisted target and shows what happens: the
-/// hostiles' bodies, their aim before each shot, the shots, the target marker and the drawn
-/// weapon. The session keeps the hits, the rounds and who is down; this keeps only spatial
-/// and moment-to-moment state, and every entity is made once, at load.
+/// A level's fights and scripted scenes (ADR 0004, M2 and M3). It plays an encounter's cues,
+/// runs each hostile, fires the leader's weapon at the assisted target and shows what happens:
+/// the hostiles' bodies, their aim before each shot, the shots, the target marker and the drawn
+/// weapon. The session keeps the hits, the rounds, the loot and who is down; this keeps only
+/// spatial and moment-to-moment state, and every entity is made once, at load.
 @MainActor
 final class EncounterStage {
   /// What one simulation step of a fight produced.
@@ -18,6 +18,12 @@ final class EncounterStage {
     /// The leader took the last allowed hit: the encounter must start again.
     var retry = false
     var won = false
+    /// Members who appeared in this step, such as Tom before his shot.
+    var appeared: [PartyMember] = []
+    /// A member who fired a scripted shot, and the direction they fired in.
+    var shooter: (member: PartyMember, facing: SIMD2<Float>)?
+    /// The leader and this member turn to face each other.
+    var face: PartyMember?
   }
 
   /// How long a shot's tracer stays on screen.
@@ -39,8 +45,11 @@ final class EncounterStage {
   private(set) var isDrawn = false
   /// The assisted target while the weapon is drawn.
   private(set) var target: String?
-  /// Who is winding up a shot, for the HUD.
-  private(set) var aiming: String?
+  /// The HUD's warning, such as "The stranger is aiming."
+  private(set) var threat: String?
+
+  /// Whether the leader stands still while a scripted scene plays.
+  var holdsLeader: Bool { encounter?.holdsLeader == true }
 
   private let specs: [String: Level.Hostile]
   private let obstacles: [PartyMotion.Box]
@@ -80,6 +89,10 @@ final class EncounterStage {
         named: "hostile.\(spec.id).shot", material: style.threat, container)
     }
     tracers[leaderTracerID] = Self.line(named: "leader.shot", material: style.warm, container)
+    for member in PartyMember.allCases {
+      tracers[Self.tracer(member)] = Self.line(
+        named: "\(member.rawValue).shot", material: style.warm, container)
+    }
     reset()
   }
 
@@ -93,7 +106,7 @@ final class EncounterStage {
     drawRemaining = 0
     cooldown = 0
     target = nil
-    aiming = nil
+    threat = nil
     reportedEmpty = false
     tracerRemaining = [:]
     for line in aimLines.values { line.isEnabled = false }
@@ -110,10 +123,11 @@ final class EncounterStage {
     director.start(encounter.cues)
   }
 
-  /// One simulation step: cues, hostiles, then the leader's weapon.
+  /// One simulation step: cues, hostiles, then the leader's weapon. `figures` are the members
+  /// who can be seen, the leader included, for scripted shots.
   func step(
     dt: Float, leader: SIMD2<Float>, facing: SIMD2<Float>, fireHeld: Bool, firePressed: Bool,
-    session: GameSession
+    figures: [PartyMember: SIMD2<Float>], session: GameSession
   ) -> Outcome {
     var outcome = Outcome()
     fadeTracers(dt: dt)
@@ -131,15 +145,32 @@ final class EncounterStage {
       case .reveal(let id): hostiles[id]?.reveal()
       case .engage(let id): hostiles[id]?.engage()
       case .say(let speaker, let line): outcome.line = "\(speaker): “\(line)”"
+      case .loot(let body):
+        if let loot = specs[body]?.loot, session.search(body, loot: loot) {
+          outcome.line = Self.describe(loot)
+        }
+      case .appear(let member): outcome.appeared.append(member)
+      case .shot(let member, let id):
+        guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
+        showTracer(Self.tracer(member), from: from, to: state.position)
+        session.defeat(id)
+        hostiles[id]?.knockDown()
+        if let down = hostiles[id] { show(id, down, facing: from) }
+        aimLines[id]?.isEnabled = false
+        let offset = state.position - from
+        if simd_length(offset) > 0.001 { outcome.shooter = (member, simd_normalize(offset)) }
+        outcome.line = "\(state.spec.name) is down."
+      case .face(let member): outcome.face = member
+      case .talk(let conversation): _ = session.converse(conversation)
       }
     }
-    var aimingNow: String?
+    var threatNow: String?
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
       let inRange = simd_distance(state.position, leader) <= spec.range
       let canHit =
         inRange && LineOfSight.isClear(from: state.position, to: leader, obstacles: obstacles)
-      if let shot = state.step(dt: dt, canHit: canHit) {
+      if let shot = state.step(dt: dt, canHit: canHit, toward: leader) {
         fire(spec.id, from: state.position, at: leader, range: spec.range, shot: shot)
         if shot == .miss, let line = spec.missLine { outcome.line = line }
         if shot == .hit {
@@ -147,12 +178,16 @@ final class EncounterStage {
           if session.takeHit() { outcome.retry = true }
         }
       }
-      if case .aiming = state.phase { aimingNow = spec.id }
+      switch state.phase {
+      case .aiming: threatNow = "\(spec.name) is aiming."
+      case .charging: threatNow = "\(spec.name) is running at you."
+      default: break
+      }
       hostiles[spec.id] = state
       show(spec.id, state, facing: leader)
       showAim(spec.id, state, at: leader)
     }
-    aiming = aimingNow
+    threat = threatNow
     if outcome.retry { return outcome }
     updateTarget(leader: leader, facing: facing)
     drawRemaining -= dt
@@ -176,17 +211,30 @@ final class EncounterStage {
         outcome.line = "Out of ammunition."
       }
     }
-    if encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) }) {
+    // A fight ends once everyone in it is down; a scene also plays its timeline to the end.
+    if !director.isPlaying, encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) }) {
       session.endEncounter()
       self.encounter = nil
       director.stop()
-      aiming = nil
+      threat = nil
       for line in aimLines.values { line.isEnabled = false }
       outcome.won = true
     }
     updateTarget(leader: leader, facing: facing)
     return outcome
   }
+
+  /// What a search found, for the HUD.
+  static func describe(_ loot: Level.Loot) -> String {
+    var found: [String] = []
+    if loot.rounds > 0 { found.append(loot.rounds == 1 ? "a round" : "\(loot.rounds) rounds") }
+    if loot.medicalKits > 0 {
+      found.append(loot.medicalKits == 1 ? "a medical kit" : "\(loot.medicalKits) medical kits")
+    }
+    return found.isEmpty ? "Nothing useful." : "Found " + found.joined(separator: " and ") + "."
+  }
+
+  private static func tracer(_ member: PartyMember) -> String { "member.\(member.rawValue)" }
 
   /// Where the camera's target should lean from the leader: towards the nearest hostile that
   /// has stepped out and is still standing, during a fight; otherwise nowhere.

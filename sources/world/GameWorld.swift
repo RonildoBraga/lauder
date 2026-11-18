@@ -312,7 +312,9 @@ final class GameWorld {
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
   /// prompt left over from before a move or a switch cannot act.
   func performAction() {
-    guard session.mode == .exploring, let body = bodies[session.leader] else { return }
+    guard session.mode == .exploring, !stage.holdsLeader, let body = bodies[session.leader] else {
+      return
+    }
     let position = SIMD2(body.position.x, body.position.z)
     let here = level.interactions.filter { $0.approach.contains(position) }
     // Several actions can share an approach; the one offered now comes first.
@@ -321,6 +323,13 @@ final class GameWorld {
       case .done:
         observation = interaction.result
         showProgress()
+        // An action can begin a scene, as the search begins the ambush (ADR 0004, M3).
+        if let encounter = level.encounters.first(where: {
+          if case .action(let action) = $0.start { action == interaction.id } else { false }
+        }) {
+          stage.begin(encounter)
+          retrySpot = encounter.retryAt
+        }
       case .alreadyDone:
         observation = interaction.repeated
       case .notYet:
@@ -415,6 +424,8 @@ final class GameWorld {
     guard let leaderBody = bodies[leader] else { return }
     let motion = self.motion
     let grid = self.grid
+    // A scripted scene holds the leader where they stand.
+    let movement = stage.holdsLeader ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
     let leaderStart = SIMD2(leaderBody.position.x, leaderBody.position.z)
@@ -475,7 +486,8 @@ final class GameWorld {
     for trigger in level.triggers where trigger.area.contains(position) {
       if session.fire(trigger.id) { observation = trigger.line }
     }
-    for encounter in level.encounters where encounter.area.contains(position) {
+    for encounter in level.encounters {
+      guard case .area(let area) = encounter.start, area.contains(position) else { continue }
       if session.beginEncounter(encounter.beat) {
         stage.begin(encounter)
         retrySpot = encounter.retryAt
@@ -487,18 +499,58 @@ final class GameWorld {
 
   /// One step of the fight: the stage plays the encounter and fires the leader's weapon; the
   /// world turns the leader, shows lines and the threat, and starts a retry after the last hit.
+  /// Only Miki carries the carbine, and not while a scene holds her.
   private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
     let angle = yaw[leader] ?? 0
+    let armed = leader == .miki && !stage.holdsLeader
+    let figures = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
+        bodies[member].flatMap {
+          $0.isEnabled ? (member, SIMD2($0.position.x, $0.position.z)) : nil
+        }
+      })
     let outcome = stage.step(
-      dt: dt, leader: position, facing: SIMD2(-sin(angle), -cos(angle)), fireHeld: fireHeld,
-      firePressed: firePressPending, session: session)
+      dt: dt, leader: position, facing: SIMD2(-sin(angle), -cos(angle)),
+      fireHeld: armed && fireHeld, firePressed: armed && firePressPending, figures: figures,
+      session: session)
     firePressPending = false
     if let facing = outcome.facing { setYaw(leader, atan2(-facing.x, -facing.y)) }
     if let line = outcome.line { observation = line }
-    let threat = stage.aiming.flatMap { stage.hostiles[$0]?.spec.name }.map { "\($0) is aiming." }
+    for member in outcome.appeared { appear(member) }
+    if let shooter = outcome.shooter {
+      setYaw(shooter.member, atan2(-shooter.facing.x, -shooter.facing.y))
+    }
+    if let member = outcome.face { faceEachOther(leader, member) }
+    let threat = stage.threat
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != stage.isDrawn { weaponDrawn = stage.isDrawn }
     if outcome.retry { retryElapsed = 0 }
+  }
+
+  /// A member who has not joined appears where they wait, turned towards the nearest hostile
+  /// in the open, or else towards the leader.
+  private func appear(_ member: PartyMember) {
+    guard let body = bodies[member] else { return }
+    body.isEnabled = true
+    let here = SIMD2(body.position.x, body.position.z)
+    let standing = stage.hostiles.values.filter { $0.isVisible && !$0.isDown }.map(\.position)
+    let leaderPosition = bodies[session.leader].map { SIMD2($0.position.x, $0.position.z) }
+    let focus =
+      standing.min { simd_distance_squared($0, here) < simd_distance_squared($1, here) }
+      ?? leaderPosition
+    if let focus, simd_distance(focus, here) > 0.01 {
+      let offset = focus - here
+      setYaw(member, atan2(-offset.x, -offset.y))
+    }
+  }
+
+  /// Two members turn to face each other, as before a conversation.
+  private func faceEachOther(_ first: PartyMember, _ second: PartyMember) {
+    guard first != second, let a = bodies[first], let b = bodies[second] else { return }
+    let offset = SIMD2(b.position.x - a.position.x, b.position.z - a.position.z)
+    guard simd_length(offset) > 0.01 else { return }
+    setYaw(first, atan2(-offset.x, -offset.y))
+    setYaw(second, atan2(offset.x, offset.y))
   }
 
   /// The encounter starts again after the leader's last allowed hit: the screen fades out,

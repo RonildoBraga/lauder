@@ -1,5 +1,6 @@
-/// Party C's mission text: short, ordered, speaker-labelled conversations and what the HUD says
-/// in each phase.
+/// The conversations: short, ordered and speaker-labelled. Most are Party C's mission at Relay
+/// House, with what its HUD says in each phase; `metTom` is the bridge's exchange after the
+/// ambush (ADR 0004, M3).
 ///
 /// The lines are provisional. Most come from the gameplay walkthrough; the keeper's lines, Miki's
 /// inspection and the meeting plan were added to connect them. The maintainer finalises the
@@ -13,6 +14,8 @@ enum MissionScript {
 
   enum Conversation: String, CaseIterable, Sendable {
     case briefing, inspection, repair, call, plan
+    /// On the bridge, after Tom's shot. When it ends, Tom joins.
+    case metTom
   }
 
   static let opening = "Relay House can hear the coastal operator but cannot answer."
@@ -61,6 +64,13 @@ enum MissionScript {
         Line(speaker: "Meeting plan", text: "Meet the water crew at Old Lock tomorrow afternoon."),
         Line(speaker: "Meeting plan", text: "Take the canal path and refill at the water stop."),
         Line(speaker: "Meeting plan", text: "If the route fails, call at the next radio check-in."),
+      ]
+    case .metTom:
+      [
+        Line(speaker: "Tom", text: "He was going for your back."),
+        Line(speaker: "Miki", text: "I didn't see him. Thank you."),
+        Line(speaker: "Tom", text: "Tom. You're crossing to Manhattan?"),
+        Line(speaker: "Miki", text: "Miki. I am. Walk with me?"),
       ]
     }
   }
