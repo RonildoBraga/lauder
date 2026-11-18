@@ -9,7 +9,7 @@ xcuserdata/
 # Python bytecode from the scripts' tests
 __pycache__/
 
-# Local authoring experiments; runtime assets and editable sources live in sources/content.
+# Local authoring experiments; runtime assets and editable sources live in apple/sources/content.
 .local/
 
 # Local configuration and signing material

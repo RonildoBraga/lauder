@@ -43,7 +43,7 @@ final class GameWorld {
   /// Where each companion is heading in the latest step. Tests read it.
   @ObservationIgnored private(set) var companionTargets: [PartyMember: SIMD2<Float>] = [:]
   #if DEBUG
-    /// A scripted Simulator playtest (`scripts/playtest`), started by the launch argument
+    /// A scripted Simulator playtest (`apple/scripts/playtest`), started by the launch argument
     /// `-LauderPlaytest <scenario>`. Debug builds only.
     @ObservationIgnored private(set) var playtest: PlaytestRunner?
     @ObservationIgnored private var targetMarkers: [PartyMember: Entity] = [:]

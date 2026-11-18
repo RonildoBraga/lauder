@@ -63,12 +63,12 @@ LEVELS = {
     "brooklyn-bridge": LevelFile(
         key="brooklyn-bridge",
         title="Brooklyn Bridge",
-        path="sources/content/BrooklynBridgeLayout.swift",
+        path="apple/sources/content/BrooklynBridgeLayout.swift",
         owner="BrooklynBridge",
         header=(
             "// Where everything on the Brooklyn Bridge stands (ADR 0005), in metres: x across the",
             "// deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits",
-            "// this file through scripts/blender/lauder_levels.py: Load builds the layout in",
+            "// this file through blender/lauder_levels.py: Load builds the layout in",
             "// Blender and Save writes it back. The numbers can also be edited here, and the next",
             "// Load picks them up. Keep the entries in this form so that the script can read them.",
         ),
@@ -904,10 +904,10 @@ def save_level(repository, key="brooklyn-bridge"):
 
 def _guess_repository():
     try:
-        candidate = Path(__file__).resolve().parents[2]
+        candidate = Path(__file__).resolve().parents[1]
     except (NameError, IndexError):
         return ""
-    return str(candidate) if (candidate / "sources" / "content").is_dir() else ""
+    return str(candidate) if (candidate / "apple" / "sources" / "content").is_dir() else ""
 
 
 if bpy is not None:

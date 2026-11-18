@@ -18,7 +18,7 @@ sys.dont_write_bytecode = True
 
 import lauder_levels as L  # noqa: E402
 
-ROOT = HERE.parent.parent
+ROOT = HERE.parent
 BRIDGE = L.LEVELS["brooklyn-bridge"]
 
 

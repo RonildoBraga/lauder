@@ -6,7 +6,7 @@
   @testable import Lauder
 
   /// The Simulator playtest scenarios, driven without rendering. A scenario that cannot be
-  /// completed here would fail in `scripts/playtest` too, so the standard check catches it.
+  /// completed here would fail in `apple/scripts/playtest` too, so the standard check catches it.
   @MainActor
   struct PlaytestTests {
     @Test(arguments: PlaytestRunner.scenarioNames)
