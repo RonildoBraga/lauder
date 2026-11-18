@@ -2,7 +2,7 @@
   import Foundation
   import simd
 
-  /// Scripted playtests for the Simulator, run by `scripts/playtest` (Debug builds only).
+  /// Scripted playtests for the Simulator, run by `apple/scripts/playtest` (Debug builds only).
   ///
   /// A scenario drives the leader through the normal input path, so the rendered game, the
   /// input rules and the real frame timing are all exercised. The runner records every
@@ -342,8 +342,8 @@
       talking = false
     }
 
-    /// Append the mark to marks.log as it happens, so `scripts/playtest` can take a screenshot
-    /// at that moment: "<seconds since 1970>\t<orientation>\t<name>".
+    /// Append the mark to marks.log as it happens, so `apple/scripts/playtest` can take a
+    /// screenshot at that moment: "<seconds since 1970>\t<orientation>\t<name>".
     private func announce(_ label: String) {
       guard let folder = Self.folder(for: name) else { return }
       try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

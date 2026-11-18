@@ -2,7 +2,7 @@ import simd
 
 extension Level {
   /// Where a level's things stand, as plain data with stable names (ADR 0005). Blender loads it
-  /// and saves it back through `scripts/blender/lauder_levels.py`; the level's content refers to
+  /// and saves it back through `blender/lauder_levels.py`; the level's content refers to
   /// its entries by name and adds the words: what each place is called and what it says.
   struct Layout: Sendable {
     /// A block that can be looked at. Its position is the centre of its base, on the floor.

@@ -4,7 +4,7 @@ An original, deliberately simple humanoid for proving the character asset pipeli
 
 ## Provenance and licence
 
-Created for Lauder with Codex assistance on 16 November 2026. The geometry, joint layout, colours and animation keyframes are original to this repository. No downloaded models, motion capture, textures, third-party art or legacy game assets were used. These original contributions use the repository's [MIT licence](../../../LICENSE).
+Created for Lauder with Codex assistance on 16 November 2026. The geometry, joint layout, colours and animation keyframes are original to this repository. No downloaded models, motion capture, textures, third-party art or legacy game assets were used. These original contributions use the repository's [MIT licence](../../../../LICENSE).
 
 The editable authoring source is [generate-character.py](../../../scripts/generate-character.py), using only Python's standard library. The `source/` directory contains reviewable USDA layers. Make persistent changes in the generator: regeneration updates its emitted USDA and replaces USDZ exports only when missing, invalid or different from the generated content.
 
@@ -44,7 +44,7 @@ A macOS RealityKit import probe found the authored `/Character/Motion[0]` resour
 From the repository root on macOS, with the system USD tools available:
 
 ```sh
-python3 scripts/generate-character.py
+python3 apple/scripts/generate-character.py
 ```
 
 The script loads and validates each source with `usdcat --loadOnly` and `usdchecker --strict`. It then checks an existing USDZ with `usdchecker --arkit --strict` and compares its flattened ASCII content with the generated source using `usdcat --flatten`. The comparison ignores only the tool-generated input-path documentation block. It includes the composed shared character layer, so geometry, rig, material and animation changes are detected.
@@ -53,10 +53,10 @@ A valid matching export is reported as **kept unchanged** and its bytes are unto
 
 The generated USDA text is deterministic for this generator. Fresh USDZ packaging is **not byte-for-byte reproducible**: ZIP timestamps can change the archive hash even when the embedded USDC is identical. Reproduction is checked through validated flattened content, not a new archive's hash. Repeating the command with unchanged content preserves the existing archive hashes and avoids unnecessary Git LFS revisions.
 
-Initial checks passed for both sources and exports. An independent check of the exported data also confirmed the bind/rest hierarchy, joint/weight array sizes, normalised weights and quaternions, outward face winding, stationary root, matching loop endpoints and sampled skinned bounds within the declared extent. The hosted Swift Testing import test also passes under Xcode 27.2. The maintainer confirmed visible idle/walk switching on the baseline iPhone; see the [session evidence](../../../docs/history.md#stage-1--device-and-asset-workflow).
+Initial checks passed for both sources and exports. An independent check of the exported data also confirmed the bind/rest hierarchy, joint/weight array sizes, normalised weights and quaternions, outward face winding, stationary root, matching loop endpoints and sampled skinned bounds within the declared extent. The hosted Swift Testing import test also passes under Xcode 27.2. The maintainer confirmed visible idle/walk switching on the baseline iPhone; see the [session evidence](../../../../docs/history.md#stage-1--device-and-asset-workflow).
 
 ## Approved code-first path
 
 The prototype uses primitive stand-ins and does not load or play these clips. The validated USDZ files remain bundled for the preserved import/rejection checks in the [test-only CharacterAsset fixture](../../../tests/support/CharacterAsset.swift); the loader no longer ships in the app target. `GameWorld` composes the current scene in Swift. The original Stage 1 diagnostic preview has been removed. All editable inputs needed to reproduce the delivery assets remain in this directory and the generator.
 
-This follows the [approved code-first direction](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) and [engine decision](../../../docs/decisions/0001-engine.md).
+This follows the [approved code-first direction](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023) and [engine decision](../../../../docs/decisions/0001-engine.md).

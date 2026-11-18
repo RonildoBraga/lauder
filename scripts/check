@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lint Swift, then build and test with the selected Apple toolchain."""
+"""Check every part: the Blender level script, then the Apple app's formatting, build and tests."""
 
 import json
 import os
@@ -40,7 +40,7 @@ def run(command, log):
 def check_assets():
     problems = []
     for name in ("Idle", "Walk"):
-        relative = Path("sources/content/character") / f"{name}.usdz"
+        relative = Path("apple/sources/content/character") / f"{name}.usdz"
         path = ROOT / relative
         if not path.is_file():
             problems.append(f"{relative} (missing)")
@@ -94,21 +94,24 @@ def main():
     check_assets()
     output = Path(tempfile.mkdtemp(prefix="lauder-check-"))
     try:
-        print("Checking Swift formatting.", flush=True)
-        run(
-            ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "sources", "tests"],
-            output / "format.log",
-        )
         print("Checking the Blender level script.", flush=True)
         run(
-            [sys.executable, "-I", "-B", "scripts/blender/test_lauder_levels.py"],
+            [sys.executable, "-I", "-B", "blender/test_lauder_levels.py"],
             output / "blender-levels.log",
+        )
+        print("Checking Swift formatting.", flush=True)
+        run(
+            [
+                "xcrun", "swift", "format", "lint", "--strict", "--recursive",
+                "apple/sources", "apple/tests",
+            ],
+            output / "format.log",
         )
         destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()
         command = [
             "xcodebuild",
             "-quiet",
-            "-project", "Lauder.xcodeproj",
+            "-project", "apple/Lauder.xcodeproj",
             "-scheme", "Lauder",
             "-configuration", "Debug",
             "-destination", destination,
