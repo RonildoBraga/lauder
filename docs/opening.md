@@ -78,11 +78,13 @@ The maintainer assigned the fourth milestone, **“Yes, start M4”**, and after
 
 The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 steps in 92.9 s and `opening` 58 of 58 in 112.4 s. Frames averaged 16.7 ms, and the only frames over 34 ms were each run's first. While moving, the companions stayed within 0.6 m of their slots 88% and 93% of the time and never overlapped. The stills show Laura lying across the lane as she calls out, clear of the panel, then standing to face Miki, then the three together and “Manhattan, together.”. In Blender 5.3, Load shows Laura's two new areas, and Save with no edits finds nothing to change.
 
-**Still to do:** the opening's phone checkpoint, which M4's exit requires: controls with touch and with a controller, combat feel, Pause and recovery, and measured frame pacing on the baseline iPhone.
+**Phone frame pacing.** TestFlight build 0.1.0 (3), archived at `c6af7c1`, which differs from `b7cb98f` only in its build number, was installed from TestFlight on the baseline iPhone 13 Pro Max (iOS 27.2.1). When the maintainer asked for it (**“Record now”**), Claude recorded two minutes with Instruments' Game Performance Overview. After the first 15 s, Lauder held **60.00 fps** over 102.8 s: every frame took one 60 Hz interval (16.67 ms), with none longer and none skipped. The thermal state was Fair for the first 96 s, then Nominal. It is a single short sample: it shows neither sustained nor thermal performance, and it does not record which part of the opening was played or with which input. A first attempt stopped after 1.4 s, when the phone's connection dropped.
+
+**Still to do:** the rest of the phone checkpoint, which M4's exit requires: the maintainer's report on controls with touch and with a controller, combat feel, and Pause and recovery.
 
 ## Open across the opening
 
-- **The phone checkpoint** for controls, combat feel and frame pacing is the part of M4 still to do. The bridge's frame pacing on the phone, with the fight and the party following, is unmeasured.
+- **The phone checkpoint's** controls, combat feel, and Pause and recovery are the part of M4 still to do. One two-minute frame-pacing sample held 60 fps; a full run, and sustained play, are unmeasured on the phone.
 - **The timings and distances** — the 1.5 s wind-up, the 1.4 s pause, the 14 m reach, the camera's leans, the 0.35 s draw, 0.4 s between shots, 12 rounds, the loot, and how long the scenes hold the party — are starting values for playtests. The lines are provisional.
 - **The stranger stands still** once he has stepped out, and bodies do not block movement. Nothing holsters the carbine after a fight. If Miki walks on without fighting, the stranger's fight stays open, and the story cannot move on without it.
 - **The attacker's strike is not built:** Tom always drops him first. Tom appears in place rather than stepping into view, and nobody walks during the scenes. Laura lies still rather than crawling, and stands up in place. Companions do not fight on their own; Tom's shot is scripted.
