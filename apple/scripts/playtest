@@ -3,12 +3,12 @@
 
 Builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen,
 screenshots every marked moment as it happens, then collects the run's summary and trace. The scenarios
-live in sources/world/Playtest.swift. Results go to .local/playtest/<time>/ unless --output is
-given; that folder is ignored by Git.
+live in apple/sources/world/Playtest.swift. Results go to .local/playtest/<time>/ at the repository
+root unless --output is given; that folder is ignored by Git.
 
-    ./scripts/playtest                 # every scenario, one after another
-    ./scripts/playtest first-fight ambush
-    ./scripts/playtest --list
+    ./apple/scripts/playtest           # every scenario, one after another
+    ./apple/scripts/playtest first-fight ambush
+    ./apple/scripts/playtest --list
 """
 
 import argparse
@@ -24,7 +24,7 @@ import sys
 import tempfile
 import time
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
 SCENARIOS = ["bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening"]
 PRIVATE_IDENTIFIER = re.compile(
@@ -43,7 +43,7 @@ def run(command, **options):
 
 def check_assets():
     for name in ("Idle", "Walk"):
-        path = ROOT / "sources/content/character" / f"{name}.usdz"
+        path = ROOT / "apple/sources/content/character" / f"{name}.usdz"
         with path.open("rb") as stream:
             if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
                 raise SystemExit(f"{path.relative_to(ROOT)} is a Git LFS pointer; run 'git lfs pull'.")
@@ -74,7 +74,7 @@ def simulator():
 def build(device, derived):
     say("Building the Debug app.")
     result = run([
-        "xcodebuild", "-quiet", "-project", "Lauder.xcodeproj", "-scheme", "Lauder",
+        "xcodebuild", "-quiet", "-project", "apple/Lauder.xcodeproj", "-scheme", "Lauder",
         "-configuration", "Debug", "-destination", f"platform=iOS Simulator,id={device}",
         "-derivedDataPath", str(derived), "build", "CODE_SIGNING_ALLOWED=NO",
     ], cwd=ROOT)

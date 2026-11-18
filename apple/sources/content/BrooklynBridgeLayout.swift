@@ -1,6 +1,6 @@
 // Where everything on the Brooklyn Bridge stands (ADR 0005), in metres: x across the
 // deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits
-// this file through scripts/blender/lauder_levels.py: Load builds the layout in
+// this file through blender/lauder_levels.py: Load builds the layout in
 // Blender and Save writes it back. The numbers can also be edited here, and the next
 // Load picks them up. Keep the entries in this form so that the script can read them.
 

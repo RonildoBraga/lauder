@@ -32,32 +32,36 @@ The proposed cast has Miki, Laura and Tom as the playable trio and Nina as a sup
 ## Project structure
 
 ```text
-Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
-sources/
-  app/                        App entry point, world ownership and bundle configuration
-  interface/                  HUD, controller/keyboard/touch input and shared input rules
-  gameplay/                   Party identity, session-owned party, leadership, Pause and story beats
-  combat/                     Plain-Swift weapons, sight lines, assisted aim and hostiles
-  world/                      RealityKit bodies, squad movement, fights, camera and scene presentation
-  content/
-    Level.swift               A playable place as a value, and the party's shared body
-    BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
-    BrooklynBridgeLayout.swift Where everything on the bridge stands, its decoration and camera, edited in Blender (ADR 0005)
-    MissionScript.swift       Conversations; the lines are provisional
-    character/                Current animated stand-in, editable sources and provenance
-      source/                 Editable USD layers; excluded from the app bundle
-      Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
-tests/                        Party/session, asset import, movement, input, combat and layout tests
-  support/                    Test-only asset validator and the squad tests' yard; not in the app target
-docs/                         Architecture, decisions, prototype plan, opening record and project history
-  story/                      Story bible
-scripts/                      Standard checks, Simulator playtests, the Blender level script, the character asset generator and the app icon
-.github/                      Pull request template
+apple/                          The iPhone game: Swift, RealityKit and SwiftUI
+  Lauder.xcodeproj/             App/test targets and the shared Lauder scheme
+  sources/
+    app/                        App entry point, world ownership and bundle configuration
+    interface/                  HUD, controller/keyboard/touch input and shared input rules
+    gameplay/                   Party identity, session-owned party, leadership, Pause and story beats
+    combat/                     Plain-Swift weapons, sight lines, assisted aim and hostiles
+    world/                      RealityKit bodies, squad movement, fights, camera and scene presentation
+    content/
+      Level.swift               A playable place as a value, and the party's shared body
+      BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
+      BrooklynBridgeLayout.swift Where everything on the bridge stands, its decoration and camera, edited in Blender (ADR 0005)
+      MissionScript.swift       Conversations; the lines are provisional
+      character/                Current animated stand-in, editable sources and provenance
+        source/                 Editable USD layers; excluded from the app bundle
+        Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
+  tests/                        Party/session, asset import, movement, input, combat and layout tests
+    support/                    Test-only asset validator and the squad tests' yard; not in the app target
+  scripts/                      Simulator playtests, the character asset generator and the app icon
+  .swift-format                 Swift formatting rules
+blender/                        The level editor: the Blender script that loads and saves layouts, and its tests
+docs/                           Architecture, decisions, prototype plan, opening record and project history
+  story/                        Story bible
+scripts/check                   Checks every part: the Blender script, then the app's formatting, build and tests
+.github/                        Pull request template
 ```
 
-Keep presentation in SceneStyle and SceneDressing, the level's geometry, collision and anchors in its `Level` (BrooklynBridge and its layout file), party, story and fight rules in GameSession/InputRules, conversations in MissionScript, squad movement in NavigationGrid, SquadPlanner and CompanionMotor, and fights in the combat types, StoryDirector and EncounterStage. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+Keep presentation in SceneStyle and SceneDressing, the level's geometry, collision and anchors in its `Level` (BrooklynBridge and its layout file), party, story and fight rules in GameSession/InputRules, conversations in MissionScript, squad movement in NavigationGrid, SquadPlanner and CompanionMotor, and fights in the combat types, StoryDirector and EncounterStage. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them. Each platform and tool keeps its own top-level folder, so that later platforms, such as Android or Steam, can sit beside `apple/`. What a second platform will share, such as the level layouts, stays in `apple/` until then, when it moves to a shared folder in a form both can read.
 
-For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app; see [target membership](CONTRIBUTING.md#target-membership).
+For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `apple/sources/content`, so they are not copied into the app; see [target membership](CONTRIBUTING.md#target-membership).
 
 ## First prototype
 
@@ -71,7 +75,7 @@ People and AI-assisted contributors are welcome. Useful contributions now includ
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md). Use issues for proposals and questions; maintainers review changes before merging. The project plans alone are not an assignment to start implementation.
 
-With Xcode 27.2 selected and LFS assets downloaded, run `./scripts/check` for formatting, build and unit tests. Open `Lauder.xcodeproj` and the shared `Lauder` scheme for the prototype. Use Simulator for everyday iteration, with iPhone 13 Pro Max checks at milestones before merging playable features. The app keeps the screen awake while active, including when paused. See [validation and local signing](CONTRIBUTING.md#validation) for the testing workflow.
+With Xcode 27.2 selected and LFS assets downloaded, run `./scripts/check` for formatting, build and unit tests. Open `apple/Lauder.xcodeproj` and the shared `Lauder` scheme for the prototype. Use Simulator for everyday iteration, with iPhone 13 Pro Max checks at milestones before merging playable features. The app keeps the screen awake while active, including when paused. See [validation and local signing](CONTRIBUTING.md#validation) for the testing workflow.
 
 ## Licence
 

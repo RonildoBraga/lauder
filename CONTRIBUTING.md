@@ -16,7 +16,7 @@ An explicit maintainer assignment or instruction authorises that task. Avoid ask
 
 ## Naming conventions
 
-Use lowercase names for manually maintained folders, with hyphens between words when needed. Swift source filenames use PascalCase, such as `GameWorld.swift`. Other documentation and script filenames use lowercase kebab-case, such as `visual-direction.md` and `generate-character.py`.
+Keep each platform's and tool's files in its own top-level folder, as the [project structure](README.md#project-structure) shows: `apple/` for the iPhone app and `blender/` for the level editor. A later platform gets a folder of its own beside `apple/`. Use lowercase names for manually maintained folders, with hyphens between words when needed. Swift source filenames use PascalCase, such as `GameWorld.swift`. Other documentation and script filenames use lowercase kebab-case, such as `visual-direction.md` and `generate-character.py`.
 
 Preserve conventional names: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `LICENSE`, `Info.plist` and `Lauder.xcodeproj`. Leave Xcode/tool-owned internal folder names unchanged. Targets, modules and products remain `Lauder` and `LauderTests`. Asset resource names and USD prim paths retain their intentional case; `/Character/Rig` is an asset identifier, not a repository folder.
 
@@ -49,7 +49,7 @@ Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime
 
 The script first checks that the required USDZ assets exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
 
-It then runs the selected toolchain's `swift format` with the committed `.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
+It then runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
 
 The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDER_DESTINATION` can override the Xcode destination; `LAUDER_DEVELOPMENT_TEAM` supplies a signing team for a physical-device test. Configure your Apple account and signing locally in Xcode first; do not commit those values or device identifiers. The default simulator check does not need code signing.
 
@@ -61,17 +61,17 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 
 ### Scripted Simulator playtests
 
-`./scripts/playtest` plays scripted scenarios in the rendered app, so an agent or contributor can check behaviour without driving the game by hand:
+`./apple/scripts/playtest` plays scripted scenarios in the rendered app, so an agent or contributor can check behaviour without driving the game by hand:
 
 ```bash
-./scripts/playtest
+./apple/scripts/playtest
 ```
 
 ```bash
-./scripts/playtest first-fight ambush
+./apple/scripts/playtest first-fight ambush
 ```
 
-It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and prints each scenario's result: pass or fail with reasons, frame times, the party update's cost, body overlaps, slot keeping and the widest gap. It takes a screenshot at every marked moment as the app announces it, such as the stranger going down. Videos, screenshots, traces and summaries go to `.local/playtest/<time>/`, which Git ignores, or to `--output`. With no names it plays every scenario; `--list` names them: `bridge-walk` (Miki alone from the Brooklyn end to the Manhattan end, winning the stranger's fight on the way, each trigger once, then Restart), `first-fight` (the stranger's near miss, then two shots put him down, then Restart), `fight-retry` (three hits in the open start the fight again; Miki walks back in and wins), `ambush` (after the fight Miki searches the stranger, Tom drops the attacker and joins, follows her to mid-span, then Restart), `laura` (on from Tom joining: across the gap, Help, Laura joins and both follow, then Restart) and `opening` (the whole opening to the closing exchange at the Manhattan end, then Restart). They are defined in `sources/world/Playtest.swift`.
+It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and prints each scenario's result: pass or fail with reasons, frame times, the party update's cost, body overlaps, slot keeping and the widest gap. It takes a screenshot at every marked moment as the app announces it, such as the stranger going down. Videos, screenshots, traces and summaries go to `.local/playtest/<time>/`, which Git ignores, or to `--output`. With no names it plays every scenario; `--list` names them: `bridge-walk` (Miki alone from the Brooklyn end to the Manhattan end, winning the stranger's fight on the way, each trigger once, then Restart), `first-fight` (the stranger's near miss, then two shots put him down, then Restart), `fight-retry` (three hits in the open start the fight again; Miki walks back in and wins), `ambush` (after the fight Miki searches the stranger, Tom drops the attacker and joins, follows her to mid-span, then Restart), `laura` (on from Tom joining: across the gap, Help, Laura joins and both follow, then Restart) and `opening` (the whole opening to the closing exchange at the Manhattan end, then Restart). They are defined in `apple/sources/world/Playtest.swift`.
 
 The scenario input goes through the normal controls and input rules, and the HUD shows the step and result. Small discs mark where each companion is heading. The runner exists only in Debug builds, so phone and Release builds are unaffected. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Simulator frame times and Debug-build costs are not phone performance, and a scripted route does not replace a person playing.
 
@@ -85,9 +85,9 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
-Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration and the game camera. Blender loads and saves it:
+Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `apple/sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration and the game camera. Blender loads and saves it:
 
-1. In Blender (checked with 5.3), open `scripts/blender/lauder_levels.py` in the Text Editor and press **Run Script**. A **Lauder** tab appears in the 3D Viewport's sidebar (press N).
+1. In Blender (checked with 5.3), open `blender/lauder_levels.py` in the Text Editor and press **Run Script**. A **Lauder** tab appears in the 3D Viewport's sidebar (press N).
 2. Check the **Repository** folder, which defaults to the folder the script came from, and press **Load**. The bridge appears in a **Lauder Brooklyn Bridge** collection:
    - the deck, the boxes coloured by surface, the landmarks, the areas drawn as outlines and the named markers;
    - the decoration's pieces, such as the walkway and the cables;
@@ -147,6 +147,6 @@ The supported path generates editable USD sources and USDZ delivery assets, load
 
 ### Target membership
 
-`sources/` and `tests/` are Xcode folder-synchronised groups, so Swift files and the two runtime USDZ resources join their targets automatically. The app target deliberately excludes `sources/content/character/README.md` and the editable `sources/content/character/source` folder, and does not copy `sources/app/Info.plist` as a resource, since the build uses it as the typed input to the bundle's plist. Review target membership when adding other non-runtime files beneath either folder, so authoring files are not copied into the app.
+`apple/sources/` and `apple/tests/` are Xcode folder-synchronised groups, so Swift files and the two runtime USDZ resources join their targets automatically. The app target deliberately excludes `apple/sources/content/character/README.md` and the editable `apple/sources/content/character/source` folder, and does not copy `apple/sources/app/Info.plist` as a resource, since the build uses it as the typed input to the bundle's plist. Review target membership when adding other non-runtime files beneath either folder, so authoring files are not copied into the app.
 
 Keep signing credentials, API keys, personal device identifiers, local account information, generated builds and caches out of the repository.

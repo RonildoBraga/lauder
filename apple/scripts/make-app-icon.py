@@ -4,7 +4,7 @@
 Simple shapes only, standing in until icon art is assigned. Writes an opaque 1024 x 1024 PNG,
 as App Store Connect requires, using only the standard library. Run from the repository root:
 
-    python3 scripts/make-app-icon.py
+    python3 apple/scripts/make-app-icon.py
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ import struct
 import zlib
 
 SIZE = 1024
-OUTPUT = Path("sources/app/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
+OUTPUT = Path("apple/sources/app/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
 
 # Colours from SceneStyle and the HUD.
 BACKGROUND = (19, 33, 36)
