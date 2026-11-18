@@ -67,10 +67,10 @@ After playing M3, the maintainer noted that the scene in the game did not look e
 
 ### Checks
 
-- `./scripts/check` passes: 124 Swift tests in 19 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 21 tests. The new tests cover:
+- `./scripts/check` passes: 124 Swift tests in 19 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 22 tests. The new tests cover:
   - pieces and the camera reading and writing back unchanged;
   - rotations converting between the game's axes and Blender's;
-  - a turned piece and a moved camera saving as expected;
+  - a turned piece and a moved camera saving as expected, down to a half-degree turn;
   - a hand-written turn surviving a save;
   - Save's rules for pieces, and the camera kept when its rig is gone;
   - the details of a car, a truck and a landmark;

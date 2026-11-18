@@ -198,8 +198,25 @@ def rotation_from_blender(q):
     return _canonical(_multiply(_multiply(_AXES, q), _conjugate(_AXES)))
 
 
-def is_identity(q, tolerance=1e-5):
-    return abs(abs(_canonical(q)[0]) - 1) < tolerance
+#: A turn is written to four places, which holds turns down to about a hundredth of a degree.
+_TURN_PLACES = 4
+
+
+def _turn_values(q):
+    """A rotation as a layout file writes it: (x, y, z, w), as Swift's simd_quatf takes it, with w
+    not negative."""
+    w, x, y, z = q
+    if w < 0:
+        w, x, y, z = -w, -x, -y, -z
+    return (x, y, z, w)
+
+
+def is_identity(q):
+    """Whether a rotation is written as no turn at all, because its x, y and z round to zero. Any
+    turn that the file can hold is written, however small: half a degree swings the ends of a
+    248 m lane line by a metre."""
+    x, y, z, _ = _turn_values(q)
+    return all(_number(value, _TURN_PLACES) == "0" for value in (x, y, z))
 
 
 def _same_rotation(a, b, tolerance=1e-9):
@@ -380,10 +397,7 @@ def _box_arguments(box):
 def _piece_arguments(piece):
     arguments = [f'"{piece.name}"', f"at: {_list(piece.position)}", f"size: {_list(piece.size)}"]
     if not is_identity(piece.rotation):
-        w, x, y, z = piece.rotation
-        if w < 0:
-            w, x, y, z = -w, -x, -y, -z
-        arguments.append(f"turn: {_list((x, y, z, w), places=4)}")
+        arguments.append(f"turn: {_list(_turn_values(piece.rotation), _TURN_PLACES)}")
     return arguments + [f"surface: .{piece.surface}"]
 
 

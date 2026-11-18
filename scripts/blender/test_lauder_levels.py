@@ -248,6 +248,22 @@ class BridgeLayoutTests(unittest.TestCase):
 
         self.assertEqual(without(text), without(self.text))
 
+    def test_a_small_turn_is_saved_and_kept(self):
+        # Half a degree about the vertical swings the ends of a long piece by metres.
+        piece = next(p for p in self.layout.pieces if L.is_identity(p.rotation))
+        shapes = shapes_for(self.layout)
+        shape = next(s for s in shapes if s.name == piece.name)
+        shape.rotation = L._multiply(turn((0, 0, 1), 0.5), shape.rotation)
+        text = L.emit_layout(self.save(shapes, camera_for(self.layout)), BRIDGE)
+        saved = next(p for p in L.parse_layout(text).pieces if p.name == piece.name)
+        self.assertFalse(L.is_identity(saved.rotation))
+        self.assertTrue(same_turn(saved.rotation, turn((0, 1, 0), 0.5)))
+        # Read and written again, as after editing the file by hand, the small turn stays.
+        self.assertEqual(L.emit_layout(L.parse_layout(text), BRIDGE), text)
+        # Only a turn too small for the file's four places is written as none.
+        self.assertFalse(L.is_identity(turn((1, 0, 0), 0.02)))
+        self.assertTrue(L.is_identity(turn((1, 0, 0), 0.005)))
+
     def test_a_turn_is_written_only_for_a_turned_piece(self):
         flat = L.Piece("slab", (1, 0.1, 2), (3, 0.2, 4), "concrete")
         tilted = L.Piece("beam", (0, 3, -5), (0.2, 0.2, 6), "metal", (-0.5, 0.5, 0.5, 0.5))
