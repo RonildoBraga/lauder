@@ -63,7 +63,7 @@ All results are from the iPhone 17 / iOS 27.0 Simulator with Xcode 27.2. Nothing
 
 Frame times averaged 16.7–16.9 ms. In five of the six launches the first frame took 124–150 ms, before any input. Merged main showed the same, 123–142 ms, in a comparison run in this session, while Party B's runs earlier in the day did not, so this comes from the Simulator, not this change. Every other frame over 25 ms, the slowest at 32 ms, came in the first 1.1 s. In `mission`, which includes a Restart, no frame took longer than 32 ms.
 
-The party update averaged about 0.7 ms per frame in this Debug build. Its slowest frame was 5.8 ms in `mission` and 4.1 ms in `all`, the two runs with a Restart, and at most 2.4 ms in the others. No phone timing has been measured; see the [phone checkpoint](#phone-checkpoint--18-november-2026).
+The party update averaged about 0.7 ms per frame in this Debug build. Its slowest frame was 5.8 ms in `mission` and 4.1 ms in `all`, the two runs with a Restart, and at most 2.4 ms in the others. On the phone, display pacing is in the [phone performance sample](#phone-performance-sample); the party update's cost was not measured there.
 
 The first rendered runs of this change found two problems, now fixed. An early version built the closed-passage route grid on the first frame of play, costing 44 ms; both grids are built at load again, as on main. And a step's result and new objective appeared while its conversation was still playing; the step now takes effect when the conversation ends, as the architecture says, and the HUD hides the result line until then.
 
@@ -83,13 +83,31 @@ After playing it, the maintainer reported: **“everything worked as expected”
 
 That is the maintainer's summary; Claude observed nothing on the phone. It does not cover:
 
-- Frame pacing. No capture was taken, so the 60 fps target and S1's timing check are unmeasured on this build.
+- The party update's cost per frame, which is S1's timing check. The [performance sample](#phone-performance-sample) below measures display pacing only.
 - The earlier lists on #18, which were not part of this session's checks: running along walls at shallow angles, controller handoff and the switch between touch and controller, system gestures, follower spacing on long runs, the squad observations for S1, the awake screen and normal locking, walking cadence and Xbox hardware.
 - The plan's exits for Parties B and C, which ask whether a new or unfamiliar player understands the goal without coaching.
+
+### Phone performance sample
+
+Claude then recorded 120 seconds with Instruments' Game Performance Overview template through the phone's all-processes target, the method of the [Party A sample](party-a.md#phone-performance-sample). A first recording held no frames from Lauder, because the app was not in the foreground while it ran. For the second, Claude brought Lauder to the front from the Mac and started recording; the maintainer was asked to play the loop without stopping and to restart if finished early. The trace shows Lauder presenting frames throughout, not what was on screen. Exactly one Lauder Metal layer contributed.
+
+The first 15 seconds and partial boundary buckets were excluded. The [sanitised metric CSV](party-c-phone-metrics.csv) contains 104 complete aggregation buckets from **15.168 to 119.174 seconds**, covering **104.006 seconds** and **6,236 reported frames**.
+
+| Metric | Reported result |
+|---|---:|
+| Duration-weighted FPS | 59.9581 |
+| Bucket FPS range | 57.9981–60.8130 |
+| Frame-weighted mean display interval | 16.6785 ms |
+| Maximum reported display interval | 50.0033 ms |
+| Reported skipped-frame counter | 0 |
+
+The nominal **60 fps mean target was met in this short Release sample**. Three buckets reported a longer frame: 33.3 ms, one frame shown for two refreshes, at about 70 and 79 seconds, and 50.0 ms, shown for three, at about 105 seconds. What was happening in the game at those moments, and so their cause, is not known. Thermal state stayed Nominal throughout.
+
+These are aggregate statistics reported by the instrument, as for Party A. The per-frame tables exported no rows, so no p95/p99 or exact count of individual hitches is claimed. Frame count over covered time, 59.9581 fps, and 1,000 over the mean interval, 59.9576 fps, agree. The raw traces stay private; the CSV holds only relative times and numeric metrics. Profiling overhead, sustained thermal behaviour, memory and other devices are outside this short result.
 
 ## Limits
 
 - Only the maintainer has played it by hand, so the plan's exit question, whether an unfamiliar player understands the goal and completes the loop without coaching, is open.
-- Apart from the phone checkpoint above, every check ran in the Simulator with scripted input. Phone frame pacing and the earlier [#18 lists](https://github.com/RonildoBraga/lauder/issues/18) remain open.
+- Apart from the phone checkpoint above, every check ran in the Simulator with scripted input. The earlier [#18 lists](https://github.com/RonildoBraga/lauder/issues/18) remain open, and the phone sample is short, not a sustained or thermal test.
 - The dialogue is provisional, as described above.
 - The run is in memory only. Saving and Continue remain later hardening.
