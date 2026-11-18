@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Updated:** 18 November 2026\
-**Status:** The game opens on a greybox Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md). Milestones M1 to M3 are merged. The maintainer assigned M4, **“Yes, start M4”**, which is implemented and in review, with its phone checkpoint still to come. The [opening record](opening.md) lists what each milestone built and how it was checked. The earlier Relay House slice, Stages 1 and 2, Parties A to C and squad movement S1, is summarised in the [project history](history.md); the maintainer removed its level on 18 November 2026. TestFlight build 0.1.0 (2), from M3's branch at `ecb1031`, is available to internal testers.\
+**Status:** The game opens on a greybox Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md). Milestones M1 to M3 are merged. The maintainer assigned M4, **“Yes, start M4”**, which is implemented and in review, with its phone checkpoint still to come. The [opening record](opening.md) lists what each milestone built and how it was checked. The earlier Relay House slice, Stages 1 and 2, Parties A to C and squad movement S1, is summarised in the [project history](history.md); the maintainer removed its level on 18 November 2026. TestFlight build 0.1.0 (3), from M4's branch at `c6af7c1`, is available to internal testers.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
