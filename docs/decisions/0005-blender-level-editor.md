@@ -1,6 +1,6 @@
 # ADR 0005 — Blender as the level editor
 
-**Status:** Accepted by the maintainer on 18 November 2026 (**“Yes, as recommended”**) and implemented for the Brooklyn Bridge.\
+**Status:** Accepted by the maintainer on 18 November 2026 (**“Yes, as recommended”**) and implemented for the Brooklyn Bridge. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/43#issuecomment-6973768300) (“Yes, merge it”) without an independent review.\
 **Date:** 18 November 2026\
 **Deciders:** Maintainer\
 **Author:** Claude
