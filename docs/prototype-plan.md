@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Date:** 16 November 2026\
-**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls are merged, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation). The [#25 wall-contact correction](wall-contact.md), the [#28 follower-spacing fix](follower-spacing.md) and [squad movement phase S1](squad-s1.md) are merged; S1's remaining checks, including phone timing, are listed in its record. TestFlight build 0.1.0 (1) of main at `e63c0a0` is available to internal testers. The maintainer [accepted ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026, which moves the opening to the Brooklyn Bridge and brings a first fight into the first playable; its milestones M1 to M5 are each assigned separately, and none is assigned yet. [Party B](party-b.md), the barrier that Lara or Tomas can open, is merged after build/tests and rendered Simulator playtests, without an independent review. [Party C](party-c.md), the briefing, regulator, repair, call, Read plan and in-place Restart, is merged after build/tests and rendered Simulator playtests, without an independent review, and by the maintainer's decision its dialogue stays provisional until the relationships are settled. After playing both on the baseline iPhone, the maintainer reported “everything worked as expected”; the [phone checkpoint](party-c.md#phone-checkpoint--18-november-2026) lists what that covers, and a short sample of the loop averaged about 60 fps. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies and dialogue remain proposals; no skill barrier or repair loop is included in A.\
+**Status:** Party A is implemented with Simulator route proof and a baseline PS5 phone route/control/recovery run. Its short phone sample averaged about 60 fps; remaining manual tests are deferred by the maintainer. Optional touch controls are merged, with [phone multi-touch, Pause and recovery confirmed by the maintainer](touch-controls.md#validation). The [#25 wall-contact correction](wall-contact.md), the [#28 follower-spacing fix](follower-spacing.md) and [squad movement phase S1](squad-s1.md) are merged; S1's remaining checks, including phone timing, are listed in its record. TestFlight build 0.1.0 (1) of main at `e63c0a0` is available to internal testers. The maintainer [accepted ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026, which moves the opening to the Brooklyn Bridge and brings a first fight into the first playable; its milestones M1 to M5 are each assigned separately. The maintainer assigned M1, the greybox bridge with Miki alone, which is [implemented and awaiting review](#opening--the-brooklyn-bridge). [Party B](party-b.md), the barrier that Laura or Tom can open, is merged after build/tests and rendered Simulator playtests, without an independent review. [Party C](party-c.md), the briefing, regulator, repair, call, Read plan and in-place Restart, is merged after build/tests and rendered Simulator playtests, without an independent review, and by the maintainer's decision its dialogue stays provisional until the relationships are settled. After playing both on the baseline iPhone, the maintainer reported “everything worked as expected”; the [phone checkpoint](party-c.md#phone-checkpoint--18-november-2026) lists what that covers, and a short sample of the loop averaged about 60 fps. Initial following/recovery, controls, the three-session stop budget and A/C phone checkpoints remain accepted. Track earlier progress in the [Party A record](party-a.md). Biographies and dialogue remain proposals; no skill barrier or repair loop is included in A.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -15,9 +15,9 @@ Use one contiguous Relay House–depot scene, simple coloured stand-ins and the 
 
 | Element | Proposed first playable |
 |---|---|
-| Party | Miki, Lara and Tomas, all present and controllable; names and role assignments remain proposals |
+| Party | Miki, Laura and Tom, all present and controllable; names and role assignments remain proposals |
 | Leadership | One active character, two computer-controlled followers, one elevated follow camera |
-| Access | One barrier: Lara reaches its latch, or Tomas shifts its loose panel; either opens the same passage |
+| Access | One barrier: Laura reaches its latch, or Tom shifts its loose panel; either opens the same passage |
 | Salvage and repair | Miki inspects and takes one regulator, then repairs one transmitter |
 | Other dialogue | Keeper briefing through text, without a fourth physical character rig |
 | Contact | Coastal operator/water crew; all three party members remain local |
@@ -29,7 +29,7 @@ The two access methods are alternatives, not consecutive tasks. There is no sepa
 
 This is a materially larger first playable than the earlier solo scope. Two followers through the existing narrow passage add navigation, switching and camera risk before the salvage loop has been played. Party A is a bounded experiment to expose that cost, not a small extension already known to work. Do not continue adding content if it fails its stop criterion.
 
-Nina-specific dialogue is excluded from this prototype while kinship remains undecided. Lara participates beside the others, rather than as the remote contact. The full chapter's departure, crossing, further encounters and detailed revelations are outside this slice.
+Nina-specific dialogue is excluded from this prototype while kinship remains undecided. Laura participates beside the others, rather than as the remote contact. The full chapter's departure, crossing, further encounters and detailed revelations are outside this slice.
 
 ## Review before implementation
 
@@ -47,7 +47,7 @@ Initial recovery is **hold and diagnose**, not an automatic warp: stop the block
 |---|---|---|---|
 | Move active character | Left stick | Bottom-left analog stick | WASD |
 | Contextual action / advance text | Cross / A | Look for the current observation; later contextual action | E |
-| Cycle leader Miki → Lara → Tomas | R1 / RB | Next: name | Q |
+| Cycle leader Miki → Laura → Tom | R1 / RB | Next: name | Q |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
 
 These initial switching mappings are implemented in Party A. Q delivery was checked in Simulator and R1 on the baseline PS5-connected phone; Xbox RB uses the same input path but hardware delivery remains unverified. Q replaces the earlier Tab proposal to avoid focus navigation. The maintainer's [touch request](touch-controls.md#authorisation) supersedes the earlier no-touch decision. Touch is automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen. **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
@@ -62,8 +62,8 @@ These initial switching mappings are implemented in Party A. Q delivery was chec
 | Interaction | Eligible active character | Result |
 |---|---|---|
 | Keeper briefing | Any leader | Establish the fault and shared objective |
-| Reach latch | Lara | Open the shared ground-level service passage once |
-| Shift loose panel | Tomas | Open that same passage once, as an alternative to the latch |
+| Reach latch | Laura | Open the shared ground-level service passage once |
+| Shift loose panel | Tom | Open that same passage once, as an alternative to the latch |
 | Inspect and take regulator | Miki | Confirm compatibility and collect the single party-owned part |
 | Repair | Miki, with the part | Consume the part once and restore the transmitter |
 | Call / Read plan | Any leader | Contact the water crew / reread the secured meeting details |
@@ -78,7 +78,7 @@ The agreed [three-session stop criterion](decisions/0001-engine.md#stage-1-stop-
 
 ### 2. Make movement comfortable
 
-Stage 2 supplies the existing route, character collision, camera framing, controller/keyboard input, pause and interruption handling. Its stationary Tomas and single moving character are historical implementation facts, not the party target. Preserve the actual [Simulator and phone observations](stage-2.md); passing the earlier solo checks does not establish party behaviour.
+Stage 2 supplies the existing route, character collision, camera framing, controller/keyboard input, pause and interruption handling. Its stationary Tom and single moving character are historical implementation facts, not the party target. Preserve the actual [Simulator and phone observations](stage-2.md); passing the earlier solo checks does not establish party behaviour.
 
 ## Party A — prove switching and following
 
@@ -114,9 +114,9 @@ Allow **three focused work sessions** to establish a reliable round trip under e
 
 **Implemented and merged.** The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/36#issuecomment-6964336936) on 18 November 2026: **“Merge and proceed with the next step”**. It had no independent review, because the bot reviewers were out of quota. The [Party B record](party-b.md) lists what was built and checked. The maintainer has played it on the phone within Party C's loop; the new-player exit below is untested.
 
-Add one closed barrier to the existing service passage. Lara can **Reach latch** from the ground, or Tomas can **Shift loose panel** from a stable grip. Each is a contextual action conveyed by brief text or a simple pose. No free jump, climbing mode, vertical control, simulated heavy-object physics or inaccessible follower ledge is needed.
+Add one closed barrier to the existing service passage. Laura can **Reach latch** from the ground, or Tom can **Shift loose panel** from a stable grip. Each is a contextual action conveyed by brief text or a simple pose. No free jump, climbing mode, vertical control, simulated heavy-object physics or inaccessible follower ledge is needed.
 
-- Author one accessible approach and prompt for each method. Miki's feedback explains the Lara/Tomas alternatives; an unsuitable leader cannot use the other character remotely.
+- Author one accessible approach and prompt for each method. Miki's feedback explains the Laura/Tom alternatives; an unsuitable leader cannot use the other character remotely.
 - Either action sets the same party-owned open flag. The player never needs both. Test each solution independently from a fresh run.
 - Once opened, all three traverse the normal ground passage in either direction. Repeating either action, including the other method, has no additional effect.
 - Switching preserves the opened state. The front entrance stays blocked; the closed barrier cannot be bypassed by changing leaders.
@@ -132,7 +132,7 @@ Add only the briefing, one regulator, transmitter repair, short crew call, compl
 
 The trio leaves Relay House together. Miki checks disconnected equipment and takes its compatible regulator without disabling the maintained water supply. The party returns; Miki repairs the transmitter. Any leader can start the call with the coastal operator and water crew and secure the Old Lock meeting plan. All three remain present locally.
 
-Tomas needs the coastal supply team to arrange future inland deliveries, so meeting its crew at Old Lock serves his onward journey as well as the immediate repair. A brief proposed meal coda in the walkthrough tests inclusion among the adults. Finalise the underlying relationships and ending dialogue, which the maintainer chose to settle after Party C; the provisional crew call does not establish that the full chapter's emotional ending lands.
+Tom needs the coastal supply team to arrange future inland deliveries, so meeting its crew at Old Lock serves his onward journey as well as the immediate repair. A brief proposed meal coda in the walkthrough tests inclusion among the adults. Finalise the underlying relationships and ending dialogue, which the maintainer chose to settle after Party C; the provisional crew call does not establish that the full chapter's emotional ending lands.
 
 - Keep the opened passage, carried part and mission progress with the party. Switching cannot duplicate, drop or hide progress. The architecture review should determine which indicators are derived from the phase rather than stored twice.
 - Repair without the part explains what is missing and changes nothing. Repeated pickup, repair or call requests cannot award or consume progress twice.
@@ -141,6 +141,20 @@ Tomas needs the coastal supply team to arrange future inland deliveries, so meet
 - A Restart command through the selected input path resets the existing world in place: party, passage, regulator and transmitter return to their initial state without duplicate entities, loads or callbacks. This is the proposed reset strategy; record its exact steps and the minimal menu in the architecture review before C.
 
 **Exit:** An unfamiliar player using touch or a supported controller can understand the goal and complete the party loop on the phone without developer coaching. Review what was enjoyable or unclear before adding another mechanic.
+
+## Opening — the Brooklyn Bridge
+
+The maintainer [accepted ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026. The game now opens with Miki alone on a greybox Brooklyn Bridge, and the Relay House slice of Parties A to C becomes the second level. The ADR's five milestones are each assigned separately, with `./scripts/check`, Simulator playtests and a maintainer playtest:
+
+| Milestone | Adds | State |
+|---|---|---|
+| **M1** The bridge, Miki alone | Levels as values, the bridge greybox, a party of one, trigger areas, Restart, the renames to Tom and Laura | Assigned by the maintainer (“Yes, start M1”), implemented and awaiting review; see its [record](opening-m1.md) |
+| **M2** The first fight | Fire, assisted aim, line of sight, hits, the stranger, the retry | Not assigned |
+| **M3** Search, ambush, Tom | Searching and loot, the ambush, Tom's shot, recruitment, following with one companion | Not assigned |
+| **M4** Laura and onwards | Helping, the medical kit, the third member, the end of the slice; a phone checkpoint | Not assigned |
+| **M5** Formations | ADR 0003 phase S2 on the open deck | Not assigned |
+
+**M1 exit:** Miki walks the whole deck without snagging and the camera reads well; each trigger fires once; Relay House still passes its tests. Stop rule from the ADR: if the first fight is not readable on the phone after three focused work sessions on M2, stop and reassess with the maintainer.
 
 ## Verification and performance
 
@@ -158,7 +172,7 @@ Use a **manual Simulator playtest checklist**, not an implied automated renderin
 1. Complete shelter → depot → shelter with each leader; inspect both followers at turns and the opening.
 2. Reverse and switch beside obstacles and inside the passage; check world collision, companion routes, spacing and camera easing. Record any hold/stuck case rather than hiding it.
 3. Check keyboard and touch movement/action/switch/Pause, source selection, switch while moving, simultaneous commands and release recovery. Single-pointer checks cannot establish physical stick-plus-button multi-touch or held-finger recovery.
-4. From fresh runs, open the barrier with Lara and with Tomas. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
+4. From fresh runs, open the barrier with Laura and with Tom. Recheck stale/wrong-role approaches, repeated requests and group traversal with the barrier closed/open.
 5. Carry the part through leader changes, repair, call, reread and restart. Verify that dialogue/Pause controls do not act on nearby objects or duplicate world updates.
 
 Run the relevant subset at A, B and C; items for later stages do not block the earlier movement experiment. Pure rule tests alone cannot establish these spatial behaviours.
@@ -175,7 +189,7 @@ Then repeat full runs and restarts on the physical phone over roughly **15–20 
 
 ## Outside the first playable
 
-Mandatory strength obstacles, free jumping/climbing, formation orders, separate character inventories, skill trees, multiplayer, combat, health/hunger systems, extra salvage errands, crafting, branching dialogue, voice acting, cinematics, additional levels, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission.
+Mandatory strength obstacles, free jumping/climbing, formation orders, separate character inventories, skill trees, multiplayer, health/hunger systems, extra salvage errands, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge and Relay House, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) brings into the opening from M2: assisted aim, a placeholder hit rule and one ammunition count.
 
 The party loop can establish whether switching, following and purposeful salvage work together. It will not establish full-chapter pacing, persistent-save reliability or sustained device performance. Expand only in response to a concrete playtest need.
 
@@ -191,4 +205,4 @@ The [combat identities](story/story-bible.md#combat-identities), [future squad b
 
 **Review state:** Claude [reviewed the character and combat definitions](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6942990880) and revised them for that review: a distinct Reposition, quick switching to use a signature, a placeholder hit rule, a sight rule, encounter persistence and a proposed input budget. The maintainer [agreed those definitions](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) on 17 November 2026: **“Agreed, start design”**. The movement, formation and combat systems are designed next. **Squad movement:** [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation, formations, orders and phases S1–S4. The maintainer [accepted it](https://github.com/RonildoBraga/lauder/pull/32#issuecomment-6944093756) on 17 November 2026: **“Accept, S1 first”**. Phase S1, natural following, is assigned before Party B; later phases are not. Before any formation or combat implementation, settle the open design choices with the maintainer and obtain an explicit assignment for a bounded graybox experiment. A reviewer recommendation or a clean review alone is not an implementation assignment. **Opening:** the maintainer accepted [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026, which settles the design choices for the Brooklyn Bridge opening's first fight; each of its milestones still needs its own assignment.
 
-Review should establish whether Miki's ranged attack interruption, Lara's grounded repositioning and Tomas's close protection offer distinct decisions; whether bypass, quiet retrieval and retreat are credible for the whole party; and whether controller and touch input can support the proposal simply. The authorised touch work in [PR #26](https://github.com/RonildoBraga/lauder/pull/26) remains separate; the new combat mappings are undecided. Existing collision/following findings, including [#25](https://github.com/RonildoBraga/lauder/issues/25) and [#28](https://github.com/RonildoBraga/lauder/issues/28), retain their own review and verification scope. This design record claims no runtime or performance result and starts no merge, release or TestFlight work.
+Review should establish whether Miki's ranged attack interruption, Laura's grounded repositioning and Tom's close protection offer distinct decisions; whether bypass, quiet retrieval and retreat are credible for the whole party; and whether controller and touch input can support the proposal simply. The authorised touch work in [PR #26](https://github.com/RonildoBraga/lauder/pull/26) remains separate; the new combat mappings are undecided. Existing collision/following findings, including [#25](https://github.com/RonildoBraga/lauder/issues/25) and [#28](https://github.com/RonildoBraga/lauder/issues/28), retain their own review and verification scope. This design record claims no runtime or performance result and starts no merge, release or TestFlight work.

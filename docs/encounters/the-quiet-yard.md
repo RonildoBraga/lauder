@@ -21,9 +21,9 @@ The party reaches the covered approach. One unit crosses a strip of sunlight; th
 
 > **Security unit:** Evacuation clearance required.
 >
-> **Tomas:** Those seals fit the older pumps.
+> **Tom:** Those seals fit the older pumps.
 >
-> **Lara:** There’s a way around the yard.
+> **Laura:** There’s a way around the yard.
 >
 > **Miki:** We can leave them. Let’s look first.
 
@@ -39,7 +39,7 @@ When a unit notices someone, its warning and preparation give the player a clear
 
 **Try for the seals quietly:** The player waits for a readable opening, then moves along the protected route.
 
-> **Lara:** Past the van, then behind that wall. There’s room for all of us.
+> **Laura:** Past the van, then behind that wall. There’s room for all of us.
 
 The player need not press a formation button to fit through the route. Companions temporarily compress their spacing when necessary, then settle into nearby clear positions. They do not copy every footstep or wander into sight to maintain an exact triangle. The crossing window must be broad enough for the whole party, not only the leader.
 
@@ -59,15 +59,15 @@ One possible sequence shows how the identities complement each other:
 
   > **Miki:** Move now.
 
-- **Lara — Reposition:** While that unit faces elsewhere, dash to a nearby reachable angle with a clear shot, quickly enough to leave the line of a shot already aimed at her. The destination is visible and unobstructed; this is not a teleport through the wall or a long dash into another encounter.
+- **Laura — Reposition:** While that unit faces elsewhere, dash to a nearby reachable angle with a clear shot, quickly enough to leave the line of a shot already aimed at her. The destination is visible and unobstructed; this is not a teleport through the wall or a long dash into another encounter.
 
-  > **Lara:** Going left.
+  > **Laura:** Going left.
 
-- **Tomas — Brace:** Meet a unit's close advance with a braced scatter-weapon blast, stopping that approach long enough to protect the route back to the gate. He holds useful space rather than becoming invulnerable or drawing every enemy automatically.
+- **Tom — Brace:** Meet a unit's close advance with a braced scatter-weapon blast, stopping that approach long enough to protect the route back to the gate. He holds useful space rather than becoming invulnerable or drawing every enemy automatically.
 
-  > **Tomas:** Gate’s clear. Your choice.
+  > **Tom:** Gate’s clear. Your choice.
 
-This is an illustrative sequence, **not a required Miki → Lara → Tomas combo**. Any leader must offer a viable way to engage, collect the seals or disengage with help from the other two. A player can remain with a preferred character, use cover and ordinary fire, or retreat without using all three abilities. No unit is immune until a designated specialist acts.
+This is an illustrative sequence, **not a required Miki → Laura → Tom combo**. Any leader must offer a viable way to engage, collect the seals or disengage with help from the other two. A player can remain with a preferred character, use cover and ordinary fire, or retreat without using all three abilities. No unit is immune until a designated specialist acts.
 
 The tactical decision is where to stand and when to move, interrupt, hold or leave. Assisted aiming should support that decision on a phone; repeatedly selecting tiny body parts is not part of the proposal. Each unit's wind-up lasts long enough for the player to switch to Miki and Disrupt it, and the HUD names who can answer it.
 
@@ -81,9 +81,9 @@ The gate never closes behind the party. There is no extra wave, dropped-salvage 
 
 Once the whole party is safely clear:
 
-> **Lara:** Everyone?
+> **Laura:** Everyone?
 >
-> **Tomas:** Here.
+> **Tom:** Here.
 >
 > **Miki:** We keep going.
 
@@ -91,7 +91,7 @@ Once the whole party is safely clear:
 
 Whether they collected the seals, fought or took the detour, the trio passes a recently repaired water pipe beyond the yard. The repair has been made with care using different fittings from the original installation.
 
-> **Tomas:** Someone’s still maintaining this.
+> **Tom:** Someone’s still maintaining this.
 >
 > **Miki:** Then someone still needs it.
 

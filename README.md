@@ -10,11 +10,11 @@ The player switches between three characters while the other two follow. Their d
 
 The [wall-contact freeze fix for #25](docs/wall-contact.md) and the [follower-spacing fix for #28](docs/follower-spacing.md) are merged. So is phase S1 of the accepted [squad movement design](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md): companions keep a Close formation, take their own routes and fall into single file in narrow places. After playing it on the baseline iPhone the maintainer reported “it looks good”; the [S1 record](docs/squad-s1.md) lists the checks still open, including phone timing. Debug builds can run [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests). TestFlight build 0.1.0 (1), made from main at `e63c0a0`, is available to internal testers under the app ID `com.ronildo.lauder`; see [TestFlight builds](CONTRIBUTING.md#testflight-builds).
 
-[Party B](docs/party-b.md) is merged: a closed barrier in the service passage that Lara can open by reaching a latch or Tomas by shifting a loose panel, with Miki explaining both. It passes build/tests and rendered Simulator playtests. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/36#issuecomment-6964336936) without an independent review, and has since played it on the phone as part of Party C's loop.
+[Party B](docs/party-b.md) is merged: a closed barrier in the service passage that Laura can open by reaching a latch or Tom by shifting a loose panel, with Miki explaining both. It passes build/tests and rendered Simulator playtests. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/36#issuecomment-6964336936) without an independent review, and has since played it on the phone as part of Party C's loop.
 
 [Party C](docs/party-c.md) is merged: the keeper's briefing, Miki's regulator, the repair, a call that agrees the Old Lock meeting, **Read plan**, and an in-place Restart from a two-choice pause menu. It passes build/tests and rendered Simulator playtests. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/37#issuecomment-6968168004) without an independent review. After playing it on the baseline iPhone, the maintainer reported “everything worked as expected”; the [phone checkpoint](docs/party-c.md#phone-checkpoint--18-november-2026) lists what that covers, and a short sample of the loop averaged about 60 fps. Its dialogue stays provisional: the maintainer chose to settle the relationships later.
 
-The maintainer [accepted ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026: the game will open with Miki alone on a greybox Brooklyn Bridge, meeting Tom and Laura as strangers through a first fight, an ambush and a rescue. It is built in five milestones, each assigned separately, and none is assigned yet. The Relay House slice stays as a second level.
+The maintainer [accepted ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026: the game opens with Miki alone on a greybox Brooklyn Bridge, meeting Tom and Laura as strangers through a first fight, an ambush and a rescue. It is built in five milestones, each assigned separately. The maintainer assigned the first, and [M1](docs/opening-m1.md) is implemented and awaiting review: the app opens on a flat greybox of the bridge, about 250 m long, which Miki crosses alone, with lines that show once at points along the way. Tomas and Lara are renamed Tom and Laura. The Relay House slice stays as a second level.
 
 The maintainer has endorsed occasional combat supporting exploration and salvage, and assigned documentation of the trio's [combat identities](docs/story/story-bible.md#combat-identities) and [The Quiet Yard](docs/encounters/the-quiet-yard.md). Claude's review is addressed and the maintainer [agreed the character definitions](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774); the [squad movement design](docs/decisions/0003-squad-movement.md) is accepted, with its first phase, natural following, assigned before Party B. Weapons, signature abilities and squad behaviour are working designs, with [review required before implementation](docs/prototype-plan.md#combat-design-review-gate). The encounter takes place after Chapter One and remains outside the current first playable. This documentation assignment starts no combat or formation implementation.
 
@@ -23,15 +23,15 @@ The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Sce
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
-- [Gameplay script](docs/gameplay-script.md): proposed party controls, shared access problem, salvage, repair and coastal contact.
+- [Gameplay script](docs/gameplay-script.md): the Brooklyn Bridge opening, party controls, and the Relay House level's access problem, salvage, repair and coastal contact.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, a proposal, not assigned for implementation.
-- [Chapter One — A Place to Meet](docs/story/chapter-01.md): index to the current outline and playable walkthrough; detailed dialogue remains a later writing pass.
+- [Chapter One — Across the bridge](docs/story/chapter-01.md): index to the bridge opening's outline and walkthrough; the dialogue remains a later writing pass.
 - [Architecture](docs/architecture.md): party ownership, input, following, camera, restart and later saving design.
 - [First playable prototype](docs/prototype-plan.md): party movement and switching first, then access and the repair loop, with staged checks.
 - [Stage 1 evidence](docs/stage-1.md): toolchain, device checks, session outcomes and remaining work.
 - [Stage 2 evidence](docs/stage-2.md): controller decisions, simulator iteration and physical-device checks.
 
-The proposed cast has Miki, Lara and Tomas as the playable trio and Nina as a supporting character. Their role assignments, enhancement histories and exact relationships remain proposals. The earlier family relationships are under review.
+The proposed cast has Miki, Laura and Tom as the playable trio and Nina as a supporting character. The three meet as strangers on the Brooklyn Bridge; their role assignments, enhancement histories and relationships remain proposals that unfold through play.
 
 ## Project structure
 
@@ -40,11 +40,13 @@ Lauder.xcodeproj/              App/test targets and the shared Lauder scheme
 sources/
   app/                        App entry point, world ownership and bundle configuration
   interface/                  HUD, controller/keyboard/touch input and shared input rules
-  gameplay/                   Party identity and session-owned leadership/Pause
+  gameplay/                   Party identity and session-owned party, leadership and Pause
   world/                      RealityKit bodies, squad movement, camera and scene presentation
   content/
-    PrototypeLayout.swift     Route geometry, collision dimensions and interaction anchors
-    MissionScript.swift       Mission conversations and objectives; the lines are provisional
+    Level.swift               A playable place as a value, and the party's shared body
+    BrooklynBridge.swift      The opening's greybox bridge: geometry, triggers and spawns
+    RelayHouse.swift          The second level's geometry, collision and interactions
+    MissionScript.swift       Relay House conversations and objectives; the lines are provisional
     character/                Current animated stand-in, editable sources and provenance
       source/                 Editable USD layers; excluded from the app bundle
       Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
@@ -56,7 +58,7 @@ scripts/                      Standard checks, Simulator playtests, the characte
 .github/                      Pull request template
 ```
 
-Keep presentation in SceneStyle and SceneDressing, route/collision anchors in PrototypeLayout, party and mission rules in GameSession/InputRules, mission text in MissionScript and squad movement in NavigationGrid, SquadPlanner and CompanionMotor. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
+Keep presentation in SceneStyle and SceneDressing, each level's geometry, collision and anchors in its `Level` (BrooklynBridge, RelayHouse), party and mission rules in GameSession/InputRules, mission text in MissionScript and squad movement in NavigationGrid, SquadPlanner and CompanionMotor. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `sources/content`, so they are not copied into the app. See the [verified membership rules](docs/stage-2-project-groups.md#target-membership).
 

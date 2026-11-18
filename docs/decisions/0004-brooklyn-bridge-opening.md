@@ -1,6 +1,6 @@
 # ADR 0004 — the Brooklyn Bridge opening
 
-**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment and none is assigned yet, so nothing is implemented.\
+**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment. M1 is assigned and [implemented](../opening-m1.md), awaiting review; later milestones are not assigned.\
 **Date:** 18 November 2026\
 **Deciders:** Maintainer\
 **Author:** Claude
