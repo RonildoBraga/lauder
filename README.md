@@ -45,7 +45,8 @@ sources/
   world/                      RealityKit bodies, squad movement, fights, camera and scene presentation
   content/
     Level.swift               A playable place as a value, and the party's shared body
-    BrooklynBridge.swift      The opening's greybox bridge: geometry, triggers, spawns and the stranger
+    BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
+    BrooklynBridgeLayout.swift Where everything on the bridge stands, edited in Blender (ADR 0005)
     RelayHouse.swift          The second level's geometry, collision and interactions
     MissionScript.swift       Relay House conversations and objectives; the lines are provisional
     character/                Current animated stand-in, editable sources and provenance
@@ -55,7 +56,7 @@ tests/                        Party/session, asset import, movement, input and l
   support/                    Test-only asset validator; excluded from the app target
 docs/                         Architecture, decisions, prototype plan and validation evidence
   story/                      Story bible and Chapter One outline index
-scripts/                      Standard checks, Simulator playtests, the character asset generator and the app icon
+scripts/                      Standard checks, Simulator playtests, the Blender level script, the character asset generator and the app icon
 .github/                      Pull request template
 ```
 
