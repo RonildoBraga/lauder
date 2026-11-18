@@ -28,8 +28,8 @@ Claude implemented and checked M1, so nothing below is an independent review. Th
 
 ## Limits
 
-- Nobody has played the bridge by hand. Whether the camera reads well, part of M1's exit, is the maintainer's judgement.
-- Simulator only. The opening's planned phone checkpoint comes with M4. The bridge has more scenery than Relay House, including about a hundred thin cable and walkway pieces, and its phone performance is unmeasured.
+- The build was installed on the baseline iPhone, and the maintainer then authorised the merge: **“Yes, merge both”**. No observations from playing it were reported, so whether the camera reads well, part of M1's exit, is unrecorded.
+- The checks above ran in the Simulator. The opening's planned phone checkpoint comes with M4. The bridge has more scenery than Relay House, including about a hundred thin cable and walkway pieces, and its phone performance is unmeasured.
 - The towers' upper parts and the cables' high sections are above the camera, so the bridge reads mostly at deck level.
 - Crossing the empty deck takes about a minute and a half with nothing to do but read a few lines. The encounters, and the ordered story beats that start them, arrive with M2 to M4.
 - TestFlight build 0.1.0 (1) predates M1. A new upload would need build 2.
