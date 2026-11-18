@@ -29,9 +29,9 @@ enum MissionScript {
         Line(speaker: "Keeper", text: "We can hear the coastal operator, but we can't answer."),
         Line(speaker: "Miki", text: "The receiver works. The regulator cuts out when we transmit."),
         Line(
-          speaker: "Tomas",
+          speaker: "Tom",
           text: "The depot used emergency sets like this. There may be one in a protected bay."),
-        Line(speaker: "Lara", text: "Then we check the side access. We come back together."),
+        Line(speaker: "Laura", text: "Then we check the side access. We come back together."),
       ]
     case .inspection:
       [
@@ -53,8 +53,8 @@ enum MissionScript {
         Line(
           speaker: "Coastal operator",
           text: "The crew can meet you at Old Lock tomorrow afternoon."),
-        Line(speaker: "Lara", text: "We'll take the canal path. Keep the next check-in for us."),
-        Line(speaker: "Tomas", text: "I'll mark the closure for anyone coming after us."),
+        Line(speaker: "Laura", text: "We'll take the canal path. Keep the next check-in for us."),
+        Line(speaker: "Tom", text: "I'll mark the closure for anyone coming after us."),
       ]
     case .plan:
       [

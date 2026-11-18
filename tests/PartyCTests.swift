@@ -14,7 +14,7 @@ struct PartyCTests {
   private let panel = SIMD2<Float>(3.2, -4)
   private static let missionSteps: [(PrototypeLayout.ActionID, PartyMember)] = [
     (.hearBriefing, .miki), (.takeRegulator, .miki), (.repairTransmitter, .miki),
-    (.callCrew, .lara),
+    (.callCrew, .laura),
   ]
 
   // MARK: - Session rules
@@ -24,37 +24,37 @@ struct PartyCTests {
     let session = GameSession()
     #expect(session.perform(.takeRegulator, by: .miki) == .notYet)
     #expect(session.perform(.repairTransmitter, by: .miki) == .notYet)
-    #expect(session.perform(.callCrew, by: .lara) == .notYet)
-    #expect(session.perform(.readPlan, by: .tomas) == .notYet)
+    #expect(session.perform(.callCrew, by: .laura) == .notYet)
+    #expect(session.perform(.readPlan, by: .tom) == .notYet)
     // Any leader can hear the briefing.
-    #expect(session.perform(.hearBriefing, by: .tomas) == .done)
+    #expect(session.perform(.hearBriefing, by: .tom) == .done)
     finish(session)
     #expect(session.phase == .seekingRegulator)
     #expect(session.perform(.hearBriefing, by: .miki) == .alreadyDone)
-    #expect(session.perform(.takeRegulator, by: .lara) == .notEligible)
+    #expect(session.perform(.takeRegulator, by: .laura) == .notEligible)
     #expect(session.perform(.takeRegulator, by: .miki) == .done)
     finish(session)
     #expect(session.carriesRegulator)
     #expect(session.perform(.takeRegulator, by: .miki) == .alreadyDone)
-    #expect(session.perform(.repairTransmitter, by: .tomas) == .notEligible)
+    #expect(session.perform(.repairTransmitter, by: .tom) == .notEligible)
     #expect(session.perform(.repairTransmitter, by: .miki) == .done)
     finish(session)
     #expect(session.phase == .radioRepaired)
     #expect(!session.carriesRegulator)
     #expect(session.perform(.repairTransmitter, by: .miki) == .alreadyDone)
-    #expect(session.perform(.callCrew, by: .lara) == .done)
+    #expect(session.perform(.callCrew, by: .laura) == .done)
     finish(session)
     #expect(session.phase == .meetingAgreed)
-    #expect(session.perform(.callCrew, by: .tomas) == .alreadyDone)
+    #expect(session.perform(.callCrew, by: .tom) == .alreadyDone)
     // The passage is separate progress: still closed, and either method still works.
     #expect(!session.passageOpen)
-    #expect(session.perform(.shiftPanel, by: .tomas) == .done)
+    #expect(session.perform(.shiftPanel, by: .tom) == .done)
   }
 
   @Test
   func aStepTakesEffectWhenItsConversationEnds() {
     let session = session(at: .radioRepaired)
-    #expect(session.perform(.callCrew, by: .tomas) == .done)
+    #expect(session.perform(.callCrew, by: .tom) == .done)
     #expect(session.phase == .radioRepaired)
     session.togglePause()
     session.togglePause()
@@ -111,7 +111,7 @@ struct PartyCTests {
     #expect(session.currentLine == MissionScript.lines(.briefing).first)
     session.cycleLeader()
     #expect(session.leader == .miki)
-    #expect(session.perform(.reachLatch, by: .lara) == .unavailable)
+    #expect(session.perform(.reachLatch, by: .laura) == .unavailable)
     for line in MissionScript.lines(.briefing).dropFirst() {
       session.advanceDialogue()
       #expect(session.currentLine == line)
@@ -157,9 +157,9 @@ struct PartyCTests {
   @Test
   func sessionRestartReturnsToTheBeginning() {
     let session = session(at: .meetingAgreed)
-    _ = session.perform(.reachLatch, by: .lara)
+    _ = session.perform(.reachLatch, by: .laura)
     session.cycleLeader()
-    _ = session.perform(.readPlan, by: .lara)
+    _ = session.perform(.readPlan, by: .laura)
     session.togglePause()
     session.movePauseChoice(by: 1)
     session.restart()
@@ -213,15 +213,15 @@ struct PartyCTests {
   @Test
   func theWholeLoopWorksAcrossLeaderChanges() throws {
     let world = GameWorld()
-    // The briefing, with Tomas leading.
-    lead(world, .tomas)
+    // The briefing, with Tom leading.
+    lead(world, .tom)
     try walk(world, to: [transmitter])
     #expect(world.actionName == "Talk to keeper")
     world.performAction()
     #expect(world.session.mode == .dialogue)
     finish(world)
     #expect(world.session.phase == .seekingRegulator)
-    // Tomas opens the passage, then finds that only Miki can take the regulator.
+    // Tom opens the passage, then finds that only Miki can take the regulator.
     try walk(world, to: [[2.5, 3], panel])
     world.performAction()
     #expect(world.session.passageOpen)
@@ -245,8 +245,8 @@ struct PartyCTests {
       world.session.cycleLeader()
       #expect(world.session.carriesRegulator)
     }
-    // Back at the transmitter Lara cannot fit it; Miki can, once.
-    lead(world, .lara)
+    // Back at the transmitter Laura cannot fit it; Miki can, once.
+    lead(world, .laura)
     try walk(world, to: [[5, -4.5], [2.5, -4.5], [2.5, 3], transmitter])
     #expect(world.hint == PrototypeLayout.interaction(.repairTransmitter).suggestion)
     world.performAction()
@@ -261,7 +261,7 @@ struct PartyCTests {
     #expect(entity(world, "relay.transmitter.fault")?.isEnabled == false)
     #expect(entity(world, "relay.transmitter.regulator")?.isEnabled == true)
     // Anyone can call. Then anyone can reread the plan, which changes nothing.
-    lead(world, .tomas)
+    lead(world, .tom)
     try walk(world, to: [transmitter])
     #expect(world.actionName == "Call")
     world.performAction()
@@ -291,7 +291,7 @@ struct PartyCTests {
   @Test
   func theRegulatorWaitsForTheBriefing() throws {
     let world = GameWorld()
-    lead(world, .lara)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     world.performAction()
     lead(world, .miki)
@@ -308,7 +308,7 @@ struct PartyCTests {
     let world = GameWorld()
     world.performAction()
     finish(world)
-    lead(world, .tomas)
+    lead(world, .tom)
     try walk(world, to: [[2.5, 3], panel])
     world.performAction()
     lead(world, .miki)
@@ -343,7 +343,7 @@ struct PartyCTests {
   func thePauseMenuConfirmsItsChoiceAndNeverActsOnANearbyObject() throws {
     let world = GameWorld()
     clearReleaseGate(world)
-    lead(world, .lara)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     #expect(world.actionName == "Reach latch")
     let pause = InputRules.Input(
@@ -361,7 +361,7 @@ struct PartyCTests {
       with: InputRules.Input(
         movement: [1, 0], actionPressed: false, pausePressed: false, switchPressed: true),
       sampledIn: .paused, deltaTime: 1 / 60)
-    #expect(world.session.leader == .lara)
+    #expect(world.session.leader == .laura)
     world.update(with: action, sampledIn: .paused, deltaTime: 1 / 60)
     #expect(world.session.mode == .exploring)
     #expect(!world.session.passageOpen)
@@ -379,7 +379,7 @@ struct PartyCTests {
     #expect(world.session.leader == .miki)
     #expect(world.controls.needsNeutralInput)
     // The touch Restart button restarts directly from the menu.
-    lead(world, .tomas)
+    lead(world, .tom)
     world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
     world.update(
       with: InputRules.Input(
@@ -397,7 +397,7 @@ struct PartyCTests {
     // Some progress first: the briefing, the passage and the regulator.
     world.performAction()
     finish(world)
-    lead(world, .lara)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     world.performAction()
     lead(world, .miki)

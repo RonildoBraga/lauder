@@ -348,7 +348,7 @@ final class GameWorld {
     let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { from, to in
       motion.canTraverse(from: from, to: to)
     }
-    // While the passage is closed, companions keep clear of the spots where Lara or Tomas
+    // While the passage is closed, companions keep clear of the spots where Laura or Tom
     // must stand to open it.
     let keepClear = PrototypeLayout.interactions
       .filter { $0.keepClear && session.offers($0.id) }.map(\.approach)
@@ -569,8 +569,8 @@ final class GameWorld {
       })
   }
 
-  /// The closed barrier, with a latch at its top for Lara and a loose panel at its foot for
-  /// Tomas, both visible from the street side.
+  /// The closed barrier, with a latch at its top for Laura and a loose panel at its foot for
+  /// Tom, both visible from the street side.
   private func addBarrier(style: SceneStyle) {
     let position = PrototypeLayout.barrierPosition
     let size = PrototypeLayout.barrierSize

@@ -64,10 +64,10 @@ struct SceneStyle {
     case .miki:
       color = UIColor(red: 0.25, green: 0.65, blue: 0.59, alpha: 1)
       width = 0.38
-    case .lara:
+    case .laura:
       color = UIColor(red: 0.9, green: 0.61, blue: 0.29, alpha: 1)
       width = 0.31
-    case .tomas:
+    case .tom:
       color = UIColor(red: 0.38, green: 0.51, blue: 0.81, alpha: 1)
       width = 0.49
     }

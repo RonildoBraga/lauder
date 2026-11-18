@@ -43,13 +43,13 @@ struct PartySceneTests {
           $0.minimum == centre - half && $0.maximum == centre + half
         })
     }
-    #expect(world.root.findEntity(named: "relay.tomas") == nil)
+    #expect(world.root.findEntity(named: "relay.tom") == nil)
     #expect(world.root.findEntity(named: "relay.transmitter") != nil)
     #expect(world.root.findEntity(named: "depot.regulator") != nil)
 
     let initialPositions = bodies.map(\.position)
     world.session.cycleLeader()
-    #expect(world.session.leader == .lara)
+    #expect(world.session.leader == .laura)
     #expect(bodies.map(\.position) == initialPositions)
   }
 }

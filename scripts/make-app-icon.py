@@ -21,8 +21,8 @@ GROUND = (34, 54, 56)
 HEAD = (166, 173, 140)
 WARM = (255, 191, 102)
 MIKI = (64, 166, 150)
-LARA = (230, 156, 74)
-TOMAS = (97, 130, 207)
+LAURA = (230, 156, 74)
+TOM = (97, 130, 207)
 
 
 def rounded_rectangle(cx, cy, width, height, radius):
@@ -61,8 +61,8 @@ def figure(cx, top, body_width, colour):
 
 SHAPES = (
     [(ellipse(512, 640, 400, 200), GROUND), (ring(512, 728, 132, 44, 18), WARM)]
-    + figure(300, 268, 129, LARA)
-    + figure(724, 268, 204, TOMAS)
+    + figure(300, 268, 129, LAURA)
+    + figure(724, 268, 204, TOM)
     + figure(512, 378, 158, MIKI)
 )
 

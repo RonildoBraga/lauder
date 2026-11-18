@@ -15,7 +15,7 @@ struct GameSessionTests {
   @Test
   func leadershipCyclesThroughAllThreeMembers() {
     let session = GameSession()
-    for expected in [PartyMember.lara, .tomas, .miki, .lara] {
+    for expected in [PartyMember.laura, .tom, .miki, .laura] {
       session.cycleLeader()
       #expect(session.leader == expected)
     }
@@ -29,13 +29,13 @@ struct GameSessionTests {
     #expect(session.mode == .paused)
     #expect(session.isPaused)
     session.cycleLeader()
-    #expect(session.leader == .lara)
+    #expect(session.leader == .laura)
 
     session.togglePause()
     #expect(session.mode == .exploring)
-    #expect(session.leader == .lara)
+    #expect(session.leader == .laura)
     session.cycleLeader()
-    #expect(session.leader == .tomas)
+    #expect(session.leader == .tom)
   }
 
   @Test
@@ -49,9 +49,9 @@ struct GameSessionTests {
     }
 
     for _ in 0..<4 { sample(.init(controllerSwitch: true)) }
-    #expect(session.leader == .lara)
+    #expect(session.leader == .laura)
     sample(.init())
     sample(.init(controllerSwitch: true))
-    #expect(session.leader == .tomas)
+    #expect(session.leader == .tom)
   }
 }

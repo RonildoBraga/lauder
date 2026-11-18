@@ -42,9 +42,9 @@ struct CompanionMotor {
 
   static func reactionDelay(for member: PartyMember) -> Float {
     switch member {
-    case .lara: 0.1
+    case .laura: 0.1
     case .miki: 0.15
-    case .tomas: 0.2
+    case .tom: 0.2
     }
   }
 

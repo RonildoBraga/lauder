@@ -79,8 +79,8 @@ enum PrototypeLayout {
   static func spawn(for member: PartyMember) -> SIMD3<Float> {
     switch member {
     case .miki: spawn
-    case .lara: spawn + [0, 0, 0.8]
-    case .tomas: spawn + [0, 0, 1.6]
+    case .laura: spawn + [0, 0, 0.8]
+    case .tom: spawn + [0, 0, 1.6]
     }
   }
 
@@ -173,12 +173,12 @@ enum PrototypeLayout {
   }
 
   // Party B: one closed barrier fills the 1.8 m service opening in the depot's west wall.
-  // Either Lara's latch or Tomas's loose panel opens the same ordinary ground passage.
+  // Either Laura's latch or Tom's loose panel opens the same ordinary ground passage.
   static let barrierPosition: SIMD3<Float> = [4, 0.55, -4.5]
   static let barrierSize: SIMD3<Float> = [0.35, 1.1, 1.8]
   static let barrierFootprint = footprint(position: barrierPosition, size: barrierSize)
   static let barrierHint =
-    "The service passage is closed. Lara could reach the latch, or Tomas could shift the loose panel."
+    "The service passage is closed. Laura could reach the latch, or Tom could shift the loose panel."
 
   /// Inside the shelter, around the transmitter, including where the party starts.
   static let transmitterApproach = PartyMotion.Box(minimum: [-11.4, 0.5], maximum: [-7.6, 3.4])
@@ -187,18 +187,18 @@ enum PrototypeLayout {
 
   static let interactions: [Interaction] = [
     Interaction(
-      id: .reachLatch, name: "Reach latch", member: .lara,
+      id: .reachLatch, name: "Reach latch", member: .laura,
       approach: PartyMotion.Box(minimum: [2.8, -5.35], maximum: [3.6, -4.65]), keepClear: true,
-      suggestion: "Lara could reach the latch at the top of the barrier.",
+      suggestion: "Laura could reach the latch at the top of the barrier.",
       mikiSuggestion: barrierHint,
-      result: "Lara reaches up and releases the latch. The passage is open for everyone.",
+      result: "Laura reaches up and releases the latch. The passage is open for everyone.",
       repeated: "The passage is already open."),
     Interaction(
-      id: .shiftPanel, name: "Shift panel", member: .tomas,
+      id: .shiftPanel, name: "Shift panel", member: .tom,
       approach: PartyMotion.Box(minimum: [2.8, -4.35], maximum: [3.6, -3.65]), keepClear: true,
-      suggestion: "Tomas could shift the loose panel at the foot of the barrier.",
+      suggestion: "Tom could shift the loose panel at the foot of the barrier.",
       mikiSuggestion: barrierHint,
-      result: "Tomas braces and shifts the loose panel aside. The passage is open for everyone.",
+      result: "Tom braces and shifts the loose panel aside. The passage is open for everyone.",
       repeated: "The passage is already open."),
     // Party C. At the transmitter exactly one of these is offered in each phase.
     Interaction(
