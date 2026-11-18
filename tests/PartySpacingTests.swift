@@ -10,7 +10,7 @@ struct PartySpacingTests {
   /// leader kept running. A full-speed circle in open ground isolates that effect.
   @Test(arguments: 0..<4)
   func followersKeepTheirSpacingWhateverTheFrameTimes(cadence: Int) throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     let members = PartyMember.allCases
     let bodies = try members.map { member in
       try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
@@ -21,7 +21,7 @@ struct PartySpacingTests {
       return Float(state >> 40) / Float(1 << 24)
     }
     // Screen-relative stick axes for a world heading, as GameWorld consumes them.
-    let toCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
+    let toCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
     let forward = -simd_normalize(toCamera)
     let right = SIMD2(-forward.y, forward.x)
 
@@ -59,7 +59,7 @@ struct PartySpacingTests {
 
   @Test
   func aShortFrameCarriesItsTimeToTheNextFrame() throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     let leader = try #require(world.root.findEntity(named: "party.miki"))
     let start = leader.position
     // Less than one step: no movement yet, but the time is owed to the next frame.

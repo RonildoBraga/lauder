@@ -43,7 +43,7 @@ Two earlier decisions frame it. The maintainer's code-first rule on issue #9 is 
 - The file's entries keep the form the script reads. The script refuses to load anything it cannot read exactly, so a save never drops an entry.
 - Some tests check positions in today's layout, such as the cover near the stranger and the fight's area. Moving those things means updating the tests with them.
 - The decoration that blocks nothing (the walkway, cables, lane lines and tower tops) follows the deck, towers and dividers in the layout. It is not edited in Blender. The [amendment](#amendment--the-decoration-and-the-game-camera) below moves it into the layout file.
-- Relay House stays hand-written Swift for now. Art made in Blender and loaded as USDZ remains a later, separate step.
+- Relay House stayed hand-written Swift until the maintainer removed its level later on 18 November 2026. Art made in Blender and loaded as USDZ remains a later, separate step.
 
 ## Amendment — the decoration and the game camera
 
@@ -63,7 +63,6 @@ After playing M3, the maintainer noted that the scene in the game did not look e
 
 - The decoration no longer follows the layout by itself. Moving a tower or a divider leaves its top, walkway and cables where they were, so they have to be moved with it.
 - Blender still does not show the characters, the game's lighting and shadows, or the materials' finish.
-- Relay House keeps its decoration rules in Swift.
 
 ### Checks
 

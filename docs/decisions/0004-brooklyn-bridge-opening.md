@@ -1,6 +1,6 @@
 # ADR 0004 — the Brooklyn Bridge opening
 
-**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment. M1, M2 and M3 are implemented and merged, as their records for [M1](../opening-m1.md), [M2](../opening-m2.md) and [M3](../opening-m3.md) describe; later milestones are not assigned.\
+**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment. M1, M2 and M3 are implemented and merged, as the [opening record](../opening.md) describes, and the maintainer assigned M4 (“Yes, start M4”); M5 is not assigned. Recommendation 3 kept Relay House as a second level; on 18 November 2026 the maintainer chose the alternative and removed it (“Remove it”), as the [project history](../history.md#the-opening-moves-to-the-bridge) records.\
 **Date:** 18 November 2026\
 **Deciders:** Maintainer\
 **Author:** Claude

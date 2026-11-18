@@ -44,10 +44,8 @@ struct SquadPlanner {
     let dt: Float
   }
 
-  /// `avoid` marks places companions must not take, such as interaction approach areas.
   mutating func targets(
-    for input: Input, grid: NavigationGrid, isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool,
-    avoid: (SIMD2<Float>) -> Bool = { _ in false }
+    for input: Input, grid: NavigationGrid, isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
   ) -> [PartyMember: SIMD2<Float>] {
     let flipped = turn(towards: input.leaderVelocity, dt: input.dt)
     // Whoever is in the party with the leader: two companions, or one before the last joins.
@@ -67,7 +65,7 @@ struct SquadPlanner {
       let slot = leader + side * offset.x - heading * offset.y
       let pulledIn = leader + (slot - leader) / 2
       func fits(_ point: SIMD2<Float>) -> Bool {
-        grid.isRoomy(point) && isClear(leader, point) && !avoid(point)
+        grid.isRoomy(point) && isClear(leader, point)
       }
       let slotFits = fits(slot)
       fitTime[member] = slotFits ? (fitTime[member] ?? 0) + input.dt : 0
@@ -107,11 +105,11 @@ struct SquadPlanner {
       // A waiting companion stands clear of doorways, close to their place, on their own side
       // of it and on the leader's side of any wall.
       let own = input.positions[member] ?? target
-      if isStill && (!grid.isRoomy(target) || avoid(target)),
+      if isStill && !grid.isRoomy(target),
         let roomy = grid.nearestWalkable(
           to: target, within: 1.5,
           where: { candidate in
-            grid.isRoomy(candidate) && isClear(leader, candidate) && !avoid(candidate)
+            grid.isRoomy(candidate) && isClear(leader, candidate)
               && simd_distance(candidate, own) <= simd_distance(target, own) + 0.5
               // Two waiting companions never share a spot, or neither could settle.
               && result.values.allSatisfy { simd_distance($0, candidate) >= 0.8 }

@@ -121,9 +121,9 @@ struct BridgeTests {
   @Test
   func oneCompanionFollowsInTheCloseFormation() {
     var planner = SquadPlanner(heading: [0, -1])
-    let grid = NavigationGrid(level: BrooklynBridge.level, passageOpen: true)
+    let grid = NavigationGrid(level: BrooklynBridge.level)
     let motion = PartyMotion(
-      radius: PartyBody.radius, obstacles: BrooklynBridge.level.obstacles(passageOpen: true))
+      radius: PartyBody.radius, obstacles: BrooklynBridge.level.obstacles)
     let leader: SIMD2<Float> = [6.5, 90]
     let targets = planner.targets(
       for: SquadPlanner.Input(

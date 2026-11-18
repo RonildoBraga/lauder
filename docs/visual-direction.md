@@ -6,16 +6,16 @@ The main visual reference is [Death's Door, by Acid Nerve / Devolver Digital](ht
 
 ## Current priority
 
-Use the existing primitive scene, simple colours and animated stand-in to test the [proposed gameplay loop](gameplay-script.md). New game assets are not a prerequisite. Add only the feedback needed to understand actions and their results; retain the current presentation while the script is reviewed. The guidance below describes the earlier pass and a later visual direction, rather than a new art task.
+Use the greybox bridge, simple colours and primitive stand-ins to test the [opening](gameplay-script.md). New game assets are not a prerequisite. Add only the feedback needed to understand actions and their results. The guidance below records the earlier pass and the later direction, rather than a new art task.
 
-## Apply to the current route
+## Applying the reference
 
-- Give the shelter, depot, obstacles and utility props distinct silhouettes using simple generated geometry and a few bevels or layered forms.
-- Use muted teal and stone for large structures, lighter neutral ground for the route, and small amber accents for useful utilities and landmarks. Keep Miki distinct from the ground and nearby props.
-- Make the blocked depot entrance and open service passage legible from the existing camera. Keep the walking surface clear of decorative clutter and preserve visible feet and ground contact.
-- Express the futuristic setting through relay equipment, utility cabinets, cable housings and salvaged panels. Add only enough detail to distinguish the shelter, street and depot.
+- Give large structures, obstacles and useful props distinct silhouettes using simple generated geometry and a few bevels or layered forms.
+- Use muted teal and stone for large structures, lighter neutral ground for the route, and small amber accents for useful things and landmarks. Keep Miki distinct from the ground and nearby props.
+- Keep the route and its blockers legible from the camera. Keep the walking surface clear of decorative clutter and preserve visible feet and ground contact.
+- Express the futuristic setting through equipment, utility cabinets, cable housings and salvaged panels, with only enough detail to tell places apart.
 
-Keep the current route, collision layout, camera framing, interaction anchors and controls. This pass does not add a level, combat, mission rules, pickup/repair behaviour or Stage 3 dialogue.
+A visual pass keeps the route, collision layout, camera framing, interaction anchors and controls.
 
 ## Rendering budget
 
@@ -25,10 +25,10 @@ Build decoration once during scene setup. Reuse meshes and a small shared materi
 - No new textures, particles or postprocessing effects.
 - No added visual animation or per-frame visual work; existing character movement, skeletal animation and camera follow continue as before.
 
-These are limits for this pass, not measured performance guarantees. Record the actual scene/material/light counts and validation in the [Stage 2 evidence](stage-2.md).
+These are limits, not measured performance guarantees. Record the actual scene, material and light counts and the validation with the change.
 
 ## Review and performance
 
-Review the start, street and depot at the landscape phone aspect ratio in Simulator. Miki, the walkable path, obstacles and useful landmarks should remain clear while moving, including at the service opening. Run the existing formatting, build and test checks.
+Review the scene at the landscape phone aspect ratio in Simulator. Miki, the walkable path, obstacles and useful landmarks should remain clear while moving. Run the standard checks.
 
-The target remains **60 fps on iPhone 13 Pro Max**. Phone checks are currently deferred at the maintainer's request; performance for this visual pass is **unmeasured on the phone**. Simulator screenshots and successful checks do not establish device frame pacing, thermals or battery behaviour. Preserve the limits of the existing [phone-check deferral](../AGENTS.md#work-and-verify) and report the verification gap explicitly.
+The target remains **60 fps on iPhone 13 Pro Max**. The earlier visual pass was not measured on the phone. Simulator screenshots and successful checks do not establish device frame pacing, thermals or battery behaviour; report the verification gap explicitly.

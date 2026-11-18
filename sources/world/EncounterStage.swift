@@ -66,7 +66,7 @@ final class EncounterStage {
   private var reportedEmpty = false
 
   init(level: Level, style: SceneStyle) {
-    obstacles = level.obstacles(passageOpen: false)
+    obstacles = level.obstacles
     let all = level.encounters.flatMap(\.hostiles)
     specs = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
     weaponProp = style.carbine()

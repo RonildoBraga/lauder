@@ -6,7 +6,7 @@ import simd
 struct TouchControls: UIViewRepresentable {
   let controls: GameControls
   let generation: Int
-  /// "Look", the leader's contextual action such as "Reach latch", "Continue" in a
+  /// "Look", the leader's contextual action such as "Search", "Continue" in a
   /// conversation, or "Restart" while paused.
   let actionTitle: String
   /// Who Next would switch to, or nil while the leader travels alone.

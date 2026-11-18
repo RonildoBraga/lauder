@@ -8,14 +8,14 @@ import simd
 struct PartySoakTests {
   @Test(arguments: [UInt64(0xC011_1DE0), 0xC011_1DE1, 0xC011_1DE2, 0xC011_1DE3])
   func authoredPartySurvivesMixedWallContactAndLeaderChanges(seed: UInt64) throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let world = GameWorld(level: TestYard.level)
     let members = PartyMember.allCases
     let bodies = try members.map { member in
       try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
     }
     let bounds = authoredBounds()
     let motion = PartyMotion(
-      radius: PartyBody.radius, obstacles: RelayHouse.obstacles)
+      radius: PartyBody.radius, obstacles: TestYard.obstacles)
     var random = Generator(state: seed)
     var segment = Segment(kind: .free, movement: .zero)
     var remaining = 0
@@ -150,10 +150,8 @@ struct PartySoakTests {
   }
 
   private func authoredBounds() -> [Bounds] {
-    let scenery = RelayHouse.boxes.filter { $0.name != RelayHouse.BoxID.ground.rawValue }.map {
-      Bounds(position: $0.position, size: $0.size)
-    }
-    let landmarks = RelayHouse.points.map { point in
+    let scenery = TestYard.boxes.map { Bounds(position: $0.position, size: $0.size) }
+    let landmarks = TestYard.points.map { point in
       Bounds(position: point.position, size: point.size)
     }
     return scenery + landmarks
@@ -201,7 +199,7 @@ struct PartySoakTests {
     }
     // Convert the authored wall's world heading back to the same screen-relative stick
     // coordinates consumed by GameWorld. No collision result is manufactured in the test.
-    let offsetToCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
+    let offsetToCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
     let forward = -simd_normalize(offsetToCamera)
     let right = SIMD2(-forward.y, forward.x)
     return SIMD2(simd_dot(direction, right), simd_dot(direction, forward))

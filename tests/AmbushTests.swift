@@ -15,17 +15,17 @@ struct AmbushTests {
   func theSearchComesAfterTheFightAndBeginsTheAmbushOnce() {
     let session = GameSession(level: BrooklynBridge.level)
     #expect(!session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger, by: .miki) == .notYet)
+    #expect(session.perform(.searchStranger) == .notYet)
     #expect(session.beginEncounter(.stranger))
     session.defeat("stranger")
     // Not while the fight is still being settled.
     #expect(!session.offers(.searchStranger))
     session.endEncounter()
     #expect(session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger, by: .miki) == .done)
+    #expect(session.perform(.searchStranger) == .done)
     #expect(session.beat == .ambush && session.inEncounter)
     #expect(!session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger, by: .miki) == .alreadyDone)
+    #expect(session.perform(.searchStranger) == .alreadyDone)
     // The loot is taken once, when the search finishes.
     let loot = BrooklynBridge.stranger.loot ?? Level.Loot()
     #expect(loot.rounds > 0 && loot.medicalKits == 1)
@@ -44,7 +44,7 @@ struct AmbushTests {
       #expect(session.beginEncounter(.stranger))
       session.defeat("stranger")
       session.endEncounter()
-      #expect(session.perform(.searchStranger, by: .miki) == .done)
+      #expect(session.perform(.searchStranger) == .done)
       #expect(session.converse(.metTom))
       #expect(session.mode == .dialogue && session.party == [.miki])
       #expect(!session.converse(.metTom))
@@ -56,7 +56,7 @@ struct AmbushTests {
     #expect(session.beginEncounter(.stranger))
     session.defeat("stranger")
     session.endEncounter()
-    #expect(session.perform(.searchStranger, by: .miki) == .done)
+    #expect(session.perform(.searchStranger) == .done)
     #expect(session.converse(.metTom))
     for _ in MissionScript.lines(.metTom) { session.advanceDialogue() }
     #expect(session.mode == .exploring)
@@ -188,6 +188,87 @@ struct AmbushTests {
     #expect(!tom.isEnabled && !attacker.isEnabled)
     #expect(position(world, .tom) == BrooklynBridge.level.spawn(.tom))
     #expect(count(world.root) == entities)
+  }
+
+  // MARK: - Prompts, conversations and the pause menu in play
+
+  @Test
+  func theSearchPromptDoesNotOutliveAMove() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, 43])
+    #expect(world.actionName == "Search")
+    walk(world, to: [6.5, 47])
+    #expect(world.actionName == nil)
+    world.performAction()
+    #expect(world.session.searched.isEmpty && world.session.beat == .stranger)
+  }
+
+  @Test
+  func inTheExchangeTheActionOnlyShowsTheNextLine() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, 43])
+    world.performAction()
+    #expect(run(world, upTo: 6) { world.session.mode == .dialogue })
+    let line = world.session.lineIndex
+    let observation = world.observation
+    let before = position(world, .miki)
+    let press = InputRules.Input(
+      movement: [1, 0], actionPressed: true, pausePressed: false, switchPressed: true)
+    world.update(with: press, sampledIn: .dialogue, deltaTime: 1 / 60)
+    #expect(world.session.lineIndex == line + 1)
+    #expect(world.session.leader == .miki)
+    #expect(position(world, .miki) == before)
+    // Miki stands at the searched body, but the press only showed the next line.
+    #expect(world.observation == observation)
+  }
+
+  @Test
+  func thePauseMenuConfirmsItsChoiceAndNeverActsOnTheBody() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, 43])
+    #expect(world.actionName == "Search")
+    let pause = InputRules.Input(
+      movement: .zero, actionPressed: false, pausePressed: true, switchPressed: false)
+    let action = InputRules.Input(
+      movement: .zero, actionPressed: true, pausePressed: false, switchPressed: false)
+    let down = InputRules.Input(
+      movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
+      menuMove: 1)
+    let before = position(world, .miki)
+    // Confirming at once resumes: the menu opens on Resume. Nothing is searched.
+    world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
+    #expect(world.session.isPaused)
+    world.update(
+      with: InputRules.Input(
+        movement: [1, 0], actionPressed: false, pausePressed: false, switchPressed: false),
+      sampledIn: .paused, deltaTime: 1 / 60)
+    world.update(with: action, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.mode == .exploring)
+    #expect(world.session.searched.isEmpty && world.session.beat == .stranger)
+    #expect(position(world, .miki) == before)
+    #expect(world.controls.needsNeutralInput)
+    // Down, then confirm, restarts.
+    world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
+    world.update(with: down, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.pauseChoice == .restart)
+    world.update(with: action, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.mode == .exploring)
+    #expect(world.session.defeated.isEmpty && world.session.beat == .alone)
+    #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
+    #expect(world.controls.needsNeutralInput)
+    // The touch Restart button restarts directly from the menu.
+    walk(world, to: [6.5, 110])
+    world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
+    world.update(
+      with: InputRules.Input(
+        movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
+        restartPressed: true),
+      sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.mode == .exploring)
+    #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
   }
 
   // MARK: - Helpers

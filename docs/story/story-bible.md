@@ -22,7 +22,7 @@ Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapon
 
 The previous draft established Miki as widowed, Nina as her daughter, Tom as her father and Laura as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Some earlier ideas may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
-The [Chapter One page](chapter-01.md) links to the current outline and records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses the ensemble outline into the proposed party slice. The superseded family/solo script remains in Git history, rather than alongside the current narrative.
+The [Chapter One outline](#chapter-one--across-the-bridge) below records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses it into what the player sees and does. The superseded family/solo script remains in Git history, rather than alongside the current narrative.
 
 ## Premise
 
@@ -219,7 +219,9 @@ The repaired set serves others as well as the party. It establishes contact and 
 **Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
 **Achievement:** Three strangers reach Manhattan together, each having helped another.
 
-The [decision record](../decisions/0004-brooklyn-bridge-opening.md) builds this in milestones. The greybox bridge with Miki alone exists; the encounters follow.
+The [decision record](../decisions/0004-brooklyn-bridge-opening.md) builds this in milestones: the bridge, the first fight, the ambush and Tom are built, and Laura follows. The dialogue remains to be written.
+
+Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 
 ### 1. Alone on the bridge
 
@@ -245,7 +247,7 @@ The dialogue is not written yet. Lines stay short and reveal nothing about anyon
 
 ## Later scene — Relay House
 
-The earlier Chapter One, built around a transmitter repair at Relay House, is kept as a later scene, and the game keeps it as a second level. Where it falls in the journey, and how it fits New York, is not decided. By then the three know one another. Its outline:
+The earlier Chapter One, built around a transmitter repair at Relay House, is kept as a later scene. The game's prototype of it was removed on 18 November 2026; its code is in Git history. Where it falls in the journey, and how it fits New York, is not decided. By then the three know one another. Its outline:
 
 **Immediate goal:** Restore the transmitter and agree a viable onward route.\
 **Emotional movement:** Practical cooperation becomes a deliberate commitment to travel together.\
@@ -335,6 +337,6 @@ Balance questions with answers, jokes, reliable actions and progress. Major conn
 - Each chapter delivers a concrete achievement. New information does not repeatedly erase routes, move destinations or undo trust merely to extend the journey.
 - People beyond the party have meaningful lives of their own.
 
-With the combat identities agreed, the next design step is the movement, formation and combat systems; the accepted [ADR 0003](../decisions/0003-squad-movement.md) covers the movement and formation part. Settle the trio's identities, underlying relationships and enhancement specifics before the full dialogue pass; the bridge opening's lines come first, and stay brief. The Relay House level uses a short crew call and omits Nina's dialogue while her relationship is open. Decide where Relay House and Old Lock sit relative to New York, so water and timing remain credible.
+With the combat identities agreed, the next design step is the movement, formation and combat systems; the accepted [ADR 0003](../decisions/0003-squad-movement.md) covers the movement and formation part. Settle the trio's identities, underlying relationships and enhancement specifics before the full dialogue pass; the bridge opening's lines come first, and stay brief. Decide where Relay House and Old Lock sit relative to New York, so water and timing remain credible.
 
-The [Party A record](../party-a.md) tracks implementation and actual checks of three primitive characters, following, switching and camera behaviour. The maintainer assigned that work regardless of Claude's response; that earlier assignment does not authorise the new squad mechanics. The [prototype plan](../prototype-plan.md) owns the scope, review gates, control defaults and phone cadence. Character-specific interactions, mission dialogue and the repair loop remain later stages; the combat, formation and positioning designs above are not implemented by this writing pass.
+The [prototype plan](../prototype-plan.md) owns the scope, review gates, control defaults and phone cadence. The combat, formation and positioning designs above are not implemented beyond the opening's milestones.

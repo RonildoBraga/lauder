@@ -5,9 +5,9 @@ People and AI-assisted contributors are welcome. The project has a walkable Swif
 ## Before working
 
 Read the [README](README.md) and the documents relevant to the change:
-- [Story bible](docs/story/story-bible.md) and [Chapter One outline index](docs/story/chapter-01.md) for narrative work.
+- [Story bible](docs/story/story-bible.md), with its [Chapter One outline](docs/story/story-bible.md#chapter-one--across-the-bridge), for narrative work.
 - [Architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md) for technical work.
-- [Gameplay script](docs/gameplay-script.md) for the proposed player experience and the distinction between current behaviour and planned interactions.
+- [Gameplay walkthrough](docs/gameplay-script.md) for the player experience, and the distinction between current behaviour and planned interactions.
 - [AGENTS.md](AGENTS.md) when using a coding agent.
 
 Distinguish agreed foundations from working proposals. For changes to the story foundations, engine, architecture or prototype scope, explain the proposal in an issue before investing in a large rewrite, unless an existing issue or maintainer assignment already describes that work.
@@ -68,20 +68,20 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 ```
 
 ```bash
-./scripts/playtest route reversals
+./scripts/playtest first-fight ambush
 ```
 
-It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and prints each scenario's result: pass or fail with reasons, frame times, the party update's cost, body overlaps, slot keeping and the widest gap. It takes a screenshot at every marked moment as the app announces it, such as Laura at the latch or a reversal. Videos, screenshots, traces and summaries go to `.local/playtest/<time>/`, which Git ignores, or to `--output`. `--list` names the scenarios: `route` (Laura opens the passage, then the depot round trip), `panel` (Tom opens it), `closed` (Miki and the wrong approach cannot), `leaders`, `reversals`, `switches`, `walls`, `mission` (Party C's loop from the briefing to the plan, then Restart), `all`, `bridge-walk` (Miki alone from the Brooklyn end to the Manhattan end, winning the stranger's fight on the way, each trigger once, then Restart), `first-fight` (the stranger's near miss, then two shots put him down, then Restart) `fight-retry` (three hits in the open start the fight again; Miki walks back in and wins) and `ambush` (after the fight Miki searches the stranger, Tom drops the attacker and joins, follows her to mid-span, then Restart). `bridge-walk`, `first-fight`, `fight-retry` and `ambush` play the Brooklyn Bridge; the others play Relay House, which they load themselves. They are defined in `sources/world/Playtest.swift`. To play Relay House by hand in a Debug build, launch with `-LauderLevel relay-house`.
+It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and prints each scenario's result: pass or fail with reasons, frame times, the party update's cost, body overlaps, slot keeping and the widest gap. It takes a screenshot at every marked moment as the app announces it, such as the stranger going down. Videos, screenshots, traces and summaries go to `.local/playtest/<time>/`, which Git ignores, or to `--output`. With no names it plays every scenario; `--list` names them: `bridge-walk` (Miki alone from the Brooklyn end to the Manhattan end, winning the stranger's fight on the way, each trigger once, then Restart), `first-fight` (the stranger's near miss, then two shots put him down, then Restart), `fight-retry` (three hits in the open start the fight again; Miki walks back in and wins) and `ambush` (after the fight Miki searches the stranger, Tom drops the attacker and joins, follows her to mid-span, then Restart). They are defined in `sources/world/Playtest.swift`.
 
 The scenario input goes through the normal controls and input rules, and the HUD shows the step and result. Small discs mark where each companion is heading. The runner exists only in Debug builds, so phone and Release builds are unaffected. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Simulator frame times and Debug-build costs are not phone performance, and a scripted route does not replace a person playing.
 
-For repeated **PosterBoard** startup crashes, see the [Simulator recovery record](docs/simulator-troubleshooting.md). The dedicated **iPhone 17 — Lauder** device is the current working testing environment; the original device retains its data.
+If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder ([project history](docs/history.md#simulator-note)).
 
 Phone gameplay supports PS5 DualSense/Xbox through one GameController extended-gamepad path and an optional touch path. Controllers use left stick, Cross/A, R1/RB, R2/RT to fire and Options/Menu; touch uses a bottom-left analog stick, **Look**, **Next: name**, **Pause/Resume** and, during a fight, **Fire**. **Look** shows the leader's action where there is one, **Continue** in a conversation and **Restart** while paused. Touch is automatic without an extended controller. With one attached, the controller remains the default unless **Use touch controls** is selected; **Use controller** returns to it. The preference is in memory. Every path supplies shared InputRules intents; see the [touch-control record](docs/touch-controls.md).
 
 On source changes, cancel old touch captures and require neutral input. Pause keeps the touch surface mounted: even a finger resting at the stick centre must lift before the release gate clears. At an assigned phone checkpoint, check simultaneous stick/button touches, Pause with held fingers, cancellation and source changes on the physical phone. Earlier controller tests and single-pointer Simulator checks do not prove these behaviours on a new build.
 
-The accepted party plan has phone checkpoints after **Party A** and **Party C**, with B covered alongside C; use Simulator for everyday checks and intermediate PRs. Before declaring each milestone complete, use the baseline iPhone 13 Pro Max to verify its affected controls, movement/collision, camera, Pause/Resume, input release, interruptions and disconnect/reconnect. Measure frame pacing for performance claims. Earlier phone deferrals and the separate Xbox-hardware gap remain open until actual observations or a maintainer decision resolve them. Simulator timing is not phone evidence. The foreground game stays awake, including Pause, and normal idle locking resumes on leaving it. Record results and remaining gaps in the [Stage 2 evidence](docs/stage-2.md), following the [prototype plan](docs/prototype-plan.md).
+Use Simulator for everyday checks and intermediate PRs; the [prototype plan](docs/prototype-plan.md) sets the phone checkpoints, the next with M4. Before declaring each milestone complete, use the baseline iPhone 13 Pro Max to verify its affected controls, movement/collision, camera, Pause/Resume, input release, interruptions and disconnect/reconnect. Measure frame pacing for performance claims. Earlier phone deferrals and the separate Xbox-hardware gap remain open until actual observations or a maintainer decision resolve them. Simulator timing is not phone evidence. The foreground game stays awake, including Pause, and normal idle locking resumes on leaving it. Record results and remaining gaps in the milestone's section of the [opening record](docs/opening.md); the [project history](docs/history.md) keeps the earlier ones.
 
 ## Editing a level in Blender
 
@@ -144,5 +144,9 @@ Submit original material or material you are entitled to contribute. For third-p
 Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. Keep generated build products and caches out of source control.
 
 The supported path generates editable USD sources and USDZ delivery assets, loads the USDZ files directly, and composes scenes in Swift. See the [engine decision](docs/decisions/0001-engine.md).
+
+### Target membership
+
+`sources/` and `tests/` are Xcode folder-synchronised groups, so Swift files and the two runtime USDZ resources join their targets automatically. The app target deliberately excludes `sources/content/character/README.md` and the editable `sources/content/character/source` folder, and does not copy `sources/app/Info.plist` as a resource, since the build uses it as the typed input to the bundle's plist. Review target membership when adding other non-runtime files beneath either folder, so authoring files are not copied into the app.
 
 Keep signing credentials, API keys, personal device identifiers, local account information, generated builds and caches out of the repository.

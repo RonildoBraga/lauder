@@ -12,9 +12,9 @@ The change adds an input option to the existing Party A scene. It adds no charac
 
 - Without an extended controller, show a fixed bottom-left analog stick and **Look**, **Next: name** and **Pause/Resume** controls.
 - With a controller attached, prefer it unless the player selects **Use touch controls**. **Use controller** returns to it. The preference is in memory and is not persisted across app launches.
-- Keep keyboard WASD/E/Q/Escape and the existing PS5/Xbox mappings. Touch **Look** requests the same intent as Cross/A/E. Later stages relabel it: the leader's action where there is one ([Party B](party-b.md)), **Continue** in a conversation and **Restart** while paused ([Party C](party-c.md)).
+- Keep keyboard WASD/E/Q/Escape and the existing PS5/Xbox mappings. Touch **Look** requests the same intent as Cross/A/E. It shows the leader's action where there is one, such as **Search**, **Continue** in a conversation and **Restart** while paused.
 - Support a stick finger alongside button fingers. Lift the stick finger to stop; all contacts must release before a neutral-input gate clears, even when the stick is centred.
-- [Opening M2](opening-m2.md) adds a **Fire** button beside the action button, shown during a fight or once the carbine is drawn. It requests the same intent as R2/RT/F and follows the same rules: a fresh press draws, a hold keeps firing, and its finger must lift before the gate clears. With it the layout has four buttons, within the [proposed five](gameplay-script.md#future-squad-and-combat-design).
+- [M2](opening.md#m2--the-first-fight) adds a **Fire** button beside the action button, shown during a fight or once the carbine is drawn. It requests the same intent as R2/RT/F and follows the same rules: a fresh press draws, a hold keeps firing, and its finger must lift before the gate clears. With it the layout has four buttons, within the [proposed five](gameplay-script.md#future-squad-and-combat-design).
 
 ## Input ownership
 
@@ -36,6 +36,4 @@ The earlier live-check deferral was lifted when the maintainer returned on 17 No
 
 Physical controller handoff and PS5/Xbox delivery on this revision were not tested. Cross-zone finger dragging was not separately observed on the phone. No new frame-pacing, thermal, battery or idle-timer timing measurement is claimed; earlier phone-test deferrals remain separate. The short input check does not replace those measurements or prove sustained play.
 
-The recurring Simulator PosterBoard startup failure was isolated separately. The [fresh testing device](simulator-troubleshooting.md) passed three boots, the standard check and a post-launch observation without that failure.
-
-The independently reported [wall-contact freeze in #25](https://github.com/RonildoBraga/lauder/issues/25) remains open; this input change does not change the collision resolver.
+A recurring Simulator startup crash in Apple's PosterBoard was isolated separately and fixed with a fresh Simulator device ([project history](history.md#simulator-note)). The [wall-contact freeze in #25](https://github.com/RonildoBraga/lauder/issues/25) was fixed separately too; this input change did not change the collision resolver.

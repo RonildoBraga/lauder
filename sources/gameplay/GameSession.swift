@@ -8,14 +8,6 @@ final class GameSession {
     case exploring, dialogue, paused
   }
 
-  /// Party C's mission progress, in order. The carried part, the regulator's place in the world,
-  /// the transmitter's state and the objective are all derived from it.
-  enum Phase: Int, CaseIterable, Comparable, Sendable {
-    case briefing, seekingRegulator, carryingRegulator, radioRepaired, meetingAgreed
-
-    static func < (lhs: Phase, rhs: Phase) -> Bool { lhs.rawValue < rhs.rawValue }
-  }
-
   /// The opening's story beats, in order (ADR 0004). Each begins once, after the one before.
   enum Beat: Int, CaseIterable, Comparable, Sendable {
     case alone, stranger
@@ -47,22 +39,18 @@ final class GameSession {
   }
 
   enum ActionResult: Equatable, Sendable {
-    /// Accepted: progress changed, or the plan was read.
+    /// Accepted: progress changed.
     case done
     /// The action already succeeded; repeating it changes nothing.
     case alreadyDone
-    /// The mission has not reached this action yet.
+    /// The story has not reached this action yet.
     case notYet
-    case notEligible
-    /// Repair without the regulator explains what is missing and changes nothing.
-    case missingPart
     /// Only while exploring, not while paused or in a conversation.
     case unavailable
   }
 
   private let startingParty: [PartyMember]
   private let startingAmmo: Int
-  private let interactions: [Level.Interaction]
   /// The beat each encounter-starting action begins, from the level's encounters.
   private let beatStarted: [Level.ActionID: Beat]
   /// The story's progress on the bridge.
@@ -88,25 +76,17 @@ final class GameSession {
   private(set) var party: [PartyMember]
   /// The trigger areas that have shown their line in this run.
   private(set) var firedTriggers: Set<String> = []
-  /// Party B's shared progress: either specialist action opens the passage for everyone. It is
-  /// separate from the phase, because opening access is not a mission step.
-  private(set) var passageOpen = false
-  private(set) var phase = Phase.briefing
   private(set) var conversation: MissionScript.Conversation?
   private(set) var lineIndex = 0
   private(set) var pauseChoice = PauseChoice.resume
   /// Where Resume returns: exploring, or the conversation at its current line.
   private var resumeMode = Mode.exploring
-  /// The phase the current conversation leads to. A step takes effect when its conversation
-  /// ends, so finishing the call secures the meeting and Restart mid-conversation discards it.
-  private var pendingPhase: Phase?
 
   init(level: Level) {
-    precondition(!level.party.isEmpty, "\(level.id.rawValue) must start with someone.")
+    precondition(!level.party.isEmpty, "\(level.id) must start with someone.")
     startingParty = level.party
     startingAmmo = level.startingAmmo
     ammo = level.startingAmmo
-    interactions = level.interactions
     beatStarted = Dictionary(
       level.encounters.compactMap { encounter in
         if case .action(let action) = encounter.start { (action, encounter.beat) } else { nil }
@@ -120,7 +100,6 @@ final class GameSession {
   var inEncounter: Bool { checkpoint != nil }
 
   var isPaused: Bool { mode == .paused }
-  var carriesRegulator: Bool { phase == .carryingRegulator }
   var currentLine: MissionScript.Line? {
     conversation.map { MissionScript.lines($0)[lineIndex] }
   }
@@ -249,59 +228,20 @@ final class GameSession {
     hitsTaken = 0
   }
 
-  /// Whether the action is offered at its approach now. Exactly one transmitter action is
-  /// offered in each phase.
+  /// Whether the action is offered at its approach now.
   func offers(_ action: Level.ActionID) -> Bool {
     switch action {
-    case .reachLatch, .shiftPanel: !passageOpen
-    case .hearBriefing: phase == .briefing
-    case .takeRegulator: phase == .seekingRegulator
-    case .repairTransmitter: phase == .seekingRegulator || phase == .carryingRegulator
-    case .callCrew: phase == .radioRepaired
-    case .readPlan: phase == .meetingAgreed
     case .searchStranger:
       defeated.contains("stranger") && !searched.contains("stranger") && beat == .stranger
         && !inEncounter
     }
   }
 
-  func isEligible(_ member: PartyMember, for action: Level.ActionID) -> Bool {
-    interactions.first { $0.id == action }?.member.map { $0 == member } ?? true
-  }
-
-  /// Accept or reject a named action. The world has already checked that the active body
-  /// stands in the action's approach area; the session checks mode, progress and eligibility.
-  /// An accepted mission step starts its conversation and takes effect when it ends.
-  func perform(_ action: Level.ActionID, by member: PartyMember) -> ActionResult {
+  /// Accept or reject a named action. The world has already checked that the leader stands in
+  /// the action's approach area; the session checks mode and progress.
+  func perform(_ action: Level.ActionID) -> ActionResult {
     guard mode == .exploring else { return .unavailable }
     switch action {
-    case .reachLatch, .shiftPanel:
-      // Repeating either method, by anyone, has no further effect once the passage is open.
-      guard !passageOpen else { return .alreadyDone }
-      guard isEligible(member, for: action) else { return .notEligible }
-      passageOpen = true
-    case .hearBriefing:
-      guard phase == .briefing else { return .alreadyDone }
-      advance(to: .seekingRegulator, telling: .briefing)
-    case .takeRegulator:
-      guard phase <= .seekingRegulator else { return .alreadyDone }
-      guard phase == .seekingRegulator else { return .notYet }
-      guard isEligible(member, for: action) else { return .notEligible }
-      advance(to: .carryingRegulator, telling: .inspection)
-    case .repairTransmitter:
-      guard phase <= .carryingRegulator else { return .alreadyDone }
-      guard phase > .briefing else { return .notYet }
-      guard isEligible(member, for: action) else { return .notEligible }
-      guard phase == .carryingRegulator else { return .missingPart }
-      advance(to: .radioRepaired, telling: .repair)
-    case .callCrew:
-      guard phase <= .radioRepaired else { return .alreadyDone }
-      guard phase == .radioRepaired else { return .notYet }
-      advance(to: .meetingAgreed, telling: .call)
-    case .readPlan:
-      // Reading the plan repeats the meeting details and changes no progress.
-      guard phase == .meetingAgreed else { return .notYet }
-      tell(.plan)
     case .searchStranger:
       // The search begins the ambush; the loot is taken when it finishes (ADR 0004, M3).
       guard defeated.contains("stranger") else { return .notYet }
@@ -312,15 +252,13 @@ final class GameSession {
     return .done
   }
 
-  /// The action press during a conversation: the next line, or after the last, the step takes
-  /// effect and play resumes.
+  /// The action press during a conversation: the next line, or after the last, what it settles
+  /// takes effect and play resumes.
   func advanceDialogue() {
     guard mode == .dialogue, let conversation else { return }
     if lineIndex + 1 < MissionScript.lines(conversation).count {
       lineIndex += 1
     } else {
-      if let pendingPhase { phase = pendingPhase }
-      pendingPhase = nil
       if conversation == .metTom {
         // The exchange after Tom's shot ends with him joining (ADR 0004, M3).
         recruit(.tom)
@@ -348,16 +286,8 @@ final class GameSession {
     medicalKits = 0
     hitsDealt = [:]
     checkpoint = nil
-    passageOpen = false
-    phase = .briefing
-    pendingPhase = nil
     conversation = nil
     lineIndex = 0
-  }
-
-  private func advance(to next: Phase, telling conversation: MissionScript.Conversation) {
-    pendingPhase = next
-    tell(conversation)
   }
 
   private func tell(_ conversation: MissionScript.Conversation) {

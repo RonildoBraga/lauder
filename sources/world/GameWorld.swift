@@ -20,10 +20,8 @@ final class GameWorld {
   private(set) var nearbyName: String?
   private(set) var observation: String
   private(set) var diagnostic: String?
-  /// The leader's contextual action here, such as "Reach latch"; nil when there is none.
+  /// The leader's contextual action here, such as "Search"; nil when there is none.
   private(set) var actionName: String?
-  /// Role feedback, such as which member could act here.
-  private(set) var hint: String?
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
   /// Whether the leader's weapon is drawn.
@@ -35,17 +33,8 @@ final class GameWorld {
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
   @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
   @ObservationIgnored private let camera = PerspectiveCamera()
-  // Movement and routes follow the session's passage flag; the world keeps no copy of it.
-  @ObservationIgnored private let closedMotion: PartyMotion
-  @ObservationIgnored private let openMotion: PartyMotion
-  @ObservationIgnored private let closedGrid: NavigationGrid
-  @ObservationIgnored private let openGrid: NavigationGrid
-  // Scene parts that show the session's progress. They hold no progress of their own.
-  @ObservationIgnored private var barrierParts: [Entity] = []
-  @ObservationIgnored private var regulatorPart: Entity?
-  @ObservationIgnored private var installedRegulator: Entity?
-  @ObservationIgnored private var faultLight: Entity?
-  @ObservationIgnored private var readyLight: Entity?
+  @ObservationIgnored private let motion: PartyMotion
+  @ObservationIgnored private let grid: NavigationGrid
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
@@ -90,26 +79,16 @@ final class GameWorld {
   var showsWeapon: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry is under way.
   var isRetrying: Bool { retryElapsed != nil }
-  /// The HUD's objective: the level's own, or Party C's mission at Relay House.
-  var objective: String { level.objective ?? MissionScript.objective(session.phase) }
+  /// The HUD's objective.
+  var objective: String { level.objective }
 
-  private var motion: PartyMotion { session.passageOpen ? openMotion : closedMotion }
-  private var grid: NavigationGrid { session.passageOpen ? openGrid : closedGrid }
-
-  /// The bridge, unless a Debug launch argument picks a playtest's level or `-LauderLevel`.
-  init(level: Level? = nil) {
-    let level = level ?? Self.launchLevel
+  init(level: Level = BrooklynBridge.level) {
     self.level = level
     session = GameSession(level: level)
     observation = level.opening
-    closedMotion = PartyMotion(
-      radius: PartyBody.radius, obstacles: level.obstacles(passageOpen: false))
-    openMotion = PartyMotion(
-      radius: PartyBody.radius, obstacles: level.obstacles(passageOpen: true))
-    // Build the route grids while loading, not on the first frame of play or the frame the
-    // passage opens.
-    closedGrid = NavigationGrid(level: level, passageOpen: false)
-    openGrid = level.passage == nil ? closedGrid : NavigationGrid(level: level, passageOpen: true)
+    motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
+    // Build the route grid while loading, not on the first frame of play.
+    grid = NavigationGrid(level: level)
     squadLeader = level.party[0]
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
@@ -117,7 +96,7 @@ final class GameWorld {
     cameraTarget = Self.startingCameraTarget(level)
     let style = SceneStyle()
     stage = EncounterStage(level: level, style: style)
-    root.name = level.id.rawValue
+    root.name = level.id
     for box in [level.ground] + level.boxes {
       let entity: Entity =
         box.surface == .vehicle
@@ -135,10 +114,7 @@ final class GameWorld {
     for interaction in level.interactions {
       precondition(
         level.interactions.filter { $0.id == interaction.id }.count == 1,
-        "\(level.id.rawValue) defines \(interaction.id.rawValue) more than once.")
-    }
-    if level.id == .relayHouse {
-      addRelayHouseParts(style: style)
+        "\(level.id) defines \(interaction.id.rawValue) more than once.")
     }
     root.addChild(stage.container)
     SceneDressing.add(to: root, style: style, level: level)
@@ -163,7 +139,6 @@ final class GameWorld {
     // Miki carries the carbine; it shows while drawn.
     visuals[.miki]?.addChild(stage.weaponProp)
     placeParty()
-    showProgress()
     updateCamera(deltaTime: 0)
     updateNearby()
     #if DEBUG
@@ -171,19 +146,6 @@ final class GameWorld {
         startPlaytest(scenario, style: style)
       }
     #endif
-  }
-
-  private static var launchLevel: Level {
-    #if DEBUG
-      let defaults = UserDefaults.standard
-      if let scenario = defaults.string(forKey: "LauderPlaytest") {
-        return Level.level(PlaytestRunner.level(for: scenario))
-      }
-      if let name = defaults.string(forKey: "LauderLevel"), let id = Level.ID(rawValue: name) {
-        return Level.level(id)
-      }
-    #endif
-    return BrooklynBridge.level
   }
 
   private static func startingCameraTarget(_ level: Level) -> SIMD3<Float> {
@@ -285,11 +247,8 @@ final class GameWorld {
         togglePause()
       } else if input.actionPressed {
         session.advanceDialogue()
-        // A finished conversation's step has just taken effect.
-        if session.mode != .dialogue {
-          showProgress()
-          updateNearby()
-        }
+        // What a finished conversation settles has just taken effect.
+        if session.mode != .dialogue { updateNearby() }
       }
     case .exploring:
       if input.pausePressed {
@@ -319,10 +278,9 @@ final class GameWorld {
     let here = level.interactions.filter { $0.approach.contains(position) }
     // Several actions can share an approach; the one offered now comes first.
     if let interaction = here.first(where: { session.offers($0.id) }) ?? here.first {
-      switch session.perform(interaction.id, by: session.leader) {
+      switch session.perform(interaction.id) {
       case .done:
         observation = interaction.result
-        showProgress()
         // An action can begin a scene, as the search begins the ambush (ADR 0004, M3).
         if let encounter = level.encounters.first(where: {
           if case .action(let action) = $0.start { action == interaction.id } else { false }
@@ -334,20 +292,13 @@ final class GameWorld {
         observation = interaction.repeated
       case .notYet:
         observation = interaction.early
-      case .notEligible:
-        observation = feedback(for: interaction)
-      case .missingPart:
-        observation = MissionScript.missingPart
       case .unavailable:
         break
       }
       updateNearby()
       return
     }
-    observation =
-      nearby?.observation(at: session.phase)
-      ?? level.lookAround
-      ?? MissionScript.guidance(session.phase, passageOpen: session.passageOpen)
+    observation = nearby?.observation ?? level.lookAround
   }
 
   /// The in-place Restart: the same scene, bodies and update subscription, returned to the
@@ -375,7 +326,6 @@ final class GameWorld {
     cameraTarget = Self.startingCameraTarget(level)
     unsimulatedTime = 0
     skipNextStep = true
-    showProgress()
     observation = level.opening
     nearby = nil
     nearbyName = nil
@@ -447,16 +397,11 @@ final class GameWorld {
     let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { from, to in
       motion.canTraverse(from: from, to: to)
     }
-    // Companions keep clear of the spots where a specialist must stand while that action is
-    // offered, such as Relay House's latch and panel.
-    let keepClear = level.interactions
-      .filter { $0.keepClear && session.offers($0.id) }.map(\.approach)
     let targets = planner.targets(
       for: SquadPlanner.Input(
         leader: leader, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         positions: current, route: route, dt: dt),
-      grid: grid, isClear: isClear,
-      avoid: { point in keepClear.contains { $0.contains(point) } })
+      grid: grid, isClear: isClear)
     companionTargets = targets
     for member in session.party where member != leader {
       guard let start = current[member], let target = targets[member],
@@ -695,7 +640,6 @@ final class GameWorld {
     var playtestSnapshot: PlaytestRunner.Snapshot {
       PlaytestRunner.Snapshot(
         leader: session.leader, party: session.party, positions: positions, mode: session.mode,
-        phase: session.phase, passageOpen: session.passageOpen,
         firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
         retrying: isRetrying)
@@ -747,43 +691,12 @@ final class GameWorld {
     }
   #endif
 
-  /// The action prompt or role feedback for the active body where it stands.
+  /// The leader's action prompt where they stand.
   private func updatePrompt(at position: SIMD2<Float>) {
-    var name: String?
-    var feedback: String?
-    if let interaction = level.interactions.first(where: {
+    let name = level.interactions.first {
       $0.approach.contains(position) && session.offers($0.id)
-    }) {
-      if session.isEligible(session.leader, for: interaction.id) {
-        name = interaction.name
-      } else {
-        feedback = self.feedback(for: interaction)
-      }
-    } else if let passage = level.passage, !session.passageOpen {
-      let centre = SIMD2(passage.barrier.position.x, passage.barrier.position.z)
-      if simd_distance(position, centre) < Level.interactionRadius {
-        feedback = passage.hint
-      }
-    }
+    }?.name
     if actionName != name { actionName = name }
-    if hint != feedback { hint = feedback }
-  }
-
-  /// For a leader who cannot act here: who can. At the passage Miki explains both ways.
-  private func feedback(for interaction: Level.Interaction) -> String {
-    session.leader == .miki
-      ? interaction.mikiSuggestion ?? interaction.suggestion : interaction.suggestion
-  }
-
-  /// Make the scene show the session's progress: the barrier, the regulator in its housing or
-  /// in the transmitter, and the transmitter's status light. Movement and routes read the
-  /// passage flag directly.
-  private func showProgress() {
-    for part in barrierParts { part.isEnabled = !session.passageOpen }
-    regulatorPart?.isEnabled = session.phase < .carryingRegulator
-    installedRegulator?.isEnabled = session.phase >= .radioRepaired
-    faultLight?.isEnabled = session.phase < .radioRepaired
-    readyLight?.isEnabled = session.phase >= .radioRepaired
   }
 
   private static func freshMotors() -> [PartyMember: CompanionMotor] {
@@ -791,82 +704,5 @@ final class GameWorld {
       uniqueKeysWithValues: PartyMember.allCases.map {
         ($0, CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: $0)))
       })
-  }
-
-  // MARK: - Relay House
-
-  /// The parts that show Party B's barrier and Party C's progress at Relay House.
-  private func addRelayHouseParts(style: SceneStyle) {
-    addBarrier(style: style)
-    addMissionParts(style: style)
-  }
-
-  /// The closed barrier, with a latch at its top for Laura and a loose panel at its foot for
-  /// Tom, both visible from the street side.
-  private func addBarrier(style: SceneStyle) {
-    let position = RelayHouse.barrierPosition
-    let size = RelayHouse.barrierSize
-    let barrier = style.block(
-      size: size, at: position, material: style.material(for: .hazard))
-    barrier.name = "passage.barrier"
-    let latch = style.block(
-      size: [0.12, 0.12, 0.3], at: position + [-0.12, size.y / 2 + 0.06, -0.55],
-      material: style.signal)
-    latch.name = "passage.latch"
-    let panel = style.block(
-      size: [0.04, 0.45, 0.55], at: position + [-size.x / 2 - 0.02, -0.3, 0.5],
-      material: style.material(for: .depot))
-    panel.name = "passage.panel"
-    barrierParts = [barrier, latch, panel]
-    for part in barrierParts { root.addChild(part) }
-  }
-
-  private func addMissionParts(style: SceneStyle) {
-    // The transmitter's status light, amber until the repair, and the regulator Miki fits on top.
-    let transmitter = RelayHouse.point(.transmitter)
-    let light =
-      transmitter.position + [-0.19, transmitter.size.y / 2 - 0.16, transmitter.size.z / 2 + 0.02]
-    faultLight = addPart(
-      "relay.transmitter.fault", size: [0.14, 0.04, 0.03], at: light, material: style.warm,
-      style: style)
-    readyLight = addPart(
-      "relay.transmitter.ready", size: [0.14, 0.04, 0.03], at: light, material: style.signal,
-      style: style)
-    installedRegulator = addPart(
-      "relay.transmitter.regulator", size: [0.24, 0.12, 0.2],
-      at: transmitter.position + [-0.05, transmitter.size.y + 0.06, 0], material: style.signal,
-      style: style)
-    // The regulator on its disconnected housing, and the water bypass beside it that Miki
-    // leaves connected, running to the depot's back wall.
-    let housing = RelayHouse.point(.regulator)
-    regulatorPart = addPart(
-      "depot.regulator.part", size: [0.3, 0.12, 0.22],
-      at: housing.position + [0, housing.size.y + 0.06, 0], material: style.signal, style: style)
-    let wall = RelayHouse.box(.depotBack)
-    let start = housing.position.z - housing.size.z / 2
-    let end = wall.position.z + wall.size.z / 2
-    let x = housing.position.x + 0.15
-    _ = addPart(
-      "depot.water-bypass", size: [0.08, 0.08, start - end], at: [x, 0.04, (start + end) / 2],
-      material: style.water, style: style)
-    _ = addPart(
-      "depot.water-riser", size: [0.08, wall.size.y, 0.08], at: [x, wall.size.y / 2, end + 0.04],
-      material: style.water, style: style)
-    for position in RelayHouse.serviceMarkerPositions {
-      let marker = ModelEntity(
-        mesh: .generateBox(size: RelayHouse.serviceMarkerSize), materials: [style.signal])
-      marker.position = position
-      root.addChild(marker)
-    }
-  }
-
-  private func addPart(
-    _ name: String, size: SIMD3<Float>, at position: SIMD3<Float>, material: any Material,
-    style: SceneStyle
-  ) -> Entity {
-    let part = style.block(size: size, at: position, material: material)
-    part.name = name
-    root.addChild(part)
-    return part
   }
 }

@@ -11,22 +11,13 @@
     enum Step {
       /// Steer the leader to a point; fails after 30 s.
       case walk(SIMD2<Float>)
-      /// Hold the stick towards a world direction.
-      case push(SIMD2<Float>, seconds: Float)
       case wait(seconds: Float)
-      case switchLeader
       /// A named moment, for stills cut from the screen recording.
       case mark(String)
-      case expectTogether(maxDistance: Float)
-      case expectInDepot
-      /// Switch until this member leads.
-      case lead(PartyMember)
       /// Press the action for one frame. While paused it confirms the menu's choice.
       case act
-      case expectPassage(open: Bool)
       /// Press the action to start a conversation, then once per line until play resumes.
       case talk
-      case expectPhase(GameSession.Phase)
       /// Press Pause for one frame.
       case pause
       /// Move the pause menu's choice: -1 up, 1 down.
@@ -52,8 +43,6 @@
       let party: [PartyMember]
       let positions: [PartyMember: SIMD2<Float>]
       let mode: GameSession.Mode
-      let phase: GameSession.Phase
-      let passageOpen: Bool
       let firedTriggers: Int
       let beat: GameSession.Beat
       let hitsTaken: Int
@@ -100,17 +89,12 @@
       let worstLeaderGap: Double
     }
 
-    static let scenarioNames = [
-      "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
-      "bridge-walk", "first-fight", "fight-retry", "ambush",
-    ]
+    static let scenarioNames = ["bridge-walk", "first-fight", "fight-retry", "ambush"]
     static let walkTimeout: Float = 30
     /// How long each conversation line stays on screen before the next press.
     static let lineSeconds: Float = 0.6
 
     let name: String
-    /// The level the scenario plays; GameWorld loads it for the launch argument.
-    let level: Level.ID
     private let steps: [Step]
     private var index = 0
     private var stepTime: Float = 0
@@ -140,7 +124,6 @@
     init?(scenario: String) {
       guard let steps = Self.steps(for: scenario) else { return nil }
       name = scenario
-      level = Self.level(for: scenario)
       self.steps = steps
     }
 
@@ -178,78 +161,22 @@
             continue
           }
           return InputRules.Raw(stick: stick(towards: offset))
-        case .push(let direction, let seconds):
-          guard stepTime < seconds else {
-            advance()
-            continue
-          }
-          return InputRules.Raw(stick: stick(towards: direction))
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
             continue
           }
           return InputRules.Raw()
-        case .switchLeader:
-          // Press for one frame and release for one, so InputRules sees a fresh edge.
-          switchFrame += 1
-          if switchFrame == 1 { return InputRules.Raw(controllerSwitch: true) }
-          switchFrame = 0
-          advance()
-          return InputRules.Raw()
         case .mark(let label):
           marks.append(Summary.Mark(name: label, seconds: Double(elapsed)))
           announce(label)
           advance()
-        case .expectTogether(let maximum):
-          for (member, position) in positions
-          where simd_distance(position, leaderPosition) > maximum {
-            failures.append(
-              "\(member.displayName) was \(Self.metres(simd_distance(position, leaderPosition))) "
-                + "from the leader at \(Self.seconds(elapsed)) (allowed \(Self.metres(maximum)))")
-          }
-          advance()
-        case .expectInDepot:
-          for (member, position) in positions where !Self.isInDepot(position) {
-            failures.append(
-              "\(member.displayName) was outside the depot at \(Self.describe(position))")
-          }
-          advance()
-        case .lead(let member):
-          if leader == member {
-            switchFrame = 0
-            presses = 0
-            advance()
-            continue
-          }
-          // One press, one release, then look again; three presses reach anyone.
-          switchFrame += 1
-          if switchFrame == 1 {
-            presses += 1
-            if presses > 3 {
-              failures.append("could not switch to \(member.displayName)")
-              switchFrame = 0
-              presses = 0
-              advance()
-              continue
-            }
-            return InputRules.Raw(controllerSwitch: true)
-          }
-          switchFrame = 0
-          return InputRules.Raw()
         case .act:
           switchFrame += 1
           if switchFrame == 1 { return InputRules.Raw(controllerAction: true) }
           switchFrame = 0
           advance()
           return InputRules.Raw()
-        case .expectPassage(let open):
-          if snapshot.passageOpen != open {
-            failures.append(
-              "the passage was \(snapshot.passageOpen ? "open" : "closed") "
-                + "at \(Self.seconds(elapsed))")
-          }
-          advance()
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -281,13 +208,6 @@
             return InputRules.Raw(controllerAction: true)
           }
           return InputRules.Raw()
-        case .expectPhase(let phase):
-          if snapshot.phase != phase {
-            failures.append(
-              "the mission was at \(snapshot.phase) instead of \(phase) "
-                + "at \(Self.seconds(elapsed))")
-          }
-          advance()
         case .pause:
           switchFrame += 1
           if switchFrame == 1 { return InputRules.Raw(controllerPause: true) }
@@ -302,16 +222,15 @@
           advance()
           return InputRules.Raw()
         case .expectRestarted:
-          let start = Level.level(level)
+          let start = BrooklynBridge.level
           if snapshot.leader != start.party[0] || snapshot.party != start.party
-            || snapshot.phase != .briefing || snapshot.passageOpen || snapshot.firedTriggers != 0
-            || snapshot.beat != .alone || snapshot.defeated != 0 || snapshot.hitsTaken != 0
-            || snapshot.ammo != start.startingAmmo || snapshot.mode != .exploring
+            || snapshot.firedTriggers != 0 || snapshot.beat != .alone || snapshot.defeated != 0
+            || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
+            || snapshot.mode != .exploring
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
-                + "\(snapshot.party.count), the mission was at \(snapshot.phase), the passage "
-                + "was \(snapshot.passageOpen ? "open" : "closed") and "
+                + "\(snapshot.party.count), the story was at \(snapshot.beat) and "
                 + "\(snapshot.firedTriggers) trigger(s) had fired")
           }
           for (member, position) in positions
@@ -477,91 +396,12 @@
 
     // MARK: - Scenarios
 
-    /// Laura opens the service passage from the latch approach (Party B).
-    private static let openWithLaura: [Step] = [
-      .lead(.laura), .walk([2.5, 3]), .walk([3.2, -5]), .mark("at the latch"),
-      .wait(seconds: 1), .act,
-      .expectPassage(open: true), .mark("passage open"),
-    ]
-
-    /// Through the open passage into the depot and back to the street.
-    private static let roundTrip: [Step] = [
-      .walk([2.5, 3]), .walk([2.5, -4.5]), .mark("doorway in"), .walk([5, -4.5]),
-      .walk([6.5, -3]), .wait(seconds: 2), .expectInDepot, .mark("in the depot"),
-      .walk([5, -4.5]), .mark("doorway out"), .walk([2.5, -4.5]), .walk([2.5, 3]),
-      .walk([-6, 3]), .wait(seconds: 2), .expectTogether(maxDistance: 2.5),
-      .mark("back on the street"),
-    ]
-
-    private static let route = openWithLaura + roundTrip
-
-    /// Tom opens the passage from the loose-panel approach instead.
-    private static let panel: [Step] = [
-      .lead(.tom), .walk([2.5, 3]), .walk([3.2, -4]), .mark("at the panel"),
-      .wait(seconds: 1), .act,
-      .expectPassage(open: true), .walk([5, -4.2]), .walk([6.5, -3]), .wait(seconds: 2),
-      .expectInDepot, .mark("in the depot"),
-    ]
-
-    /// Miki cannot open the passage, and nor can Tom from the latch.
-    private static let closed: [Step] = [
-      .lead(.miki), .walk([2.5, 3]), .walk([3.2, -5]), .mark("Miki at the latch"),
-      .wait(seconds: 1), .act, .expectPassage(open: false), .lead(.tom), .walk([3.2, -5]),
-      .mark("Tom at the latch"), .wait(seconds: 1), .act, .expectPassage(open: false),
-      .wait(seconds: 1.5),
-      .expectTogether(maxDistance: 2.5),
-    ]
-
-    private static let reversals: [Step] = [
-      .walk([-4, 5]), .wait(seconds: 1),
-      .push([1, 0], seconds: 1.2), .mark("reversal 1"), .push([-1, 0], seconds: 1.2),
-      .mark("reversal 2"), .push([1, 0], seconds: 1.2), .mark("reversal 3"),
-      .push([-1, 0], seconds: 1.2), .mark("sharp turn"), .push([1, -1], seconds: 1),
-      .push([-1, 1], seconds: 1), .wait(seconds: 2), .expectTogether(maxDistance: 2.5),
-      .mark("settled after reversals"),
-    ]
-
-    private static let switches: [Step] = [
-      .walk([-4, 5]), .push([1, 0], seconds: 0.8), .switchLeader, .mark("switch while moving"),
-      .push([1, 0], seconds: 0.8), .switchLeader, .push([-1, 0], seconds: 0.8), .switchLeader,
-      .wait(seconds: 1), .switchLeader, .mark("switch while standing"), .wait(seconds: 2),
-      .expectTogether(maxDistance: 2.5), .mark("settled after switches"),
-    ]
-
-    private static let walls: [Step] =
-      [.walk([-10, 8.6]), .push([1, 0.15], seconds: 3), .mark("wall slide"), .wait(seconds: 1)]
-      + openWithLaura + [
-        .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([9.3, -6.3]),
-        .push([1, -1], seconds: 1.5), .mark("depot corner"), .wait(seconds: 2),
-        .expectInDepot, .expectTogether(maxDistance: 2.5),
-      ]
-
     /// Restart from the pause menu: Pause, down to Restart, confirm. The check comes before the
     /// companions step into formation around Miki.
     private static let restartRun: [Step] = [
       .pause, .wait(seconds: 0.5), .menu(1), .wait(seconds: 0.3), .mark("restart chosen"),
       .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
     ]
-
-    /// Party C's loop from a fresh run: the briefing, Laura's latch, Miki's regulator, the return
-    /// with Tom leading, the repair, Laura's call and the plan, then a Restart and a new briefing.
-    private static let mission: [Step] =
-      [
-        .mark("start"), .wait(seconds: 0.6), .act, .wait(seconds: 0.4), .mark("briefing"),
-        .talk, .expectPhase(.seekingRegulator), .mark("briefed"),
-      ]
-      + openWithLaura + [
-        .lead(.miki), .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([6.2, -4.2]),
-        .mark("at the housing"), .wait(seconds: 0.6), .talk, .expectPhase(.carryingRegulator),
-        .mark("regulator taken"), .wait(seconds: 0.6),
-        .lead(.tom), .walk([5, -4.5]), .walk([2.5, -4.5]), .walk([2.5, 3]),
-        .walk([-8.4, 2.4]), .wait(seconds: 1), .act, .mark("Tom at the transmitter"),
-        .wait(seconds: 0.6), .expectPhase(.carryingRegulator),
-        .lead(.miki), .walk([-8.8, 2]), .talk, .expectPhase(.radioRepaired), .mark("repaired"),
-        .wait(seconds: 0.6), .lead(.laura), .walk([-9, 2.6]), .act, .wait(seconds: 0.4),
-        .mark("call"), .talk, .expectPhase(.meetingAgreed), .mark("meeting agreed"),
-        .wait(seconds: 0.6), .talk, .expectPhase(.meetingAgreed), .mark("plan read"),
-      ] + restartRun + [.talk, .expectPhase(.seekingRegulator), .mark("briefed again")]
 
     /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1 and M2): up the east
     /// roadway, past the stranger once he is down, through the first tower, across the collapsed
@@ -616,25 +456,8 @@
         .walk([6.5, -9]), .mark("mid-span with Tom"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
-    /// The level a scenario plays: the bridge for the opening's, Relay House for the others.
-    static func level(for scenario: String) -> Level.ID {
-      ["bridge-walk", "first-fight", "fight-retry", "ambush"].contains(scenario)
-        ? .brooklynBridge : .relayHouse
-    }
-
     static func steps(for scenario: String) -> [Step]? {
       switch scenario {
-      case "route": route
-      case "panel": panel
-      case "closed": closed
-      case "leaders":
-        openWithLaura + [.lead(.miki)] + roundTrip + [.lead(.laura)] + roundTrip
-          + [.lead(.tom)] + roundTrip
-      case "reversals": reversals
-      case "switches": switches
-      case "walls": walls
-      case "mission": mission
-      case "all": closed + route + reversals + switches + walls + restartRun + mission
       case "bridge-walk": bridgeWalk
       case "first-fight": firstFight
       case "fight-retry": fightRetry
@@ -645,9 +468,9 @@
 
     // MARK: - Helpers
 
-    /// Stick axes for a world direction under this scenario's level's camera.
+    /// Stick axes for a world direction under the bridge's camera.
     private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-      Self.stick(towards: direction, cameraOffset: Level.level(level).cameraOffset)
+      Self.stick(towards: direction, cameraOffset: BrooklynBridge.level.cameraOffset)
     }
 
     /// Screen-relative stick axes for a world direction, as Movement interprets them.
@@ -658,11 +481,6 @@
       let right = SIMD2(-forward.y, forward.x)
       let unit = simd_normalize(direction)
       return SIMD2(simd_dot(unit, right), simd_dot(unit, forward))
-    }
-
-    /// The depot's interior, inside its walls.
-    static func isInDepot(_ point: SIMD2<Float>) -> Bool {
-      point.x > 4.2 && point.x < 9.8 && point.y > -6.8 && point.y < -1.2
     }
 
     private static func timing(_ values: [Double]) -> Summary.Timing {
@@ -679,10 +497,6 @@
 
     private static func describe(_ point: SIMD2<Float>) -> String {
       String(format: "(%.2f, %.2f)", point.x, point.y)
-    }
-
-    private static func metres(_ value: Float) -> String {
-      String(format: "%.2f m", value)
     }
 
     private static func seconds(_ value: Float) -> String {

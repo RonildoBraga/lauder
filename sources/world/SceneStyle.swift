@@ -4,15 +4,8 @@ import UIKit
 @MainActor
 struct SceneStyle {
   let unitBox = MeshResource.generateBox(size: 1)
-  let unitCylinder = MeshResource.generateCylinder(height: 1, radius: 1)
   let unitSphere = MeshResource.generateSphere(radius: 1)
 
-  let ground = SimpleMaterial(
-    color: UIColor(red: 0.23, green: 0.31, blue: 0.29, alpha: 1), roughness: 1,
-    isMetallic: false)
-  let wall = SimpleMaterial(
-    color: UIColor(red: 0.39, green: 0.48, blue: 0.44, alpha: 1), roughness: 1,
-    isMetallic: false)
   let wallCap = SimpleMaterial(
     color: UIColor(red: 0.65, green: 0.68, blue: 0.55, alpha: 1), roughness: 1,
     isMetallic: false)
@@ -25,20 +18,10 @@ struct SceneStyle {
   let stone = SimpleMaterial(
     color: UIColor(red: 0.56, green: 0.57, blue: 0.45, alpha: 1), roughness: 1,
     isMetallic: false)
-  let foliage = SimpleMaterial(
-    color: UIColor(red: 0.35, green: 0.43, blue: 0.25, alpha: 1), roughness: 1,
-    isMetallic: false)
-  let cloth = SimpleMaterial(
-    color: UIColor(red: 0.34, green: 0.46, blue: 0.47, alpha: 1), roughness: 1,
-    isMetallic: false)
   let warm = UnlitMaterial(color: UIColor(red: 1, green: 0.75, blue: 0.4, alpha: 1))
   /// Threats: a hostile's aim and shots, and the assisted target's marker.
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
-  let water = SimpleMaterial(
-    color: UIColor(red: 0.29, green: 0.52, blue: 0.71, alpha: 1), roughness: 0.6,
-    isMetallic: false)
-  // The bridge's greybox surfaces.
   let asphalt = SimpleMaterial(
     color: UIColor(red: 0.27, green: 0.29, blue: 0.29, alpha: 1), roughness: 1,
     isMetallic: false)
@@ -60,10 +43,7 @@ struct SceneStyle {
 
   func material(for surface: Level.Surface) -> SimpleMaterial {
     switch surface {
-    case .ground: ground
     case .concrete: stone
-    case .shelter: wall
-    case .depot: metal
     case .hazard: rust
     case .asphalt: asphalt
     case .steel: steel
@@ -158,14 +138,6 @@ struct SceneStyle {
       block(
         size: [size.x * 0.85, size.y * 0.15, size.z * 1.03], at: [0, -size.y * 0.27, 0],
         material: wallCap))
-    if point.id == RelayHouse.PointID.transmitter.rawValue {
-      entity.addChild(
-        block(size: [0.48, 0.32, 0.025], at: [0, 0.12, 0.315], material: signal))
-      entity.addChild(
-        block(size: [0.05, 0.9, 0.05], at: [0.28, 0.9, 0], material: metal))
-    }
-    // The transmitter's status light and the regulator itself change with the mission, so
-    // GameWorld adds them.
     return entity
   }
 

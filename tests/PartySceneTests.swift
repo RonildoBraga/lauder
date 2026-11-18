@@ -8,7 +8,8 @@ import simd
 struct PartySceneTests {
   @Test
   func renderedSceneryAndMovementUseTheSameAuthoredFootprints() throws {
-    let world = GameWorld(level: RelayHouse.level)
+    let level = BrooklynBridge.level
+    let world = GameWorld(level: level)
     let bodies = try PartyMember.allCases.map { member in
       try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
     }
@@ -18,38 +19,37 @@ struct PartySceneTests {
       #expect(body.components[CollisionComponent.self] == nil)
       #expect(body.components[PhysicsBodyComponent.self] == nil)
     }
-    for box in RelayHouse.boxes {
+    for box in [level.ground] + level.boxes {
       let entity = try #require(world.root.findEntity(named: box.name))
       #expect(entity.components[CollisionComponent.self] == nil)
       #expect(entity.components[PhysicsBodyComponent.self] == nil)
       #expect(entity.position == box.position)
-      if box.name == RelayHouse.BoxID.ground.rawValue { continue }
+      if box.name == level.ground.name { continue }
       let centre = SIMD2(box.position.x, box.position.z)
       let half = SIMD2(box.size.x, box.size.z) / 2
       #expect(
-        RelayHouse.obstacles.contains {
+        level.obstacles.contains {
           $0.minimum == centre - half && $0.maximum == centre + half
         })
     }
     #expect(world.root.components[PhysicsSimulationComponent.self] == nil)
-    #expect(RelayHouse.obstacles.count == RelayHouse.boxes.count - 1 + 2)
-    for point in RelayHouse.points {
+    #expect(level.obstacles.count == level.boxes.count + level.points.count)
+    for point in level.points {
       let entity = try #require(world.root.findEntity(named: point.id))
       let size = point.size
       let centre = SIMD2(entity.position.x, entity.position.z)
       let half = SIMD2(size.x, size.z) / 2
       #expect(
-        RelayHouse.obstacles.contains {
+        level.obstacles.contains {
           $0.minimum == centre - half && $0.maximum == centre + half
         })
     }
-    #expect(world.root.findEntity(named: "relay.tom") == nil)
-    #expect(world.root.findEntity(named: "relay.transmitter") != nil)
-    #expect(world.root.findEntity(named: "depot.regulator") != nil)
 
+    // Changing the leader moves no one.
     let initialPositions = bodies.map(\.position)
+    world.session.recruit(.tom)
     world.session.cycleLeader()
-    #expect(world.session.leader == .laura)
+    #expect(world.session.leader == .tom)
     #expect(bodies.map(\.position) == initialPositions)
   }
 }

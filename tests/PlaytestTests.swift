@@ -9,12 +9,9 @@
   /// completed here would fail in `scripts/playtest` too, so the standard check catches it.
   @MainActor
   struct PlaytestTests {
-    @Test(arguments: [
-      "route", "panel", "closed", "reversals", "switches", "walls", "mission", "bridge-walk",
-      "first-fight", "fight-retry", "ambush",
-    ])
+    @Test(arguments: PlaytestRunner.scenarioNames)
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
-      let world = GameWorld(level: Level.level(PlaytestRunner.level(for: name)))
+      let world = GameWorld()
       var runner = try #require(PlaytestRunner(scenario: name))
       var frames = 0
       while !runner.isFinished {
@@ -43,7 +40,7 @@
     @Test
     func anUnknownScenarioIsReportedOnTheHUD() {
       #expect(PlaytestRunner(scenario: "nope") == nil)
-      let world = GameWorld(level: RelayHouse.level)
+      let world = GameWorld()
       world.startPlaytest("nope")
       #expect(world.playtest == nil)
       #expect(world.observation.contains("Unknown playtest"))

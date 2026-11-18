@@ -16,7 +16,7 @@ struct MovementTests {
 
   @Test
   func releasedNoisyAndInvalidInputCannotMoveTheCharacter() {
-    let offset = RelayHouse.cameraOffset
+    let offset = TestYard.cameraOffset
     for input: SIMD2<Float> in [.zero, [0.05, -0.03], [.nan, 1], [1, .infinity]] {
       #expect(Movement.direction(for: input, cameraOffset: offset) == .zero)
     }
