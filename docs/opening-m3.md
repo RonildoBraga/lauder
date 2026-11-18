@@ -58,6 +58,8 @@ Claude installed a signed Release build of PR #44 at `95bf857` directly on the b
 
 That is the maintainer's summary; Claude observed nothing on the phone. It does not say whether the scene was played more than once, how far Tom followed, or which inputs were used. No frame pacing was measured.
 
+The maintainer then [authorised the merge](https://github.com/RonildoBraga/lauder/pull/44#issuecomment-6975896955): **“Yes, merge both”**, for M3 and the decoration change stacked on it. Codex's automatic review of `95bf857` reported no findings; no independent review was requested.
+
 ## Limits
 
 - The attacker's strike is not built. Tom always drops him first and the scene holds Miki, so it never comes up.
