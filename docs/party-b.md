@@ -48,7 +48,7 @@ Frame times averaged 16.7 ms in every run. Every frame over 25 ms, the slowest a
 
 ## Limits
 
-- Nobody has played this by hand yet, so whether a new player understands why to switch is untested. That is the plan's exit question for Party B.
-- Simulator only, with scripted input. The phone check comes with Party C, as planned.
+- The maintainer has played it on the phone within [Party C's loop](party-c.md#phone-checkpoint--18-november-2026), but whether a new player understands why to switch is untested. That is the plan's exit question for Party B.
+- Apart from that phone checkpoint, every check ran in the Simulator with scripted input.
 - Both methods are single presses with text feedback, as the plan specifies. They show role-gated prompts and alternatives, not different movement skills.
 - Party C's Restart, which would close the passage again, does not exist yet; a new launch starts with it closed.

@@ -4,7 +4,7 @@
 
 ## Assignment and scope
 
-After merging [Party B](party-b.md), the maintainer instructed: **“Merge and proceed with the next step”**. Under ADR 0003's accepted order of work and the [prototype plan](prototype-plan.md#party-c--close-and-evaluate-the-shared-loop), the next step is Party C: the keeper's briefing, one regulator, the transmitter repair, a short crew call, completion, **Read plan** and an in-memory Restart. The plan's phone session at the end of Party C has not happened.
+After merging [Party B](party-b.md), the maintainer instructed: **“Merge and proceed with the next step”**. Under ADR 0003's accepted order of work and the [prototype plan](prototype-plan.md#party-c--close-and-evaluate-the-shared-loop), the next step is Party C: the keeper's briefing, one regulator, the transmitter repair, a short crew call, completion, **Read plan** and an in-memory Restart. The plan's phone session at the end of Party C is recorded [below](#phone-checkpoint--18-november-2026).
 
 Claude implemented and checked Party C, so nothing below is an independent review. The [README](../README.md) and [prototype plan](prototype-plan.md) own stage and review status.
 
@@ -63,15 +63,33 @@ All results are from the iPhone 17 / iOS 27.0 Simulator with Xcode 27.2. Nothing
 
 Frame times averaged 16.7–16.9 ms. In five of the six launches the first frame took 124–150 ms, before any input. Merged main showed the same, 123–142 ms, in a comparison run in this session, while Party B's runs earlier in the day did not, so this comes from the Simulator, not this change. Every other frame over 25 ms, the slowest at 32 ms, came in the first 1.1 s. In `mission`, which includes a Restart, no frame took longer than 32 ms.
 
-The party update averaged about 0.7 ms per frame in this Debug build. Its slowest frame was 5.8 ms in `mission` and 4.1 ms in `all`, the two runs with a Restart, and at most 2.4 ms in the others. Phone timing belongs to the planned phone session.
+The party update averaged about 0.7 ms per frame in this Debug build. Its slowest frame was 5.8 ms in `mission` and 4.1 ms in `all`, the two runs with a Restart, and at most 2.4 ms in the others. No phone timing has been measured; see the [phone checkpoint](#phone-checkpoint--18-november-2026).
 
 The first rendered runs of this change found two problems, now fixed. An early version built the closed-passage route grid on the first frame of play, costing 44 ms; both grids are built at load again, as on main. And a step's result and new objective appeared while its conversation was still playing; the step now takes effect when the conversation ends, as the architecture says, and the HUD hides the result line until then.
 
 The screenshots show the keeper's lines with the objective unchanged until the briefing ends, Tomas told that Miki can fit the regulator, the regulator gone from its housing beside the water bypass, the regulator fitted on the transmitter during the call, the pause menu with Restart chosen, and everyone back at the start afterwards.
 
+## Phone checkpoint — 18 November 2026
+
+Claude built a signed Release build of `main` at `4cd58ab` (version 0.1.0, build 1) with Xcode 27.2 and installed it directly on the baseline iPhone 13 Pro Max, on iOS 27.2.1, without TestFlight. Claude then gave the maintainer the Party C checks [listed on #18](https://github.com/RonildoBraga/lauder/issues/18#issuecomment-6965256982), with frame pacing reduced to noting any stutter:
+
+1. The whole loop with touch, then with the PS5 controller: the keeper's briefing, through the passage, Miki taking the regulator, the return under another leader, the repair, the call and **Read plan**.
+2. Pause during a conversation, then resume: the same line comes back.
+3. Confirm the pause menu straight away: it resumes. Then choose Restart, on touch with **Restart**: everyone is back at the start with the barrier closed, and nothing moves until every finger and button is released.
+4. Restart a few times part-way through a run, and note any hitch.
+5. Note any stutter.
+
+After playing it, the maintainer reported: **“everything worked as expected”**.
+
+That is the maintainer's summary; Claude observed nothing on the phone. It does not cover:
+
+- Frame pacing. No capture was taken, so the 60 fps target and S1's timing check are unmeasured on this build.
+- The earlier lists on #18, which were not part of this session's checks: running along walls at shallow angles, controller handoff and the switch between touch and controller, system gestures, follower spacing on long runs, the squad observations for S1, the awake screen and normal locking, walking cadence and Xbox hardware.
+- The plan's exits for Parties B and C, which ask whether a new or unfamiliar player understands the goal without coaching.
+
 ## Limits
 
-- Nobody has played this by hand, so the plan's exit question, whether an unfamiliar player understands the goal and completes the loop without coaching, is open.
-- Simulator only, with scripted input. The planned Party C phone session, which also covers Party B and the [#18 checks](https://github.com/RonildoBraga/lauder/issues/18), has not happened.
+- Only the maintainer has played it by hand, so the plan's exit question, whether an unfamiliar player understands the goal and completes the loop without coaching, is open.
+- Apart from the phone checkpoint above, every check ran in the Simulator with scripted input. Phone frame pacing and the earlier [#18 lists](https://github.com/RonildoBraga/lauder/issues/18) remain open.
 - The dialogue is provisional, as described above.
 - The run is in memory only. Saving and Continue remain later hardening.
