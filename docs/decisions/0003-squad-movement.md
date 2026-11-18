@@ -51,7 +51,7 @@ Rules that make slots behave well:
 2. **Validity.** A slot is used only if a body fits there and the straight line from the leader to it is clear (`PartyMotion.canTraverse`). That stops a slot landing behind a thin wall.
 3. **Compression.** An invalid slot is first pulled halfway towards the leader; if that also fails, the companion takes their Column slot on the leader's route. This produces single file in the 1.8 m service opening and re-forms the group afterwards.
 4. **Assignment.** Which companion takes which slot is chosen to minimise total distance, and changes only when it saves more than 0.5 m. Companions therefore do not swap sides back and forth or cross paths.
-5. **Keep-clear areas.** Slots are pushed out of interaction approach areas (planned before Party B in the [architecture](../architecture.md#one-interaction)) and out of very tight cells, so companions do not settle in a doorway or in front of a latch.
+5. **Keep-clear areas.** Slots are pushed out of interaction approach areas (planned before Party B in the [architecture](https://github.com/RonildoBraga/lauder/blob/a6b23a9/docs/architecture.md#one-interaction)) and out of very tight cells, so companions do not settle in a doorway or in front of a latch.
 6. **Route memory for Column.** A short record of the leader's last 6 m of travel replaces the trail graph. It only places Column slots; companions still steer to them.
 
 ### Orders
