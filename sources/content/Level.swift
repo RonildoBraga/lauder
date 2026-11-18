@@ -53,6 +53,8 @@ struct Level {
     case repairTransmitter = "relay.repair"
     case callCrew = "relay.call"
     case readPlan = "relay.read-plan"
+    /// Searching the stranger's body, on the bridge (M3).
+    case searchStranger = "bridge.search-stranger"
   }
 
   /// A contextual action, usable only while the active body stands in its approach area.
@@ -92,23 +94,40 @@ struct Level {
     let line: String
   }
 
+  /// What a body yields when it is searched.
+  struct Loot: Equatable, Sendable {
+    var rounds = 0
+    var medicalKits = 0
+  }
+
   /// Someone who fights in an encounter: where they wait unseen, where they step out to, how
-  /// many hits they take and the timing of their shots.
+  /// many hits they take and how they attack.
   struct Hostile {
+    /// How a hostile attacks once engaged.
+    enum Attack: Equatable, Sendable {
+      /// Aims with a visible wind-up, shoots, recovers and aims again.
+      case shoot
+      /// Runs at the leader at this speed, in metres per second.
+      case charge(speed: Float)
+    }
+
     let id: String
     let name: String
     let hiddenAt: SIMD2<Float>
     let standAt: SIMD2<Float>
     let hits: Int
+    var attack = Attack.shoot
     /// The visible aim before each shot, long enough to take cover or answer.
-    let windUp: Float
+    var windUp: Float = 0
     /// The pause after each shot before the next aim begins.
-    let recovery: Float
-    let range: Float
+    var recovery: Float = 0
+    var range: Float = 0
     /// The first shot misses on purpose, so the opening teaches without punishing.
     var firstShotMisses = false
     /// Shown after that deliberate miss: how to answer it.
     var missLine: String?
+    /// What searching the body yields once the hostile is down.
+    var loot: Loot?
   }
 
   /// What happens at a moment after an encounter begins.
@@ -119,16 +138,36 @@ struct Level {
     case say(speaker: String, line: String)
     /// A hostile starts to fight.
     case engage(String)
+    /// The leader finishes searching this hostile's body, and its loot is taken.
+    case loot(String)
+    /// A member who has not joined yet appears where they wait.
+    case appear(PartyMember)
+    /// A scripted shot by a member that takes this hostile down.
+    case shot(by: PartyMember, at: String)
+    /// The leader and this member turn to face each other.
+    case face(PartyMember)
+    /// A conversation begins; what it settles takes effect when it ends.
+    case talk(MissionScript.Conversation)
   }
 
-  /// A fight that begins when the leader walks into its area: the story beat it starts, its
-  /// hostiles, its first moments, and where a retry places the leader, just outside the area.
+  /// A story beat with hostiles: its first moments, how it begins, and where a retry places the
+  /// leader after the last allowed hit.
   struct Encounter {
+    enum Start {
+      /// When the leader walks into this area.
+      case area(PartyMotion.Box)
+      /// When the leader performs this action.
+      case action(ActionID)
+    }
+
     let beat: GameSession.Beat
-    let area: PartyMotion.Box
-    let retryAt: SIMD2<Float>
+    let start: Start
+    /// Just outside the area, or nil when the leader cannot be hurt.
+    let retryAt: SIMD2<Float>?
     let hostiles: [Hostile]
     let cues: [(at: Float, cue: Cue)]
+    /// The leader stands still while the cues play, as in a short scripted scene.
+    var holdsLeader = false
   }
 
   /// How close a point of interest must be for a look to describe it.

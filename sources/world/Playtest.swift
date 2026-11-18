@@ -42,6 +42,8 @@
       case expectDefeated(Int)
       /// How many hits the leader has taken in the current encounter.
       case expectHits(Int)
+      /// Who travels together, in switching order.
+      case expectParty([PartyMember])
     }
 
     /// What the runner can see of the game each frame.
@@ -100,7 +102,7 @@
 
     static let scenarioNames = [
       "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
-      "bridge-walk", "first-fight", "fight-retry",
+      "bridge-walk", "first-fight", "fight-retry", "ambush",
     ]
     static let walkTimeout: Float = 30
     /// How long each conversation line stays on screen before the next press.
@@ -342,6 +344,13 @@
             failures.append(
               "\(snapshot.defeated) hostile(s) were down instead of \(count) "
                 + "at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .expectParty(let members):
+          if snapshot.party != members {
+            failures.append(
+              "the party was " + snapshot.party.map(\.displayName).joined(separator: ", ")
+                + " at \(Self.seconds(elapsed))")
           }
           advance()
         case .expectHits(let count):
@@ -595,9 +604,21 @@
         .expectDefeated(1), .mark("won after the retry"),
       ]
 
+    /// The ambush (ADR 0004, M3): after the first fight Miki searches the stranger, the attacker
+    /// runs at her, Tom drops him and joins after a short exchange. Tom then follows her through
+    /// the first tower to mid-span, and a Restart leaves Miki alone again.
+    private static let ambush: [Step] =
+      toTheStranger + [
+        .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1), .walk([6.5, 43]),
+        .mark("at the body"), .act, .wait(seconds: 2.3), .mark("the attacker"),
+        .wait(seconds: 1.3), .talk, .expectBeat(.withTom), .expectParty([.miki, .tom]),
+        .expectDefeated(2), .mark("Tom joins"), .walk([6.5, 20]), .mark("through the tower"),
+        .walk([6.5, -9]), .mark("mid-span with Tom"), .wait(seconds: 0.5),
+      ] + restartRun + [.expectParty([.miki])]
+
     /// The level a scenario plays: the bridge for the opening's, Relay House for the others.
     static func level(for scenario: String) -> Level.ID {
-      ["bridge-walk", "first-fight", "fight-retry"].contains(scenario)
+      ["bridge-walk", "first-fight", "fight-retry", "ambush"].contains(scenario)
         ? .brooklynBridge : .relayHouse
     }
 
@@ -617,6 +638,7 @@
       case "bridge-walk": bridgeWalk
       case "first-fight": firstFight
       case "fight-retry": fightRetry
+      case "ambush": ambush
       default: nil
       }
     }

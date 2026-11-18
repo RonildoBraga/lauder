@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUNDLE = "com.ronildo.lauder"
 SCENARIOS = [
     "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
-    "bridge-walk", "first-fight", "fight-retry",
+    "bridge-walk", "first-fight", "fight-retry", "ambush",
 ]
 PRIVATE_IDENTIFIER = re.compile(
     r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",

@@ -1,8 +1,9 @@
 import simd
 
-/// One hostile's behaviour in an encounter. It waits unseen, steps out, and once engaged aims
-/// with a visible wind-up, shoots, recovers and aims again until it is down. Plain values: the
-/// world moves its body and resolves the shot against the leader.
+/// One hostile's behaviour in an encounter. It waits unseen and steps out. Once engaged, a
+/// shooter aims with a visible wind-up, shoots, recovers and aims again until it is down; a
+/// charger runs at the leader. Plain values: the world moves its body and resolves the shot
+/// against the leader.
 struct HostileState {
   enum Phase: Equatable {
     case hidden
@@ -12,6 +13,8 @@ struct HostileState {
     case waiting
     case aiming(remaining: Float)
     case recovering(remaining: Float)
+    /// Running at the leader.
+    case charging
     case down
   }
 
@@ -26,6 +29,8 @@ struct HostileState {
 
   /// Seconds to step out from where it waited.
   static let stepOutTime: Float = 0.8
+  /// How close a charger comes to the leader before it stops.
+  static let reach: Float = 0.9
 
   let spec: Level.Hostile
   private(set) var phase = Phase.hidden
@@ -52,7 +57,12 @@ struct HostileState {
   mutating func engage() {
     guard !isDown else { return }
     engaged = true
-    if phase == .waiting { phase = .aiming(remaining: spec.windUp) }
+    if phase == .waiting { phase = attacking }
+  }
+
+  /// The phase an engaged hostile attacks in.
+  private var attacking: Phase {
+    spec.attack == .shoot ? .aiming(remaining: spec.windUp) : .charging
   }
 
   mutating func knockDown() {
@@ -60,8 +70,9 @@ struct HostileState {
   }
 
   /// Advance by one simulation step. A shot returns when a wind-up completes; `canHit` says
-  /// whether the line to the leader is clear and within range at that moment.
-  mutating func step(dt: Float, canHit: Bool) -> Shot? {
+  /// whether the line to the leader is clear and within range at that moment. A charger runs
+  /// towards `target`, the leader.
+  mutating func step(dt: Float, canHit: Bool, toward target: SIMD2<Float>) -> Shot? {
     switch phase {
     case .hidden, .down:
       return nil
@@ -71,10 +82,18 @@ struct HostileState {
       if progress < 1 {
         phase = .steppingOut(elapsed: elapsed + dt)
       } else {
-        phase = engaged ? .aiming(remaining: spec.windUp) : .waiting
+        phase = engaged ? attacking : .waiting
       }
       return nil
     case .waiting:
+      return nil
+    case .charging:
+      guard case .charge(let speed) = spec.attack else { return nil }
+      let offset = target - position
+      let distance = simd_length(offset)
+      if distance > Self.reach {
+        position += offset / distance * min(speed * dt, distance - Self.reach)
+      }
       return nil
     case .aiming(let remaining):
       guard remaining - dt <= 0 else {

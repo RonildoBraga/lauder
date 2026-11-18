@@ -56,13 +56,16 @@ extension BrooklynBridge {
       .area("second-tower", from: [-12, -72], to: [12, -66]),
       .area("manhattan-end", from: [-12, -112], to: [12, -106]),
       .area("stranger", from: [-12, 47], to: [12, 52]),
+      .area("search.stranger", from: [5.6, 40.6], to: [8.4, 43.4]),
     ],
     markers: [
       .marker("spawn.miki", at: [6.5, 116]),
-      .marker("spawn.tom", at: [4.6, 12.5]),
+      .marker("spawn.tom", at: [8.8, 37.5]),
       .marker("spawn.laura", at: [-7.6, -38]),
       .marker("stranger.hidden", at: [9.4, 41.6]),
       .marker("stranger.stand", at: [7, 42]),
       .marker("stranger.retry", at: [6.5, 55.5]),
+      .marker("attacker.hidden", at: [10, 26]),
+      .marker("attacker.stand", at: [7.6, 26.6]),
     ])
 }

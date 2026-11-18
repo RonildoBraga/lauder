@@ -2,7 +2,7 @@
 
 **Date:** 18 November 2026\
 **Status:** Swift and RealityKit accepted. The party design was consolidated through [PR #22](https://github.com/RonildoBraga/lauder/pull/22); the maintainer has now assigned Party A regardless of Claude's response.\
-**Scope:** Party A implements primitive bodies, leadership/Pause, switching and camera follow. Companions follow as a squad under [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1, which replaced Party A's recorded trails. Its [session record](party-a.md) distinguishes verification from remaining work. [Party B](party-b.md) added the passage's specialist actions, and [Party C](party-c.md) the mission phases, dialogue, a pause menu and in-place Restart. Persistence remains later hardening; this design does not settle open relationships. [ADR 0004](decisions/0004-brooklyn-bridge-opening.md), accepted on 18 November 2026, opens the game on the Brooklyn Bridge. Its milestone M1 made levels values, gave the session the party's membership and trigger areas, and added the greybox bridge; the [M1 record](opening-m1.md) lists what was built and checked. M2 added the first fight: Fire, assisted aim, line of sight, hits and a retry, as its [record](opening-m2.md) describes. Searching and recruitment follow in M3 and M4.
+**Scope:** Party A implements primitive bodies, leadership/Pause, switching and camera follow. Companions follow as a squad under [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) phase S1, which replaced Party A's recorded trails. Its [session record](party-a.md) distinguishes verification from remaining work. [Party B](party-b.md) added the passage's specialist actions, and [Party C](party-c.md) the mission phases, dialogue, a pause menu and in-place Restart. Persistence remains later hardening; this design does not settle open relationships. [ADR 0004](decisions/0004-brooklyn-bridge-opening.md), accepted on 18 November 2026, opens the game on the Brooklyn Bridge. Its milestone M1 made levels values, gave the session the party's membership and trigger areas, and added the greybox bridge; the [M1 record](opening-m1.md) lists what was built and checked. M2 added the first fight: Fire, assisted aim, line of sight, hits and a retry, as its [record](opening-m2.md) describes. M3 added searching, the ambush scene and Tom joining, as its [record](opening-m3.md) describes. Laura follows in M4.
 
 ## Decision and platform
 
@@ -50,7 +50,7 @@ Scene composition remains Swift code. The preserved [test-only asset fixture](..
 - Mode: exploring, dialogue or paused. Pausing records whether to resume exploring or the current dialogue; pauses do not nest or lose the dialogue cursor.
 - Who is in the party, in switching order, and the active leader among them. A level can start with fewer than three: the bridge starts with Miki alone, and Relay House with Miki → Laura → Tom. Members join through the story; Next appears only when there is someone to switch to.
 - The trigger areas that have shown their line in this run, added by M1.
-- The story's beat, added by M2: Miki alone, then the stranger. A beat begins only after the one before, once and while exploring. During a fight the session also holds the leader's hits, the carbine's rounds, the hostiles that are down and the checkpoint that a retry returns to.
+- The story's beat: Miki alone, then the stranger (M2), then the ambush and travelling with Tom (M3). A beat begins only after the one before, once and while exploring. During a fight the session also holds the leader's hits, the carbine's rounds, the hostiles that are down and the checkpoint that a retry returns to. Since M3 it also holds the bodies searched and a small shared inventory with the medical kits, and adds Tom to the party when the exchange after the ambush ends.
 - Mission phase, added by Party C.
 - A separate `passageOpen` flag, introduced with Party B. Opening access is not a mission phase and either solution sets the same flag.
 - The current conversation and line, and the pause menu's choice.
@@ -118,7 +118,7 @@ The camera keeps the accepted elevated offset and field of view and follows the 
 
 ## The prototype's state
 
-The app opens on the **Brooklyn Bridge** ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md), milestone M1): Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom and Laura's bodies wait, hidden, at the places their scenes will use. M2 adds the first ordered beat, the stranger's fight; searching and recruitment arrive with M3 and M4. Debug builds open Relay House with `-LauderLevel relay-house`, and its playtests load it themselves.
+The app opens on the **Brooklyn Bridge** ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md), milestone M1): Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom and Laura's bodies wait, hidden, at the places their scenes will use. M2 adds the stranger's fight, and M3 the search, the ambush and Tom joining; Laura arrives with M4. Debug builds open Relay House with `-LauderLevel relay-house`, and its playtests load it themselves.
 
 ### The first fight
 
@@ -130,6 +130,19 @@ An encounter is a value in its level: the beat it starts, a trigger area, the po
 4. When every hostile is down, the session ends the fight and the leader's hits recover.
 
 The session's last allowed hit starts the retry. The screen fades out over 0.6 s; the session restores its checkpoint; the stage puts every hostile back unseen; the leader returns to the retry point with fresh route memory, formation planner and motors; the screen fades in over 0.4 s; and the input owner requires neutral input, as on Resume. Pause holds the fight and the fade, because both advance only while exploring.
+
+### Scenes
+
+M3 adds the scene: an encounter that an action begins, that holds the leader still while its cues play, and that has no retry, because the leader cannot be hurt in it. The ambush is one. Searching the stranger's body begins it, and its cues, all played in the fixed step, do the following in order:
+
+- step the attacker out from behind the van and set him running at Miki;
+- take the body's loot into the session's shared inventory;
+- show Tom;
+- fire Tom's scripted shot, which the session counts as a takedown;
+- turn Miki and Tom to each other;
+- start their exchange.
+
+A scene ends after its last cue, once its hostiles are down. The exchange's effect, Tom joining, takes place when it ends, like Party C's mission steps. Pause holds a scene, and Restart cancels it. While a scene holds the leader, the world ignores movement, Fire and actions; Pause still works.
 
 **Relay House**, the second level, keeps Party C's mission phase, as implemented:
 
@@ -157,10 +170,10 @@ Tests cover stale prompts after movement/switching, both alternative methods ind
 
 Party C implements the **in-place Restart** of the existing session and world, chosen from the pause menu through the selected input path. Its exact steps:
 
-1. The session resets: exploring, the level's starting party with its first member (Miki) leading, no trigger fired, the first story beat with no fight under way, full rounds, no hits and nobody down, the briefing phase, the passage closed, no conversation, and the pause menu back on Resume.
+1. The session resets: exploring, the level's starting party with its first member (Miki) leading, no trigger fired, the first story beat with no fight under way, full rounds, no hits, nobody down, no body searched and an empty inventory, the briefing phase, the passage closed, no conversation, and the pause menu back on Resume.
 2. The world puts every body back on its level's spawn point, facing the level's starting direction, shows only the members in the party and marks the leader. Route memory restarts at the leader's spawn; the formation planner, each companion motor, the companion targets and the stall warning start afresh.
 3. The camera transition is cancelled and the camera target returns to the start. Owed simulation time is dropped and the next step is skipped.
-4. At Relay House, the barrier, the regulator on its housing and the transmitter's amber light show again, projected from the reset session; movement and routes follow the closed passage because they read the session's flag. On the bridge, the encounter stage puts every hostile back unseen and holsters the carbine, and a retry in progress is cancelled with its fade.
+4. At Relay House, the barrier, the regulator on its housing and the transmitter's amber light show again, projected from the reset session; movement and routes follow the closed passage because they read the session's flag. On the bridge, the encounter stage puts every hostile back unseen and holsters the carbine, Tom is hidden again, and a scene or a retry in progress is cancelled with its fade.
 5. The observation returns to the level's opening line, and the prompt and nearby landmark are recomputed. The input owner requires neutral input, as on Resume, so every button, key and finger must be released before anything moves.
 
 Restart does not attach a second simulation callback, rebuild the static scene, add entities or reload already available stand-ins. The run has no asynchronous effects or loads today, so nothing needs invalidating; one added later must check that it still belongs to the current run. Tests restart three times on each level and count every entity and the party bodies. The update subscription is attached only when the view appears, so Restart cannot add a second one.
@@ -177,7 +190,7 @@ Save meaningful changes with one ordered atomic writer. Restart invalidates olde
 
 ## Assets and checks
 
-Party A adds pure tests for input precedence and session modes/leadership; S1 adds grid, route-memory and whole-party formation, stillness, switching and service-opening tests. The #25 correction adds exact collision regressions and fixed-seed whole-party route tests using the authored blockers; [its record](wall-contact.md) separates pending validation from earlier results. Manual Simulator checks still cover the rendered route, turns, reversals, camera easing and switching to each separated member. B adds layout eligibility/approach and shared-gate checks. C adds the full progression, dialogue, pause-menu and repeated in-place Restart checks, and a `mission` playtest scenario. M2 adds sight-line, assisted-aim, hostile-timing and cue tests, the session's beat, hit, round and retry rules, the Fire input, whole-fight tests on the bridge, and the `first-fight` and `fight-retry` scenarios. Unit tests do not prove the rendered route. Debug builds also contain scripted playtests that `scripts/playtest` runs in the rendered Simulator app; they feed scripted input through the normal controls and record traces, and are compiled out of Release builds.
+Party A adds pure tests for input precedence and session modes/leadership; S1 adds grid, route-memory and whole-party formation, stillness, switching and service-opening tests. The #25 correction adds exact collision regressions and fixed-seed whole-party route tests using the authored blockers; [its record](wall-contact.md) separates pending validation from earlier results. Manual Simulator checks still cover the rendered route, turns, reversals, camera easing and switching to each separated member. B adds layout eligibility/approach and shared-gate checks. C adds the full progression, dialogue, pause-menu and repeated in-place Restart checks, and a `mission` playtest scenario. M2 adds sight-line, assisted-aim, hostile-timing and cue tests, the session's beat, hit, round and retry rules, the Fire input, whole-fight tests on the bridge, and the `first-fight` and `fight-retry` scenarios. M3 adds tests of the search and its loot, the attacker's charge, the scene playing the same way three times, Pause and Restart during it, and Tom joining and following, and the `ambush` scenario. Unit tests do not prove the rendered route. Debug builds also contain scripted playtests that `scripts/playtest` runs in the rendered Simulator app; they feed scripted input through the normal controls and record traces, and are compiled out of Release builds.
 
 Use Simulator keyboard and single-pointer touch input for everyday iteration. The [touch-control validation record](touch-controls.md#validation) distinguishes those checks, the maintainer's physical multi-touch/Pause/recovery observations and remaining controller/performance gaps. Live PS5 input did not work in the tested Simulator setup; enumeration does not prove delivery. The accepted checkpoint schedule is after **Party A** and **Party C**, with B checked alongside C. It preserves [#18's earlier deferral](https://github.com/RonildoBraga/lauder/issues/18). Record controller/lifecycle observations and measured frame pacing; neither the solo phone checks nor Simulator timing prove party performance. Sustained 15–20 minute thermal/memory checks remain later hardening.
 

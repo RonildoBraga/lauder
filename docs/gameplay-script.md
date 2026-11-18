@@ -1,7 +1,7 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 18 November 2026\
-**Status:** The game opens on the Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026. Milestone M1, the greybox bridge with Miki alone, is [recorded here](opening-m1.md), and M2, the first fight, is merged, with [its record](opening-m2.md); the later encounters follow in M3 and M4. The Relay House walkthrough below is kept as the second level: its access problem is merged as [Party B](party-b.md) and its repair loop as [Party C](party-c.md), with provisional dialogue, and the [Party A record](party-a.md) tracks the movement checks. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
+**Status:** The game opens on the Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026. Milestone M1, the greybox bridge with Miki alone, is [recorded here](opening-m1.md), and M2, the first fight, is merged, with [its record](opening-m2.md). M3, the search, the ambush and Tom, is merged, with [its record](opening-m3.md), and Laura follows in M4. The Relay House walkthrough below is kept as the second level: its access problem is merged as [Party B](party-b.md) and its repair loop as [Party C](party-c.md), with provisional dialogue, and the [Party A record](party-a.md) tracks the movement checks. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md). The [prototype plan](prototype-plan.md) defines staged checks; the [Chapter One index](story/chapter-01.md) points to the current outline.
 
 The maintainer has endorsed the occasional-combat direction and assigned the [combat-role and Quiet Yard documentation](#future-squad-and-combat-design) for Claude's review before implementation. That separate design gate does not extend the earlier Party A implementation assignment.
 
@@ -27,9 +27,9 @@ She is alone, so the player learns to move and look. **Next** does not appear un
 
 A stranger waits among the cars before the first tower. As Miki nears him he steps out into the lane, and she calls out, "Friendly!" He aims, with a red line to her and a warning on the HUD, and fires: a near miss, scripted. The HUD says "He opened fire. Fire back, or take cover." and shows how to fire, and while he stands the camera leans towards him so both are on screen. **Fire** draws Miki's carbine on the first press and shoots at the nearest hostile in sight, marked on the deck, with no manual aiming. Before he has fired, he is not a target. Cars give cover to both sides. Miki can take three hits, shown beside her name, and he two. A third hit fades the screen and starts the fight again with nothing lost, Miki just short of the cars.
 
-### 3. The search, and Tom (M3)
+### 3. The search, and Tom (M3, built)
 
-Miki can search the body for ammunition and a medical kit. While she searches, an attacker runs at her from behind a van with a knife. Tom, close by, shoots him before he reaches her. A short exchange follows, and Tom joins: **Next** appears, and he follows in the Close formation.
+Miki can search the body for ammunition and a medical kit. While she searches, an attacker runs at her from behind a van with a knife. Tom, close by, shoots him before he reaches her. A short exchange follows, and Tom joins: **Next** appears, and he follows in the Close formation. The scene plays the same way every time, and Miki stands still while it plays.
 
 ### 4. Laura (M4)
 

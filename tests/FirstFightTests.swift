@@ -208,7 +208,8 @@ struct FirstFightTests {
     #expect(world.session.beat == .alone && world.session.hitsTaken == 0)
     #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
     #expect(!world.session.inEncounter && world.session.firedTriggers == fired)
-    #expect(simd_distance(position(world), BrooklynBridge.strangerEncounter.retryAt) < 0.01)
+    let retryAt = try #require(BrooklynBridge.strangerEncounter.retryAt)
+    #expect(simd_distance(position(world), retryAt) < 0.01)
     #expect(try #require(world.root.findEntity(named: "hostile.stranger")).isEnabled == false)
     #expect(count(world.root) == entities)
     // Walking back in plays the fight again from its start, deliberate miss and all.
