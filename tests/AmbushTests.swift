@@ -190,6 +190,87 @@ struct AmbushTests {
     #expect(count(world.root) == entities)
   }
 
+  // MARK: - Prompts, conversations and the pause menu in play
+
+  @Test
+  func theSearchPromptDoesNotOutliveAMove() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, 43])
+    #expect(world.actionName == "Search")
+    walk(world, to: [6.5, 47])
+    #expect(world.actionName == nil)
+    world.performAction()
+    #expect(world.session.searched.isEmpty && world.session.beat == .stranger)
+  }
+
+  @Test
+  func inTheExchangeTheActionOnlyShowsTheNextLine() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, 43])
+    world.performAction()
+    #expect(run(world, upTo: 6) { world.session.mode == .dialogue })
+    let line = world.session.lineIndex
+    let observation = world.observation
+    let before = position(world, .miki)
+    let press = InputRules.Input(
+      movement: [1, 0], actionPressed: true, pausePressed: false, switchPressed: true)
+    world.update(with: press, sampledIn: .dialogue, deltaTime: 1 / 60)
+    #expect(world.session.lineIndex == line + 1)
+    #expect(world.session.leader == .miki)
+    #expect(position(world, .miki) == before)
+    // Miki stands at the searched body, but the press only showed the next line.
+    #expect(world.observation == observation)
+  }
+
+  @Test
+  func thePauseMenuConfirmsItsChoiceAndNeverActsOnTheBody() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, 43])
+    #expect(world.actionName == "Search")
+    let pause = InputRules.Input(
+      movement: .zero, actionPressed: false, pausePressed: true, switchPressed: false)
+    let action = InputRules.Input(
+      movement: .zero, actionPressed: true, pausePressed: false, switchPressed: false)
+    let down = InputRules.Input(
+      movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
+      menuMove: 1)
+    let before = position(world, .miki)
+    // Confirming at once resumes: the menu opens on Resume. Nothing is searched.
+    world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
+    #expect(world.session.isPaused)
+    world.update(
+      with: InputRules.Input(
+        movement: [1, 0], actionPressed: false, pausePressed: false, switchPressed: false),
+      sampledIn: .paused, deltaTime: 1 / 60)
+    world.update(with: action, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.mode == .exploring)
+    #expect(world.session.searched.isEmpty && world.session.beat == .stranger)
+    #expect(position(world, .miki) == before)
+    #expect(world.controls.needsNeutralInput)
+    // Down, then confirm, restarts.
+    world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
+    world.update(with: down, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.pauseChoice == .restart)
+    world.update(with: action, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.mode == .exploring)
+    #expect(world.session.defeated.isEmpty && world.session.beat == .alone)
+    #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
+    #expect(world.controls.needsNeutralInput)
+    // The touch Restart button restarts directly from the menu.
+    walk(world, to: [6.5, 110])
+    world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
+    world.update(
+      with: InputRules.Input(
+        movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
+        restartPressed: true),
+      sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.session.mode == .exploring)
+    #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
+  }
+
   // MARK: - Helpers
 
   /// From the start of a run: walk into the stranger's fight and put him down after his miss.
