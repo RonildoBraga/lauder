@@ -60,7 +60,7 @@ Claude built a signed Release build of PR #42 at `3cb982c` (version 0.1.0, build
 4. Pause and Restart during the fight.
 5. The fight again with the PS5 controller, with R2 to fire.
 
-After playing it, the maintainer reported: **“It read well”**.
+After playing it, the maintainer reported: **“It read well”**. The maintainer then [authorised the merge](https://github.com/RonildoBraga/lauder/pull/42#issuecomment-6973249055): **“Yes, merge it”**. There was no independent review.
 
 That is the maintainer's summary; Claude observed nothing on the phone. It does not say who played, or whether touch, the controller or both were used. On its own, then, it does not show that a new player answers the stranger without help with each input. No frame pacing was measured.
 
