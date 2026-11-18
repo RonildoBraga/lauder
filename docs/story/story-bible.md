@@ -1,40 +1,40 @@
-# Lauder — story bible, draft 0.5
+# Lauder — story bible, draft 0.6
 
-**Date:** 17 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The maintainer [agreed the combat identities](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) below on 17 November 2026 as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The maintainer [accepted ADR 0004](../decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026: the game now opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers. This page's opening, premise, places and names are rewritten with milestone M1; until then they describe the Relay House slice.
+**Date:** 18 November 2026\
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The maintainer [agreed the combat identities](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) below on 17 November 2026 as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The maintainer [accepted ADR 0004](../decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026: the game now opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers. Milestone M1 rewrote this page's direction, premise, places and Chapter One to match, and renamed Tomas and Lara as Tom and Laura; dated records written earlier keep the old names.
 
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
 - Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
-- Three playable characters are present together. The player moves the active character; the other two remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
+- Three playable characters travel together once they have met. Miki begins alone, and Tom and Laura join her on the Brooklyn Bridge as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)). The player moves the active character; the others remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
 - Each character has distinct capabilities that make different approaches useful, including agility and strength.
-- Chapter One centres on restoring a transmitter through exploration and purposeful salvage.
-- The world is futuristic and devastated, resembling the aftermath of a world war. The cause and wider extent of the collapse remain uncertain.
-- Exploration, purposeful salvage and survival lead the experience. Combat is occasional and light; all three characters carry weapons and can defend themselves and support one another. Ordinary cooperation, humour and care remain possible.
+- Chapter One begins with Miki crossing the Brooklyn Bridge towards Manhattan, where circumstances bring her together with Tom and Laura. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
+- The world is futuristic and devastated, resembling the aftermath of a world war. The opening is set in a post-apocalyptic New York. The cause and wider extent of the collapse remain uncertain.
+- Exploration, purposeful salvage and survival lead the experience. The opening teaches combat through two short encounters on the bridge; afterwards combat stays occasional and light. All three characters carry weapons and can defend themselves and support one another. Ordinary cooperation, humour and care remain possible.
 - Human enhancement exists through discreet internal synthetic replacements and biological or genetic changes. Characters retain a human exterior; exposed machinery is not the visual direction.
 
-The control description is understood as **one human player directing a party of three**, with two computer-controlled followers. Three simultaneous human players or online co-op are not assumed by this document.
+The control description is understood as **one human player directing a party of up to three**, with the others as computer-controlled companions. Three simultaneous human players or online co-op are not assumed by this document.
 
 ### What remains open
 
-Miki, Lara and Tomas are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
+Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
 
-The previous draft established Miki as widowed, Nina as her daughter, Tomas as her father and Lara as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. Some may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
+The previous draft established Miki as widowed, Nina as her daughter, Tom as her father and Laura as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Some earlier ideas may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
 The [Chapter One page](chapter-01.md) links to the current outline and records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses the ensemble outline into the proposed party slice. The superseded family/solo script remains in Git history, rather than alongside the current narrative.
 
 ## Premise
 
-Three travellers reach a relay shelter after their intended crossing closes. They have different reasons to reach the coast, limited supplies and incomplete information. Restoring the shelter's transmitter gives each a practical reason to help the others.
+Miki sets out alone across the Brooklyn Bridge, towards Manhattan, through a post-apocalyptic New York. Why she is crossing, like Tom's and Laura's pasts, is revealed gradually rather than at the start.
 
-Miki has spent years maintaining a damaged district. She is leaving for a coastal settlement where Lara has offered to introduce her to people making a life there. Lara needs a checked route back to the water crew she works with. Tomas needs to reach the coastal supply team to arrange the next inland deliveries. Meeting its crew at Old Lock gives him contacts and an onward route; his obligations explain why he continues beyond repairing the radio.
+On the bridge she meets strangers. One ignores her call of "Friendly!" and opens fire. While she searches his body, another comes at her with a knife and is shot by Tom, who walks on with her. Further on they find Laura injured and help her, and she joins them. The opening shows what each of them does when a stranger needs help, not who they were before.
 
-They begin with a shared journey, not a complete shared history. Some trust already exists between Miki and Lara; the circumstances behind it emerge gradually. Tomas's cooperation grows through their work together. The opening makes these immediate reasons clear without presenting everyone's biography.
+They begin with circumstances, not a shared history. Trust grows from what they do for one another. Their biographies, motives and relationships unfold through the journey; the opening does not explain them.
 
-At the depot, they discover that a supposedly abandoned block still has a maintained water connection. Their different knowledge gives that discovery human meaning. Their first achievement is a working transmitter and an agreed meeting at Old Lock. Choosing to travel there together begins a commitment beyond completing one repair.
+The earlier premise, three travellers who restore a relay shelter's transmitter, survives as the [Relay House scene](#later-scene--relay-house), kept for later.
 
-The longer story follows that commitment. Homecoming can mean finding people and a place with which to build a future. The group gradually chooses what they owe one another and the communities sustaining their journey.
+The longer story follows the commitment the three come to make. Homecoming can mean finding people and a place with which to build a future. The group gradually chooses what they owe one another and the communities sustaining their journey.
 
 ## The playable party
 
@@ -45,8 +45,8 @@ The active character leads movement and supplies their particular interaction ca
 | Working character | Contribution | Example use | Personal tension |
 |---|---|---|---|
 | Miki | Systems knowledge, inspection and careful salvage | Identify a compatible regulator without cutting a live supply | Finds mechanical certainty easier than relying on another person's judgement |
-| Lara | Agility, balance and reading a route | Reach a service latch and open access for the whole party | Is used to carrying a route's risks herself and must share decisions |
-| Tomas | Strength, controlled load handling and delivery knowledge | Shift a manageable obstruction or support a heavy assembly | Wants to remain dependable when his old information is no longer enough |
+| Laura | Agility, balance and reading a route | Reach a service latch and open access for the whole party | Is used to carrying a route's risks herself and must share decisions |
+| Tom | Strength, controlled load handling and delivery knowledge | Shift a manageable obstruction or support a heavy assembly | Wants to remain dependable when his old information is no longer enough |
 
 These distinctions are not complete identities. All three can observe, talk, help and carry ordinary supplies. Expertise and enhanced capacity are different things: stronger arms do not explain knowing how to repair a transmitter.
 
@@ -54,13 +54,13 @@ These distinctions are not complete identities. All three can observe, talk, hel
 
 - Favour readable alternatives. A stable route may take longer; an agile approach may open a convenient passage. Strength can make a load safer to handle without solving every obstacle.
 - Avoid repeating three obstacles each labelled for a different character. Switching should follow the player's reading of a place.
-- A specialist opening should ultimately admit the party. Lara might reach a latch to release access for the others; following her does not make them equally agile.
+- A specialist opening should ultimately admit the party. Laura might reach a latch to release access for the others; following her does not make them equally agile.
 - Companions should not repeatedly become stuck or need rescue to justify their presence. A narrow passage needs a credible group route before the scene is written around it.
 - Keep commands few and readable. The current leadership-switch controls are recorded in the [gameplay input contract](../gameplay-script.md#readable-controls-and-party-feedback); formation cycling, placement and regroup controls remain design proposals rather than implemented mappings. Skill trees and separate equipment systems are not prerequisites.
 
 ### Combat identities
 
-Each character should be useful as leader and capable of ordinary weapon defence. Their distinctions concern range, exposure, positioning and the situation they can improve, rather than an obligatory sequence of three specialist actions. Keep ordinary travel comfortable under every leader; Tomas should not make routine exploration slower simply because he has a stronger build.
+Each character should be useful as leader and capable of ordinary weapon defence. Their distinctions concern range, exposure, positioning and the situation they can improve, rather than an obligatory sequence of three specialist actions. Keep ordinary travel comfortable under every leader; Tom should not make routine exploration slower simply because he has a stronger build.
 
 In the proposed first combat experiment, companions provide basic weapon support while the player triggers only the active character's signature ability. They do not spend signatures automatically or require the player to manage three ability bars. Using another member's signature therefore means switching to them first, and the controls and threats must allow for that:
 
@@ -71,9 +71,9 @@ In the proposed first combat experiment, companions provide basic weapon support
 
 Defending the group does not mean starting fights with neutral people, breaking a chosen non-combat approach or pursuing threats after a withdrawal order. Exact targeting, damage, timing and recovery rules require design review and playtesting. Until health is designed, The Quiet Yard uses a [placeholder hit rule](../encounters/the-quiet-yard.md#placeholder-hit-rule) so that exposure and retreat can be tested.
 
-Personality can influence a companion's preferred nearby position and brief reactions: Miki looks for a clear view, Lara reads another safe angle, and Tomas considers the exposed approach. It must not create concealed disobedience, suicidal advances or repeated rescue chores. A command to regroup and leave takes priority over those preferences.
+Personality can influence a companion's preferred nearby position and brief reactions: Miki looks for a clear view, Laura reads another safe angle, and Tom considers the exposed approach. It must not create concealed disobedience, suicidal advances or repeated rescue chores. A command to regroup and leave takes priority over those preferences.
 
-Natural movement should seek reachable nearby destinations and respond to obstacles, with enough space for all three. **Close** for compact mutual support and **Spread** for more separation on open ground are the two proposed initial formations. Narrow passages temporarily compress the group, which expands again where space permits. Formation shape must yield to safe, credible group access; Lara's agility cannot justify taking a route her companions cannot use. Placement and regroup orders, directional-pad use and touch equivalents remain proposals. Their exact bindings, targeting method and navigation rules are not settled here.
+Natural movement should seek reachable nearby destinations and respond to obstacles, with enough space for all three. **Close** for compact mutual support and **Spread** for more separation on open ground are the two proposed initial formations. Narrow passages temporarily compress the group, which expands again where space permits. Formation shape must yield to safe, credible group access; Laura's agility cannot justify taking a route her companions cannot use. Placement and regroup orders, directional-pad use and touch equivalents remain proposals. Their exact bindings, targeting method and navigation rules are not settled here.
 
 ## Miki — understanding what still works
 
@@ -83,43 +83,43 @@ Natural movement should seek reachable nearby destinations and respond to obstac
 
 Miki reads places through a dry pipe, a warm cable or a pump vibrating behind a wall. She checks markings and diagrams rather than assuming a familiar housing contains a safe part. Her practical local knowledge does not give her universal access to future technology.
 
-She wants to reach the coast and discover whether she can belong somewhere beyond the district that has needed her for years. Lara has offered an introduction and a possible place to stay; Miki chooses to pursue it. The opening has a destination without depending on an endangered relative.
+She wants to reach the coast and discover whether she can belong somewhere beyond the district that has needed her for years. Laura has offered an introduction and a possible place to stay; Miki chooses to pursue it. The opening has a destination without depending on an endangered relative.
 
 She tends to add one more task to a completed job. Under pressure she becomes brief and exact. Dry humour and small acts of care appear when she stops trying to control every uncertainty.
 
-Her first important act is restraint: she leaves useful infrastructure intact because other people depend on it. Over the chapter, she accepts that Lara's experience and Tomas's conversations supply facts her instruments cannot.
+Her first important act is restraint: she leaves useful infrastructure intact because other people depend on it. Over the chapter, she accepts that Laura's experience and Tom's conversations supply facts her instruments cannot.
 
 **Proposed combat identity — precision and disruption.** Miki carries a precision carbine suited to measured shots from a clear position. **Disrupt** uses a precise shot to interrupt one clearly telegraphed ranged attack at useful range, opening a brief window for a teammate to cross, fire or withdraw. It is a specific combat action, not universal hacking, control of every machine or knowledge acquired through an unexplained enhancement. The Quiet Yard proposal first demonstrates it against a visible security-unit wind-up; applicability to other threats remains to be defined.
 
 Her strength is reading a threat and making a deliberate opening. Being crowded or attacked from several directions exposes her limits; basic weapon fire still lets her defend herself. As a companion, she favours a reachable position with a clear view and supports the current fight without independently changing the group's plan. That preference reflects her careful inspection and desire for certainty. Learning to trust another person's timing can develop her character without making her mechanically unreliable.
 
-## Lara — finding a way through
+## Laura — finding a way through
 
 **Proposed background:** Scout and route worker for a coastal water crew.\
 **Proposed role:** Agility, balance and access.\
 **Possible enhancement:** Biological changes supporting coordination and recovery; the changes, timing and reason remain undecided.
 
-Lara is physically present with Miki and Tomas from the opening playable journey. The radio does not introduce her as an absent companion waiting at the coast.
+Laura is physically present with Miki and Tom from the opening playable journey. The radio does not introduce her as an absent companion waiting at the coast.
 
 She needs current conditions to get herself and the water crew safely through the crossing. Her responsibilities continue while she travels; joining the group is her decision, with obligations and limits of its own.
 
-Miki already has reason to trust her. Show that through a kept appointment, an accurate warning or an honest limit before explaining their history. Lara can be dependable and have a past the player has not heard.
+Miki already has reason to trust her. Show that through a kept appointment, an accurate warning or an honest limit before explaining their history. Laura can be dependable and have a past the player has not heard.
 
 She reads footing and structure before committing her weight. Her agility appears in controlled movement, not necessarily acrobatics. She tires, makes mistakes and can be injured.
 
 The proposed depot discovery reveals that she once helped maintain water for people who stayed in an officially emptied block. She answers naturally when asked. Her knowledge reflects a particular experience, not proof of a secret role in the global collapse.
 
-**Proposed combat identity — mobility and useful angles.** Lara carries a light burst-fire weapon that supports movement between nearby safe positions. **Reposition** is a quick dash, at about twice running speed, to a point she can see on reachable ground a few metres away. A prepared shot is aimed where its target stood; the dash is quick enough to leave that line, which walking usually is not. That lets her cross a short exposed gap, reach another angle before a unit turns, or break away. It cannot cross a blocked passage, perform an unsupported leap or protect her once she stops in the open, and it needs a moment to recover before she can dash again. Its value comes from the ground and the threat's readable attention, rather than a hidden damage bonus for switching characters.
+**Proposed combat identity — mobility and useful angles.** Laura carries a light burst-fire weapon that supports movement between nearby safe positions. **Reposition** is a quick dash, at about twice running speed, to a point she can see on reachable ground a few metres away. A prepared shot is aimed where its target stood; the dash is quick enough to leave that line, which walking usually is not. That lets her cross a short exposed gap, reach another angle before a unit turns, or break away. It cannot cross a blocked passage, perform an unsupported leap or protect her once she stops in the open, and it needs a moment to recover before she can dash again. Its value comes from the ground and the threat's readable attention, rather than a hidden damage bonus for switching characters.
 
-She is strongest when she can move deliberately and use an opening; her light weapon has less stopping power against a close advance than Tomas's. Isolation or sustained exposure puts her at risk. As a companion, she prefers a nearby useful angle while staying within the group's support and obeying placement or withdrawal orders. Her tendency to carry route risks herself can appear in dialogue and choices, but it must not force the player to chase or rescue her. Biological coordination changes remain a possible explanation of capacity, not a settled biography or a substitute for route knowledge.
+She is strongest when she can move deliberately and use an opening; her light weapon has less stopping power against a close advance than Tom's. Isolation or sustained exposure puts her at risk. As a companion, she prefers a nearby useful angle while staying within the group's support and obeying placement or withdrawal orders. Her tendency to carry route risks herself can appear in dialogue and choices, but it must not force the player to chase or rescue her. Biological coordination changes remain a possible explanation of capacity, not a settled biography or a substitute for route knowledge.
 
-## Tomas — carrying his share
+## Tom — carrying his share
 
 **Proposed background:** Transport and water-delivery work.\
 **Proposed role:** Strength, handling loads and route knowledge.\
 **Possible enhancement:** Internal synthetic muscle and supporting skeletal replacements fitted for medical or civilian work reasons; the actual history remains undecided.
 
-Tomas travels with the group throughout the chapter. He carries his share, has inland communities depending on deliveries and knows the district's former connections. He intends to reach the coastal supply team to arrange their next allocation; Old Lock is his meeting point with its crew and part of that onward journey. His relationship to Miki is open; the new script should introduce what they actually know about each other.
+Tom travels with the group throughout the chapter. He carries his share, has inland communities depending on deliveries and knows the district's former connections. He intends to reach the coastal supply team to arrange their next allocation; Old Lock is his meeting point with its crew and part of that onward journey. His relationship to Miki is open; the new script should introduce what they actually know about each other.
 
 A stronger build gives him a clear silhouette. His useful strength is controlled and specific: he can shift an obstructing frame the others cannot safely move. He cannot lift an entire ruined structure or make an unsafe floor bear its weight.
 
@@ -127,13 +127,13 @@ He asks who walked a road and when. His maps are useful, but he will correct the
 
 He sometimes masks worry with instructions. His arc involves accepting help and sharing responsibility, not proving his worth through a heroic sacrifice. He has a voice beyond being the strongest member or an older source of wisdom.
 
-**Proposed combat identity — close protection and space control.** Tomas carries a close-range scatter weapon. **Brace** steadies a controlled blast that briefly checks a nearby advancing threat, creating room at an approach or protecting a withdrawal. Unlike Miki's interruption of a telegraphed ranged attack, it addresses close pressure on a small area. It does not make his body bulletproof, create a shield from his replacement tissue or require teammates to stand behind him in every encounter.
+**Proposed combat identity — close protection and space control.** Tom carries a close-range scatter weapon. **Brace** steadies a controlled blast that briefly checks a nearby advancing threat, creating room at an approach or protecting a withdrawal. Unlike Miki's interruption of a telegraphed ranged attack, it addresses close pressure on a small area. It does not make his body bulletproof, create a shield from his replacement tissue or require teammates to stand behind him in every encounter.
 
 He is strongest where a close approach needs holding and weakest against distant pressure or threats reaching him from several sides. He remains a practical leader at ordinary travelling pace. As a companion, he favours a useful position near an exposed approach or teammate, without blocking the group's movement or ignoring a retreat. His care for deliveries and people makes protection personal; his arc also allows others to cover him. The origin and exact capacity of his possible internal replacements remain undecided.
 
 ### How the trio complements itself
 
-Miki can create a brief opening, Lara can use another angle, and Tomas can make space to leave or hold a close approach. Those are alternatives and opportunities for teamwork, not a mandatory combo. Ordinary fire and positioning must remain useful with any leader, and no character is a passive escort or a compulsory healer. Their exploration contributions remain central: understanding equipment, reading access and handling a load continue to matter outside a fight.
+Miki can create a brief opening, Laura can use another angle, and Tom can make space to leave or hold a close approach. Those are alternatives and opportunities for teamwork, not a mandatory combo. Ordinary fire and positioning must remain useful with any leader, and no character is a passive escort or a compulsory healer. Their exploration contributions remain central: understanding equipment, reading access and handling a load continue to matter outside a fight.
 
 The weapons make survival capability visible before the player learns where it came from. Their ownership does not settle military history, allegiance, kinship or enhancement origins. Reveal those histories through relevant encounters and choices; explain the usable combat rules when they first matter.
 
@@ -175,7 +175,7 @@ Enhanced and unenhanced people have skills, agency and moral differences. Enhanc
 
 ### How the player learns
 
-Show a useful capability clearly, then develop its context. Tomas moves a load with unusual control; a later encounter can explain who fitted his replacement and what it meant to him. Lara's movement can become familiar before her training or treatment history is discussed.
+Show a useful capability clearly, then develop its context. Tom moves a load with unusual control; a later encounter can explain who fitted his replacement and what it meant to him. Laura's movement can become familiar before her training or treatment history is discussed.
 
 Avoid an opening diagnostic dossier, an obligatory body reveal or a surprise ability that invalidates earlier obstacles. Keep abilities reliable enough to learn. Let mystery concern the person, their choices and the history surrounding that ability.
 
@@ -197,6 +197,8 @@ People can cooperate, disagree or compete over resources without belonging to a 
 
 | Place | Working purpose |
 |---|---|
+| The Brooklyn Bridge | The opening crossing, where Miki meets Tom and Laura |
+| Manhattan | Where the crossing leads; what the party finds there is not yet written |
 | The Basin | Damaged inland district Miki has helped maintain |
 | East Span | Recently closed crossing interrupting the travellers' routes |
 | Relay House | Occupied shelter with a working receiver and failed transmitter |
@@ -204,28 +206,60 @@ People can cooperate, disagree or compete over resources without belonging to a 
 | Old Lock | Staffed crossing where the party can meet the coastal water crew |
 | The coastal settlement | Inhabited destination with a water crew, local routines and Nina's present home |
 
-Names, distances and the full map remain working choices. The canal route needs a water stop and current reports from both approaches before the party relies on it.
+The places after the first two belong to the Relay House scene and the journey beyond it; where they sit relative to New York is not settled. Names, distances and the full map remain working choices. The canal route needs a water stop and current reports from both approaches before the party relies on it.
 
 Handsets retain offline functions and limited short-range radio. Maintained relay sets permit longer contacts at scheduled times. Relay House hears the coastal operator but cannot answer until its power regulator is replaced.
 
 The repaired set serves others as well as the party. It establishes contact and a meeting plan; it does not restore the old network or make the roads safe.
 
-## Chapter One — A Place to Meet
+## Chapter One — Across the bridge
+
+**Immediate goal:** Cross the Brooklyn Bridge into Manhattan.\
+**Emotional movement:** Strangers brought together by circumstance begin to rely on one another.\
+**Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
+**Achievement:** Three strangers reach Manhattan together, each having helped another.
+
+The [decision record](../decisions/0004-brooklyn-bridge-opening.md) builds this in milestones. The greybox bridge with Miki alone exists; the encounters follow.
+
+### 1. Alone on the bridge
+
+Miki starts at the Brooklyn end among abandoned and damaged vehicles, debris and obstacles. She is alone, so the player learns to move and look around.
+
+### 2. Friendly?
+
+A stranger stands among the cars. Not knowing whether he is hostile, Miki calls out, "Friendly!" He uses her hesitation and fires. The player draws and returns fire: this is the first fight. Afterwards Miki can approach the body.
+
+### 3. The search, and Tom
+
+Miki searches the body for ammunition and supplies. While she is distracted, another attacker comes at her from behind with a knife and is shot before he can strike. She turns and finds Tom. A brief exchange introduces him, and he walks on with her.
+
+### 4. Laura
+
+Further along, an injured woman is crawling between the cars, struggling to move. Miki offers help. A short exchange gives her name, Laura, and after receiving help she joins them.
+
+### 5. Onwards
+
+The three continue towards Manhattan together. With two companions, squad movement and formations come into play. Each one's personality, abilities and role in the group emerge over the journey rather than in the opening.
+
+The dialogue is not written yet. Lines stay short and reveal nothing about anyone's past beyond what the moment needs.
+
+## Later scene — Relay House
+
+The earlier Chapter One, built around a transmitter repair at Relay House, is kept as a later scene, and the game keeps it as a second level. Where it falls in the journey, and how it fits New York, is not decided. By then the three know one another. Its outline:
 
 **Immediate goal:** Restore the transmitter and agree a viable onward route.\
 **Emotional movement:** Practical cooperation becomes a deliberate commitment to travel together.\
-**Party:** Miki, Lara and Tomas are together from the opening journey, using the proposed lineup.\
 **Achievement:** A working community transmitter, an Old Lock appointment and a concrete discovery about the district.
 
 ### 1. The road on the map
 
-East Span is closed after recent structural movement. Miki cannot reach the place Lara described; Lara cannot confirm the water crew's approach; Tomas cannot rely on his delivery route. The northern detour takes more water than they carry.
+East Span is closed after recent structural movement. Miki cannot reach the place Laura described; Laura cannot confirm the water crew's approach; Tom cannot rely on his delivery route. The northern detour takes more water than they carry.
 
 They compare what each actually knows and head to Relay House. Dialogue establishes present needs and a little familiarity, without a family introduction or an account of the war.
 
 ### 2. A reason to help
 
-The keeper explains the transmitter fault. Miki identifies compatible equipment. Tomas remembers protected bays at the depot. Lara assesses the route from its last known access points, acknowledging that conditions may have changed.
+The keeper explains the transmitter fault. Miki identifies compatible equipment. Tom remembers protected bays at the depot. Laura assesses the route from its last known access points, acknowledging that conditions may have changed.
 
 They agree to make the short salvage trip together. The keeper remains at the shelter. None of the playable trio is parked there as a stationary quest-giver.
 
@@ -233,21 +267,21 @@ They agree to make the short salvage trip together. The keeper remains at the sh
 
 Front access is blocked. The group reads the depot and chooses an approach. The scene can demonstrate a useful leadership switch without requiring an obstacle for each skill.
 
-The current walkthrough proposes two approaches to the same service barrier: Lara reaches its release latch, or Tomas shifts its loose panel from a stable grip. Either opens the passage for everyone; neither requires the other first. These are contextual actions represented simply in the graybox, not free climbing or a physics lifting system. Miki checks the regulator and isolates the disconnected equipment containing it.
+The current walkthrough proposes two approaches to the same service barrier: Laura reaches its release latch, or Tom shifts its loose panel from a stable grip. Either opens the passage for everyone; neither requires the other first. These are contextual actions represented simply in the graybox, not free climbing or a physics lifting system. Miki checks the regulator and isolates the disconnected equipment containing it.
 
 A maintained bypass supplies a neighbouring block marked empty in an old transport register. Inspection shows current use. Miki leaves that supply connected; the regulator comes from separate equipment. This decision belongs to ordinary salvage, not a new branching morality system.
 
 ### 4. Different knowledge of the same place
 
-Lara recognises the bypass. Tomas has different information in his records. They discuss it where they find it:
+Laura recognises the bypass. Tom has different information in his records. They discuss it where they find it:
 
-> **Lara:** We kept that tap open for the people who stayed.
+> **Laura:** We kept that tap open for the people who stayed.
 >
-> **Tomas:** That block was marked empty.
+> **Tom:** That block was marked empty.
 >
-> **Lara:** Some people never left.
+> **Laura:** Some people never left.
 
-These are proposed lines. A direct follow-up should get a natural answer about who was there and what Lara knew. The discovery raises a local human question; it does not prove a global conspiracy or Tomas's culpability.
+These are proposed lines. A direct follow-up should get a natural answer about who was there and what Laura knew. The discovery raises a local human question; it does not prove a global conspiracy or Tom's culpability.
 
 ### 5. Make the return matter
 
@@ -255,17 +289,17 @@ All three return with the regulator. Miki installs and tests it while the others
 
 They contact the coastal operator and water crew. Reports from both approaches make the canal route credible. The party and crew agree to meet at Old Lock, with a next radio appointment and a staffed shelter to use if travel fails.
 
-Nina can speak during the scheduled contact once her relationship has been settled in the dialogue pass. A brief ordinary exchange supplies warmth. Lara participates beside Miki and Tomas, not as a remote voice.
+Nina can speak during the scheduled contact once her relationship has been settled in the dialogue pass. A brief ordinary exchange supplies warmth. Laura participates beside Miki and Tom, not as a remote voice.
 
 ### 6. Tomorrow's bags
 
 Another traveller uses the set. The party shares food, checks its water and packs for the route it now knows. Each has contributed; each has a reason to continue. A reciprocal act, such as making room for another person's tools, expresses growing care.
 
-The chapter ends with lasting progress. They choose to make the next journey together. They also know that the district's written history has left people out. Chapter One's transmitter repair and present prototype walkthrough remain a journey without a required fight; the armed-squad proposal does not insert a combat gate into them.
+The scene ends with lasting progress. They choose to make the next journey together. They also know that the district's written history has left people out. The transmitter repair remains a journey without a required fight; the armed-squad proposal does not insert a combat gate into it.
 
 ## Later encounter proposal — The Quiet Yard
 
-After Chapter One, on the way toward Old Lock, the party can consider a canal maintenance yard holding spare filter seals useful to the coastal water crew. [The Quiet Yard](../encounters/the-quiet-yard.md) is a separate design exercise for occasional combat, avoidance and withdrawal, rather than an addition to the current repair prototype.
+After the Relay House scene, on the way toward Old Lock, the party can consider a canal maintenance yard holding spare filter seals useful to the coastal water crew. [The Quiet Yard](../encounters/the-quiet-yard.md) is a separate design exercise for occasional combat, avoidance and withdrawal, rather than an addition to the current repair prototype.
 
 A safe detour continues the journey without the seals. The yard can also offer a readable patrol gap and a covered route for the whole party, or an optional confrontation with two old security units of one type. Existing walls and clear approaches give the proposed roles something understandable to do. No compulsory sequence of signatures, invisible combat lock or reinforcement wave is needed. Regrouping and leaving remains a supported choice during an encounter; the encounter proposal must define fair targeting, pursuit limits and a credible exit before implementation.
 
@@ -278,14 +312,14 @@ Exploration creates a question, interaction supplies a perspective, and a later 
 | Player encounters | First understanding | Later development |
 |---|---|---|
 | Maintained water in a block marked empty | People continued living beyond the official account | Meet someone who depended on it and learn what maintaining it required |
-| Lara recognises the bypass | She helped people there | Learn the circumstances through an encounter and her choices about a new obligation |
-| Tomas corrects a record | He can admit his information has limits | Discover how the delivery network affected particular people |
+| Laura recognises the bypass | She helped people there | Learn the circumstances through an encounter and her choices about a new obligation |
+| Tom corrects a record | He can admit his information has limits | Discover how the delivery network affected particular people |
 | Miki leaves useful infrastructure intact | Her care extends beyond the party | A recipient recognises the consequences of that decision |
 | A companion demonstrates unusual capacity | The player learns a reliable capability | Medical or work history gives it personal meaning when relevant |
 
 ### Author knowledge and fair disclosure
 
-Before scripting the chapter, settle the local truth. A proposed explanation: the transport register recorded the end of organised evacuation as an empty block, although residents stayed. Lara and residents maintained the bypass. Tomas knew the transport record, not an exhaustive census. Miki discovers current use through inspection. This remains an author proposal, not a revelation already delivered by the game.
+Before scripting the chapter, settle the local truth. A proposed explanation: the transport register recorded the end of organised evacuation as an empty block, although residents stayed. Laura and residents maintained the bypass. Tom knew the transport record, not an exhaustive census. Miki discovers current use through inspection. This remains an author proposal, not a revelation already delivered by the game.
 
 For important reveals, record what happened, what each character knows, what the player has observed and what the reveal changes. Decide underlying relationships before writing lines intended to conceal them. Public repository notes may contain labelled spoilers; mystery is for the player's experience, not a lack of answers among writers.
 
@@ -301,6 +335,6 @@ Balance questions with answers, jokes, reliable actions and progress. Major conn
 - Each chapter delivers a concrete achievement. New information does not repeatedly erase routes, move destinations or undo trust merely to extend the journey.
 - People beyond the party have meaningful lives of their own.
 
-With the combat identities agreed, the next design step is the movement, formation and combat systems; the accepted [ADR 0003](../decisions/0003-squad-movement.md) covers the movement and formation part. Settle the trio's identities, underlying relationships and enhancement specifics before the full Chapter One dialogue pass. The current walkthrough uses a short crew call and omits Nina's dialogue while her relationship is open. Map East Span, Relay House and Old Lock so water and timing remain credible.
+With the combat identities agreed, the next design step is the movement, formation and combat systems; the accepted [ADR 0003](../decisions/0003-squad-movement.md) covers the movement and formation part. Settle the trio's identities, underlying relationships and enhancement specifics before the full dialogue pass; the bridge opening's lines come first, and stay brief. The Relay House level uses a short crew call and omits Nina's dialogue while her relationship is open. Decide where Relay House and Old Lock sit relative to New York, so water and timing remain credible.
 
 The [Party A record](../party-a.md) tracks implementation and actual checks of three primitive characters, following, switching and camera behaviour. The maintainer assigned that work regardless of Claude's response; that earlier assignment does not authorise the new squad mechanics. The [prototype plan](../prototype-plan.md) owns the scope, review gates, control defaults and phone cadence. Character-specific interactions, mission dialogue and the repair loop remain later stages; the combat, formation and positioning designs above are not implemented by this writing pass.

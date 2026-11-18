@@ -4,7 +4,7 @@ import simd
 
 @testable import Lauder
 
-/// Party B: one closed barrier, opened by Lara's latch or Tomas's loose panel.
+/// Party B: one closed barrier, opened by Laura's latch or Tom's loose panel.
 @MainActor
 struct PartyBTests {
   private let latch = SIMD2<Float>(3.2, -5)
@@ -12,24 +12,24 @@ struct PartyBTests {
 
   @Test
   func theSessionAcceptsOnlyTheEligibleMemberAndOnlyOnce() {
-    let session = GameSession()
+    let session = GameSession(level: RelayHouse.level)
     #expect(session.perform(.reachLatch, by: .miki) == .notEligible)
-    #expect(session.perform(.reachLatch, by: .tomas) == .notEligible)
-    #expect(session.perform(.shiftPanel, by: .lara) == .notEligible)
+    #expect(session.perform(.reachLatch, by: .tom) == .notEligible)
+    #expect(session.perform(.shiftPanel, by: .laura) == .notEligible)
     #expect(!session.passageOpen)
     session.togglePause()
-    #expect(session.perform(.reachLatch, by: .lara) == .unavailable)
+    #expect(session.perform(.reachLatch, by: .laura) == .unavailable)
     session.togglePause()
-    #expect(session.perform(.reachLatch, by: .lara) == .done)
+    #expect(session.perform(.reachLatch, by: .laura) == .done)
     #expect(session.passageOpen)
-    #expect(session.perform(.shiftPanel, by: .tomas) == .alreadyDone)
+    #expect(session.perform(.shiftPanel, by: .tom) == .alreadyDone)
     #expect(session.perform(.reachLatch, by: .miki) == .alreadyDone)
   }
 
   @Test
   func everyActionIsDefinedExactlyOnce() {
-    for id in PrototypeLayout.ActionID.allCases {
-      #expect(PrototypeLayout.interactions.filter { $0.id == id }.count == 1, "\(id.rawValue)")
+    for id in Level.ActionID.allCases {
+      #expect(RelayHouse.interactions.filter { $0.id == id }.count == 1, "\(id.rawValue)")
     }
   }
 
@@ -38,25 +38,31 @@ struct PartyBTests {
     let street = SIMD2<Float>(2.5, -4.5)
     let depot = SIMD2<Float>(6, -4.5)
     let closed = PartyMotion(
-      radius: PrototypeLayout.characterRadius,
-      obstacles: PrototypeLayout.obstacles(passageOpen: false))
+      radius: PartyBody.radius,
+      obstacles: RelayHouse.obstacles(passageOpen: false))
     #expect(!closed.canTraverse(from: street, to: depot))
-    #expect(NavigationGrid.forPassage(open: false).route(from: street, to: depot) == nil)
-    #expect(NavigationGrid.forPassage(open: true).route(from: street, to: depot) != nil)
+    #expect(
+      NavigationGrid(level: RelayHouse.level, passageOpen: false).route(from: street, to: depot)
+        == nil)
+    #expect(
+      NavigationGrid(level: RelayHouse.level, passageOpen: true).route(from: street, to: depot)
+        != nil)
     // Both approaches are reachable on the street side while the barrier is closed.
-    for interaction in [PrototypeLayout.ActionID.reachLatch, .shiftPanel].map(
-      PrototypeLayout.interaction)
+    for interaction in [Level.ActionID.reachLatch, .shiftPanel].map(
+      RelayHouse.interaction)
     {
       let centre = (interaction.approach.minimum + interaction.approach.maximum) / 2
       #expect(closed.canTraverse(from: centre, to: centre), "\(interaction.name)")
-      #expect(NavigationGrid.forPassage(open: false).route(from: [-6, 3], to: centre) != nil)
+      #expect(
+        NavigationGrid(level: RelayHouse.level, passageOpen: false).route(
+          from: [-6, 3], to: centre) != nil)
     }
   }
 
-  @Test(arguments: [PrototypeLayout.ActionID.reachLatch, .shiftPanel])
-  func eitherMethodOpensThePassageForTheWholeParty(action: PrototypeLayout.ActionID) throws {
-    let world = GameWorld()
-    let interaction = PrototypeLayout.interaction(action)
+  @Test(arguments: [Level.ActionID.reachLatch, .shiftPanel])
+  func eitherMethodOpensThePassageForTheWholeParty(action: Level.ActionID) throws {
+    let world = GameWorld(level: RelayHouse.level)
+    let interaction = RelayHouse.interaction(action)
     lead(world, try #require(interaction.member))
     try walk(world, to: [[2.5, 3], action == .reachLatch ? latch : panel])
     #expect(world.actionName == interaction.name)
@@ -83,14 +89,14 @@ struct PartyBTests {
 
   @Test
   func mikiExplainsBothMethodsAndCannotOpenEither() throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     #expect(world.session.leader == .miki)
     try walk(world, to: [[2.5, 3], latch])
     #expect(world.actionName == nil)
-    #expect(world.hint == PrototypeLayout.barrierHint)
+    #expect(world.hint == RelayHouse.barrierHint)
     world.performAction()
     #expect(!world.session.passageOpen)
-    #expect(world.observation == PrototypeLayout.barrierHint)
+    #expect(world.observation == RelayHouse.barrierHint)
     try walk(world, to: [panel])
     world.performAction()
     #expect(!world.session.passageOpen)
@@ -98,8 +104,8 @@ struct PartyBTests {
 
   @Test
   func promptsDoNotOutliveAMoveOrASwitch() throws {
-    let world = GameWorld()
-    lead(world, .lara)
+    let world = GameWorld(level: RelayHouse.level)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     #expect(world.actionName == "Reach latch")
     // Moving away clears the prompt; a press there does not open anything.
@@ -107,28 +113,28 @@ struct PartyBTests {
     #expect(world.actionName == nil)
     world.performAction()
     #expect(!world.session.passageOpen)
-    // Back at the latch, switching to Tomas turns the prompt into a suggestion.
+    // Back at the latch, switching to Tom turns the prompt into a suggestion.
     try walk(world, to: [latch])
     #expect(world.actionName == "Reach latch")
     world.session.cycleLeader()
     try walk(world, to: [latch])
-    #expect(world.session.leader == .tomas)
+    #expect(world.session.leader == .tom)
     #expect(world.actionName == nil)
-    #expect(world.hint == PrototypeLayout.interaction(.reachLatch).suggestion)
+    #expect(world.hint == RelayHouse.interaction(.reachLatch).suggestion)
     world.performAction()
     #expect(!world.session.passageOpen)
   }
 
   @Test
   func repeatingEitherActionAfterOpeningChangesNothing() throws {
-    let world = GameWorld()
-    lead(world, .lara)
+    let world = GameWorld(level: RelayHouse.level)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     world.performAction()
     #expect(world.session.passageOpen)
     world.performAction()
     #expect(world.observation == "The passage is already open.")
-    lead(world, .tomas)
+    lead(world, .tom)
     try walk(world, to: [panel])
     #expect(world.actionName == nil)
     #expect(world.hint == nil)
@@ -139,13 +145,13 @@ struct PartyBTests {
 
   @Test
   func companionsKeepClearOfTheApproachesWhileThePassageIsClosed() throws {
-    let world = GameWorld()
-    lead(world, .lara)
+    let world = GameWorld(level: RelayHouse.level)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     wait(world, seconds: 3)
-    for member in PartyMember.allCases where member != .lara {
+    for member in PartyMember.allCases where member != .laura {
       let body = position(world, member)
-      for interaction in PrototypeLayout.interactions {
+      for interaction in RelayHouse.interactions {
         #expect(!interaction.approach.contains(body), "\(member) stands in \(interaction.name)")
       }
     }
@@ -159,7 +165,7 @@ struct PartyBTests {
 
   /// Screen-relative stick axes for a world direction, as GameWorld consumes them.
   private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let toCamera = SIMD2(PrototypeLayout.cameraOffset.x, PrototypeLayout.cameraOffset.z)
+    let toCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
     let forward = -simd_normalize(toCamera)
     let right = SIMD2(-forward.y, forward.x)
     let unit = simd_normalize(direction)

@@ -31,17 +31,21 @@
       case pause
       /// Move the pause menu's choice: -1 up, 1 down.
       case menu(Int)
-      /// Everyone back where a new run starts, with Miki leading and no progress.
+      /// Everyone back where a new run starts, with the level's starting party and no progress.
       case expectRestarted
+      /// How many trigger areas have shown their line in this run.
+      case expectTriggers(Int)
     }
 
     /// What the runner can see of the game each frame.
     struct Snapshot {
       let leader: PartyMember
+      let party: [PartyMember]
       let positions: [PartyMember: SIMD2<Float>]
       let mode: GameSession.Mode
       let phase: GameSession.Phase
       let passageOpen: Bool
+      let firedTriggers: Int
     }
 
     struct Frame {
@@ -84,12 +88,15 @@
 
     static let scenarioNames = [
       "route", "panel", "closed", "leaders", "reversals", "switches", "walls", "mission", "all",
+      "bridge-walk",
     ]
     static let walkTimeout: Float = 30
     /// How long each conversation line stays on screen before the next press.
     static let lineSeconds: Float = 0.6
 
     let name: String
+    /// The level the scenario plays; GameWorld loads it for the launch argument.
+    let level: Level.ID
     private let steps: [Step]
     private var index = 0
     private var stepTime: Float = 0
@@ -102,8 +109,8 @@
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
     private var trace =
-      "t,dt,leader,miki_x,miki_z,lara_x,lara_z,tomas_x,tomas_z,"
-      + "miki_tx,miki_tz,lara_tx,lara_tz,tomas_tx,tomas_tz,warning\n"
+      "t,dt,leader,miki_x,miki_z,laura_x,laura_z,tom_x,tom_z,"
+      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning\n"
     private var frameTimes: [Double] = []
     private var simulationTimes: [Double] = []
     private var warningFrames = 0
@@ -119,6 +126,7 @@
     init?(scenario: String) {
       guard let steps = Self.steps(for: scenario) else { return nil }
       name = scenario
+      level = Self.level(for: scenario)
       self.steps = steps
     }
 
@@ -155,13 +163,13 @@
             advance()
             continue
           }
-          return InputRules.Raw(stick: Self.stick(towards: offset))
+          return InputRules.Raw(stick: stick(towards: offset))
         case .push(let direction, let seconds):
           guard stepTime < seconds else {
             advance()
             continue
           }
-          return InputRules.Raw(stick: Self.stick(towards: direction))
+          return InputRules.Raw(stick: stick(towards: direction))
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -280,20 +288,28 @@
           advance()
           return InputRules.Raw()
         case .expectRestarted:
-          if snapshot.leader != .miki || snapshot.phase != .briefing || snapshot.passageOpen
+          let start = Level.level(level)
+          if snapshot.leader != start.party[0] || snapshot.party != start.party
+            || snapshot.phase != .briefing || snapshot.passageOpen || snapshot.firedTriggers != 0
             || snapshot.mode != .exploring
           {
             failures.append(
-              "after Restart \(snapshot.leader.displayName) led, the mission was at "
-                + "\(snapshot.phase) and the passage was "
-                + (snapshot.passageOpen ? "open" : "closed"))
+              "after Restart \(snapshot.leader.displayName) led a party of "
+                + "\(snapshot.party.count), the mission was at \(snapshot.phase), the passage "
+                + "was \(snapshot.passageOpen ? "open" : "closed") and "
+                + "\(snapshot.firedTriggers) trigger(s) had fired")
           }
-          for (member, position) in positions {
-            let spawn = PrototypeLayout.spawn(for: member)
-            if simd_distance(position, SIMD2(spawn.x, spawn.z)) > 0.3 {
-              failures.append(
-                "\(member.displayName) was at \(Self.describe(position)) after Restart")
-            }
+          for (member, position) in positions
+          where simd_distance(position, start.spawn(member)) > 0.3 {
+            failures.append(
+              "\(member.displayName) was at \(Self.describe(position)) after Restart")
+          }
+          advance()
+        case .expectTriggers(let count):
+          if snapshot.firedTriggers != count {
+            failures.append(
+              "\(snapshot.firedTriggers) trigger(s) had fired instead of \(count) "
+                + "at \(Self.seconds(elapsed))")
           }
           advance()
         }
@@ -321,7 +337,7 @@
       for (index, first) in members.enumerated() {
         for second in members.dropFirst(index + 1) {
           guard let a = frame.positions[first], let b = frame.positions[second] else { continue }
-          if simd_distance(a, b) < 2 * PrototypeLayout.characterRadius { overlapping = true }
+          if simd_distance(a, b) < 2 * PartyBody.radius { overlapping = true }
         }
       }
       if overlapping { overlapFrames += 1 }
@@ -413,9 +429,9 @@
 
     // MARK: - Scenarios
 
-    /// Lara opens the service passage from the latch approach (Party B).
-    private static let openWithLara: [Step] = [
-      .lead(.lara), .walk([2.5, 3]), .walk([3.2, -5]), .mark("at the latch"),
+    /// Laura opens the service passage from the latch approach (Party B).
+    private static let openWithLaura: [Step] = [
+      .lead(.laura), .walk([2.5, 3]), .walk([3.2, -5]), .mark("at the latch"),
       .wait(seconds: 1), .act,
       .expectPassage(open: true), .mark("passage open"),
     ]
@@ -429,21 +445,21 @@
       .mark("back on the street"),
     ]
 
-    private static let route = openWithLara + roundTrip
+    private static let route = openWithLaura + roundTrip
 
-    /// Tomas opens the passage from the loose-panel approach instead.
+    /// Tom opens the passage from the loose-panel approach instead.
     private static let panel: [Step] = [
-      .lead(.tomas), .walk([2.5, 3]), .walk([3.2, -4]), .mark("at the panel"),
+      .lead(.tom), .walk([2.5, 3]), .walk([3.2, -4]), .mark("at the panel"),
       .wait(seconds: 1), .act,
       .expectPassage(open: true), .walk([5, -4.2]), .walk([6.5, -3]), .wait(seconds: 2),
       .expectInDepot, .mark("in the depot"),
     ]
 
-    /// Miki cannot open the passage, and nor can Tomas from the latch.
+    /// Miki cannot open the passage, and nor can Tom from the latch.
     private static let closed: [Step] = [
       .lead(.miki), .walk([2.5, 3]), .walk([3.2, -5]), .mark("Miki at the latch"),
-      .wait(seconds: 1), .act, .expectPassage(open: false), .lead(.tomas), .walk([3.2, -5]),
-      .mark("Tomas at the latch"), .wait(seconds: 1), .act, .expectPassage(open: false),
+      .wait(seconds: 1), .act, .expectPassage(open: false), .lead(.tom), .walk([3.2, -5]),
+      .mark("Tom at the latch"), .wait(seconds: 1), .act, .expectPassage(open: false),
       .wait(seconds: 1.5),
       .expectTogether(maxDistance: 2.5),
     ]
@@ -466,7 +482,7 @@
 
     private static let walls: [Step] =
       [.walk([-10, 8.6]), .push([1, 0.15], seconds: 3), .mark("wall slide"), .wait(seconds: 1)]
-      + openWithLara + [
+      + openWithLaura + [
         .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([9.3, -6.3]),
         .push([1, -1], seconds: 1.5), .mark("depot corner"), .wait(seconds: 2),
         .expectInDepot, .expectTogether(maxDistance: 2.5),
@@ -479,25 +495,44 @@
       .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
     ]
 
-    /// Party C's loop from a fresh run: the briefing, Lara's latch, Miki's regulator, the return
-    /// with Tomas leading, the repair, Lara's call and the plan, then a Restart and a new briefing.
+    /// Party C's loop from a fresh run: the briefing, Laura's latch, Miki's regulator, the return
+    /// with Tom leading, the repair, Laura's call and the plan, then a Restart and a new briefing.
     private static let mission: [Step] =
       [
         .mark("start"), .wait(seconds: 0.6), .act, .wait(seconds: 0.4), .mark("briefing"),
         .talk, .expectPhase(.seekingRegulator), .mark("briefed"),
       ]
-      + openWithLara + [
+      + openWithLaura + [
         .lead(.miki), .walk([2.5, -4.5]), .walk([5, -4.5]), .walk([6.2, -4.2]),
         .mark("at the housing"), .wait(seconds: 0.6), .talk, .expectPhase(.carryingRegulator),
         .mark("regulator taken"), .wait(seconds: 0.6),
-        .lead(.tomas), .walk([5, -4.5]), .walk([2.5, -4.5]), .walk([2.5, 3]),
-        .walk([-8.4, 2.4]), .wait(seconds: 1), .act, .mark("Tomas at the transmitter"),
+        .lead(.tom), .walk([5, -4.5]), .walk([2.5, -4.5]), .walk([2.5, 3]),
+        .walk([-8.4, 2.4]), .wait(seconds: 1), .act, .mark("Tom at the transmitter"),
         .wait(seconds: 0.6), .expectPhase(.carryingRegulator),
         .lead(.miki), .walk([-8.8, 2]), .talk, .expectPhase(.radioRepaired), .mark("repaired"),
-        .wait(seconds: 0.6), .lead(.lara), .walk([-9, 2.6]), .act, .wait(seconds: 0.4),
+        .wait(seconds: 0.6), .lead(.laura), .walk([-9, 2.6]), .act, .wait(seconds: 0.4),
         .mark("call"), .talk, .expectPhase(.meetingAgreed), .mark("meeting agreed"),
         .wait(seconds: 0.6), .talk, .expectPhase(.meetingAgreed), .mark("plan read"),
       ] + restartRun + [.talk, .expectPhase(.seekingRegulator), .mark("briefed again")]
+
+    /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1): up the east roadway
+    /// through the first tower, across the collapsed divider beside the jammed bus, then up the
+    /// west roadway through the second tower. Each trigger area shows its line once, then a
+    /// Restart returns her to the start with none fired.
+    private static let bridgeWalk: [Step] =
+      [
+        .mark("start"), .walk([6.5, 66]), .mark("cars ahead"), .walk([6.5, 20]),
+        .mark("first tower"), .walk([6.5, -9]), .mark("mid-span"), .walk([6.5, -28]),
+        .mark("blocked lanes"), .walk([-7, -31]), .mark("across the divider"),
+        .walk([-7, -70]), .mark("second tower"), .walk([-7, -108]), .mark("Manhattan end"),
+        .expectTriggers(6), .walk([-7, -100]), .walk([-7, -108]), .expectTriggers(6),
+        .wait(seconds: 0.5),
+      ] + restartRun + [.expectTriggers(0)]
+
+    /// The level a scenario plays: the bridge for `bridge-walk`, Relay House for the others.
+    static func level(for scenario: String) -> Level.ID {
+      scenario == "bridge-walk" ? .brooklynBridge : .relayHouse
+    }
 
     static func steps(for scenario: String) -> [Step]? {
       switch scenario {
@@ -505,23 +540,29 @@
       case "panel": panel
       case "closed": closed
       case "leaders":
-        openWithLara + [.lead(.miki)] + roundTrip + [.lead(.lara)] + roundTrip
-          + [.lead(.tomas)] + roundTrip
+        openWithLaura + [.lead(.miki)] + roundTrip + [.lead(.laura)] + roundTrip
+          + [.lead(.tom)] + roundTrip
       case "reversals": reversals
       case "switches": switches
       case "walls": walls
       case "mission": mission
       case "all": closed + route + reversals + switches + walls + restartRun + mission
+      case "bridge-walk": bridgeWalk
       default: nil
       }
     }
 
     // MARK: - Helpers
 
+    /// Stick axes for a world direction under this scenario's level's camera.
+    private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
+      Self.stick(towards: direction, cameraOffset: Level.level(level).cameraOffset)
+    }
+
     /// Screen-relative stick axes for a world direction, as Movement interprets them.
-    static func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
+    static func stick(towards direction: SIMD2<Float>, cameraOffset: SIMD3<Float>) -> SIMD2<Float> {
       guard simd_length(direction) > 0.0001 else { return .zero }
-      let toCamera = SIMD2(PrototypeLayout.cameraOffset.x, PrototypeLayout.cameraOffset.z)
+      let toCamera = SIMD2(cameraOffset.x, cameraOffset.z)
       let forward = -simd_normalize(toCamera)
       let right = SIMD2(-forward.y, forward.x)
       let unit = simd_normalize(direction)

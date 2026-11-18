@@ -27,7 +27,7 @@ struct GameView: View {
       HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 5) {
           Text("\(world.session.leader.displayName) · \(world.session.leader.role)").font(.headline)
-          Text(MissionScript.objective(world.session.phase))
+          Text(world.objective)
             .font(.subheadline)
           if world.session.carriesRegulator {
             // Derived from the mission phase: the part belongs to the party, not to a leader.
@@ -35,7 +35,7 @@ struct GameView: View {
               .font(.caption).foregroundStyle(Color(red: 0.62, green: 0.87, blue: 0.77))
           }
           HStack(spacing: 8) {
-            ForEach(PartyMember.allCases, id: \.self) { member in
+            ForEach(world.session.party, id: \.self) { member in
               Text(member.displayName)
                 .font(.caption2)
                 .fontWeight(member == world.session.leader ? .bold : .regular)
@@ -45,11 +45,11 @@ struct GameView: View {
           // During a conversation its panel carries the text and the Continue hint; the result
           // of the step appears here once the conversation ends.
           let talking = world.session.mode == .dialogue
-          if !world.controls.touchControlsEnabled && !talking {
-            Text(
-              "\(world.controls.switchButtonName) · Lead as \(world.session.leader.next.displayName)"
-            )
-            .font(.caption)
+          if !world.controls.touchControlsEnabled && !talking,
+            let next = world.session.nextLeader
+          {
+            Text("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
+              .font(.caption)
           }
           if !talking {
             Text(world.observation).font(.caption)
@@ -172,7 +172,7 @@ struct GameView: View {
                   )
               }
             }
-            Text("Restart begins a new run from the keeper's briefing.").font(.caption)
+            Text(world.level.restartNote).font(.caption)
             HStack(spacing: 12) {
               Text("Up or down to choose").font(.caption)
               Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
@@ -198,7 +198,7 @@ struct GameView: View {
         TouchControls(
           controls: world.controls, generation: world.controls.touchGeneration,
           actionTitle: touchActionTitle,
-          nextLeaderName: world.session.leader.next.displayName,
+          nextLeaderName: world.session.nextLeader?.displayName,
           mode: world.session.mode)
       }
     }

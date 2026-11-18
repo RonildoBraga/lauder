@@ -9,9 +9,11 @@
   /// completed here would fail in `scripts/playtest` too, so the standard check catches it.
   @MainActor
   struct PlaytestTests {
-    @Test(arguments: ["route", "panel", "closed", "reversals", "switches", "walls", "mission"])
+    @Test(arguments: [
+      "route", "panel", "closed", "reversals", "switches", "walls", "mission", "bridge-walk",
+    ])
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
-      let world = GameWorld()
+      let world = GameWorld(level: Level.level(PlaytestRunner.level(for: name)))
       var runner = try #require(PlaytestRunner(scenario: name))
       var frames = 0
       while !runner.isFinished {
@@ -40,7 +42,7 @@
     @Test
     func anUnknownScenarioIsReportedOnTheHUD() {
       #expect(PlaytestRunner(scenario: "nope") == nil)
-      let world = GameWorld()
+      let world = GameWorld(level: RelayHouse.level)
       world.startPlaytest("nope")
       #expect(world.playtest == nil)
       #expect(world.observation.contains("Unknown playtest"))
@@ -49,9 +51,10 @@
       }
     }
 
+    /// The party's positions, as the rendered run records them; members yet to join are left out.
     private func positions(_ world: GameWorld) -> [PartyMember: SIMD2<Float>] {
       Dictionary(
-        uniqueKeysWithValues: PartyMember.allCases.map { ($0, position(world, $0)) })
+        uniqueKeysWithValues: world.session.party.map { ($0, position(world, $0)) })
     }
 
     private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {

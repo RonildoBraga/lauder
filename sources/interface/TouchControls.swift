@@ -9,7 +9,8 @@ struct TouchControls: UIViewRepresentable {
   /// "Look", the leader's contextual action such as "Reach latch", "Continue" in a
   /// conversation, or "Restart" while paused.
   let actionTitle: String
-  let nextLeaderName: String
+  /// Who Next would switch to, or nil while the leader travels alone.
+  let nextLeaderName: String?
   let mode: GameSession.Mode
 
   func makeUIView(context: Context) -> Surface {
@@ -83,15 +84,20 @@ struct TouchControls: UIViewRepresentable {
     required init?(coder: NSCoder) { nil }
 
     func update(
-      actionTitle: String, nextLeaderName: String, mode: GameSession.Mode, generation: Int
+      actionTitle: String, nextLeaderName: String?, mode: GameSession.Mode, generation: Int
     ) {
       self.mode = mode
       if self.generation != generation {
         reset()
       }
       action.setTitle(actionTitle)
-      cycle.setTitle("Next: \(nextLeaderName)")
-      cycle.accessibilityLabel = "Lead as \(nextLeaderName)"
+      if let nextLeaderName {
+        cycle.setTitle("Next: \(nextLeaderName)")
+        cycle.accessibilityLabel = "Lead as \(nextLeaderName)"
+      }
+      // Alone, there is nobody to switch to. A finger already on Next keeps it until it lifts,
+      // so the release gate still sees that button let go.
+      cycle.isHidden = nextLeaderName == nil && !cycle.isCaptured
       pause.setTitle(mode == .paused ? "Resume" : "Pause")
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
@@ -138,6 +144,8 @@ private final class TouchZone: UIControl {
   private var movement = SIMD2<Float>.zero
 
   var travelRadius: CGFloat { max(1, min(bounds.width, bounds.height) / 2 - 26) }
+  /// Whether a finger currently holds this zone.
+  var isCaptured: Bool { captured != nil }
 
   init(title: String = "", isStick: Bool = false) {
     self.isStick = isStick

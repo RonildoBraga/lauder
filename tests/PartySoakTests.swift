@@ -8,14 +8,14 @@ import simd
 struct PartySoakTests {
   @Test(arguments: [UInt64(0xC011_1DE0), 0xC011_1DE1, 0xC011_1DE2, 0xC011_1DE3])
   func authoredPartySurvivesMixedWallContactAndLeaderChanges(seed: UInt64) throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     let members = PartyMember.allCases
     let bodies = try members.map { member in
       try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
     }
     let bounds = authoredBounds()
     let motion = PartyMotion(
-      radius: PrototypeLayout.characterRadius, obstacles: PrototypeLayout.obstacles)
+      radius: PartyBody.radius, obstacles: RelayHouse.obstacles)
     var random = Generator(state: seed)
     var segment = Segment(kind: .free, movement: .zero)
     var remaining = 0
@@ -63,7 +63,7 @@ struct PartySoakTests {
         let factor: Float =
           members[index] == world.session.leader ? 1 : CompanionMotor.catchUpFactor
         let maximum =
-          PrototypeLayout.speed * factor * (min(dt, 1 / 30) + GameWorld.simulationStep) + 0.003
+          PartyBody.speed * factor * (min(dt, 1 / 30) + GameWorld.simulationStep) + 0.003
         guard travel <= maximum else {
           Issue.record(
             "seed \(seed), frame \(frame), \(members[index]): travel \(travel) exceeds \(maximum)")
@@ -72,7 +72,7 @@ struct PartySoakTests {
         // This oracle is independent of PartyMotion's sweep and obstacle conversion.
         let clearance = bounds.reduce(Float.infinity) { min($0, $1.distance(to: position)) }
         // The 2 mm skin must survive, not only non-penetration; 5 µm allows Float rounding.
-        guard clearance >= PrototypeLayout.characterRadius + PartyMotion.skin - 0.000005 else {
+        guard clearance >= PartyBody.radius + PartyMotion.skin - 0.000005 else {
           Issue.record(
             "seed \(seed), frame \(frame), \(members[index]): inside the skin at \(position), clearance \(clearance)"
           )
@@ -150,10 +150,10 @@ struct PartySoakTests {
   }
 
   private func authoredBounds() -> [Bounds] {
-    let scenery = PrototypeLayout.boxes.filter { $0.id != .ground }.map {
+    let scenery = RelayHouse.boxes.filter { $0.name != RelayHouse.BoxID.ground.rawValue }.map {
       Bounds(position: $0.position, size: $0.size)
     }
-    let landmarks = PrototypeLayout.points.map { point in
+    let landmarks = RelayHouse.points.map { point in
       Bounds(position: point.position, size: point.size)
     }
     return scenery + landmarks
@@ -193,7 +193,7 @@ struct PartySoakTests {
     guard distance > 0 else { return .zero }
     let normal = offset / distance
     let direction: SIMD2<Float>
-    if distance > PrototypeLayout.characterRadius + 0.015 {
+    if distance > PartyBody.radius + 0.015 {
       direction = -normal
     } else {
       let tangent = SIMD2(-normal.y, normal.x) * (clockwise ? 1 : -1)
@@ -201,7 +201,7 @@ struct PartySoakTests {
     }
     // Convert the authored wall's world heading back to the same screen-relative stick
     // coordinates consumed by GameWorld. No collision result is manufactured in the test.
-    let offsetToCamera = SIMD2(PrototypeLayout.cameraOffset.x, PrototypeLayout.cameraOffset.z)
+    let offsetToCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
     let forward = -simd_normalize(offsetToCamera)
     let right = SIMD2(-forward.y, forward.x)
     return SIMD2(simd_dot(direction, right), simd_dot(direction, forward))

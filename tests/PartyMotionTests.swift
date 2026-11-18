@@ -128,7 +128,7 @@ struct PartyMotionTests {
   ])
   func everyReportedFrozenPositionHasAnOutwardEscape(start: SIMD2<Float>) {
     let motion = PartyMotion(
-      radius: PrototypeLayout.characterRadius, obstacles: PrototypeLayout.obstacles)
+      radius: PartyBody.radius, obstacles: RelayHouse.obstacles)
     var escapes = 0
     for index in 0..<16 {
       let angle = Float(index) * .pi / 8
@@ -136,7 +136,7 @@ struct PartyMotionTests {
       let end = motion.resolve(start: start, delta: delta)
       #expect(simd_distance(start, end) <= simd_length(delta) + 0.000001)
       if simd_distance(start, end) > 0.00001 { escapes += 1 }
-      for box in PrototypeLayout.obstacles {
+      for box in RelayHouse.obstacles {
         let closest = SIMD2(
           min(max(end.x, box.minimum.x), box.maximum.x),
           min(max(end.y, box.minimum.y), box.maximum.y))

@@ -72,7 +72,7 @@ enum InputRules {
       actionWasPressed: action, pauseWasPressed: pause, switchWasPressed: cycle,
       restartWasPressed: restart, menuDirection: direction)
     if state.needsNeutralInput {
-      let deadZone = PrototypeLayout.movementDeadZone
+      let deadZone = Movement.deadZone
       next.needsNeutralInput =
         simd_length_squared(raw.stick) > deadZone * deadZone
         || !raw.stick.x.isFinite || !raw.stick.y.isFinite

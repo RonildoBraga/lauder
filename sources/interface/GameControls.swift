@@ -122,7 +122,7 @@ final class GameControls {
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
     #endif
-    let deadZone = PrototypeLayout.movementDeadZone
+    let deadZone = Movement.deadZone
     if raw.hasKeyboardInput {
       showKeyboard()
     } else if touchControlsEnabled {

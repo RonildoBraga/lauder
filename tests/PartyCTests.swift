@@ -12,49 +12,49 @@ struct PartyCTests {
   private let housing = SIMD2<Float>(6.2, -4.2)
   private let latch = SIMD2<Float>(3.2, -5)
   private let panel = SIMD2<Float>(3.2, -4)
-  private static let missionSteps: [(PrototypeLayout.ActionID, PartyMember)] = [
+  private static let missionSteps: [(Level.ActionID, PartyMember)] = [
     (.hearBriefing, .miki), (.takeRegulator, .miki), (.repairTransmitter, .miki),
-    (.callCrew, .lara),
+    (.callCrew, .laura),
   ]
 
   // MARK: - Session rules
 
   @Test
   func theMissionAdvancesThroughItsPhasesInOrderAndOnlyOnce() {
-    let session = GameSession()
+    let session = GameSession(level: RelayHouse.level)
     #expect(session.perform(.takeRegulator, by: .miki) == .notYet)
     #expect(session.perform(.repairTransmitter, by: .miki) == .notYet)
-    #expect(session.perform(.callCrew, by: .lara) == .notYet)
-    #expect(session.perform(.readPlan, by: .tomas) == .notYet)
+    #expect(session.perform(.callCrew, by: .laura) == .notYet)
+    #expect(session.perform(.readPlan, by: .tom) == .notYet)
     // Any leader can hear the briefing.
-    #expect(session.perform(.hearBriefing, by: .tomas) == .done)
+    #expect(session.perform(.hearBriefing, by: .tom) == .done)
     finish(session)
     #expect(session.phase == .seekingRegulator)
     #expect(session.perform(.hearBriefing, by: .miki) == .alreadyDone)
-    #expect(session.perform(.takeRegulator, by: .lara) == .notEligible)
+    #expect(session.perform(.takeRegulator, by: .laura) == .notEligible)
     #expect(session.perform(.takeRegulator, by: .miki) == .done)
     finish(session)
     #expect(session.carriesRegulator)
     #expect(session.perform(.takeRegulator, by: .miki) == .alreadyDone)
-    #expect(session.perform(.repairTransmitter, by: .tomas) == .notEligible)
+    #expect(session.perform(.repairTransmitter, by: .tom) == .notEligible)
     #expect(session.perform(.repairTransmitter, by: .miki) == .done)
     finish(session)
     #expect(session.phase == .radioRepaired)
     #expect(!session.carriesRegulator)
     #expect(session.perform(.repairTransmitter, by: .miki) == .alreadyDone)
-    #expect(session.perform(.callCrew, by: .lara) == .done)
+    #expect(session.perform(.callCrew, by: .laura) == .done)
     finish(session)
     #expect(session.phase == .meetingAgreed)
-    #expect(session.perform(.callCrew, by: .tomas) == .alreadyDone)
+    #expect(session.perform(.callCrew, by: .tom) == .alreadyDone)
     // The passage is separate progress: still closed, and either method still works.
     #expect(!session.passageOpen)
-    #expect(session.perform(.shiftPanel, by: .tomas) == .done)
+    #expect(session.perform(.shiftPanel, by: .tom) == .done)
   }
 
   @Test
   func aStepTakesEffectWhenItsConversationEnds() {
     let session = session(at: .radioRepaired)
-    #expect(session.perform(.callCrew, by: .tomas) == .done)
+    #expect(session.perform(.callCrew, by: .tom) == .done)
     #expect(session.phase == .radioRepaired)
     session.togglePause()
     session.togglePause()
@@ -93,7 +93,7 @@ struct PartyCTests {
 
   @Test
   func eachPhaseOffersExactlyOneTransmitterAction() {
-    let actions: [PrototypeLayout.ActionID] = [
+    let actions: [Level.ActionID] = [
       .hearBriefing, .repairTransmitter, .callCrew, .readPlan,
     ]
     for phase in GameSession.Phase.allCases {
@@ -105,13 +105,13 @@ struct PartyCTests {
 
   @Test
   func aConversationHoldsActionsAndSwitchingUntilItsLastLine() {
-    let session = GameSession()
+    let session = GameSession(level: RelayHouse.level)
     #expect(session.perform(.hearBriefing, by: .miki) == .done)
     #expect(session.mode == .dialogue)
     #expect(session.currentLine == MissionScript.lines(.briefing).first)
     session.cycleLeader()
     #expect(session.leader == .miki)
-    #expect(session.perform(.reachLatch, by: .lara) == .unavailable)
+    #expect(session.perform(.reachLatch, by: .laura) == .unavailable)
     for line in MissionScript.lines(.briefing).dropFirst() {
       session.advanceDialogue()
       #expect(session.currentLine == line)
@@ -123,7 +123,7 @@ struct PartyCTests {
 
   @Test
   func pauseKeepsTheConversationAtItsLine() {
-    let session = GameSession()
+    let session = GameSession(level: RelayHouse.level)
     _ = session.perform(.hearBriefing, by: .miki)
     session.advanceDialogue()
     let line = session.currentLine
@@ -138,7 +138,7 @@ struct PartyCTests {
 
   @Test
   func thePauseMenuOpensOnResumeAndHasTwoChoices() {
-    let session = GameSession()
+    let session = GameSession(level: RelayHouse.level)
     session.movePauseChoice(by: 1)
     session.togglePause()
     #expect(session.pauseChoice == .resume)
@@ -157,9 +157,9 @@ struct PartyCTests {
   @Test
   func sessionRestartReturnsToTheBeginning() {
     let session = session(at: .meetingAgreed)
-    _ = session.perform(.reachLatch, by: .lara)
+    _ = session.perform(.reachLatch, by: .laura)
     session.cycleLeader()
-    _ = session.perform(.readPlan, by: .lara)
+    _ = session.perform(.readPlan, by: .laura)
     session.togglePause()
     session.movePauseChoice(by: 1)
     session.restart()
@@ -182,8 +182,8 @@ struct PartyCTests {
       #expect(!lines.isEmpty, "\(conversation)")
       #expect(lines.allSatisfy { !$0.speaker.isEmpty && !$0.text.isEmpty })
     }
-    for id in PrototypeLayout.InteractionID.allCases {
-      #expect(PrototypeLayout.points.filter { $0.id == id }.count == 1, "\(id.rawValue)")
+    for id in RelayHouse.PointID.allCases {
+      #expect(RelayHouse.points.filter { $0.id == id.rawValue }.count == 1, "\(id.rawValue)")
     }
   }
 
@@ -191,43 +191,43 @@ struct PartyCTests {
 
   @Test
   func approachesAreOnTheUsableSideOfTheirWalls() {
-    let closed = NavigationGrid.forPassage(open: false)
-    let open = NavigationGrid.forPassage(open: true)
+    let closed = NavigationGrid(level: RelayHouse.level, passageOpen: false)
+    let open = NavigationGrid(level: RelayHouse.level, passageOpen: true)
     // The housing's approach lies inside the depot, reachable only through the open passage.
-    let depot = PrototypeLayout.housingApproach
+    let depot = RelayHouse.housingApproach
     #expect(isInDepot(depot.minimum) && isInDepot(depot.maximum))
     #expect(closed.route(from: [-6, 3], to: housing) == nil)
     #expect(open.route(from: [-6, 3], to: housing) != nil)
     // The transmitter's lies inside the shelter, in front of its back wall, and the party
     // starts in it.
-    let shelter = PrototypeLayout.box(.shelterBack)
+    let shelter = RelayHouse.box(.shelterBack)
     #expect(
-      PrototypeLayout.transmitterApproach.minimum.y > shelter.position.z + shelter.size.z / 2)
+      RelayHouse.transmitterApproach.minimum.y > shelter.position.z + shelter.size.z / 2)
     #expect(closed.route(from: [-6, 3], to: transmitter) != nil)
-    let start = PrototypeLayout.spawn(for: .miki)
-    #expect(PrototypeLayout.transmitterApproach.contains(SIMD2(start.x, start.z)))
+    let start = RelayHouse.spawn(for: .miki)
+    #expect(RelayHouse.transmitterApproach.contains(SIMD2(start.x, start.z)))
   }
 
   // MARK: - The world
 
   @Test
   func theWholeLoopWorksAcrossLeaderChanges() throws {
-    let world = GameWorld()
-    // The briefing, with Tomas leading.
-    lead(world, .tomas)
+    let world = GameWorld(level: RelayHouse.level)
+    // The briefing, with Tom leading.
+    lead(world, .tom)
     try walk(world, to: [transmitter])
     #expect(world.actionName == "Talk to keeper")
     world.performAction()
     #expect(world.session.mode == .dialogue)
     finish(world)
     #expect(world.session.phase == .seekingRegulator)
-    // Tomas opens the passage, then finds that only Miki can take the regulator.
+    // Tom opens the passage, then finds that only Miki can take the regulator.
     try walk(world, to: [[2.5, 3], panel])
     world.performAction()
     #expect(world.session.passageOpen)
     try walk(world, to: [[2.5, -4.5], [5, -4.5], housing])
     #expect(world.actionName == nil)
-    #expect(world.hint == PrototypeLayout.interaction(.takeRegulator).suggestion)
+    #expect(world.hint == RelayHouse.interaction(.takeRegulator).suggestion)
     world.performAction()
     #expect(world.session.phase == .seekingRegulator)
     lead(world, .miki)
@@ -245,10 +245,10 @@ struct PartyCTests {
       world.session.cycleLeader()
       #expect(world.session.carriesRegulator)
     }
-    // Back at the transmitter Lara cannot fit it; Miki can, once.
-    lead(world, .lara)
+    // Back at the transmitter Laura cannot fit it; Miki can, once.
+    lead(world, .laura)
     try walk(world, to: [[5, -4.5], [2.5, -4.5], [2.5, 3], transmitter])
-    #expect(world.hint == PrototypeLayout.interaction(.repairTransmitter).suggestion)
+    #expect(world.hint == RelayHouse.interaction(.repairTransmitter).suggestion)
     world.performAction()
     #expect(world.session.phase == .carryingRegulator)
     lead(world, .miki)
@@ -261,13 +261,13 @@ struct PartyCTests {
     #expect(entity(world, "relay.transmitter.fault")?.isEnabled == false)
     #expect(entity(world, "relay.transmitter.regulator")?.isEnabled == true)
     // Anyone can call. Then anyone can reread the plan, which changes nothing.
-    lead(world, .tomas)
+    lead(world, .tom)
     try walk(world, to: [transmitter])
     #expect(world.actionName == "Call")
     world.performAction()
     finish(world)
     #expect(world.session.phase == .meetingAgreed)
-    #expect(world.observation == PrototypeLayout.interaction(.callCrew).result)
+    #expect(world.observation == RelayHouse.interaction(.callCrew).result)
     #expect(world.actionName == "Read plan")
     world.performAction()
     #expect(world.session.conversation == .plan)
@@ -278,7 +278,7 @@ struct PartyCTests {
 
   @Test
   func mikiCannotRepairWithoutTheRegulator() {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     world.performAction()
     finish(world)
     #expect(world.actionName == "Repair")
@@ -290,25 +290,25 @@ struct PartyCTests {
 
   @Test
   func theRegulatorWaitsForTheBriefing() throws {
-    let world = GameWorld()
-    lead(world, .lara)
+    let world = GameWorld(level: RelayHouse.level)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     world.performAction()
     lead(world, .miki)
     try walk(world, to: [[2.5, -4.5], [5, -4.5], housing])
     #expect(world.actionName == nil)
     world.performAction()
-    #expect(world.observation == PrototypeLayout.interaction(.takeRegulator).early)
+    #expect(world.observation == RelayHouse.interaction(.takeRegulator).early)
     #expect(world.session.phase == .briefing)
     #expect(entity(world, "depot.regulator.part")?.isEnabled == true)
   }
 
   @Test
   func theRegulatorPromptDoesNotOutliveASwitchOrAMove() throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     world.performAction()
     finish(world)
-    lead(world, .tomas)
+    lead(world, .tom)
     try walk(world, to: [[2.5, 3], panel])
     world.performAction()
     lead(world, .miki)
@@ -326,7 +326,7 @@ struct PartyCTests {
 
   @Test
   func inAConversationTheActionOnlyShowsTheNextLine() {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     clearReleaseGate(world)
     world.performAction()
     #expect(world.session.mode == .dialogue)
@@ -341,9 +341,9 @@ struct PartyCTests {
 
   @Test
   func thePauseMenuConfirmsItsChoiceAndNeverActsOnANearbyObject() throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     clearReleaseGate(world)
-    lead(world, .lara)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     #expect(world.actionName == "Reach latch")
     let pause = InputRules.Input(
@@ -361,7 +361,7 @@ struct PartyCTests {
       with: InputRules.Input(
         movement: [1, 0], actionPressed: false, pausePressed: false, switchPressed: true),
       sampledIn: .paused, deltaTime: 1 / 60)
-    #expect(world.session.leader == .lara)
+    #expect(world.session.leader == .laura)
     world.update(with: action, sampledIn: .paused, deltaTime: 1 / 60)
     #expect(world.session.mode == .exploring)
     #expect(!world.session.passageOpen)
@@ -379,7 +379,7 @@ struct PartyCTests {
     #expect(world.session.leader == .miki)
     #expect(world.controls.needsNeutralInput)
     // The touch Restart button restarts directly from the menu.
-    lead(world, .tomas)
+    lead(world, .tom)
     world.update(with: pause, sampledIn: .exploring, deltaTime: 1 / 60)
     world.update(
       with: InputRules.Input(
@@ -392,12 +392,12 @@ struct PartyCTests {
 
   @Test
   func restartResetsTheWorldInPlaceWithoutDuplicates() throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     let entities = descendants(world.root)
     // Some progress first: the briefing, the passage and the regulator.
     world.performAction()
     finish(world)
-    lead(world, .lara)
+    lead(world, .laura)
     try walk(world, to: [[2.5, 3], latch])
     world.performAction()
     lead(world, .miki)
@@ -414,7 +414,7 @@ struct PartyCTests {
       #expect(!world.session.passageOpen)
       #expect(world.session.mode == .exploring)
       for member in PartyMember.allCases {
-        let spawn = PrototypeLayout.spawn(for: member)
+        let spawn = RelayHouse.spawn(for: member)
         #expect(simd_distance(position(world, member), SIMD2(spawn.x, spawn.z)) < 0.001)
       }
       #expect(entity(world, "passage.barrier")?.isEnabled == true)
@@ -439,7 +439,7 @@ struct PartyCTests {
   // MARK: - Helpers
 
   private func session(at phase: GameSession.Phase) -> GameSession {
-    let session = GameSession()
+    let session = GameSession(level: RelayHouse.level)
     for (action, member) in Self.missionSteps where session.phase < phase {
       _ = session.perform(action, by: member)
       finish(session)
@@ -470,7 +470,7 @@ struct PartyCTests {
   }
 
   private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let toCamera = SIMD2(PrototypeLayout.cameraOffset.x, PrototypeLayout.cameraOffset.z)
+    let toCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
     let forward = -simd_normalize(toCamera)
     let right = SIMD2(-forward.y, forward.x)
     let unit = simd_normalize(direction)

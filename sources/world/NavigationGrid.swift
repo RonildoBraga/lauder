@@ -25,12 +25,25 @@ struct NavigationGrid: Sendable {
     rows = Int(((maximum.y - minimum.y) / cellSize).rounded(.up))
     origin = minimum + cellSize / 2
 
-    var walkable = [Bool](repeating: false, count: columns * rows)
-    for row in 0..<rows {
-      for column in 0..<columns {
-        let centre = origin + SIMD2(Float(column), Float(row)) * cellSize
-        walkable[row * columns + column] = obstacles.allSatisfy {
-          Self.distance(from: centre, to: $0) >= clearance
+    // A cell is walkable when every obstacle is at least `clearance` from its centre. Only the
+    // cells inside an obstacle's box grown by the clearance can be closer, so each obstacle
+    // checks just those: the same result as testing every cell against every obstacle, at a
+    // cost that suits a long level such as the bridge.
+    var walkable = [Bool](repeating: true, count: columns * rows)
+    for box in obstacles {
+      let low = (box.minimum - clearance - origin) / cellSize
+      let high = (box.maximum + clearance - origin) / cellSize
+      let firstColumn = max(0, Int(low.x.rounded(.up)))
+      let lastColumn = min(columns - 1, Int(high.x.rounded(.down)))
+      let firstRow = max(0, Int(low.y.rounded(.up)))
+      let lastRow = min(rows - 1, Int(high.y.rounded(.down)))
+      guard firstColumn <= lastColumn, firstRow <= lastRow else { continue }
+      for row in firstRow...lastRow {
+        for column in firstColumn...lastColumn where walkable[row * columns + column] {
+          let centre = origin + SIMD2(Float(column), Float(row)) * cellSize
+          if Self.distance(from: centre, to: box) < clearance {
+            walkable[row * columns + column] = false
+          }
         }
       }
     }
@@ -87,24 +100,14 @@ struct NavigationGrid: Sendable {
     self.region = region
   }
 
-  /// The prototype's floor and fixed blockers, with the body radius, 2 mm skin and a 3 cm
-  /// margin. The service passage is open in this grid.
-  static let prototype = layout(PrototypeLayout.obstacles)
-  /// The same grid with Party B's barrier closing the service passage.
-  static let closedPassage = layout(PrototypeLayout.obstacles(passageOpen: false))
-
-  static func forPassage(open: Bool) -> NavigationGrid {
-    open ? prototype : closedPassage
-  }
-
-  private static func layout(_ obstacles: [PartyMotion.Box]) -> NavigationGrid {
-    let ground = PrototypeLayout.box(.ground)
-    let centre = SIMD2(ground.position.x, ground.position.z)
-    let half = SIMD2(ground.size.x, ground.size.z) / 2
-    return NavigationGrid(
-      minimum: centre - half, maximum: centre + half, cellSize: 0.2,
-      clearance: PrototypeLayout.characterRadius + PartyMotion.skin + 0.03,
-      tightWidth: 1.5, obstacles: obstacles)
+  /// The level's floor and blockers, with the body radius, 2 mm skin and a 3 cm margin, and the
+  /// passage's barrier while it is closed.
+  init(level: Level, passageOpen: Bool) {
+    let bounds = level.bounds
+    self.init(
+      minimum: bounds.minimum, maximum: bounds.maximum, cellSize: 0.2,
+      clearance: PartyBody.radius + PartyMotion.skin + 0.03,
+      tightWidth: 1.5, obstacles: level.obstacles(passageOpen: passageOpen))
   }
 
   func isWalkable(_ point: SIMD2<Float>) -> Bool {
