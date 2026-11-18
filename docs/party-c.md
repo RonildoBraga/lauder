@@ -10,7 +10,7 @@ Claude implemented and checked Party C, so nothing below is an independent revie
 
 ### What this does not settle
 
-The plan asks for the relationships and ending dialogue to be finalised before Party C, and the walkthrough keeps its water-tap exchange for review before it becomes game content. Neither has happened; both are the maintainer's decisions. So:
+The plan asked for the relationships and ending dialogue to be finalised before Party C, and the walkthrough keeps its water-tap exchange for review before it becomes game content. Neither has happened. When authorising the merge, the maintainer [accepted Claude's recommendation](https://github.com/RonildoBraga/lauder/pull/37#issuecomment-6968168004) to keep the provisional dialogue for now and settle the relationships later: **“I'm ok merge and proceed with your recommendation”**. So:
 
 - Every line is provisional and lives in `MissionScript.swift`. Most come from the [gameplay walkthrough](gameplay-script.md). The keeper's two lines, Miki's inspection, the call's opening and the meeting plan were added to connect them.
 - The water-tap exchange and the meal coda are left out. The beat of leaving the water supply connected stays, carried by Miki's inspection and a visible bypass pipe.
