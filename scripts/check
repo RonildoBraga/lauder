@@ -101,7 +101,7 @@ def main():
         )
         print("Checking the Blender level script.", flush=True)
         run(
-            [sys.executable, "-I", "scripts/blender/test_lauder_levels.py"],
+            [sys.executable, "-I", "-B", "scripts/blender/test_lauder_levels.py"],
             output / "blender-levels.log",
         )
         destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()

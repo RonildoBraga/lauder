@@ -12,6 +12,7 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.dont_write_bytecode = True
 
 import lauder_levels as L  # noqa: E402
 
