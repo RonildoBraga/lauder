@@ -263,7 +263,7 @@ enum SceneDressing {
   /// The raised walkway above the divider, on posts. It is shown but cannot be walked on.
   private static func addWalkway(using geometry: Geometry) {
     let style = geometry.style
-    for divider in BrooklynBridge.structure where divider.name.hasPrefix("divider") {
+    for divider in BrooklynBridge.layout.boxes where divider.name.hasPrefix("divider") {
       let length = divider.size.z
       let centre = divider.position.z
       geometry.box(

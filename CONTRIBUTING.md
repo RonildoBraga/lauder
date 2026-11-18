@@ -83,6 +83,21 @@ On source changes, cancel old touch captures and require neutral input. Pause ke
 
 The accepted party plan has phone checkpoints after **Party A** and **Party C**, with B covered alongside C; use Simulator for everyday checks and intermediate PRs. Before declaring each milestone complete, use the baseline iPhone 13 Pro Max to verify its affected controls, movement/collision, camera, Pause/Resume, input release, interruptions and disconnect/reconnect. Measure frame pacing for performance claims. Earlier phone deferrals and the separate Xbox-hardware gap remain open until actual observations or a maintainer decision resolve them. Simulator timing is not phone evidence. The foreground game stays awake, including Pause, and normal idle locking resumes on leaving it. Record results and remaining gaps in the [Stage 2 evidence](docs/stage-2.md), following the [prototype plan](docs/prototype-plan.md).
 
+## Editing a level in Blender
+
+Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout, where everything stands, is `sources/content/BrooklynBridgeLayout.swift`, and Blender loads and saves it:
+
+1. In Blender (checked with 5.3), open `scripts/blender/lauder_levels.py` in the Text Editor and press **Run Script**. A **Lauder** tab appears in the 3D Viewport's sidebar (press N).
+2. Check the **Repository** folder, which defaults to the folder the script came from, and press **Load**. The bridge appears in a **Lauder Brooklyn Bridge** collection: the deck, the boxes coloured by surface, the landmarks, the areas drawn as outlines, and the named markers. Loading again discards changes made in Blender.
+3. Move, resize, duplicate or delete boxes, and move areas and markers. Follow the game's rules:
+   - turn boxes only in quarter turns about the vertical;
+   - keep boxes and landmarks on the deck;
+   - give a new box a name of its own and one of the Lauder materials, which sets its surface.
+4. Press **Save**. It checks the game's rules and writes the file, or explains what to fix and writes nothing.
+5. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
+
+The file stays the source of truth. Its numbers can also be edited directly, keeping each entry's form, and the next Load picks them up. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the script's own tests, which need no Blender.
+
 ## TestFlight builds
 
 TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid team, which is passed at archive time with `DEVELOPMENT_TEAM` and kept out of the repository. Archive the Release configuration for `generic/platform=iOS` with automatic signing and `-allowProvisioningUpdates`, then upload with `xcodebuild -exportArchive` and an export-options file whose method is `app-store-connect` and destination `upload`. Each upload needs a build number not used before for its version, so raise `CURRENT_PROJECT_VERSION` first; 0.1.0 (1) is taken. Internal testers receive each build automatically. Upload only with the maintainer's go-ahead.

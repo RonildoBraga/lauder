@@ -137,6 +137,29 @@ struct BridgeTests {
     #expect(target.y > leader.y)
   }
 
+  /// The layout file that Blender edits (ADR 0005) holds only what the bridge uses, and its
+  /// boxes and landmarks stand on the deck.
+  @Test
+  func theLayoutFileHoldsWhatTheBridgeUses() {
+    let layout = BrooklynBridge.layout
+    #expect(abs(layout.ground.position.y + layout.ground.size.y / 2) < 0.005)
+    for box in layout.boxes {
+      #expect(abs(box.position.y - box.size.y / 2) < 0.005, "\(box.name) stands on the deck")
+    }
+    for landmark in layout.landmarks {
+      #expect(abs(landmark.position.y) < 0.005, "\(landmark.name) stands on the deck")
+    }
+    // Each landmark, area and marker has its words or its part in BrooklynBridge.swift.
+    let level = BrooklynBridge.level
+    #expect(layout.landmarks.map(\.name) == level.points.map(\.id))
+    #expect(layout.areas.map(\.name) == level.triggers.map(\.id) + ["stranger"])
+    #expect(
+      layout.markers.map(\.name) == [
+        "spawn.miki", "spawn.tom", "spawn.laura", "stranger.hidden", "stranger.stand",
+        "stranger.retry",
+      ])
+  }
+
   // MARK: - Helpers
 
   /// Steer the leader straight to a point, reporting each new line the HUD shows.

@@ -99,6 +99,11 @@ def main():
             ["xcrun", "swift", "format", "lint", "--strict", "--recursive", "sources", "tests"],
             output / "format.log",
         )
+        print("Checking the Blender level script.", flush=True)
+        run(
+            [sys.executable, "-I", "-B", "scripts/blender/test_lauder_levels.py"],
+            output / "blender-levels.log",
+        )
         destination = os.environ.get("LAUDER_DESTINATION") or simulator_destination()
         command = [
             "xcodebuild",
