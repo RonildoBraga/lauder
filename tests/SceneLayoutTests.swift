@@ -3,9 +3,9 @@ import Testing
 @testable import Lauder
 
 struct SceneLayoutTests {
-  @Test(arguments: PrototypeLayout.BoxID.allCases)
-  func eachDeclaredBoxExistsExactlyOnce(id: PrototypeLayout.BoxID) {
-    #expect(PrototypeLayout.boxes.filter { $0.id == id }.count == 1)
+  @Test(arguments: RelayHouse.BoxID.allCases)
+  func eachDeclaredBoxExistsExactlyOnce(id: RelayHouse.BoxID) {
+    #expect(RelayHouse.boxes.filter { $0.name == id.rawValue }.count == 1)
   }
 
   @MainActor
@@ -13,7 +13,7 @@ struct SceneLayoutTests {
   func plantersFitTheirSolidSupportFootprints() {
     let tolerance: Float = 0.00001
     for placement in SceneDressing.planterPlacements {
-      let wall = PrototypeLayout.box(placement.support)
+      let wall = RelayHouse.box(placement.support)
       let position = placement.basePosition
       let size = SceneDressing.planterSize
       #expect(placement.support.hasWallCap)

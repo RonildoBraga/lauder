@@ -50,7 +50,10 @@ struct SquadPlanner {
     avoid: (SIMD2<Float>) -> Bool = { _ in false }
   ) -> [PartyMember: SIMD2<Float>] {
     let flipped = turn(towards: input.leaderVelocity, dt: input.dt)
-    let companions = PartyMember.allCases.filter { $0 != input.leader }
+    // Whoever is in the party with the leader: two companions, or one before the last joins.
+    let companions = PartyMember.allCases.filter {
+      $0 != input.leader && input.positions[$0] != nil
+    }
     if flipped { order = [] }
     assign(companions, input: input)
 

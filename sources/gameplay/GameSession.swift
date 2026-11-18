@@ -35,8 +35,15 @@ final class GameSession {
     case unavailable
   }
 
+  private let startingParty: [PartyMember]
+  private let interactions: [Level.Interaction]
   private(set) var mode = Mode.exploring
-  private(set) var leader = PartyMember.miki
+  private(set) var leader: PartyMember
+  /// Who travels together, in switching order. A level can start with fewer than three; the
+  /// others join through the story (ADR 0004).
+  private(set) var party: [PartyMember]
+  /// The trigger areas that have shown their line in this run.
+  private(set) var firedTriggers: Set<String> = []
   /// Party B's shared progress: either specialist action opens the passage for everyone. It is
   /// separate from the phase, because opening access is not a mission step.
   private(set) var passageOpen = false
@@ -50,10 +57,24 @@ final class GameSession {
   /// ends, so finishing the call secures the meeting and Restart mid-conversation discards it.
   private var pendingPhase: Phase?
 
+  init(level: Level) {
+    precondition(!level.party.isEmpty, "\(level.id.rawValue) must start with someone.")
+    startingParty = level.party
+    interactions = level.interactions
+    party = level.party
+    leader = level.party[0]
+  }
+
   var isPaused: Bool { mode == .paused }
   var carriesRegulator: Bool { phase == .carryingRegulator }
   var currentLine: MissionScript.Line? {
     conversation.map { MissionScript.lines($0)[lineIndex] }
+  }
+
+  /// Who Next would switch to, or nil while the leader travels alone.
+  var nextLeader: PartyMember? {
+    guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
+    return party[(index + 1) % party.count]
   }
 
   func togglePause() {
@@ -73,13 +94,26 @@ final class GameSession {
   }
 
   func cycleLeader() {
-    guard mode == .exploring else { return }
-    leader = leader.next
+    guard mode == .exploring, let next = nextLeader else { return }
+    leader = next
+  }
+
+  /// A member joins the party and can lead from now on. Joining twice changes nothing.
+  func recruit(_ member: PartyMember) {
+    guard !party.contains(member) else { return }
+    party.append(member)
+  }
+
+  /// The leader walked into a trigger area: true the first time in a run, so its line shows
+  /// once, and false afterwards or outside exploring.
+  func fire(_ trigger: String) -> Bool {
+    guard mode == .exploring else { return false }
+    return firedTriggers.insert(trigger).inserted
   }
 
   /// Whether the action is offered at its approach now. Exactly one transmitter action is
   /// offered in each phase.
-  func offers(_ action: PrototypeLayout.ActionID) -> Bool {
+  func offers(_ action: Level.ActionID) -> Bool {
     switch action {
     case .reachLatch, .shiftPanel: !passageOpen
     case .hearBriefing: phase == .briefing
@@ -90,14 +124,14 @@ final class GameSession {
     }
   }
 
-  func isEligible(_ member: PartyMember, for action: PrototypeLayout.ActionID) -> Bool {
-    PrototypeLayout.interaction(action).member.map { $0 == member } ?? true
+  func isEligible(_ member: PartyMember, for action: Level.ActionID) -> Bool {
+    interactions.first { $0.id == action }?.member.map { $0 == member } ?? true
   }
 
   /// Accept or reject a named action. The world has already checked that the active body
   /// stands in the action's approach area; the session checks mode, progress and eligibility.
   /// An accepted mission step starts its conversation and takes effect when it ends.
-  func perform(_ action: PrototypeLayout.ActionID, by member: PartyMember) -> ActionResult {
+  func perform(_ action: Level.ActionID, by member: PartyMember) -> ActionResult {
     guard mode == .exploring else { return .unavailable }
     switch action {
     case .reachLatch, .shiftPanel:
@@ -151,7 +185,9 @@ final class GameSession {
     mode = .exploring
     resumeMode = .exploring
     pauseChoice = .resume
-    leader = .miki
+    party = startingParty
+    leader = startingParty[0]
+    firedTriggers = []
     passageOpen = false
     phase = .briefing
     pendingPhase = nil

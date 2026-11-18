@@ -36,14 +36,65 @@ struct SceneStyle {
   let water = SimpleMaterial(
     color: UIColor(red: 0.29, green: 0.52, blue: 0.71, alpha: 1), roughness: 0.6,
     isMetallic: false)
+  // The bridge's greybox surfaces.
+  let asphalt = SimpleMaterial(
+    color: UIColor(red: 0.27, green: 0.29, blue: 0.29, alpha: 1), roughness: 1,
+    isMetallic: false)
+  let steel = SimpleMaterial(
+    color: UIColor(red: 0.42, green: 0.48, blue: 0.5, alpha: 1), roughness: 0.9,
+    isMetallic: false)
+  let granite = SimpleMaterial(
+    color: UIColor(red: 0.66, green: 0.62, blue: 0.54, alpha: 1), roughness: 1,
+    isMetallic: false)
+  let vehicleBody = SimpleMaterial(
+    color: UIColor(red: 0.47, green: 0.38, blue: 0.33, alpha: 1), roughness: 1,
+    isMetallic: false)
+  let glass = SimpleMaterial(
+    color: UIColor(red: 0.14, green: 0.19, blue: 0.21, alpha: 1), roughness: 0.7,
+    isMetallic: false)
+  let river = SimpleMaterial(
+    color: UIColor(red: 0.13, green: 0.2, blue: 0.24, alpha: 1), roughness: 0.8,
+    isMetallic: false)
 
-  func material(for surface: PrototypeLayout.Surface) -> SimpleMaterial {
+  func material(for surface: Level.Surface) -> SimpleMaterial {
     switch surface {
+    case .ground: ground
     case .concrete: stone
     case .shelter: wall
     case .depot: metal
     case .hazard: rust
+    case .asphalt: asphalt
+    case .steel: steel
+    case .granite: granite
+    case .vehicle: vehicleBody
     }
+  }
+
+  /// A greybox vehicle filling its footprint `size`: a car's lower body and cabin, or a taller
+  /// van, bus or truck with a band of dark windows.
+  func vehicle(size: SIMD3<Float>, at position: SIMD3<Float>) -> Entity {
+    let vehicle = Entity()
+    vehicle.position = position
+    let alongZ = size.z >= size.x
+    let length = max(size.x, size.z)
+    if size.y > 2 {
+      vehicle.addChild(block(size: size, at: .zero, material: vehicleBody))
+      let band: SIMD3<Float> =
+        alongZ ? [size.x + 0.02, 0.5, length * 0.9] : [length * 0.9, 0.5, size.z + 0.02]
+      vehicle.addChild(block(size: band, at: [0, size.y * 0.25, 0], material: glass))
+    } else {
+      let lower = size.y * 0.55
+      vehicle.addChild(
+        block(
+          size: [size.x, lower, size.z], at: [0, (lower - size.y) / 2, 0],
+          material: vehicleBody))
+      let cabin: SIMD3<Float> =
+        alongZ
+        ? [size.x * 0.9, size.y - lower, length * 0.5]
+        : [length * 0.5, size.y - lower, size.z * 0.9]
+      vehicle.addChild(block(size: cabin, at: [0, (size.y - cabin.y) / 2, 0], material: glass))
+    }
+    return vehicle
   }
 
   // Only visual children are scaled; parent entities keep their authored layout transforms.
@@ -88,7 +139,7 @@ struct SceneStyle {
     return visual
   }
 
-  func landmark(for point: PrototypeLayout.PointOfInterest) -> ModelEntity {
+  func landmark(for point: Level.PointOfInterest) -> ModelEntity {
     let entity = ModelEntity()
     let size = point.size
     entity.position = point.position + [0, size.y / 2, 0]
@@ -97,7 +148,7 @@ struct SceneStyle {
       block(
         size: [size.x * 0.85, size.y * 0.15, size.z * 1.03], at: [0, -size.y * 0.27, 0],
         material: wallCap))
-    if point.id == .transmitter {
+    if point.id == RelayHouse.PointID.transmitter.rawValue {
       entity.addChild(
         block(size: [0.48, 0.32, 0.025], at: [0, 0.12, 0.315], material: signal))
       entity.addChild(

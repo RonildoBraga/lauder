@@ -1,3 +1,5 @@
+/// The three playable characters. Who is in the party, and the switching order, belong to the
+/// session; a level can start with fewer than three.
 enum PartyMember: String, CaseIterable, Sendable {
   case miki, laura, tom
 
@@ -14,14 +16,6 @@ enum PartyMember: String, CaseIterable, Sendable {
     case .miki: "Systems"
     case .laura: "Agility"
     case .tom: "Strength"
-    }
-  }
-
-  var next: PartyMember {
-    switch self {
-    case .miki: .laura
-    case .laura: .tom
-    case .tom: .miki
     }
   }
 }

@@ -10,7 +10,7 @@ struct PartySpacingTests {
   /// leader kept running. A full-speed circle in open ground isolates that effect.
   @Test(arguments: 0..<4)
   func followersKeepTheirSpacingWhateverTheFrameTimes(cadence: Int) throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     let members = PartyMember.allCases
     let bodies = try members.map { member in
       try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
@@ -21,7 +21,7 @@ struct PartySpacingTests {
       return Float(state >> 40) / Float(1 << 24)
     }
     // Screen-relative stick axes for a world heading, as GameWorld consumes them.
-    let toCamera = SIMD2(PrototypeLayout.cameraOffset.x, PrototypeLayout.cameraOffset.z)
+    let toCamera = SIMD2(RelayHouse.cameraOffset.x, RelayHouse.cameraOffset.z)
     let forward = -simd_normalize(toCamera)
     let right = SIMD2(-forward.y, forward.x)
 
@@ -40,7 +40,7 @@ struct PartySpacingTests {
       frame += 1
       elapsed += dt
       // A 2.5 m radius from the spawn stays clear of the shelter and the south boundary.
-      heading += PrototypeLayout.speed * dt / 2.5
+      heading += PartyBody.speed * dt / 2.5
       let direction = SIMD2(cos(heading), sin(heading))
       world.advanceParty(
         movement: SIMD2(simd_dot(direction, right), simd_dot(direction, forward)),
@@ -59,7 +59,7 @@ struct PartySpacingTests {
 
   @Test
   func aShortFrameCarriesItsTimeToTheNextFrame() throws {
-    let world = GameWorld()
+    let world = GameWorld(level: RelayHouse.level)
     let leader = try #require(world.root.findEntity(named: "party.miki"))
     let start = leader.position
     // Less than one step: no movement yet, but the time is owed to the next frame.
@@ -67,6 +67,6 @@ struct PartySpacingTests {
     #expect(leader.position == start)
     world.advanceParty(movement: [0, 1], deltaTime: GameWorld.simulationStep * 0.5)
     let moved = simd_distance(leader.position, start)
-    #expect(abs(moved - PrototypeLayout.speed * GameWorld.simulationStep) < 0.0001)
+    #expect(abs(moved - PartyBody.speed * GameWorld.simulationStep) < 0.0001)
   }
 }

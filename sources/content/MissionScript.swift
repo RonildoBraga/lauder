@@ -83,7 +83,7 @@ enum MissionScript {
     case .seekingRegulator:
       passageOpen
         ? "The front entrance is blocked. The service passage is open."
-        : PrototypeLayout.barrierHint
+        : RelayHouse.barrierHint
     case .carryingRegulator: "Take the regulator back to the transmitter."
     case .radioRepaired: "The transmitter is ready for the call."
     case .meetingAgreed: "The meeting at Old Lock is agreed. Anyone can read the plan again."
