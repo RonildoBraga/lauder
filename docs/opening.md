@@ -83,6 +83,8 @@ The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 st
 
 **Phone checkpoint.** For a full run on the final code, Claude installed a Release build of `097ac67`, which includes the fix after Copilot's review, directly on the same phone over a cable. When the maintainer asked for it (**“Record now”**), Lauder restarted from the beginning and Claude recorded five minutes of the maintainer's play. After the first 15 s, Lauder held **59.97 fps** over 277 s, with frames averaging 16.67 ms. Four frames ran long, two of 50.0 ms and two of 33.3 ms, about 30, 43, 47 and 90 s into the run; their cause is unknown. The thermal state stayed Fair. The maintainer then reported: **“I did not noticed any stutters and everything worked as expected”**. The report does not say which inputs were used, how far the run went, or whether Pause and Restart were tried; Codex's automatic review of `b7cb98f` found nothing, and Copilot's one finding, on `3427d21`, was fixed before this run.
 
+**Merge.** Before the merge, `main` was merged into M4 twice: for the folder layout (#48), and for the lights and surface materials in Blender (#49). `./scripts/check` passed on the result at `f4540df`. The maintainer then [authorised the merge](https://github.com/RonildoBraga/lauder/pull/47#issuecomment-6996988166): **“merge #47”**. No independent review was requested.
+
 ## Open across the opening
 
 - **On the phone,** the maintainer's report does not say which inputs were used, so a new player's first unaided try with touch and with a controller is still worth confirming. The full run's four long frames are unexplained, and sustained play over 15 to 20 minutes, with thermals, is unmeasured.
