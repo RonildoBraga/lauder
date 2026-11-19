@@ -51,7 +51,7 @@ ADR 0004's five milestones are each assigned separately, with `./scripts/check`,
 | Step | Adds | State |
 |---|---|---|
 | **1** The decision | ADR 0006 and the documents it changes | Merged: accepted by the maintainer (“Yes, record it”) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the standing permission. Codex's automatic review found nothing, and Copilot's two findings were fixed |
-| **2** The path into the game | The game loads the bridge's look from a USDZ that Blender exports, instead of drawing boxes; a phone check | Not assigned |
+| **2** The path into the game | The game loads the bridge's look from a USDZ that Blender exports, instead of drawing boxes; a phone check | In review: assigned by the maintainer (“go ahead”). The phone check comes before the merge |
 | **3** Blender as the source | The committed level file, Export and the freshness check; Load, safe Save, the working file and the palette retire | Not assigned |
 | **4** Models and provided files | Linked models, the intake check and provenance notes | Not assigned |
 | **5** Art and richer light | Models, textures, more kinds of light and baked lighting | Not assigned; follows a change to the [visual direction](visual-direction.md) |

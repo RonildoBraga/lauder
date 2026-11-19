@@ -37,10 +37,18 @@ def run(command, log):
         raise SystemExit(result.returncode)
 
 
+#: The USDZ files the app and its tests need: the Brooklyn Bridge's scene file and the test figure.
+ASSETS = (
+    "apple/sources/content/BrooklynBridge.usdz",
+    "apple/sources/content/character/Idle.usdz",
+    "apple/sources/content/character/Walk.usdz",
+)
+
+
 def check_assets():
     problems = []
-    for name in ("Idle", "Walk"):
-        relative = Path("apple/sources/content/character") / f"{name}.usdz"
+    for name in ASSETS:
+        relative = Path(name)
         path = ROOT / relative
         if not path.is_file():
             problems.append(f"{relative} (missing)")
@@ -50,7 +58,7 @@ def check_assets():
                 problems.append(f"{relative} (Git LFS pointer)")
     if problems:
         raise SystemExit(
-            "Character assets are not downloaded:\n"
+            "USDZ assets are not downloaded:\n"
             + "\n".join(f"- {problem}" for problem in problems)
             + "\nInstall Git LFS, then run 'git lfs install' and 'git lfs pull' "
             "from the repository root before rerunning ./scripts/check."

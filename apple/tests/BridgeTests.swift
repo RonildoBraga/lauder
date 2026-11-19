@@ -162,11 +162,12 @@ struct BridgeTests {
       ])
   }
 
-  /// The bridge's decoration and camera come from the layout file too: the game draws each
-  /// piece where the file puts it, turned as it says, and its camera takes the file's offset and
-  /// field of view.
+  /// The bridge's look comes from its scene file, which Blender exports from the layout file
+  /// (ADR 0006): the ground, each box and landmark stand where the file puts them, at their size,
+  /// a vehicle sits inside its box, each piece is turned as the file says, and the camera takes
+  /// the file's offset and field of view.
   @Test
-  func theGameDrawsThePiecesAndTheCameraFromTheLayoutFile() throws {
+  func theSceneFileShowsTheBridgeWhereTheLayoutFilePutsIt() throws {
     let layout = BrooklynBridge.layout
     #expect(layout.pieces.count > 100)
     #expect(Set(layout.pieces.map(\.name)).count == layout.pieces.count)
@@ -174,17 +175,58 @@ struct BridgeTests {
     #expect(level.cameraOffset == layout.camera.offset)
     #expect(level.fieldOfView == layout.camera.fieldOfView)
     let world = GameWorld(level: level)
+    let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
+    func part(_ name: String) throws -> Entity {
+      try #require(scene.findEntity(named: Self.sceneName(name)), "\(name) is in the scene file")
+    }
+    for box in [layout.ground] + layout.boxes where box.surface != .vehicle {
+      let bounds = try part(box.name).visualBounds(relativeTo: nil)
+      #expect(simd_distance(bounds.center, box.position) < 0.001, "\(box.name) stands as written")
+      #expect(simd_distance(bounds.extents, box.size) < 0.001, "\(box.name) has its size")
+    }
+    for box in layout.boxes where box.surface == .vehicle {
+      // A vehicle is a body and windows inside its box, which blocks movement and sight.
+      let bounds = try part("\(box.name) body").visualBounds(relativeTo: nil)
+      let low = box.position - box.size / 2 - 0.001
+      let high = box.position + box.size / 2 + 0.001
+      #expect(all(bounds.min .>= low) && all(bounds.max .<= high), "\(box.name) fits its box")
+      let windows = ["cabin", "windows"].compactMap {
+        scene.findEntity(named: Self.sceneName("\(box.name) \($0)"))
+      }
+      #expect(windows.count == 1, "\(box.name) has its windows")
+    }
+    for landmark in layout.landmarks {
+      let bounds = try part(landmark.name).visualBounds(relativeTo: nil)
+      let centre = landmark.position + [0, landmark.size.y / 2, 0]
+      #expect(simd_distance(bounds.center, centre) < 0.001, "\(landmark.name) stands on the deck")
+    }
     for piece in layout.pieces {
-      let entity = try #require(world.root.findEntity(named: "dressing.\(piece.name)"))
-      #expect(simd_distance(entity.position(relativeTo: nil), piece.position) < 0.001)
-      let turn = entity.orientation(relativeTo: nil).vector
-      #expect(abs(simd_dot(turn, piece.rotation.vector)) > 0.9999, "\(piece.name) is turned")
+      // Each block keeps Blender's axes inside it, so compare where its corners end up.
+      let shown = try part(piece.name).transformMatrix(relativeTo: nil)
+      let written =
+        Transform(scale: piece.size, rotation: piece.rotation, translation: piece.position).matrix
+      let corners = Self.corners.map { shown * $0 }
+      let matched = Self.corners.allSatisfy { corner in
+        corners.contains { simd_distance($0, written * corner) < 0.001 }
+      }
+      #expect(matched, "\(piece.name) stands and turns as the layout file says")
     }
     let camera = try #require(world.root.findEntity(named: "camera") as? PerspectiveCamera)
     #expect(camera.camera.fieldOfViewInDegrees == layout.camera.fieldOfView)
   }
 
   // MARK: - Helpers
+
+  /// A layout name as the scene file has it: USD allows only letters, digits and underscores, so
+  /// `car-a1 body` is `car_a1_body` there.
+  private static func sceneName(_ name: String) -> String {
+    String(name.map { $0.isASCII && ($0.isLetter || $0.isNumber) ? $0 : "_" })
+  }
+
+  /// The corners of a block one metre across, centred on its origin.
+  private static let corners: [SIMD4<Float>] = [-0.5, 0.5].flatMap { x in
+    [-0.5, 0.5].flatMap { y in [-0.5, 0.5].map { z in SIMD4<Float>(x, y, z, 1) } }
+  }
 
   /// Steer the leader straight to a point, reporting each new line the HUD shows.
   private func walk(

@@ -155,6 +155,9 @@ struct Level {
   let boxes: [Box]
   /// Decoration that blocks nothing, such as the bridge's walkway and cables.
   var pieces: [Piece] = []
+  /// The scene file that shows the level, exported by Blender (ADR 0006): the name of a USDZ in
+  /// the app's bundle. Without one, the game draws the ground, boxes, landmarks and pieces itself.
+  var scene: String?
   let points: [PointOfInterest]
   let interactions: [Interaction]
   let triggers: [Trigger]

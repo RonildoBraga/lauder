@@ -19,6 +19,12 @@ sidebar (press N). Open Level keeps each level in a working Blender file in .loc
 Git ignores, and saving that file saves the level too. Play saves the level, then builds the game
 and opens it in the iOS Simulator through apple/scripts/play.
 
+Save and Play also keep the level's scene file up to date (ADR 0006): everything the game shows of
+the level, built from the layout and the palette and exported as USD, which the game loads instead
+of drawing boxes. Each export records what it was made from in blender/scene-exports.json, and
+./scripts/check fails when a scene file no longer matches. blender/scripts/export-scene.py exports
+one in a Blender of its own, for example after a layout file is edited by hand.
+
 Reading, writing and checking layouts and the palette need no Blender: blender/test_lauder_levels.py
 runs them in ./scripts/check. Coordinates in the layout files are the game's, in metres: x across,
 y up and z along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
@@ -29,11 +35,15 @@ game's rules before anything is written, and test the round trip.
 """
 
 from dataclasses import dataclass, field
+import hashlib
+import json
 import math
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import textwrap
 
 try:
@@ -62,6 +72,8 @@ class LevelFile:
     required_boxes: tuple
     #: Where the game camera's preview target starts.
     camera_target: str
+    #: The scene file, relative to the repository: everything the game shows of the level.
+    scene: str
 
 
 LEVELS = {
@@ -76,9 +88,11 @@ LEVELS = {
             "// this file through its Lauder extension (blender/extensions/lauder_levels): Load builds the",
             "// layout in Blender and Save writes it back. The numbers can also be edited here, and the next",
             "// Load picks them up. Keep the entries in this form so that the script can read them.",
+            "// After an edit here, export the scene file again: blender/scripts/export-scene.py.",
         ),
         required_boxes=("brooklyn-tower-pier", "manhattan-tower-pier"),
         camera_target="spawn.miki",
+        scene="apple/sources/content/BrooklynBridge.usdz",
     ),
 }
 
@@ -91,12 +105,20 @@ PALETTE_HEADER = (
     "// extension (blender/extensions/lauder_levels): Load builds Blender's materials from it and Save",
     "// writes them back. The numbers can also be edited here, and the next Load picks them up. Keep",
     "// the entries in this form so that the script can read them.",
+    "// After an edit here, export the scene file again: blender/scripts/export-scene.py.",
 )
 
 #: Where each level's working Blender file lives, relative to the repository; Git ignores it.
 WORKING_FOLDER = ".local/blender"
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"
+#: The script that exports a level's scene file in a Blender of its own.
+EXPORT_SCRIPT = "blender/scripts/export-scene.py"
+#: Where each scene file records what it was made from, relative to the repository.
+SCENE_RECORD = "blender/scene-exports.json"
+#: Raised whenever the export changes what a scene file holds, so that every scene file is
+#: exported again.
+SCENE_FORMAT = 1
 
 
 def working_file(repository, level):
@@ -1064,6 +1086,115 @@ def figure(member):
     return parts
 
 
+# MARK: - The level's scene file (ADR 0006)
+
+
+def usd_name(name):
+    """The name an object takes in a USD file, where only letters, digits and underscores are
+    allowed: `car-a1` becomes `car_a1`. The game finds the scene's parts by these names."""
+    safe = re.sub(r"[^A-Za-z0-9_]", "_", name)
+    return "_" + safe if safe[:1].isdigit() else safe
+
+
+@dataclass(frozen=True)
+class ScenePart:
+    """One block that the game shows, with its centre and size in the game's space, in metres."""
+    name: str
+    centre: tuple
+    size: tuple
+    surface: str
+    rotation: tuple = IDENTITY
+
+
+def _plus(a, b):
+    return tuple(x + y for x, y in zip(a, b))
+
+
+def scene_parts(layout):
+    """Everything the game shows of a level, as its code drew it from the layout before the scene
+    file: the ground and each box; a vehicle as the body and windows inside its box, which only
+    blocks; each landmark in metal, with its painted band; and each piece, turned."""
+    ground = layout.ground
+    parts = [ScenePart(ground.name, ground.position, ground.size, ground.surface)]
+    for box in layout.boxes:
+        if box.surface != "vehicle":
+            parts.append(ScenePart(box.name, box.position, box.size, box.surface))
+            continue
+        for part, offset, size, look in details(box, "vehicle"):
+            parts.append(ScenePart(f"{box.name} {part}", _plus(box.position, offset), size, look))
+    for landmark in layout.landmarks:
+        x, y, z = landmark.position
+        centre = (x, y + landmark.size[1] / 2, z)
+        parts.append(ScenePart(landmark.name, centre, landmark.size, "metal"))
+        for part, offset, size, look in details(landmark, "landmark"):
+            parts.append(ScenePart(f"{landmark.name} {part}", _plus(centre, offset), size, look))
+    for piece in layout.pieces:
+        parts.append(ScenePart(piece.name, piece.position, piece.size, piece.surface,
+                               piece.rotation))
+    names = [usd_name(part.name) for part in parts]
+    clashes = sorted({name for name in names if names.count(name) > 1})
+    if clashes:
+        raise LayoutError(f"These names would be the same in the scene file: {', '.join(clashes)}.")
+    return parts
+
+
+_LFS_POINTER = b"version https://git-lfs.github.com/spec/v1"
+
+
+def file_fingerprint(path):
+    """A file's SHA-256, in hex. A Git LFS pointer stands for its file, so it gives the file's."""
+    data = Path(path).read_bytes()
+    if data.startswith(_LFS_POINTER):
+        found = re.search(rb"oid sha256:([0-9a-f]{64})", data)
+        if found:
+            return found.group(1).decode()
+    return hashlib.sha256(data).hexdigest()
+
+
+def scene_inputs(repository, level):
+    """What the level's scene file is made from: its layout file and the palette, each with its
+    fingerprint."""
+    root = Path(repository)
+    return {name: file_fingerprint(root / name) for name in (level.path, PALETTE_PATH)}
+
+
+def _scene_records(repository):
+    path = Path(repository) / SCENE_RECORD
+    try:
+        return json.loads(path.read_text()) if path.exists() else {}
+    except ValueError:
+        return {}  # Unreadable: every scene file counts as stale, and the next export rewrites it.
+
+
+def stale_scene(repository, key="brooklyn-bridge"):
+    """Why the level's scene file no longer matches what it is made from, or None when it does."""
+    level = LEVELS[key]
+    record = _scene_records(repository).get(level.scene)
+    if record is None or not (Path(repository) / level.scene).exists():
+        return f"{level.scene} has not been exported."
+    if record.get("format") != SCENE_FORMAT:
+        return f"{level.scene} was exported by an earlier version of the Lauder extension."
+    made_from = record.get("made from", {})
+    for name, fingerprint in scene_inputs(repository, level).items():
+        if made_from.get(name) != fingerprint:
+            return f"{name} changed since {level.scene} was exported."
+    if record.get("fingerprint") != file_fingerprint(Path(repository) / level.scene):
+        return f"{level.scene} changed since it was exported."
+    return None
+
+
+def record_scene(repository, level, inputs):
+    """Record what the level's scene file, just exported, was made from."""
+    records = _scene_records(repository)
+    records[level.scene] = {
+        "format": SCENE_FORMAT,
+        "made from": inputs,
+        "fingerprint": file_fingerprint(Path(repository) / level.scene),
+    }
+    path = Path(repository) / SCENE_RECORD
+    path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+
+
 # MARK: - Blender
 
 
@@ -1567,6 +1698,62 @@ def make_working_file(repository, key):
     return path
 
 
+#: Blender's USD export for a scene file: the game's axes (y up, metres), each object as one
+#: prim, the materials as preview surfaces, and nothing that the game makes itself.
+SCENE_EXPORT = {
+    "export_materials": True,
+    "generate_preview_surface": True,
+    "generate_materialx_network": False,
+    "export_lights": False,
+    "export_cameras": False,
+    "export_animation": False,
+    "export_custom_properties": False,
+    "author_blender_name": False,
+    "merge_parent_xform": True,
+    "convert_orientation": True,
+    "export_global_forward_selection": "NEGATIVE_Z",
+    "export_global_up_selection": "Y",
+}
+
+
+def build_scene(layout, palette):
+    """Build everything the game shows of the level (scene_parts) in the open Blender file."""
+    for part in scene_parts(layout):
+        name = usd_name(part.name)
+        item = bpy.data.objects.new(name, _cube(name))
+        item.location = to_blender(part.centre)
+        if not is_identity(part.rotation):
+            item.rotation_euler = Quaternion(rotation_to_blender(part.rotation)).to_euler("XYZ")
+        item.scale = size_to_blender(part.size)
+        material = _material(part.surface, palette)
+        # The blocks are closed, so their inside never shows: single-sided, as the game drew them.
+        material.use_backface_culling = True
+        item.data.materials.append(material)
+        bpy.context.scene.collection.objects.link(item)
+
+
+def export_scene(repository, key="brooklyn-bridge"):
+    """Write the level's scene file from its layout file and the palette, and record what it was
+    made from. It empties the open Blender file first, so it runs in a Blender of its own:
+    blender/scripts/export-scene.py."""
+    level = LEVELS[key]
+    root = Path(repository)
+    # Fingerprinted as read, so that a file changed during the export makes the scene stale.
+    texts = {name: (root / name).read_bytes() for name in (level.path, PALETTE_PATH)}
+    inputs = {name: hashlib.sha256(data).hexdigest() for name, data in texts.items()}
+    palette = parse_palette(texts[PALETTE_PATH].decode())
+    layout = parse_layout(texts[level.path].decode(), set(palette))
+    bpy.ops.wm.read_homefile(use_empty=True)
+    build_scene(layout, palette)
+    target = root / level.scene
+    with tempfile.TemporaryDirectory() as folder:
+        written = Path(folder) / target.name
+        bpy.ops.wm.usd_export(filepath=str(written), **SCENE_EXPORT)
+        shutil.copyfile(written, target)
+    record_scene(repository, level, inputs)
+    return target
+
+
 def _announce(message, error=False):
     """Tell the person from a handler or a timer, which cannot report: in the Lauder tab, and in
     Blender's status bar."""
@@ -1582,51 +1769,100 @@ def _announce(message, error=False):
     bpy.app.timers.register(report, first_interval=0.1)
 
 
-#: The game's build while Play runs it: the process, its log and the log's path.
-_PLAY = {"process": None, "log": None, "path": None}
+#: Work running in the background, one step after another, so that Blender stays usable: the
+#: steps still to run, and the running step's name, process, log and log's path.
+_JOB = {"steps": [], "name": None, "process": None, "log": None, "path": None}
+#: What each background step says when it finishes well.
+_FINISHED = {
+    "export": "Exported the scene file. The game shows it from the next build.",
+    "play": "The game is running in the Simulator.",
+}
 
 
-def _start_play(repository):
-    """Run apple/scripts/play in the background, so Blender stays usable while it builds."""
-    path = Path(repository) / ".local/play/play.log"
+def background_steps(repository, key, play):
+    """The background steps that Save (play=False) or Play needs: exporting the level's scene file
+    when it no longer matches the level's files, then, for Play, building and opening the game.
+    Each is (name, command, log)."""
+    root = Path(repository)
+    steps = []
+    if stale_scene(repository, key) is not None:
+        blender = bpy.app.binary_path if bpy is not None else "blender"
+        steps.append(("export", [
+            blender, "-b", "--factory-startup", "--python-exit-code", "1",
+            "--python", str(root / EXPORT_SCRIPT), "--", key,
+        ], "export.log"))
+    if play:
+        steps.append(("play", [sys.executable, "-I", str(root / PLAY_SCRIPT)], "play.log"))
+    return steps
+
+
+def _start_job(repository, steps):
+    """Run the steps in the background, in order, stopping at the first that fails."""
+    _JOB.update(steps=list(steps), repository=repository)
+    _next_step()
+    # Persistent, so that opening another Blender file, such as the working file, keeps watching.
+    bpy.app.timers.register(_watch_job, first_interval=1.0, persistent=True)
+
+
+def _next_step():
+    name, command, log_name = _JOB["steps"].pop(0)
+    path = Path(_JOB["repository"]) / ".local/play" / log_name
     path.parent.mkdir(parents=True, exist_ok=True)
     log = path.open("w")
-    process = subprocess.Popen(
-        [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)], cwd=repository,
-        stdout=log, stderr=subprocess.STDOUT)
-    _PLAY.update(process=process, log=log, path=path)
-    # Persistent, so that opening another Blender file, such as the working file, keeps watching.
-    bpy.app.timers.register(_watch_play, first_interval=1.0, persistent=True)
+    process = subprocess.Popen(command, cwd=_JOB["repository"], stdout=log,
+                               stderr=subprocess.STDOUT)
+    _JOB.update(name=name, process=process, log=log, path=path)
 
 
-def _play_running():
-    """Whether Play's build is still running. One that stopped while nothing watched it is
-    finished off here, so that Play is never stuck."""
-    process = _PLAY["process"]
-    if process is None:
+def _job_running():
+    """Whether background work is still running. Work that stopped while nothing watched it is
+    finished off here, so that Save and Play are never stuck."""
+    if _JOB["process"] is None:
         return False
-    if process.poll() is None:
+    if _JOB["process"].poll() is None:
         return True
-    _watch_play()
-    return False
+    _watch_job()
+    return _JOB["process"] is not None
 
 
-def _watch_play():
-    process = _PLAY["process"]
+def _watch_job():
+    process = _JOB["process"]
     if process is None:
         return None
     if process.poll() is None:
         return 0.5
-    _PLAY["log"].close()
-    _PLAY["process"] = None
+    _JOB["log"].close()
+    _JOB["process"] = None
+    name, path = _JOB["name"], _JOB["path"]
     if process.returncode == 0:
-        _announce("The game is running in the Simulator.")
-    else:
-        lines = [line.strip() for line in _PLAY["path"].read_text().splitlines() if line.strip()]
-        detail = " ".join(lines[-3:])
-        _announce(f"Play failed{': ' + detail if detail else '.'} The log is .local/play/play.log.",
-                  error=True)
+        if _JOB["steps"]:
+            try:
+                _next_step()
+            except OSError as error:
+                _JOB["steps"] = []
+                _announce(f"The next step could not start: {error}", error=True)
+                return None
+            return 0.5
+        _announce(_FINISHED[name])
+        return None
+    _JOB["steps"] = []
+    lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
+    detail = " ".join(lines[-3:])
+    what = "The scene's export" if name == "export" else "Play"
+    _announce(f"{what} failed{': ' + detail if detail else '.'} The log is "
+              f".local/play/{path.name}.", error=True)
     return None
+
+
+def _export_if_stale(repository, key):
+    """Start exporting the level's scene file when it no longer matches the level's files.
+    Returns whether an export started."""
+    if _job_running():
+        return False
+    steps = background_steps(repository, key, play=False)
+    if steps:
+        _start_job(repository, steps)
+    return bool(steps)
 
 
 def load_level(repository, key="brooklyn-bridge"):
@@ -1707,8 +1943,17 @@ if bpy is not None:
             _announce(f"The Blender file is saved, but the level is not: {error}", error=True)
         else:
             window_manager.lauder_files_changed = False
-            if changed:
-                _announce(f"Saved {' and '.join(changed)} too.")
+            try:
+                exporting = _export_if_stale(repository, level.key)
+            except OSError as error:
+                _announce(f"The level is saved, but its scene file could not be exported: {error}",
+                          error=True)
+                return
+            said = [f"Saved {' and '.join(changed)} too."] if changed else []
+            if exporting:
+                said.append("Exporting the scene file…")
+            if said:
+                _announce(" ".join(said))
 
     @persistent
     def _refresh_opened_file(_):
@@ -1819,6 +2064,12 @@ if bpy is not None:
                 return {"CANCELLED"}
             window_manager.lauder_files_changed = False
             message = f"Saved {' and '.join(changed)}." if changed else "No changes to save."
+            try:
+                if _export_if_stale(bpy.path.abspath(context.scene.lauder_repository),
+                                    context.scene.lauder_level):
+                    message += " Exporting the scene file…"
+            except OSError as error:
+                message += f" The scene file could not be exported: {error}"
             window_manager.lauder_message = message
             self.report({"INFO"}, message)
             return {"FINISHED"}
@@ -1835,8 +2086,11 @@ if bpy is not None:
             if named is None:
                 self.report({"ERROR"}, "Set the repository folder first.")
                 return {"CANCELLED"}
-            if _play_running():
-                self.report({"WARNING"}, "The game is still building; it opens when it is ready.")
+            if _job_running():
+                busy = ("The game is still building; it opens when it is ready."
+                        if _JOB["name"] == "play"
+                        else "The scene file is still exporting; press Play again when it is done.")
+                self.report({"WARNING"}, busy)
                 return {"CANCELLED"}
             repository, level = named
             try:
@@ -1854,12 +2108,15 @@ if bpy is not None:
             if is_working_file(context.scene) and bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()
             try:
-                _start_play(repository)
+                steps = background_steps(repository, level.key, play=True)
+                _start_job(repository, steps)
             except OSError as error:
                 self.report({"ERROR"}, f"Play could not start: {error}")
                 return {"CANCELLED"}
-            window_manager.lauder_message = "Building the game for the Simulator…"
-            self.report({"INFO"}, "Building the game for the Simulator…")
+            message = ("Exporting the scene file, then building the game for the Simulator…"
+                       if steps[0][0] == "export" else "Building the game for the Simulator…")
+            window_manager.lauder_message = message
+            self.report({"INFO"}, message)
             return {"FINISHED"}
 
     class LAUDER_OT_game_look(bpy.types.Operator):

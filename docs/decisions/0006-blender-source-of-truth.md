@@ -1,6 +1,6 @@
 # ADR 0006 — Blender as the source of levels and models
 
-**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Not built yet: until [its steps](#plan) land, [ADR 0005](0005-blender-level-editor.md) describes the working pipeline.\
+**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. [Step 2](#step-2--the-path-into-the-game) is built; until step 3 lands, [ADR 0005](0005-blender-level-editor.md) describes how a level is edited.\
 **Date:** 19 November 2026\
 **Supersedes:** ADR 0005's decision 3 and its Load and Save round trip, once step 3 lands. [ADR 0004](0004-brooklyn-bridge-opening.md)'s typed level data stays, generated from Blender.\
 **Deciders:** Maintainer\
@@ -127,3 +127,32 @@ Each step is a pull request of its own and needs its own go-ahead.
   - armatures and animation;
   - normal, roughness and metallic maps;
   - how long the scene takes to load on the phone.
+
+## Step 2 — the path into the game
+
+**Date:** 19 November 2026. The maintainer assigned it (**“go ahead”**) after this ADR's merge.
+
+1. **The scene file.** `apple/sources/content/BrooklynBridge.usdz` holds everything the game shows of the bridge, as its code drew it:
+   - the deck and the boxes;
+   - each vehicle's body and windows, inside its box;
+   - the landmarks with their bands;
+   - the pieces, turned.
+
+   Blender builds them from the layout file and the palette and exports them with its own USD exporter, on the game's axes, one prim per block, with the surfaces as single-sided preview-surface materials. The file holds no lights, camera, areas, markers or stand-ins. It is 14 KB, stored with Git LFS.
+2. **The game loads it.** `GameWorld` loads the scene file synchronously while it is made, in place of drawing the bridge, so start-up gains no asynchronous step, and Restart keeps it. The lights still come from the layout file. A level without a scene file, such as a test's, is still drawn from its boxes and pieces.
+3. **It stays up to date.** Until step 3, the Swift files remain the source.
+   - Saving in Blender, with **Save** or ⌘S, exports the scene file whenever the layout file or the palette changed since the last export. The export runs in a Blender of its own, in the background.
+   - Play does the same before it builds.
+   - `blender/scripts/export-scene.py` exports it by hand, after the files are edited outside Blender.
+   - `blender/scene-exports.json` records the fingerprints of both files and of the scene file. `./scripts/check` fails when any of them no longer matches.
+
+### Checks of step 2
+
+- `./scripts/check` passes: the extension's 46 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The new and changed tests cover:
+  - the scene file holding what the game drew, with names safe for USD, and refusing names that would clash;
+  - the bridge's scene file matching its layout file and the palette, and going stale when either changes;
+  - Save and Play exporting only a stale scene file;
+  - in the game, the ground, every box, vehicle, landmark and piece standing where the layout file puts them, with no part of the scene taking part in physics.
+- In Blender 5.3, run in the background on a copy of the files: moving `car-a1` and saving wrote the layout file and started the export, which made the scene file current again. A save without edits exported nothing.
+- In the Simulator, the opening frame looks the same as `main`'s. Of its 3.2 million pixels, 24.6% differ: all but 123 of them by one step in 255, and only 36 by more than 8. Two runs of `main` give the same frame, pixel for pixel.
+- Not checked yet: the phone, which comes before the merge.

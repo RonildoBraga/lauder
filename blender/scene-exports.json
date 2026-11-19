@@ -1,0 +1,10 @@
+{
+  "apple/sources/content/BrooklynBridge.usdz": {
+    "fingerprint": "aca1ea6402893f9e4654b8c844d83c6b5bd57f61c2a3c252fd1b880713fb62ff",
+    "format": 1,
+    "made from": {
+      "apple/sources/content/BrooklynBridgeLayout.swift": "ce6617366f1aaf68e2dc453faf418ca7103302963226048015b573c6b9cba0ad",
+      "apple/sources/content/Surfaces.swift": "8e50c99bf9202ca432bc9983aa29a138e31c13c57e5f1b0f739ce15e90e5cc92"
+    }
+  }
+}
