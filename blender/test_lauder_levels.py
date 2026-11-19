@@ -453,6 +453,41 @@ class BackgroundTests(unittest.TestCase):
             self.assertEqual(L.levels_using(repository, f"{L.ASSETS}/kite/kite.blend"), [])
 
 
+class BakeTests(unittest.TestCase):
+    """Ambient occlusion baked into a part's colour (ADR 0006, step 5d)."""
+
+    def test_a_parts_image_grows_with_it_within_limits(self):
+        self.assertEqual(L.bake_size((0.1, 0.1, 0.1)), L.BAKE_PIXELS[0])
+        self.assertEqual(L.bake_size((2.4, 2.4, 2.6)), 64)  # the bridge's booth
+        self.assertEqual(L.bake_size((25.2, 0.8, 1.2)), 128)  # the barricade
+        self.assertEqual(L.bake_size((25.8, 644.3, 0.3)), L.BAKE_PIXELS[1])  # the deck
+        for side in (L.bake_size((x, 1, 1)) for x in (0.5, 3, 30, 300)):
+            self.assertEqual(side & (side - 1), 0, f"{side} is a power of two")
+
+    def test_baked_images_and_materials_are_named_after_their_parts(self):
+        self.assertEqual(L.baked_image("brooklyn-bridge", "bridge.booth block"),
+                         "blender/levels/baked/brooklyn-bridge/bridge_booth_block.png")
+        self.assertEqual(L.baked_material("bridge.booth block"), "bridge.booth block baked")
+
+    def test_only_a_principled_surface_with_plain_maps_besides_its_colour_bakes(self):
+        plain = L.MaterialShape("Lauder metal", None, "BSDF_PRINCIPLED")
+        poster = L.MaterialShape("poster", None, "BSDF_PRINCIPLED", (
+            ("Base Color", (("TEX_IMAGE", "Image Texture"),)),))
+        rusty = L.MaterialShape("rusty", None, "BSDF_PRINCIPLED", (
+            ("Roughness", (("TEX_IMAGE", "Image Texture"),)),
+            ("Normal", (("NORMAL_MAP", "Normal Map"), ("TEX_IMAGE", "Image Texture")))))
+        glow = L.MaterialShape("glow", None, "EMISSION")
+        self.assertEqual(L.bake_problems("booth", [plain, poster]), [])
+        problems = L.bake_problems("sign", [rusty, glow])
+        self.assertEqual(len(problems), 2)
+        self.assertIn("sign shows rusty, whose Normal and Roughness are fed by nodes", problems[0])
+        self.assertIn("sign shows glow, which needs a Principled BSDF", problems[1])
+        # What a bake makes, its colour through its own UV map, reaches the game.
+        baked = L.MaterialShape(L.baked_material("booth"), None, "BSDF_PRINCIPLED", (
+            ("Base Color", (("TEX_IMAGE", "Image Texture"), ("UVMAP", "UV Map"))),))
+        self.assertEqual(L.material_problems([baked]), [])
+
+
 class SceneRuleTests(unittest.TestCase):
     """What a scene file can show as Blender does (ADR 0006, decision 8)."""
 

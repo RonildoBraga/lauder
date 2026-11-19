@@ -1,6 +1,6 @@
 # ADR 0006 — Blender as the source of levels and models
 
-**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended. [Step 5](#step-5--art-and-richer-light) is under way.\
+**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended. [Step 5](#step-5--art-and-richer-light) is built, apart from its phone check.\
 **Date:** 19 November 2026\
 **Supersedes:** ADR 0005's decision 3 and its Load and Save round trip, once step 3 lands. [ADR 0004](0004-brooklyn-bridge-opening.md)'s typed level data stays, generated from Blender.\
 **Deciders:** Maintainer\
@@ -353,3 +353,41 @@ The maintainer's choice reversed decision 6's rule that the code keeps the stand
 - In Blender 5.3, run in the background on a copy of the repository: saving a changed Miki through the extension exported her scene file and left the bridge's exports current. The bridge opened with the three models in Preview, passed its check and exported, made from its own file and the vehicles. Saving the car exported nothing of its own.
 - The extension's 46 tests cover the export record of these models, their freshness, and Play's and saving's background steps. A Swift test checks that each member of the party and a hostile shows its model, standing on the ground, 1.58 m tall and facing ahead.
 - Not checked: the phone.
+
+### 5d — baked occlusion
+
+It was [merged](https://github.com/RonildoBraga/lauder/pull/59#issuecomment-7008064842) under the standing permission, without an independent review.
+
+The maintainer chose **“Baked lighting”**, described as baking light into textures in Blender for the scene file. A trial found two limits. The game's RealityView adds RealityKit's built-in sky light, which neither Blender nor an offscreen RealityKit render can reproduce. And a fully baked surface, shown through emission, stops showing live shadows, such as Miki's on the road. Asked how to go on, the maintainer chose **“Bake occlusion”**: Blender bakes soft ambient occlusion into each chosen part's colour image, and the game's suns, sky light and shadows still light it.
+
+1. **Bake Occlusion,** in the Lauder tab, bakes the selected parts of Visual and every part already baked.
+   - Cycles bakes each part's colour and its ambient occlusion, within 1.5 m, through a UV map of the part's own, `baked`, made with Smart UV Project.
+   - It multiplies them into a PNG in `blender/levels/baked/<level>/`.
+   - The part then shows a copy of its material, `<part> baked`, with that image as Base Color.
+   - Its earlier materials and UV map stay in the file, a material held only by the part's own slot with a fake user. **Clear Occlusion** gives them back, and removes the UV map, material and image the bake made, unless something else, such as a duplicate of the part, still shows them.
+   - A bake marks the material and image it makes with the part's name, and replaces or removes only those, never one that merely shares the name. A part sharing its mesh with others gets a copy of its own first, so that its UV maps stay its own.
+2. **What bakes:** a part of the level's own with one material, a Principled BSDF fed by nodes only at Base Color, since the game reads one UV map, the baked colour's, and with no UV map of its own named `baked`. Other parts are refused, saying why, before anything changes, and linked models are not baked in a level. A part's image grows with its size, at 8 texels a metre, as a power of two from 64 to 1,024 pixels on a side. A long part, such as the bridge's 644 m deck, gets coarse texels along its length, and is better split first.
+3. **The game needs no change:** a baked part shows an ordinary material with an image on Base Color, which step 5b checked. Occlusion darkens the part under every light, not only the sky light, as a colour image must.
+4. **The bridge bakes nothing,** since the [visual direction](../visual-direction.md) allows no new textures yet.
+
+### Checks of 5d
+
+- The trial of a full bake:
+  - Blender's diffuse bake holds the light leaving a surface: 0.79 against 0.82 predicted, for a grey plane under the bridge's sun-key.
+  - Rendered offscreen with RealityKit, emission showed 11% brighter than a rough plane lit live with the same light, by the same factor under 1,500 and 4,500 lux.
+  - In the Simulator, the toll booth, fully baked, came out darker and warmer than when lit live. An offscreen render of the live bridge, without image-based light, was darker than the game throughout: the game has a sky light that the bake lacked.
+- In Blender 5.3, run in the background on a copy of the repository:
+  - Bake Occlusion baked the booth, its band, the barricade, the deck and a railing, in a run of about 13 seconds with the export, into images of 2 to 95 KB;
+  - the level passed its check and exported with the five images, and pressing it again kept all five baked;
+  - Clear Occlusion gave the barricade back its material, and removed its baked UV map and its image;
+  - a cube coloured by an image kept that image's colours where nothing shades it, and a cube with an image on Roughness was refused, leaving everything unbaked.
+- In the iOS 27 Simulator, with those five parts baked, the opening frame changed in 6.8% of its pixels, every one darker. Miki's live shadow stayed on the road.
+- Reviews by Codex and Copilot, and Claude's own reading, found ways a bake could harm data it did not make. Each case was fixed and then checked in a background Blender:
+  - a refused selection now changes nothing;
+  - a material held only by a part's own slot survived saving and reopening the level;
+  - parts sharing a mesh, and an Alt-D duplicate of a baked part, kept their UV maps when another was baked or cleared;
+  - a part's own texture, and an unrelated material, named like what a bake makes, survived baking and clearing;
+  - a part with a UV map named `baked` was refused;
+  - a Shift-D duplicate kept its baked image's file when the original was cleared.
+- The extension's 49 tests cover the images' sizes and names, and which parts can bake.
+- Not checked: the phone, and how baked images weigh on its memory.
