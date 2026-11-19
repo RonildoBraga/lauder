@@ -1,6 +1,6 @@
 # ADR 0006 — Blender as the source of levels and models
 
-**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended. [Step 5](#step-5--art-and-richer-light) is built, apart from its phone check.\
+**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended. [Step 5](#step-5--art-and-richer-light) is built, and on the baseline iPhone the maintainer reported it working.\
 **Date:** 19 November 2026\
 **Supersedes:** ADR 0005's decision 3 and its Load and Save round trip, once step 3 lands. [ADR 0004](0004-brooklyn-bridge-opening.md)'s typed level data stays, generated from Blender.\
 **Deciders:** Maintainer\
@@ -391,3 +391,11 @@ The maintainer chose **“Baked lighting”**, described as baking light into te
   - a Shift-D duplicate kept its baked image's file when the original was cleared.
 - The extension's 49 tests cover the images' sizes and names, and which parts can bake.
 - Not checked: the phone, and how baked images weigh on its memory.
+
+### Phone check of step 5
+
+On 20 November 2026 the maintainer asked for step 5 on the phone (**“Install on my phone”**). Claude built `main` at `078852b`, holding all four parts, for release, and installed it on the baseline iPhone 13 Pro Max. The app carried the bridge's scene file and the four models' scene files.
+
+The bridge uses none of the new lights or baked occlusion yet, so the change it showed was the party and the hostiles, loaded from their models. The maintainer chose to play without a recording (**“Just play”**) and reported **“everything is working”**.
+
+No frame timing was recorded, so the models' cost on the phone rests on the maintainer's report, not a measurement. How point and spot lights, texture maps and baked images perform there is untested until a level uses them.
