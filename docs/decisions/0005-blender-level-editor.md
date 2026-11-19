@@ -4,7 +4,7 @@
 **Date:** 18 November 2026\
 **Amended:** 18 November 2026, at the maintainer's request: [the decoration and the game camera](#amendment--the-decoration-and-the-game-camera) join the layout file. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/45#issuecomment-6975951390) (“Yes, merge both”) without an independent review\
 **Amended again:** 19 November 2026, at the maintainer's request: [the lights and the surface materials](#amendment--lights-and-surface-materials) are built in Blender too. After trying it in Blender and the Simulator, the maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/49#issuecomment-6996641912) (“Yes, merge it”) without an independent review\
-**Amended a third time:** 19 November 2026, at the maintainer's request: [the working file, a safe Save and Play](#amendment--the-working-file-a-safe-save-and-play). Not yet merged\
+**Amended a third time:** 19 November 2026, at the maintainer's request: [the working file, a safe Save and Play](#amendment--the-working-file-a-safe-save-and-play). The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/50#issuecomment-6997456643) (“merge #50 and you dont need for my reviews, you can always merge it”) without an independent review\
 **Deciders:** Maintainer\
 **Author:** Claude
 
