@@ -163,7 +163,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 ## Step 3 — the Blender file as the source
 
-**Date:** 19 November 2026. The maintainer assigned it (**“Yes, start step 3”**).
+**Date:** 19 November 2026. The maintainer assigned it (**“Yes, start step 3”**) and, asked whether the level file could go into Git LFS, answered **“Yes, push it”**. It was [merged](https://github.com/RonildoBraga/lauder/pull/53#issuecomment-7000891999) under the standing permission, without an independent review.
 
 1. **The level file.** `blender/levels/brooklyn-bridge.blend`, stored with Git LFS, is the bridge's source. The step 2 extension's Load made it once from the Swift files it replaces, and it was then sorted into five collections:
    - **Visual**, 172 parts: each box's look, as a block parented to its gameplay box; each vehicle's body and windows; each landmark's block and band; and the 111 decoration pieces.
@@ -188,8 +188,8 @@ Each step is a pull request of its own and needs its own go-ahead.
 ### Checks of step 3
 
 - The layout file exported from the new Blender file holds the same 58 entries as the hand-kept one it replaces. Every box, landmark, area and marker keeps its position and size, the camera is the same, and so are the lights, apart from one direction that rounding moved by 0.02°.
-- `./scripts/check` passes: the extension's 26 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The tests cover:
-  - the layout file's rules and form, and the names the story uses;
+- `./scripts/check` passes: the extension's 27 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The tests cover:
+  - the layout file's rules and form, and the names the story uses, which Export cannot tell without the layout file;
   - the export record going stale when the Blender file changes, or when an export is edited by hand or goes missing;
   - in the game, each box's look filling its box while the bridge is a greybox, each vehicle inside its box, and the decoration in the scene file alone.
 - In Blender 5.3, run in the background on a copy:
@@ -200,4 +200,9 @@ Each step is a pull request of its own and needs its own go-ahead.
   - a level file saved with its file browser in the home folder, and a Repository folder chosen in the Lauder tab, held no local path;
   - an export refused because the Visual collection was gone left both exports as they were.
 - In the Simulator, the opening frame looks the same as `main`'s, whose scene file step 2 exported from the Swift files: of its 3.2 million pixels, 4,012 differ (0.13%), only 10 of them by more than 8 steps in 255. Two runs of `main` give the same frame, pixel for pixel.
+- Codex's and Copilot's automatic reviews found four problems, all fixed before the merge:
+  - a save landing between the export loading the level file and fingerprinting it;
+  - a story-name check that a missing layout file turned off;
+  - a Repository path stored in the level file;
+  - a layout file written before an export was refused.
 - Not checked: the Lauder tab's buttons in the maintainer's own Blender, whose functions the background runs called; and the phone, since nothing the game shows or plays changed.
