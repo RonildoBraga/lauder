@@ -409,6 +409,8 @@ class SceneRuleTests(unittest.TestCase):
                                          bytes=L.LFS_IMAGE_BYTES + 1, lfs=False),
             "makes it relative": L.TextureShape("h", "blender/assets/car/textures/h.png",
                                                 full_path=True),
+            "not downloaded yet": L.TextureShape("i", "blender/assets/car/textures/i.png",
+                                                 pointer=True),
         }
         for words, texture in cases.items():
             problems = L.texture_problems([texture], "blender/assets/car")

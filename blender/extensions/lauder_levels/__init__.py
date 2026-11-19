@@ -716,6 +716,8 @@ class TextureShape:
     lfs: bool = None
     #: Whether the Blender file holds the image by its full path, rather than relative to itself.
     full_path: bool = False
+    #: Whether the file is a Git LFS pointer, not yet downloaded with git lfs pull.
+    pointer: bool = False
 
 
 def texture_problems(textures, folder=None):
@@ -733,6 +735,9 @@ def texture_problems(textures, folder=None):
                             f"it into {home}, so that it stays a file of its own.")
         elif not texture.exists:
             problems.append(f"The texture {texture.name} is missing: {texture.path or 'no file'}.")
+        elif texture.pointer:
+            problems.append(f"The texture {texture.name}, {texture.path}, is not downloaded yet: "
+                            f"run git lfs pull.")
         elif texture.path.startswith("/"):
             problems.append(f"The texture {texture.name} is outside the repository; copy it into "
                             f"{home}.")
@@ -1315,6 +1320,8 @@ def _texture_shape(image, root):
     if not image.filepath or not path.is_file():
         return TextureShape(image.name, image.filepath, exists=False)
     relative = _relative(path, root)
+    if is_lfs_pointer(path):
+        return TextureShape(image.name, relative, pointer=True)
     size = path.stat().st_size
     lfs = _stored_with_lfs(root, relative) if size > LFS_IMAGE_BYTES and not relative.startswith(
         "/") else None
@@ -1399,21 +1406,28 @@ def _files_used(repository):
     return sorted(used)
 
 
-def open_level_file(repository, key):
+def open_level_file(repository, key, attempts=3):
     """Open the level's Blender file, and return the fingerprints of it and of every file it uses,
     such as its models and their textures, relative to the repository. Each fingerprint is taken
     before its file is read, so a save that lands meanwhile leaves the exports stale, to be
-    exported again, and never recorded as current: the level is opened once to find the files it
-    uses, then again to read them."""
+    exported again, and never recorded as current. The level is opened to find the files it uses,
+    then again to read them, until no file it then uses went without a fingerprint first."""
     root = Path(repository)
     level = LEVELS[key]
     made_from = {level.blend: file_fingerprint(root / level.blend)}
     bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
-    for name in _files_used(root):
-        if (root / name).is_file():
-            made_from[name] = file_fingerprint(root / name)
-    bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
-    return made_from
+    for _ in range(attempts):
+        for name in _files_used(root):
+            if name not in made_from and (root / name).is_file():
+                made_from[name] = file_fingerprint(root / name)
+        bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
+        # A file still missing has no fingerprint, and the export refuses it.
+        unread = [name for name in _files_used(root)
+                  if name not in made_from and (root / name).is_file()]
+        if not unread:
+            return made_from
+    raise LayoutError(f"The files {level.blend} uses kept changing while it was read; export it "
+                      f"again.")
 
 
 def _overwrite(owner, attribute, value):
@@ -1488,13 +1502,23 @@ def export_level(repository, key="brooklyn-bridge", made_from=None):
     # Only the Visual collection is exported, each of its own parts where it stands in the world;
     # the models it shows come with their instances, from their own files.
     visual = _collection(VISUAL)
-    own = list(visual.all_objects)
+    own = [item for item in visual.all_objects if item.library is None]
     shown = set(what_collection_shows(visual))
     places = {item: item.matrix_world.copy() for item in own}
     for item in own:
         item.parent = None
         item.matrix_world = places[item]
         item.hide_render = False
+    # Nothing else stays in the scene, which the USD export writes whole: not even a model linked
+    # straight into another collection, whose objects belong to its own file.
+    scene = bpy.context.scene
+    if visual not in list(scene.collection.children):
+        scene.collection.children.link(visual)
+    for child in list(scene.collection.children):
+        if child != visual:
+            scene.collection.children.unlink(child)
+    for item in list(scene.collection.objects):
+        scene.collection.objects.unlink(item)
     for item in list(bpy.data.objects):
         if item.library is None and item not in shown:
             bpy.data.objects.remove(item, do_unlink=True)
