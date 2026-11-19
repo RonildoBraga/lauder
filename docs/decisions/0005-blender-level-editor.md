@@ -4,6 +4,7 @@
 **Date:** 18 November 2026\
 **Amended:** 18 November 2026, at the maintainer's request: [the decoration and the game camera](#amendment--the-decoration-and-the-game-camera) join the layout file. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/45#issuecomment-6975951390) (“Yes, merge both”) without an independent review\
 **Amended again:** 19 November 2026, at the maintainer's request: [the lights and the surface materials](#amendment--lights-and-surface-materials) are built in Blender too. After trying it in Blender and the Simulator, the maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/49#issuecomment-6996641912) (“Yes, merge it”) without an independent review\
+**Amended a third time:** 19 November 2026, at the maintainer's request: [the working file, a safe Save and Play](#amendment--the-working-file-a-safe-save-and-play). Not yet merged\
 **Deciders:** Maintainer\
 **Author:** Claude
 
@@ -119,3 +120,39 @@ Reviewing a proposed workflow for Blender, the maintainer noted that its lights 
   - Turning `sun-key` to shine from straight above, doubling `sky-fill`'s strength and making steel smoother saved exactly those three changes, and a second Save straight after changed nothing. A second shadow was refused and wrote nothing, and loading again brought the saved values back.
   - Rendered through the game camera with EEVEE and lit by the two suns, the asphalt's red and green match the game's opening frame to about 1%. The game's light is a little bluer and its shadows softer.
 - Not checked: the Game Look button, which needs an open 3D Viewport; the script in the maintainer's own Blender session; the phone, since the game's frame did not change.
+
+## Amendment — the working file, a safe Save and Play
+
+**Date:** 19 November 2026
+
+With the lights and materials merged, Claude asked whether to start the rest of the Blender workflow proposed with them, and the maintainer answered **“Yes, start it”**. This amends decisions 2 and 3:
+
+1. **The script is a Blender extension,** `blender/extensions/lauder_levels`, installed once from a local extension repository at `blender/extensions`. It runs from the repository, so it follows the checked-out branch. Run Script in Blender's Text Editor still works.
+2. **Each level has a working Blender file,** `.local/blender/<level>.blend`, which Git ignores.
+   - **Open Level** opens it, and makes it from the level's files the first time.
+   - Saving it with ⌘S also saves the level after the usual checks. If they fail, only the Blender file is saved.
+   - When the level's files changed while the working file was closed, opening it loads them again. If the file also holds level edits never saved to them, it changes nothing and leaves the choice to the person.
+   - Decision 3 stands: the Swift files are the source of truth, and nothing from Blender is committed. The working file can be rebuilt from them at any time.
+3. **Save is safe.** Load and Save record the files' text on the level's collection. Save refuses when the files changed since then, through an agent's edit, a pull or a branch switch: it names what changed and writes nothing. **Save Anyway** replaces those changes with what Blender holds.
+4. **Play** saves the level and runs `apple/scripts/play`, which builds the Debug app in `.local/play` and opens it in the iOS Simulator. The script reuses the playtest script's helpers. Play runs in the background, so Blender stays usable, and reports the result in the Lauder tab.
+5. **The party shows at its start markers,** drawn as the game's stand-ins, as a preview that follows each marker and is not saved. Laura shows standing, although the game has her lying hurt.
+
+### Checks
+
+- `./scripts/check` passes: the extension's tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The extension's 38 tests include seven new ones:
+  - the changes Save names;
+  - the refusal's wording;
+  - the working file's place;
+  - the repository found from the extension;
+  - the figures standing on the floor;
+  - the manifest.
+- In Blender 5.3, run in the background on copies of the two files:
+  - The extension installed from a local repository at `blender/extensions` and enabled, with its operators and both handlers.
+  - After an outside edit, Save refused with "car-b4 changed" and wrote nothing. Save Anyway then kept Blender's version.
+  - Open Level's working file:
+    - ⌘S wrote the level.
+    - A change made to the files while the working file was closed was loaded again on opening, and named.
+    - When the working file also held level edits that had not been saved, opening it changed nothing and flagged the conflict.
+  - Load drew the figures, 21 parts at the three spawn markers, and Save without edits wrote nothing.
+- `./apple/scripts/play` built and launched the game in the iOS Simulator and brought Device Hub to the front. It took 8 s the first time and 2 to 3 s afterwards.
+- Not checked: the buttons in a person's own Blender, and the install steps in Preferences.

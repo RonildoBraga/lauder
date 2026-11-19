@@ -1,46 +1,45 @@
-"""Lauder's level layouts in Blender (ADR 0005).
+"""Lauder's levels in Blender (ADR 0005), as a Blender extension.
 
 Blender is the editor for a level's scene. Load builds it in the open Blender file from the
 level's Swift layout file and the shared surface palette, and Save writes both back after checking
-the game's rules. The Swift files stay the source of truth, so a direct edit to them shows up at
-the next Load.
+the game's rules. The Swift files stay the source of truth: a direct edit to them shows up at the
+next Load, and Save will not overwrite one made since the last Load or Save.
 
 The layout holds what blocks movement and sight (the ground and boxes), what can be looked at,
 the trigger and fight areas, the markers where people start and stand, the decoration that blocks
 nothing (pieces such as the bridge's walkway and cables, turned as they need), the game camera and
 the lights. The palette holds how each surface looks, for every level: its colour, roughness and
-metalness. Load also draws the details the game adds to every vehicle and landmark, so that
-Blender shows what the game shows; they follow their box and are not saved.
+metalness. Load also draws what the game adds by its own rules, so that Blender shows what the
+game shows: the details on every vehicle and landmark, and the party at its start markers. They
+follow their box or marker and are not saved.
 
-Open this file in Blender's Text Editor and press Run Script: a Lauder tab appears in the 3D
-Viewport's sidebar (press N). Set the repository folder there once, then Load or Save.
+Install it once: in Blender's Preferences, add a local extension repository at this repository's
+blender/extensions folder, then enable Lauder levels. A Lauder tab appears in the 3D Viewport's
+sidebar (press N). Open Level keeps each level in a working Blender file in .local/blender, which
+Git ignores, and saving that file saves the level too. Play saves the level, then builds the game
+and opens it in the iOS Simulator through apple/scripts/play.
 
-Reading, writing and checking layouts and the palette need no Blender: test_lauder_levels.py runs
-them in ./scripts/check. Coordinates in the layout files are the game's, in metres: x across, y up
-and z along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
+Reading, writing and checking layouts and the palette need no Blender: blender/test_lauder_levels.py
+runs them in ./scripts/check. Coordinates in the layout files are the game's, in metres: x across,
+y up and z along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
 
 Moving something else into Blender follows the same recipe: give it a typed entry in a Swift data
 file, read and write that entry here exactly, build it in Load and read it back in Save, check the
 game's rules before anything is written, and test the round trip.
 """
 
-bl_info = {
-    "name": "Lauder levels",
-    "author": "Lauder contributors",
-    "version": (1, 2, 0),
-    "blender": (4, 2, 0),
-    "location": "3D Viewport > Sidebar > Lauder",
-    "description": "Load and save Lauder's level layouts, lights and surface palette",
-    "category": "Import-Export",
-}
-
 from dataclasses import dataclass, field
 import math
 from pathlib import Path
 import re
+import subprocess
+import sys
+import textwrap
 
 try:
+    import bmesh
     import bpy
+    from bpy.app.handlers import persistent
     from mathutils import Quaternion, Vector
 except ImportError:  # Outside Blender: the tests use the plain functions below.
     bpy = None
@@ -74,9 +73,9 @@ LEVELS = {
         header=(
             "// Where everything on the Brooklyn Bridge stands and how it is lit (ADR 0005), in metres: x",
             "// across the deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits",
-            "// this file through blender/lauder_levels.py: Load builds the layout in Blender and Save writes",
-            "// it back. The numbers can also be edited here, and the next Load picks them up. Keep the",
-            "// entries in this form so that the script can read them.",
+            "// this file through its Lauder extension (blender/extensions/lauder_levels): Load builds the",
+            "// layout in Blender and Save writes it back. The numbers can also be edited here, and the next",
+            "// Load picks them up. Keep the entries in this form so that the script can read them.",
         ),
         required_boxes=("brooklyn-tower-pier", "manhattan-tower-pier"),
         camera_target="spawn.miki",
@@ -88,11 +87,21 @@ LEVELS = {
 PALETTE_PATH = "apple/sources/content/Surfaces.swift"
 PALETTE_HEADER = (
     "// How each surface looks (ADR 0005): the game's small shared material palette, for every",
-    "// level. Colours are sRGB, each channel from 0 to 1. Blender edits this file through",
-    "// blender/lauder_levels.py: Load builds Blender's materials from it and Save writes them",
-    "// back. The numbers can also be edited here, and the next Load picks them up. Keep the",
-    "// entries in this form so that the script can read them.",
+    "// level. Colours are sRGB, each channel from 0 to 1. Blender edits this file through its Lauder",
+    "// extension (blender/extensions/lauder_levels): Load builds Blender's materials from it and Save",
+    "// writes them back. The numbers can also be edited here, and the next Load picks them up. Keep",
+    "// the entries in this form so that the script can read them.",
 )
+
+#: Where each level's working Blender file lives, relative to the repository; Git ignores it.
+WORKING_FOLDER = ".local/blender"
+#: The script that builds the game and opens it in the iOS Simulator.
+PLAY_SCRIPT = "apple/scripts/play"
+
+
+def working_file(repository, level):
+    """The level's working Blender file. Saving it saves the level's files too."""
+    return Path(repository) / WORKING_FOLDER / f"{level.key}.blend"
 
 #: Surfaces that the game's own rules draw vehicles and landmarks with; the palette keeps them.
 GAME_LOOKS = ("vehicle", "glass", "metal", "paint")
@@ -652,6 +661,63 @@ def emit_palette(palette):
     return "\n".join(lines) + "\n"
 
 
+# MARK: - Changes made outside Blender
+
+
+class FilesChanged(LayoutError):
+    """The level's files changed since Blender last loaded or saved them, so a save would undo
+    someone else's work: an agent's edit, a pull or a branch switch."""
+
+    def __init__(self, changes):
+        self.changes = changes
+        shown = ", ".join(changes[:8]) + (", and more" if len(changes) > 8 else "")
+        super().__init__(
+            f"The level's files changed since your last Load or Save: {shown}. Load to take those "
+            f"changes, or Save Anyway to replace them with what Blender holds.")
+
+
+def _layout_entries(layout):
+    """Each entry of a layout, in the file's order, by how a person would name it."""
+    entries = {"the ground": layout.ground}
+    for items in (layout.boxes, layout.landmarks, layout.areas, layout.markers, layout.pieces):
+        entries.update({item.name: item for item in items})
+    entries["the camera"] = layout.camera
+    entries.update({light.name: light for light in layout.lights})
+    return entries
+
+
+def _differences(before, after, name=lambda key: key):
+    """Which entries were changed, removed or added, in the order the files have them."""
+    changes = []
+    for key, value in before.items():
+        if key not in after:
+            changes.append(f"{name(key)} removed")
+        elif after[key] != value:
+            changes.append(f"{name(key)} changed")
+    return changes + [f"{name(key)} added" for key in after if key not in before]
+
+
+def changes_since(synced_layout, synced_palette, layout_text, palette_text):
+    """What changed in the level's files since Blender last loaded or saved them, for a person to
+    read; empty when nothing did."""
+    changes = []
+    if layout_text != synced_layout:
+        try:
+            found = _differences(_layout_entries(parse_layout(synced_layout)),
+                                 _layout_entries(parse_layout(layout_text)))
+        except LayoutError:
+            found = ["the layout file, in a form the script cannot read"]
+        changes += found or ["the layout file's comments or spacing"]
+    if palette_text != synced_palette:
+        try:
+            found = _differences(parse_palette(synced_palette), parse_palette(palette_text),
+                                 lambda name: f"the {name} surface")
+        except LayoutError:
+            found = ["the palette file, in a form the script cannot read"]
+        changes += found or ["the palette file's comments or spacing"]
+    return changes
+
+
 # MARK: - Between Blender and the game
 
 
@@ -966,6 +1032,38 @@ def details(box_or_landmark, kind):
     ]
 
 
+#: The party's stand-ins as SceneStyle.partyMember draws them: clothing colour (sRGB) and width.
+#: Blender shows them at their start markers, so keep the two in step.
+PARTY = {
+    "miki": ((0.25, 0.65, 0.59), 0.38),
+    "tom": ((0.38, 0.51, 0.81), 0.49),
+    "laura": ((0.9, 0.61, 0.29), 0.31),
+}
+#: The stand-ins' other colours in SceneStyle: the head, the legs and the front mark.
+FIGURE_COLOURS = {"head": (0.65, 0.68, 0.55), "gear": (0.16, 0.25, 0.25), "front": (0.62, 0.87, 0.77)}
+#: The height of a stand-in's centre above the floor.
+FIGURE_CENTRE = CAMERA_TARGET_HEIGHT - 0.1
+
+
+def figure(member):
+    """A stand-in's parts as SceneStyle.standIn draws it, facing Manhattan: (name, centre, size,
+    look) in the game's space, from the floor below the stand-in. Blender shows one at each spawn
+    marker; it follows the marker and is not saved."""
+    _, width = PARTY[member]
+    centre = FIGURE_CENTRE
+    parts = [
+        ("body", (0, centre + 0.04, 0), (width, 0.72, 0.3), member),
+        ("head", (0, centre + 0.57, 0), (0.32, 0.32, 0.32), "head"),
+        ("front", (0, centre + 0.12, -0.16), (0.15, 0.2, 0.025), "front"),
+    ]
+    for number, side in ((1, -1), (2, 1)):
+        parts += [
+            (f"leg {number}", (side * 0.105, centre - 0.55, 0), (0.13, 0.55, 0.18), "gear"),
+            (f"foot {number}", (side * 0.105, centre - 0.8, -0.04), (0.18, 0.1, 0.28), member),
+        ]
+    return parts
+
+
 # MARK: - Blender
 
 
@@ -1025,15 +1123,41 @@ def _apply_finish(material, finish):
         node.inputs["Metallic"].default_value = metallic
 
 
-def _area_material():
-    material = bpy.data.materials.get("Lauder area")
+def _display_material(name, colour):
+    """A material that only Blender shows, such as the areas' or the party's, in an sRGB colour."""
+    material = bpy.data.materials.get(name)
     if material is None:
-        material = bpy.data.materials.new("Lauder area")
-    # Earlier versions of this script tagged it like a surface; an area has none.
+        material = bpy.data.materials.new(name)
+    # Earlier versions of this script tagged the areas' material like a surface; it has none.
     if "lauder_surface" in material:
         del material["lauder_surface"]
-    material.diffuse_color = _linear(*AREA_COLOUR)
+    linear = _linear(*colour)
+    material.diffuse_color = linear
+    node = _principled(material, create=True)
+    if node is not None:
+        node.inputs["Base Color"].default_value = linear
+        node.inputs["Roughness"].default_value = 1.0
     return material
+
+
+def _area_material():
+    return _display_material("Lauder area", AREA_COLOUR)
+
+
+def _figure_material(look):
+    colour = PARTY[look][0] if look in PARTY else FIGURE_COLOURS[look]
+    return _display_material(f"Lauder figure {look}", colour)
+
+
+def _sphere(name):
+    """A sphere one unit across, as the game's stand-ins have for a head."""
+    mesh = bpy.data.meshes.new(name)
+    shape = bmesh.new()
+    bmesh.ops.create_uvsphere(shape, u_segments=16, v_segments=8, radius=0.5)
+    shape.to_mesh(mesh)
+    shape.free()
+    mesh["lauder"] = True
+    return mesh
 
 
 def _cube(name):
@@ -1122,6 +1246,18 @@ def build_in_blender(layout, level, palette):
             detail.scale = size_to_blender(tuple(p / s for p, s in zip(part_size, box.size)))
             detail.hide_select = True
 
+    def add_figure(marker, member):
+        # The party as the game draws it at the start, following its marker, and not saved.
+        for part_name, offset, part_size, look in figure(member):
+            name = f"{member} {part_name}"
+            part = bpy.data.objects.new(name, _sphere(name) if part_name == "head" else _cube(name))
+            part.data.materials.append(_figure_material(look))
+            parts["detail"].objects.link(part)
+            part.parent = marker
+            part.location = to_blender(offset)
+            part.scale = size_to_blender(part_size)
+            part.hide_select = True
+
     block(layout.ground.name, "ground", to_blender(layout.ground.position),
           size_to_blender(layout.ground.size), _material(layout.ground.surface, palette))
     for box in layout.boxes:
@@ -1152,6 +1288,9 @@ def build_in_blender(layout, level, palette):
         item.show_name = True
         item.location = (marker.position[0], -marker.position[1], 0)
         parts["marker"].objects.link(item)
+        member = marker.name.removeprefix("spawn.")
+        if marker.name.startswith("spawn.") and member in PARTY:
+            add_figure(item, member)
     for piece in layout.pieces:
         block(piece.name, "piece", to_blender(piece.position), size_to_blender(piece.size),
               _material(piece.surface, palette), rotation_to_blender(piece.rotation))
@@ -1339,22 +1478,161 @@ def palette_from_blender(previous):
     return palette_from_shapes(shapes, previous)
 
 
+def _files(repository, level):
+    """The text of the level's layout file and of the palette."""
+    root = Path(repository)
+    return (root / level.path).read_text(), (root / PALETTE_PATH).read_text()
+
+
+def _synced(level):
+    """The text of the level's files when Blender last loaded or saved them, or None for a level
+    loaded by an earlier version of this script."""
+    root = _level_collection(level)
+    if root is None or "_lauder_synced_layout" not in root:
+        return None
+    return root["_lauder_synced_layout"], root["_lauder_synced_palette"]
+
+
+def _remember(level, layout_text, palette_text):
+    """Record the text of the level's files as Blender now holds them, on the level's collection,
+    under names that Blender's interface does not show."""
+    root = _level_collection(level)
+    root["_lauder_synced_layout"] = layout_text
+    root["_lauder_synced_palette"] = palette_text
+
+
+def _scene_level(scene):
+    """The repository and the level that the scene's Lauder settings name, or None."""
+    repository = bpy.path.abspath(getattr(scene, "lauder_repository", "") or "")
+    level = LEVELS.get(getattr(scene, "lauder_level", ""))
+    return (repository, level) if repository and level is not None else None
+
+
+def is_working_file(scene):
+    """Whether the open Blender file is the working file of the level that the scene names."""
+    named = _scene_level(scene)
+    if named is None or not bpy.data.filepath:
+        return False
+    return Path(bpy.data.filepath).resolve() == working_file(*named).resolve()
+
+
+def _holds_unsaved_edits(level, synced):
+    """Whether Blender holds level edits that were never written to the files it last synced."""
+    try:
+        palette = palette_from_blender(parse_palette(synced[1]))
+        surfaces = set(palette)
+        layout = layout_from_shapes(
+            shapes_from_blender(level), level, parse_layout(synced[0], surfaces),
+            camera_from_blender(level), lights_from_blender(level), surfaces)
+    except LayoutError:
+        return True
+    return emit_layout(layout, level, surfaces) != synced[0] or emit_palette(palette) != synced[1]
+
+
+def refresh(scene):
+    """Bring a reopened working file up to date with the level's files. When they changed while
+    it was closed, Blender loads them again, unless the file holds level edits never saved to
+    them; then it raises FilesChanged and leaves the choice to the person. Returns what it did."""
+    repository, level = _scene_level(scene)
+    texts = _files(repository, level)
+    if _level_collection(level) is None:
+        load_level(repository, level.key)
+        return f"Loaded {level.title} from its files."
+    synced = _synced(level)
+    if synced is None or tuple(synced) == texts:
+        return None
+    changes = changes_since(*synced, *texts)
+    if _holds_unsaved_edits(level, synced):
+        raise FilesChanged(changes)
+    load_level(repository, level.key)
+    return ("The level's files changed while this file was closed, so Blender loaded them again: "
+            + ", ".join(changes[:8]) + ".")
+
+
+def make_working_file(repository, key):
+    """Start the level's working file: an empty Blender file holding just the level."""
+    bpy.ops.wm.read_homefile(use_empty=True)
+    scene = bpy.context.scene
+    scene.lauder_repository = repository
+    scene.lauder_level = key
+    load_level(repository, key)
+    path = working_file(repository, LEVELS[key])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=str(path))
+    return path
+
+
+def _announce(message, error=False):
+    """Tell the person from a handler or a timer, which cannot report: in the Lauder tab, and in
+    Blender's status bar."""
+    bpy.context.window_manager.lauder_message = message
+    print(f"Lauder: {message}")
+
+    def report():
+        try:
+            bpy.ops.lauder.report(message=message, error=error)
+        except (AttributeError, RuntimeError):
+            pass
+
+    bpy.app.timers.register(report, first_interval=0.1)
+
+
+#: The game's build while Play runs it: the process, its log and the log's path.
+_PLAY = {"process": None, "log": None, "path": None}
+
+
+def _start_play(repository):
+    """Run apple/scripts/play in the background, so Blender stays usable while it builds."""
+    path = Path(repository) / ".local/play/play.log"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    log = path.open("w")
+    process = subprocess.Popen(
+        [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)], cwd=repository,
+        stdout=log, stderr=subprocess.STDOUT)
+    _PLAY.update(process=process, log=log, path=path)
+    bpy.app.timers.register(_watch_play, first_interval=1.0)
+
+
+def _watch_play():
+    process = _PLAY["process"]
+    if process is None:
+        return None
+    if process.poll() is None:
+        return 0.5
+    _PLAY["log"].close()
+    _PLAY["process"] = None
+    if process.returncode == 0:
+        _announce("The game is running in the Simulator.")
+    else:
+        lines = [line.strip() for line in _PLAY["path"].read_text().splitlines() if line.strip()]
+        _announce("Play failed: " + " ".join(lines[-3:]) + " The log is .local/play/play.log.",
+                  error=True)
+    return None
+
+
 def load_level(repository, key="brooklyn-bridge"):
     level = LEVELS[key]
-    root = Path(repository)
-    palette = parse_palette((root / PALETTE_PATH).read_text())
-    layout = parse_layout((root / level.path).read_text(), set(palette))
+    layout_text, palette_text = _files(repository, level)
+    palette = parse_palette(palette_text)
+    layout = parse_layout(layout_text, set(palette))
     build_in_blender(layout, level, palette)
+    _remember(level, layout_text, palette_text)
     return layout
 
 
-def save_level(repository, key="brooklyn-bridge"):
+def save_level(repository, key="brooklyn-bridge", force=False):
     """Write what Blender holds to the level's layout file and the palette, after checking both:
-    if anything fails, neither is written. Returns the layout and the files that changed."""
+    if anything fails, neither is written. Unless forced, it also refuses when the files changed
+    since Blender last loaded or saved them. Returns the layout and the files that changed."""
     level = LEVELS[key]
     root = Path(repository)
     paths = {level.path: root / level.path, PALETTE_PATH: root / PALETTE_PATH}
     before = {name: path.read_text() for name, path in paths.items()}
+    synced = _synced(level)
+    if synced is not None and not force:
+        changes = changes_since(*synced, before[level.path], before[PALETTE_PATH])
+        if changes:
+            raise FilesChanged(changes)
     palette = palette_from_blender(parse_palette(before[PALETTE_PATH]))
     surfaces = set(palette)
     previous = parse_layout(before[level.path], surfaces)
@@ -1371,18 +1649,102 @@ def save_level(repository, key="brooklyn-bridge"):
         material = bpy.data.materials.get(f"Lauder {name}")
         if material is not None:
             _apply_finish(material, finish)
+    _remember(level, after[level.path], after[PALETTE_PATH])
     return layout, changed
 
 
 def _guess_repository():
+    """The repository this script was installed from, found by its folders."""
     try:
-        candidate = Path(__file__).resolve().parents[1]
-    except (NameError, IndexError):
+        here = Path(__file__).resolve()
+    except NameError:
         return ""
-    return str(candidate) if (candidate / "apple" / "sources" / "content").is_dir() else ""
+    for folder in here.parents:
+        if (folder / "apple" / "sources" / "content").is_dir():
+            return str(folder)
+    return ""
 
 
 if bpy is not None:
+
+    @persistent
+    def _save_level_with_file(_):
+        """Saving the level's working file saves the level's files too, after the usual checks.
+        The Blender file is saved whatever they find."""
+        scene = bpy.context.scene
+        if not is_working_file(scene):
+            return
+        repository, level = _scene_level(scene)
+        window_manager = bpy.context.window_manager
+        try:
+            _, changed = save_level(repository, level.key)
+        except FilesChanged as error:
+            window_manager.lauder_files_changed = True
+            _announce(f"{error} The Blender file is saved.", error=True)
+        except (LayoutError, OSError) as error:
+            _announce(f"The Blender file is saved, but the level is not: {error}", error=True)
+        else:
+            window_manager.lauder_files_changed = False
+            if changed:
+                _announce(f"Saved {' and '.join(changed)} too.")
+
+    @persistent
+    def _refresh_opened_file(_):
+        """Opening a level's working file brings it up to date with the level's files."""
+        scene = bpy.context.scene
+        if not is_working_file(scene):
+            return
+        window_manager = bpy.context.window_manager
+        try:
+            message = refresh(scene)
+        except FilesChanged as error:
+            window_manager.lauder_files_changed = True
+            _announce(f"{error} This file also holds level edits that were never saved to them.",
+                      error=True)
+        except (LayoutError, OSError) as error:
+            _announce(f"The level's files could not be checked: {error}", error=True)
+        else:
+            window_manager.lauder_files_changed = False
+            window_manager.lauder_message = ""
+            if message:
+                _announce(message)
+
+    class LAUDER_OT_open_level(bpy.types.Operator):
+        """Open the level's working Blender file in .local/blender, making it from the level's
+        files the first time. Saving it saves the level too"""
+        bl_idname = "lauder.open_level"
+        bl_label = "Open Level"
+        bl_options = {"REGISTER"}
+
+        def invoke(self, context, event):
+            if bpy.data.is_dirty and not is_working_file(context.scene):
+                return context.window_manager.invoke_confirm(
+                    self, event, title="Open the level's working file?",
+                    message="The open Blender file has unsaved changes, which this discards.")
+            return self.execute(context)
+
+        def execute(self, context):
+            named = _scene_level(context.scene)
+            if named is None:
+                self.report({"ERROR"}, "Set the repository folder first.")
+                return {"CANCELLED"}
+            repository, level = named
+            if is_working_file(context.scene):
+                _refresh_opened_file(None)
+                return {"FINISHED"}
+            path = working_file(repository, level)
+            if path.exists():
+                # The load handler brings it up to date with the level's files.
+                bpy.ops.wm.open_mainfile(filepath=str(path))
+                return {"FINISHED"}
+            try:
+                made = make_working_file(repository, level.key)
+            except (LayoutError, OSError) as error:
+                _announce(f"The working file could not be made: {error}", error=True)
+                return {"CANCELLED"}
+            _announce(f"{level.title} is open in its working file, "
+                      f"{made.relative_to(repository)}. Saving it saves the level too.")
+            return {"FINISHED"}
 
     class LAUDER_OT_load_level(bpy.types.Operator):
         """Build the level in this Blender file from the game's layout file and surface palette"""
@@ -1396,12 +1758,16 @@ if bpy is not None:
             return self.execute(context)
 
         def execute(self, context):
+            window_manager = context.window_manager
             try:
                 load_level(bpy.path.abspath(context.scene.lauder_repository),
                            context.scene.lauder_level)
             except (LayoutError, OSError) as error:
+                window_manager.lauder_message = str(error)
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
+            window_manager.lauder_files_changed = False
+            window_manager.lauder_message = ""
             self.report({"INFO"}, f"Loaded {LEVELS[context.scene.lauder_level].title}.")
             return {"FINISHED"}
 
@@ -1411,15 +1777,67 @@ if bpy is not None:
         bl_label = "Save"
         bl_options = {"REGISTER"}
 
+        force: bpy.props.BoolProperty(
+            name="Save Anyway", options={"SKIP_SAVE"},
+            description="Replace the changes made to the level's files since the last Load or Save")
+
         def execute(self, context):
+            window_manager = context.window_manager
             try:
                 _, changed = save_level(bpy.path.abspath(context.scene.lauder_repository),
-                                        context.scene.lauder_level)
-            except (LayoutError, OSError) as error:
+                                        context.scene.lauder_level, force=self.force)
+            except FilesChanged as error:
+                window_manager.lauder_files_changed = True
+                window_manager.lauder_message = str(error)
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
+            except (LayoutError, OSError) as error:
+                window_manager.lauder_message = str(error)
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            window_manager.lauder_files_changed = False
             message = f"Saved {' and '.join(changed)}." if changed else "No changes to save."
+            window_manager.lauder_message = message
             self.report({"INFO"}, message)
+            return {"FINISHED"}
+
+    class LAUDER_OT_play(bpy.types.Operator):
+        """Save the level, then build the game and open it in the iOS Simulator"""
+        bl_idname = "lauder.play"
+        bl_label = "Play"
+        bl_options = {"REGISTER"}
+
+        def execute(self, context):
+            window_manager = context.window_manager
+            named = _scene_level(context.scene)
+            if named is None:
+                self.report({"ERROR"}, "Set the repository folder first.")
+                return {"CANCELLED"}
+            if _PLAY["process"] is not None:
+                self.report({"WARNING"}, "The game is still building; it opens when it is ready.")
+                return {"CANCELLED"}
+            repository, level = named
+            try:
+                save_level(repository, level.key)
+            except FilesChanged as error:
+                window_manager.lauder_files_changed = True
+                window_manager.lauder_message = str(error)
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            except (LayoutError, OSError) as error:
+                window_manager.lauder_message = str(error)
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            window_manager.lauder_files_changed = False
+            if is_working_file(context.scene) and bpy.data.is_dirty:
+                bpy.ops.wm.save_mainfile()
+            try:
+                _start_play(repository)
+            except OSError as error:
+                self.report({"ERROR"}, f"Play could not start: {error}")
+                return {"CANCELLED"}
+            window_manager.lauder_message = "Building the game for the Simulator…"
+            self.report({"INFO"}, "Building the game for the Simulator…")
             return {"FINISHED"}
 
     class LAUDER_OT_game_look(bpy.types.Operator):
@@ -1452,6 +1870,19 @@ if bpy is not None:
             shading.studiolight_intensity = 0
             return {"FINISHED"}
 
+    class LAUDER_OT_report(bpy.types.Operator):
+        """Show a message from Lauder in the status bar"""
+        bl_idname = "lauder.report"
+        bl_label = "Lauder message"
+        bl_options = {"INTERNAL"}
+
+        message: bpy.props.StringProperty()
+        error: bpy.props.BoolProperty()
+
+        def execute(self, context):
+            self.report({"ERROR" if self.error else "INFO"}, self.message)
+            return {"FINISHED"}
+
     class LAUDER_PT_levels(bpy.types.Panel):
         bl_label = "Lauder levels"
         bl_idname = "LAUDER_PT_levels"
@@ -1461,14 +1892,37 @@ if bpy is not None:
 
         def draw(self, context):
             layout = self.layout
-            layout.prop(context.scene, "lauder_repository")
-            layout.prop(context.scene, "lauder_level")
+            scene, window_manager = context.scene, context.window_manager
+            layout.prop(scene, "lauder_repository")
+            layout.prop(scene, "lauder_level")
+            layout.operator("lauder.open_level", icon="FILE_BLEND")
             row = layout.row()
             row.operator("lauder.load_level")
             row.operator("lauder.save_level")
-            layout.operator("lauder.game_look", icon="LIGHT_SUN")
+            if window_manager.lauder_files_changed:
+                layout.operator("lauder.save_level", text="Save Anyway", icon="ERROR").force = True
+            row = layout.row()
+            row.operator("lauder.play", icon="PLAY")
+            row.operator("lauder.game_look", icon="LIGHT_SUN")
+            if window_manager.lauder_message:
+                box = layout.box()
+                for line in textwrap.wrap(window_manager.lauder_message, 42):
+                    box.label(text=line)
 
-    _CLASSES = (LAUDER_OT_load_level, LAUDER_OT_save_level, LAUDER_OT_game_look, LAUDER_PT_levels)
+    _CLASSES = (
+        LAUDER_OT_open_level, LAUDER_OT_load_level, LAUDER_OT_save_level, LAUDER_OT_play,
+        LAUDER_OT_game_look, LAUDER_OT_report, LAUDER_PT_levels,
+    )
+    _HANDLERS = (
+        (bpy.app.handlers.save_pre, _save_level_with_file),
+        (bpy.app.handlers.load_post, _refresh_opened_file),
+    )
+
+    def _remove_handlers():
+        for handlers, handler in _HANDLERS:
+            for existing in [item for item in handlers
+                             if getattr(item, "__name__", None) == handler.__name__]:
+                handlers.remove(existing)
 
     def register():
         for cls in _CLASSES:
@@ -1481,13 +1935,21 @@ if bpy is not None:
         bpy.types.Scene.lauder_level = bpy.props.EnumProperty(
             name="Level",
             items=[(key, level.title, "") for key, level in LEVELS.items()])
+        bpy.types.WindowManager.lauder_message = bpy.props.StringProperty()
+        bpy.types.WindowManager.lauder_files_changed = bpy.props.BoolProperty()
+        _remove_handlers()
+        for handlers, handler in _HANDLERS:
+            handlers.append(handler)
 
     def unregister():
+        _remove_handlers()
         for cls in reversed(_CLASSES):
             if hasattr(bpy.types, cls.__name__):
                 bpy.utils.unregister_class(getattr(bpy.types, cls.__name__))
         del bpy.types.Scene.lauder_repository
         del bpy.types.Scene.lauder_level
+        del bpy.types.WindowManager.lauder_message
+        del bpy.types.WindowManager.lauder_files_changed
 
     if __name__ == "__main__":
         register()
