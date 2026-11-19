@@ -64,7 +64,7 @@ RealityKit can take a scene's look from Blender, but not its meaning: nothing in
 8. **The contract between Blender and the game:**
    - names are lowercase, unique and stable, and the exporter maps them predictably to USD's;
    - lengths are in metres, on the game's axes;
-   - materials use Principled BSDF with image textures, and anything else is baked into images first;
+   - materials use Principled BSDF with image textures, and anything else is baked into images first. Step 5 checked which inputs images reach in the game, and which settings the scene file leaves out;
    - lights keep the [visual direction](../visual-direction.md#rendering-budget)'s budget, at most two with one casting shadows, at 1 W/m² of sun for every 700 lux, as ADR 0005 set. Step 5 raised the budget to four and added point and spot lights.
 
 ADR 0005 turned down both halves of this design, and this decision answers its reasons:
@@ -216,7 +216,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 3. **Export carries them.** The scene file holds each instance as real meshes, under one entity named after the instance, such as `car_a1_model`. USD's instancing stays off: in a test, RealityKit shared each part's mesh among a model's copies either way, and instancing only added an entity to each part. Export leaves nothing but Visual in the scene, so a model linked straight into another collection stays out of the scene file. The export record lists every model and texture that the level uses. Each is fingerprinted before Blender reads it, so a save that lands during an export leaves the export stale, never current. Saving a model exports each level whose last export used it.
 4. **Export checks what the game would show.** Besides the layout's rules, it refuses:
    - a linked file that is not a model in `blender/assets`, or a model that is missing or not downloaded;
-   - a material whose surface is not a Principled BSDF, or that is made with other nodes than image textures, UV maps, Separate Color and Normal Map nodes, and Math nodes for Alpha. Blender's USD export cannot carry the rest, so Game Look and the game would differ;
+   - a material whose surface is not a Principled BSDF, or that is made with other nodes than image textures, UV maps, Separate Color and Normal Map nodes, and Math nodes for Alpha. Blender's USD export cannot carry the rest, so Game Look and the game would differ. [Step 5b](#5b--texture-maps) later refused Separate Color too;
    - two materials, or two objects in Visual, whose names USD would make the same. A test showed why: when the car's and the van's materials were both named “Lauder vehicle”, Blender's USD export wrote one material for both, and the car lost its texture;
    - a texture that is packed into a Blender file, missing or not downloaded, outside the repository, not a PNG or JPEG, or over 1 MiB without the Git LFS rule that the repository's policy asks for;
    - a model in Gameplay.
@@ -303,3 +303,31 @@ It was [merged](https://github.com/RonildoBraga/lauder/pull/56#issuecomment-7006
 - In the Simulator, a 30 W lamp beside Miki's start showed nothing in daylight, as Blender's preview predicts. At 3,000 W, its warm light lay on the road where the layout put it.
 - RealityKit's spot angles are full cone widths. Rendered offscreen on the Mac with RealityKit, a spot light 10 m above a white plane, with angles of 58° and 60°, lit a circle of 5.7 m radius: 10 tan 30° is 5.77 m, while a 60° angle from the beam would light 17.3 m.
 - Not checked: how the lights look and perform on the phone, and RealityKit's spot falloff between the cone's two widths, which may differ from Blender's.
+
+### 5b — texture maps
+
+It was [merged](https://github.com/RonildoBraga/lauder/pull/57#issuecomment-7007123450) under the standing permission, without an independent review.
+
+1. **Six inputs take images.** Each was tried from Blender's USD export into RealityKit, on the Mac and in the iOS Simulator, and arrived where Blender uses it:
+   - **Base Color** and **Emission Color**, from an image's colour;
+   - **Roughness** and **Metallic**, from a greyscale image's colour or from an image's alpha;
+   - **Normal**, through a Normal Map node;
+   - **Alpha**, from an image's alpha or a greyscale mask, either blended or cut off at one half through a Math node.
+2. **Export and the intake check refuse what the game would show differently:**
+   - Separate Color, since RealityKit drops a map read from an image's green or blue channel: each map packed into one image needs an image of its own;
+   - a Normal Map Strength other than 1 or fed by nodes, and an Emission Strength other than 1 on an emission image. Blender's USD export leaves both out, so the game would show the normal map at full strength, and the emission image at strength 1 even where Blender shows no glow;
+   - images or other nodes on any other input, until each is checked.
+3. **Ambient occlusion has no way in yet:** the Principled BSDF has no input for it, and Blender's USD export writes none.
+4. **The bridge's materials are plain colours,** so its exports do not change. The [visual direction](../visual-direction.md) still allows no new textures; this step readies the pipeline for them.
+
+### Checks of 5b
+
+- In Blender 5.3, test cubes held each map: an image each for base colour, roughness, metallic, normal and emission; roughness and metallic packed into one image's green and blue; alpha blended, cut off and from a mask; a striped normal map at Strength 1 and 0.25; and an emission image at Emission Strength 4. They were exported with the level export's USD settings.
+- RealityKit loaded them on macOS 27 and in the iOS 27 Simulator with the same result. Every map reached its place in RealityKit's physically based material, except roughness and metallic from green and blue, which were dropped. The scene file held neither the Normal Map Strength nor the emission image's Emission Strength. A plain emission colour arrived multiplied by its strength, as Blender shows it.
+- Rendered offscreen with RealityKit on the Mac, under one sun:
+  - the striped normal map looked the same at both strengths, and the emission image at strength 4 looked as at 1;
+  - checkerboard alpha showed the backdrop through its holes, soft-edged when blended and sharp when cut off;
+  - metallic from an image's alpha followed the checkerboard held in the alpha, not the image's even red.
+- In Blender 5.3, run in the background on a copy of the repository, export refused each cube added to the bridge's Visual collection, saying why: Separate Color on Roughness, a Normal Map Strength of 0.25 and one fed by an image, an emission image at Blender's default Emission Strength of 0, and an image on Coat Weight. A cube with every checked map was exported, and the scene file carried its five images.
+- The extension's 44 tests cover each refusal.
+- Not checked: the phone, texture memory and compression, Image Texture settings such as interpolation and extension, and normal maps baked in object space.
