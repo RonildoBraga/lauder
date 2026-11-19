@@ -173,9 +173,10 @@ Each step is a pull request of its own and needs its own go-ahead.
 2. **Export reads the saved file.** Saving the level file in Blender checks the game's rules there, then exports in a background Blender with `blender/scripts/export-level.py`; Play does the same before it builds.
    - The layout file is generated now, and says so at its top.
    - The scene file comes from the Visual collection, each part placed where it stands in the world.
-   - `blender/level-exports.json` records the fingerprints of the Blender file, of any file it uses, and of both exports. `./scripts/check` fails when any of them no longer matches.
-3. **Names the story uses stay.** Export refuses to drop a layout entry whose name the level's Swift file quotes, since the game would stop at the missing name.
-4. **No local paths.** A Blender file keeps the folder each file browser last showed, such as the home folder, in its saved interface. Saving a level file points them at the level's own folder first, so a level file in the public repository holds no paths from the computer it was saved on. The bridge's file holds none.
+   - Both exports are written only once both are ready, so a refusal leaves the pair as it was.
+   - `blender/level-exports.json` records the fingerprints of the Blender file as it was read, of any file it uses, and of both exports. `./scripts/check` fails when any of them no longer matches.
+3. **Names the story uses stay.** Export refuses to drop a layout entry whose name the level's Swift file quotes, since the game would stop at the missing name. Without the layout file it cannot tell which names those are, so it refuses and says how to restore the file.
+4. **No local paths.** A Blender file keeps the folder each file browser last showed, such as the home folder, in its saved interface. Saving a level file points them at the level's own folder first, and drops the Repository folder that the Lauder tab stores, since an open level file finds its repository from where it is. A level file in the public repository holds no paths from the computer it was saved on, and the bridge's file holds none.
 5. **What retired:**
    - Load and the Swift reader, the safe Save and Save Anyway, and the working file in `.local/blender`;
    - the palette file, `Surfaces.swift`, and the boxes' surfaces;
@@ -196,6 +197,7 @@ Each step is a pull request of its own and needs its own go-ahead.
   - saving after moving `car-a1` exported the level, and the layout file showed the move;
   - a box turned at an angle was refused at save, and nothing was exported;
   - Play queued behind the save's export;
-  - a level file saved after its file browser had gone to the home folder held no local path.
+  - a level file saved with its file browser in the home folder, and a Repository folder chosen in the Lauder tab, held no local path;
+  - an export refused because the Visual collection was gone left both exports as they were.
 - In the Simulator, the opening frame looks the same as `main`'s, whose scene file step 2 exported from the Swift files: of its 3.2 million pixels, 4,012 differ (0.13%), only 10 of them by more than 8 steps in 255. Two runs of `main` give the same frame, pixel for pixel.
 - Not checked: the Lauder tab's buttons in the maintainer's own Blender, whose functions the background runs called; and the phone, since nothing the game shows or plays changed.

@@ -174,6 +174,17 @@ class LayoutTests(unittest.TestCase):
         self.assertLessEqual({("marker", "spawn.miki"), ("area", "manhattan-end"),
                               ("box", "brooklyn-tower-pier")}, bridge)
 
+    def test_without_its_layout_file_export_cannot_tell_the_storys_names(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = Path(folder)
+            (repository / BRIDGE.story).parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / BRIDGE.story, repository / BRIDGE.story)
+            with self.assertRaises(L.LayoutError) as refusal:
+                L.names_the_story_uses(repository, BRIDGE)
+            self.assertIn(f"git restore {BRIDGE.layout}", str(refusal.exception))
+            shutil.copyfile(ROOT / BRIDGE.layout, repository / BRIDGE.layout)
+            self.assertIn(("marker", "spawn.miki"), L.names_the_story_uses(repository, BRIDGE))
+
     def test_the_level_needs_its_camera_within_reason(self):
         with self.assertRaises(L.LayoutError) as refusal:
             L.layout_from_shapes(shapes_for(SAMPLE), BRIDGE, None, lights_for(SAMPLE))

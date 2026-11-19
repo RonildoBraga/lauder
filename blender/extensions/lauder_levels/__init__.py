@@ -423,6 +423,20 @@ def required_names(layout_text, story_text):
     return {(kind, name) for kind, name in _ENTRY_NAME.findall(layout_text) if name in literals}
 
 
+def names_the_story_uses(repository, level):
+    """The (kind, name) pairs in the level's layout file that its Swift file quotes
+    (required_names). Without the layout file Export cannot tell, so it refuses."""
+    root = Path(repository)
+    written, story = root / level.layout, root / level.story
+    if not story.exists():
+        return set()
+    if not written.exists():
+        raise LayoutError(
+            f"{level.layout} is missing, so Export cannot tell which of its names {story.name} "
+            f"uses. Restore it with git restore {level.layout}, then export again.")
+    return required_names(written.read_text(), story.read_text())
+
+
 def lights_from_shapes(shapes):
     """The layout's lights from Blender's, and anything that stops an export."""
     lights, problems = [], []
@@ -684,7 +698,9 @@ def _watch_job():
         return None
     _JOB["steps"] = []
     lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
-    detail = " ".join(lines[-3:])
+    # The export says why it refused in one line; otherwise the log's last lines tell.
+    detail = next((line for line in reversed(lines) if line.startswith("The level was not")),
+                  " ".join(lines[-3:]))
     what = "The export" if name == "export" else "Play"
     _announce(f"{what} failed{': ' + detail if detail else '.'} The log is "
               f".local/play/{path.name}.", error=True)
@@ -861,12 +877,8 @@ def lights_outside_the_level(view_layer):
 
 def layout_from_blender(repository, level):
     """The layout that the open level file holds, after the game's rules."""
-    root = Path(repository)
-    written = root / level.layout
-    required = required_names(written.read_text() if written.exists() else "",
-                              (root / level.story).read_text())
     return layout_from_shapes(shapes_from_blender(), level, camera_from_blender(),
-                              lights_from_blender(), required)
+                              lights_from_blender(), names_the_story_uses(repository, level))
 
 
 def _files_used(repository):
@@ -895,16 +907,22 @@ def open_level_file(repository, key, attempts=3):
     raise LayoutError(f"{LEVELS[key].blend} kept changing while it was read; export it again.")
 
 
-def forget_folders():
-    """Point Blender's file browsers at the level's own folder, so that a level file in the public
-    repository keeps no paths from the computer it was saved on, such as the home folder that a
-    file browser starts in."""
+def forget_local_paths():
+    """Keep a level file in the public repository free of paths from the computer it was saved
+    on: point Blender's file browsers, which start in the home folder, at the level's own folder,
+    and drop the Repository folder that the Lauder tab stores on a scene. An open level file finds
+    its repository from where it is."""
     for screen in bpy.data.screens:
         for area in screen.areas:
             for space in area.spaces:
                 params = getattr(space, "params", None)
                 if params is not None and hasattr(params, "directory"):
                     params.directory = b"//" if isinstance(params.directory, bytes) else "//"
+    for scene in bpy.data.scenes:
+        try:
+            scene.property_unset("lauder_repository")
+        except TypeError:
+            pass  # The extension's settings are not registered in this Blender.
 
 
 def export_level(repository, key="brooklyn-bridge", loaded=None):
@@ -917,9 +935,6 @@ def export_level(repository, key="brooklyn-bridge", loaded=None):
     made_from = {name: file_fingerprint(root / name) for name in _files_used(root)}
     made_from[level.blend] = loaded or file_fingerprint(root / level.blend)
     text = emit_layout(layout_from_blender(repository, level), level)
-    written = root / level.layout
-    if not written.exists() or written.read_text() != text:
-        written.write_text(text)
     visual = _collection(VISUAL)
     if visual is None:
         raise LayoutError("This Blender file has no Visual collection; open the level's own file.")
@@ -933,10 +948,14 @@ def export_level(repository, key="brooklyn-bridge", loaded=None):
     for item in list(bpy.data.objects):
         if item not in places:
             bpy.data.objects.remove(item, do_unlink=True)
-    target = root / level.scene
+    written, target = root / level.layout, root / level.scene
     with tempfile.TemporaryDirectory() as folder:
         exported = Path(folder) / target.name
         bpy.ops.wm.usd_export(filepath=str(exported), **SCENE_EXPORT)
+        # Both exports are ready: only now is either written, so a refusal or a failure before
+        # this leaves the pair as it was.
+        if not written.exists() or written.read_text() != text:
+            written.write_text(text)
         shutil.copyfile(exported, target)
     record_exports(repository, level, made_from,
                    {name: file_fingerprint(root / name) for name in (level.layout, level.scene)})
@@ -950,10 +969,10 @@ if bpy is not None:
         return level_of_file(bpy.data.filepath)
 
     @persistent
-    def _forget_folders_before_save(path=None, *_):
-        """A level file keeps no local folder paths in the repository (forget_folders)."""
+    def _forget_local_paths_before_save(path=None, *_):
+        """A level file keeps no local paths in the repository (forget_local_paths)."""
         if level_of_file(path if isinstance(path, str) and path else bpy.data.filepath):
-            forget_folders()
+            forget_local_paths()
 
     @persistent
     def _export_after_save(_):
@@ -1139,7 +1158,7 @@ if bpy is not None:
         LAUDER_OT_report, LAUDER_PT_levels,
     )
     _HANDLERS = (
-        (bpy.app.handlers.save_pre, _forget_folders_before_save),
+        (bpy.app.handlers.save_pre, _forget_local_paths_before_save),
         (bpy.app.handlers.save_post, _export_after_save),
     )
 
