@@ -57,6 +57,8 @@ extension BrooklynBridge {
       .area("manhattan-end", from: [-12, -112], to: [12, -106]),
       .area("stranger", from: [-12, 47], to: [12, 52]),
       .area("search.stranger", from: [5.6, 40.6], to: [8.4, 43.4]),
+      .area("laura.found", from: [-12, -46], to: [-2.6, -31]),
+      .area("help.laura", from: [-8.4, -39.6], to: [-5.6, -36.4]),
     ],
     markers: [
       .marker("spawn.miki", at: [6.5, 116]),

@@ -15,6 +15,14 @@ final class GameSession {
     case ambush
     /// After the exchange that follows Tom's shot, Tom travels with Miki.
     case withTom
+    /// The party nears mid-span, where Laura lies hurt between the cars (M4).
+    case lauraFound
+    /// Helping Laura: the medical kit lets her stand (M4).
+    case helpingLaura
+    /// After the exchange that follows, Laura travels with them too.
+    case withLaura
+    /// The three reach the Manhattan end together: the end of the opening.
+    case arrived
 
     static func < (lhs: Beat, rhs: Beat) -> Bool { lhs.rawValue < rhs.rawValue }
   }
@@ -45,7 +53,8 @@ final class GameSession {
     case alreadyDone
     /// The story has not reached this action yet.
     case notYet
-    /// Only while exploring, not while paused or in a conversation.
+    /// Not now: only while exploring, not while paused or in a conversation, and not while a
+    /// scene that must finish first is still playing.
     case unavailable
   }
 
@@ -234,6 +243,7 @@ final class GameSession {
     case .searchStranger:
       defeated.contains("stranger") && !searched.contains("stranger") && beat == .stranger
         && !inEncounter
+    case .helpLaura: beat == .lauraFound && !inEncounter
     }
   }
 
@@ -248,6 +258,15 @@ final class GameSession {
       guard !searched.contains("stranger"), let beat = beatStarted[action],
         beginEncounter(beat)
       else { return .alreadyDone }
+    case .helpLaura:
+      // Helping uses the medical kit from the stranger's body and begins a short scene (M4).
+      if beat > .lauraFound { return .alreadyDone }
+      guard beat == .lauraFound, medicalKits > 0 else { return .notYet }
+      // While she is still calling out, a press does nothing.
+      guard !inEncounter, let next = beatStarted[action], beginEncounter(next) else {
+        return .unavailable
+      }
+      medicalKits -= 1
     }
     return .done
   }
@@ -259,10 +278,17 @@ final class GameSession {
     if lineIndex + 1 < MissionScript.lines(conversation).count {
       lineIndex += 1
     } else {
-      if conversation == .metTom {
+      switch conversation {
+      case .metTom:
         // The exchange after Tom's shot ends with him joining (ADR 0004, M3).
         recruit(.tom)
         if beat == .ambush { beat = .withTom }
+      case .metLaura:
+        // And the one after Laura stands ends with her joining (M4).
+        recruit(.laura)
+        if beat == .helpingLaura { beat = .withLaura }
+      case .arrival:
+        break
       }
       self.conversation = nil
       lineIndex = 0

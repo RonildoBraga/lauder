@@ -39,6 +39,8 @@ struct Level {
   enum ActionID: String, CaseIterable, Sendable {
     /// Searching the stranger's body, on the bridge (M3).
     case searchStranger = "bridge.search-stranger"
+    /// Helping Laura with the medical kit, at mid-span (M4).
+    case helpLaura = "bridge.help-laura"
   }
 
   /// A contextual action, usable by whoever leads while they stand in its approach area.
@@ -109,10 +111,12 @@ struct Level {
     case loot(String)
     /// A member who has not joined yet appears where they wait.
     case appear(PartyMember)
+    /// A member who lay hurt where they waited stands up.
+    case stand(PartyMember)
     /// A scripted shot by a member that takes this hostile down.
     case shot(by: PartyMember, at: String)
-    /// The leader and this member turn to face each other.
-    case face(PartyMember)
+    /// Two members turn to face each other.
+    case face(PartyMember, PartyMember)
     /// A conversation begins; what it settles takes effect when it ends.
     case talk(MissionScript.Conversation)
   }
@@ -133,8 +137,12 @@ struct Level {
     let retryAt: SIMD2<Float>?
     let hostiles: [Hostile]
     let cues: [(at: Float, cue: Cue)]
-    /// The leader stands still while the cues play, as in a short scripted scene.
-    var holdsLeader = false
+    /// The party stands still while the cues play, as in a short scripted scene: whoever leads
+    /// and the companions, so that only the cues place and turn anyone until it ends.
+    var holdsParty = false
+    /// Where the camera leans while the cues play, so that what the scene is about comes into
+    /// view, as it leans towards a hostile in a fight.
+    var focus: SIMD2<Float>?
   }
 
   /// How close a point of interest must be for a look to describe it.
@@ -157,6 +165,9 @@ struct Level {
   let party: [PartyMember]
   /// Where each member's body starts, including members who join later.
   let spawns: [PartyMember: SIMD2<Float>]
+  /// Members who lie hurt where they wait, in view from the start, until a scene stands them
+  /// up. Others who have not joined stay hidden.
+  var lying: Set<PartyMember> = []
   /// The direction the party faces at the start.
   let heading: SIMD2<Float>
   /// From the camera's target to the camera.
@@ -167,8 +178,10 @@ struct Level {
   var lights: [Light] = []
   /// The first line a run shows.
   let opening: String
-  /// The objective line.
+  /// The objective line when a run starts.
   let objective: String
+  /// The objective from each of these beats on, in story order.
+  var objectiveChanges: [(beat: GameSession.Beat, text: String)] = []
   /// What a look shows with nothing nearby.
   let lookAround: String
   /// What the pause menu says Restart does.

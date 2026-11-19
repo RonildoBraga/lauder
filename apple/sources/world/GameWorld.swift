@@ -40,6 +40,8 @@ final class GameWorld {
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
+  /// Members lying hurt where they wait, until a scene stands them up (Laura, M4).
+  @ObservationIgnored private var lying: Set<PartyMember>
   /// Where each companion is heading in the latest step. Tests read it.
   @ObservationIgnored private(set) var companionTargets: [PartyMember: SIMD2<Float>] = [:]
   #if DEBUG
@@ -73,14 +75,18 @@ final class GameWorld {
   static let retryFadeIn: Float = 0.4
   /// How quickly the camera's lean follows a fight: about 95% of the way in a second.
   static let cameraLeanRate: Float = 3
+  /// How far a lying stand-in sits below a standing one, so it rests on the deck.
+  static let lyingDrop: Float = -0.67
 
   var isPaused: Bool { session.isPaused }
   /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
   var showsWeapon: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry is under way.
   var isRetrying: Bool { retryElapsed != nil }
-  /// The HUD's objective.
-  var objective: String { level.objective }
+  /// The HUD's objective: the level's own, until the story changes it.
+  var objective: String {
+    level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
+  }
 
   init(level: Level = BrooklynBridge.level) {
     self.level = level
@@ -90,6 +96,7 @@ final class GameWorld {
     // Build the route grid while loading, not on the first frame of play.
     grid = NavigationGrid(level: level)
     squadLeader = level.party[0]
+    lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
@@ -271,7 +278,7 @@ final class GameWorld {
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
   /// prompt left over from before a move or a switch cannot act.
   func performAction() {
-    guard session.mode == .exploring, !stage.holdsLeader, let body = bodies[session.leader] else {
+    guard session.mode == .exploring, !stage.holdsParty, let body = bodies[session.leader] else {
       return
     }
     let position = SIMD2(body.position.x, body.position.z)
@@ -336,13 +343,15 @@ final class GameWorld {
   }
 
   /// Every body at its spawn point, facing the level's starting direction. Members who have
-  /// not joined yet stay hidden and out of the squad.
+  /// not joined yet stay out of the squad, and hidden unless they lie hurt where they wait. A
+  /// lying member lies across that direction, which the camera looks along, so the pose reads.
   private func placeParty() {
     let facing = atan2(-level.heading.x, -level.heading.y)
+    lying = level.lying
     for member in PartyMember.allCases {
       place(member, at: level.spawn(member))
-      setYaw(member, facing)
-      bodies[member]?.isEnabled = session.party.contains(member)
+      setYaw(member, lying.contains(member) ? facing - .pi / 2 : facing)
+      bodies[member]?.isEnabled = session.party.contains(member) || lying.contains(member)
     }
     showLeaderMarker()
   }
@@ -357,9 +366,10 @@ final class GameWorld {
     if firePressed { firePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
-    // remainder, always under one step, carries to the next frame. A retry stops the rest.
+    // remainder, always under one step, carries to the next frame. A retry, or a conversation a
+    // cue has just begun, stops the rest.
     unsimulatedTime += elapsed
-    while unsimulatedTime >= Self.simulationStep, retryElapsed == nil {
+    while unsimulatedTime >= Self.simulationStep, retryElapsed == nil, session.mode == .exploring {
       unsimulatedTime -= Self.simulationStep
       simulateStep(movement: movement, dt: Self.simulationStep)
     }
@@ -374,8 +384,10 @@ final class GameWorld {
     guard let leaderBody = bodies[leader] else { return }
     let motion = self.motion
     let grid = self.grid
-    // A scripted scene holds the leader where they stand.
-    let movement = stage.holdsLeader ? .zero : movement
+    // A scripted scene holds the party where they stand, whoever leads; only its cues place and
+    // turn anyone, and switching leader during it moves no one.
+    let held = stage.holdsParty
+    let movement = held ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
     let leaderStart = SIMD2(leaderBody.position.x, leaderBody.position.z)
@@ -389,6 +401,11 @@ final class GameWorld {
     if !level.encounters.isEmpty {
       stepEncounter(leader: leader, at: leaderEnd, dt: dt)
       if retryElapsed != nil { return }
+    }
+    // The hold lasts through the step whose cue ends the scene and begins its exchange.
+    if held || session.mode != .exploring {
+      companionTargets = [:]
+      return
     }
 
     // Companions choose their own routes to formation slots (ADR 0003); every movement is
@@ -447,7 +464,7 @@ final class GameWorld {
   /// Only Miki carries the carbine, and not while a scene holds her.
   private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
     let angle = yaw[leader] ?? 0
-    let armed = leader == .miki && !stage.holdsLeader
+    let armed = leader == .miki && !stage.holdsParty
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
         bodies[member].flatMap {
@@ -462,10 +479,14 @@ final class GameWorld {
     if let facing = outcome.facing { setYaw(leader, atan2(-facing.x, -facing.y)) }
     if let line = outcome.line { observation = line }
     for member in outcome.appeared { appear(member) }
+    for member in outcome.stood {
+      lying.remove(member)
+      showPose(member)
+    }
     if let shooter = outcome.shooter {
       setYaw(shooter.member, atan2(-shooter.facing.x, -shooter.facing.y))
     }
-    if let member = outcome.face { faceEachOther(leader, member) }
+    if let (first, second) = outcome.face { faceEachOther(first, second) }
     let threat = stage.threat
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != stage.isDrawn { weaponDrawn = stage.isDrawn }
@@ -584,7 +605,16 @@ final class GameWorld {
 
   private func setYaw(_ member: PartyMember, _ angle: Float) {
     yaw[member] = angle
-    visuals[member]?.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
+    showPose(member)
+  }
+
+  /// A member's facing, and whether they lie face down on the deck.
+  private func showPose(_ member: PartyMember) {
+    let facing = simd_quatf(angle: yaw[member] ?? 0, axis: [0, 1, 0])
+    let isLying = lying.contains(member)
+    visuals[member]?.orientation =
+      isLying ? facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]) : facing
+    visuals[member]?.position = isLying ? [0, Self.lyingDrop, 0] : .zero
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.

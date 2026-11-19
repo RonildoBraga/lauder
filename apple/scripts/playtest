@@ -26,7 +26,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
-SCENARIOS = ["bridge-walk", "first-fight", "fight-retry", "ambush"]
+SCENARIOS = ["bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening"]
 PRIVATE_IDENTIFIER = re.compile(
     r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
     re.IGNORECASE,

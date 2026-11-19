@@ -1,7 +1,7 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 18 November 2026\
-**Status:** The game opens on the Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026. M1 to M3 are merged, as the [opening record](opening.md) describes, and Laura follows in M4. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines staged checks.
+**Status:** The game opens on the Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026. M1 to M3 are merged and M4 is in review, as the [opening record](opening.md) describes. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines staged checks.
 
 The maintainer has endorsed the occasional-combat direction and assigned the [combat-role and Quiet Yard documentation](#future-squad-and-combat-design) for Claude's review before implementation. That separate design gate precedes any combat or formation work beyond the opening's milestones.
 
@@ -31,19 +31,19 @@ A stranger waits among the cars before the first tower. As Miki nears him he ste
 
 Miki can search the body for ammunition and a medical kit. While she searches, an attacker runs at her from behind a van with a knife. Tom, close by, shoots him before he reaches her. A short exchange follows, and Tom joins: **Next** appears, and he follows in the Close formation. The scene plays the same way every time, and Miki stands still while it plays.
 
-### 4. Laura (M4)
+### 4. Laura (M4, built)
 
-At mid-span, beside the gap in the divider, Laura is crawling beside a car. Miki can **Help**; the exchange gives only her name. With the medical kit from the first body she can stand, and she joins.
+Laura lies hurt, face down, beside a car just past the gap in the divider, in view from the start. Once Tom has joined, crossing the gap finds her: she calls out, "Please. Over here.", and the objective becomes "Help the woman between the cars." Beside her, the action reads **Help**, for whoever leads. It uses the medical kit from the first body, and a short scene holds the party: she stands, she and Miki turn to each other, and the exchange gives only her name. When it ends she joins, and Tom and Laura follow in the Close formation.
 
-### 5. Onwards (M4, M5)
+### 5. Onwards (M4 built, M5)
 
-The three cross the second tower together to the Manhattan end. With two companions, the formations of [ADR 0003](https://github.com/RonildoBraga/lauder/blob/a5437e5/docs/decisions/0003-squad-movement.md) come into play on the open deck.
+The three cross the second tower together to the Manhattan end, where the party stops for a short closing exchange and the objective reads "Manhattan, together.": the end of the opening. With two companions, the formations of [ADR 0003](decisions/0003-squad-movement.md) come into play on the open deck in M5.
 
 Lines stay provisional and brief. None of the scenes explains anyone's past beyond what the moment needs.
 
 ## What exists today
 
-The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad in a Close formation ([ADR 0003](decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. [M2](opening.md#m2--the-first-fight) adds the stranger's fight, with assisted aim, cover, the placeholder hit rule and a retry, and [M3](opening.md#m3--the-search-the-ambush-and-tom) the search, the ambush and Tom joining. The authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately.
+The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad in a Close formation ([ADR 0003](decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. [M2](opening.md#m2--the-first-fight) adds the stranger's fight, with assisted aim, cover, the placeholder hit rule and a retry, [M3](opening.md#m3--the-search-the-ambush-and-tom) the search, the ambush and Tom joining, and [M4](opening.md#m4--laura-and-the-end-of-the-opening) Laura and the end of the opening. The authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately.
 
 ## Readable controls and party feedback
 
