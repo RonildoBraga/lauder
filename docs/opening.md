@@ -90,7 +90,7 @@ The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 st
 On 19 November 2026 the maintainer asked to simplify the bridge to the road and the towers at correct dimensions, and chose the real tower spacing, as [ADR 0004's amendment](decisions/0004-brooklyn-bridge-opening.md#amendment--the-bridge-at-its-real-tower-spacing) records.
 
 - **The bridge.** A flat deck 644 m long and 25.9 m wide: two roadways of 10.3 m, each with three lanes, either side of a 5.3 m median, the walkway's base, with its 12 m gap at mid-span. The two granite towers stand 486.3 m apart, 100 m and about 590 m from the start. Each is 43 m wide, 18 m deep and 47 m above the road, with arches 10.3 m wide and 35.7 m tall. The river lies 38.7 m below.
-- **What moved.** Each scene kept its place beside the nearest tower. The Brooklyn end, the stranger, the knife attack and Tom are unchanged; Laura, the bus and the gap moved to the new mid-span, and the Manhattan end moved with the second tower. The cables, suspenders, stays and raised walkway are gone.
+- **What moved.** Each scene kept its place beside the nearest tower. The Brooklyn end, the stranger, the knife attack and Tom are unchanged; Laura, the bus and the gap moved to the new mid-span, and the Manhattan end moved with the second tower. The bus widened to 10.2 m, so that it still closes the whole east roadway. The cables, suspenders, stays and raised walkway are gone.
 - **Walking.** The walks from the first tower to Laura and from Laura to the second tower each take about 90 s, and the navigation grid has about 420,000 cells.
 
 ## Open across the opening

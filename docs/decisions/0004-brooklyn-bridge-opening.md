@@ -172,7 +172,7 @@ The maintainer asked to simplify the bridge: **“I think we should simplify the
    - The deck is 25.9 m wide: two roadways of 10.3 m, each as wide as a tower's arch, either side of a 5.3 m median, the walkway's base.
    - The towers stand 486.3 m apart. Each is 43 m wide, 18 m deep and 47 m above the road, with arches 10.3 m wide and 35.7 m tall.
    - The river lies 38.7 m below the deck.
-2. **The deck is 644 m long,** and each beat keeps its place beside the nearest tower. The first tower's Brooklyn face stays where it was, so everything from the Brooklyn end to Tom is unchanged. Laura, the bus and the gap in the median moved to the new mid-span. The second tower's approach and the Manhattan end moved with the second tower.
+2. **The deck is 644 m long,** and each beat keeps its place beside the nearest tower. The first tower's Brooklyn face stays where it was, so everything from the Brooklyn end to Tom is unchanged. Laura, the bus and the gap in the median moved to the new mid-span. The second tower's approach and the Manhattan end moved with the second tower. The bus, which closes the east roadway, widened from 9.3 m to 10.2 m so that it still reaches the railing.
 
    | Stretch | From the Brooklyn end | Beats |
    |---|---|---|

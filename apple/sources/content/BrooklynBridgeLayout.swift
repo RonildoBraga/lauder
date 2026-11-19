@@ -45,7 +45,7 @@ extension BrooklynBridge {
     ],
     landmarks: [
       .landmark("bridge.booth", at: [0, 0, 113], size: [2.4, 2.6, 2.4]),
-      .landmark("bridge.bus", at: [7.05, 0, -239.15], size: [9.3, 3, 2.6]),
+      .landmark("bridge.bus", at: [7.5, 0, -239.15], size: [10.2, 3, 2.6]),
       .landmark("bridge.manhattan-barricade", at: [0, 0, -517.9], size: [25.1, 1.6, 0.8]),
     ],
     areas: [

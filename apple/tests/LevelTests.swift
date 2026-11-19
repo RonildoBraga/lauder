@@ -66,12 +66,22 @@ struct LevelTests {
     #expect(grid.region(at: start) != nil)
     #expect(grid.region(at: start) == grid.region(at: end))
     #expect(grid.route(from: start, to: end) != nil)
-    // The bus closes the east roadway, so the east lanes beyond it are reached only round the
-    // far end, and the gap in the divider is open.
+    // The bus closes the east roadway from the divider to the railing, so the east lanes beyond
+    // it are reached only round the far end, and the gap in the divider is open.
     let gap: SIMD2<Float> = [0, -227.15]
     #expect(grid.isWalkable(gap))
     let motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
-    #expect(!motion.canTraverse(from: [7, -235.15], to: [7, -243.15]))
+    let bus = BrooklynBridge.layout.landmark(named: "bridge.bus")
+    let divider = BrooklynBridge.layout.box(named: "divider-north")
+    let railing = BrooklynBridge.layout.box(named: "railing-east")
+    let across = stride(
+      from: divider.position.x + divider.size.x / 2,
+      through: railing.position.x - railing.size.x / 2, by: 0.05)
+    for x in across {
+      #expect(
+        !motion.canTraverse(from: [x, bus.position.z + 4], to: [x, bus.position.z - 4]),
+        "a way past the bus at x = \(x)")
+    }
     // The arches are open on both roadways at both towers.
     for z in [BrooklynBridge.brooklynTower, BrooklynBridge.manhattanTower] {
       #expect(motion.canTraverse(from: [7, z + 7], to: [7, z - 7]))
