@@ -127,7 +127,8 @@ EXPORT_FORMAT = 1
 #: part, in a folder named after the level (ADR 0006, step 5d).
 BAKED = "blender/levels/baked"
 #: A baked part's properties: that its occlusion is baked, and the materials and UV map it showed
-#: before, which Clear Occlusion gives back.
+#: before, which Clear Occlusion gives back. Each material is kept as its slot's link, its name,
+#: and whether Bake Occlusion gave it a fake user to keep it in the file meanwhile.
 BAKED_PROPERTY = "lauder_baked"
 UNBAKED_MATERIALS, UNBAKED_UV = "lauder_unbaked_materials", "lauder_unbaked_uv"
 #: The UV map, made for each baked part, that its baked colour uses.
@@ -1945,9 +1946,23 @@ def _unbaked_materials(item):
     """The materials the part shows unbaked: those it showed before its occlusion was baked, or
     those it shows now."""
     if item.get(BAKED_PROPERTY):
-        names = [name for _, name in json.loads(item[UNBAKED_MATERIALS]) if name]
+        names = [entry[1] for entry in json.loads(item[UNBAKED_MATERIALS]) if entry[1]]
         return [bpy.data.materials.get(name) for name in names]
     return [slot.material for slot in item.material_slots if slot.material is not None]
+
+
+def _keep_unbaked(item):
+    """Record the materials the part shows before its occlusion is baked. One held only by the
+    part's own slot gets a fake user, so that it stays in the file while the part shows its baked
+    look."""
+    record = []
+    for slot in item.material_slots:
+        material = slot.material
+        kept = slot.link == "OBJECT" and material is not None and not material.use_fake_user
+        if kept:
+            material.use_fake_user = True
+        record.append([slot.link, material.name if material else "", kept])
+    item[UNBAKED_MATERIALS] = json.dumps(record)
 
 
 def _unbake(item):
@@ -1955,7 +1970,8 @@ def _unbake(item):
     its baked material."""
     if not item.get(BAKED_PROPERTY):
         return
-    for slot, (link, name) in zip(item.material_slots, json.loads(item[UNBAKED_MATERIALS])):
+    for slot, entry in zip(item.material_slots, json.loads(item[UNBAKED_MATERIALS])):
+        link, name = entry[0], entry[1]
         slot.link = "OBJECT"
         slot.material = (bpy.data.materials.get(name) if name else None) if link == "OBJECT" else None
         slot.link = link
@@ -2105,6 +2121,10 @@ def bake_level(repository, level, chosen=()):
         raise LayoutError(" ".join(problems))
     for item in parts:
         _unbake(item)
+        # A mesh of its own, so that its UV map for baking, and the UV map the game reads, are
+        # the part's alone, not those of the other parts sharing its mesh.
+        if item.data.users > 1:
+            item.data = item.data.copy()
     scene, view_layer = bpy.context.scene, bpy.context.view_layer
     kept = (scene.render.engine, scene.cycles.samples, scene.world, view_layer.objects.active,
             [item for item in view_layer.objects if item.select_get()])
@@ -2118,9 +2138,7 @@ def bake_level(repository, level, chosen=()):
             materials = list(dict.fromkeys(_unbaked_materials(item)))
             image = _bake_part(root, level, item, materials)
             if not item.get(BAKED_PROPERTY):
-                item[UNBAKED_MATERIALS] = json.dumps([
-                    [slot.link, slot.material.name if slot.material else ""]
-                    for slot in item.material_slots])
+                _keep_unbaked(item)
                 item[UNBAKED_UV] = next((layer.name for layer in item.data.uv_layers
                                          if layer.active_render), "")
             look = _baked_look(item, image, materials[0])
@@ -2146,6 +2164,10 @@ def clear_occlusion(repository, level, chosen):
     parts = [item for item in chosen if item.library is None and item.get(BAKED_PROPERTY)]
     for item in parts:
         _unbake(item)
+        for entry in json.loads(item[UNBAKED_MATERIALS]):
+            material = bpy.data.materials.get(entry[1]) if entry[2] else None
+            if material is not None:
+                material.use_fake_user = False
         look = bpy.data.materials.get(baked_material(item.name))
         if look is not None and look.users == 0:
             bpy.data.materials.remove(look)
