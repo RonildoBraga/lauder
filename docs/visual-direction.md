@@ -19,9 +19,9 @@ A visual pass keeps the route, collision layout, camera framing, interaction anc
 
 ## Rendering budget
 
-Build decoration once during scene setup. Reuse meshes and a small shared material palette. Decorative details do not need their own physics bodies.
+Build decoration once during scene setup. Reuse meshes and a small shared material palette, `apple/sources/content/Surfaces.swift`, which Blender edits. Decorative details do not need their own physics bodies.
 
-- At most two explicit lights, with at most one casting shadows.
+- At most two explicit lights, with at most one casting shadows. Blender's Save checks this for the lights in a layout file.
 - No new textures, particles or postprocessing effects.
 - No added visual animation or per-frame visual work; existing character movement, skeletal animation and camera follow continue as before.
 

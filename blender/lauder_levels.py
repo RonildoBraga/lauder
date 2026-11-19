@@ -1,30 +1,36 @@
 """Lauder's level layouts in Blender (ADR 0005).
 
 Blender is the editor for a level's scene. Load builds it in the open Blender file from the
-level's Swift layout file, and Save writes that file back after checking the game's rules. The
-Swift file stays the source of truth, so a direct edit to it shows up at the next Load.
+level's Swift layout file and the shared surface palette, and Save writes both back after checking
+the game's rules. The Swift files stay the source of truth, so a direct edit to them shows up at
+the next Load.
 
 The layout holds what blocks movement and sight (the ground and boxes), what can be looked at,
 the trigger and fight areas, the markers where people start and stand, the decoration that blocks
-nothing (pieces such as the bridge's walkway and cables, turned as they need), and the game
-camera. Load also draws the details the game adds to every vehicle and landmark, so that
+nothing (pieces such as the bridge's walkway and cables, turned as they need), the game camera and
+the lights. The palette holds how each surface looks, for every level: its colour, roughness and
+metalness. Load also draws the details the game adds to every vehicle and landmark, so that
 Blender shows what the game shows; they follow their box and are not saved.
 
 Open this file in Blender's Text Editor and press Run Script: a Lauder tab appears in the 3D
 Viewport's sidebar (press N). Set the repository folder there once, then Load or Save.
 
-Reading, writing and checking a layout need no Blender: test_lauder_levels.py runs them in
-./scripts/check. Coordinates in the layout files are the game's, in metres: x across, y up and
-z along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
+Reading, writing and checking layouts and the palette need no Blender: test_lauder_levels.py runs
+them in ./scripts/check. Coordinates in the layout files are the game's, in metres: x across, y up
+and z along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
+
+Moving something else into Blender follows the same recipe: give it a typed entry in a Swift data
+file, read and write that entry here exactly, build it in Load and read it back in Save, check the
+game's rules before anything is written, and test the round trip.
 """
 
 bl_info = {
     "name": "Lauder levels",
     "author": "Lauder contributors",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Sidebar > Lauder",
-    "description": "Load and save Lauder's level layouts",
+    "description": "Load and save Lauder's level layouts, lights and surface palette",
     "category": "Import-Export",
 }
 
@@ -66,20 +72,39 @@ LEVELS = {
         path="apple/sources/content/BrooklynBridgeLayout.swift",
         owner="BrooklynBridge",
         header=(
-            "// Where everything on the Brooklyn Bridge stands (ADR 0005), in metres: x across the",
-            "// deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits",
-            "// this file through blender/lauder_levels.py: Load builds the layout in",
-            "// Blender and Save writes it back. The numbers can also be edited here, and the next",
-            "// Load picks them up. Keep the entries in this form so that the script can read them.",
+            "// Where everything on the Brooklyn Bridge stands and how it is lit (ADR 0005), in metres: x",
+            "// across the deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits",
+            "// this file through blender/lauder_levels.py: Load builds the layout in Blender and Save writes",
+            "// it back. The numbers can also be edited here, and the next Load picks them up. Keep the",
+            "// entries in this form so that the script can read them.",
         ),
         required_boxes=("brooklyn-tower-pier", "manhattan-tower-pier"),
         camera_target="spawn.miki",
     ),
 }
 
-SURFACES = (
-    "concrete", "hazard", "asphalt", "steel", "granite", "vehicle", "metal", "river", "paint",
+#: How each surface looks, for every level: the game's shared material palette. Its entries are
+#: the surfaces a box or piece may have.
+PALETTE_PATH = "apple/sources/content/Surfaces.swift"
+PALETTE_HEADER = (
+    "// How each surface looks (ADR 0005): the game's small shared material palette, for every",
+    "// level. Colours are sRGB, each channel from 0 to 1. Blender edits this file through",
+    "// blender/lauder_levels.py: Load builds Blender's materials from it and Save writes them",
+    "// back. The numbers can also be edited here, and the next Load picks them up. Keep the",
+    "// entries in this form so that the script can read them.",
 )
+
+#: Surfaces that the game's own rules draw vehicles and landmarks with; the palette keeps them.
+GAME_LOOKS = ("vehicle", "glass", "metal", "paint")
+
+#: The visual direction's budget (docs/visual-direction.md).
+MOST_LIGHTS = 2
+MOST_SHADOWED_LIGHTS = 1
+#: The shadow distance a light gets when its shadow is turned on in Blender.
+DEFAULT_SHADOW_DISTANCE = 25
+#: Blender's sun strength, in W/m², for each lux of a game light. Blender and RealityKit render
+#: differently, so this only brings Blender's preview close; the game shows the real result.
+SUN_STRENGTH_PER_LUX = 1 / 700
 
 #: The height of the camera's target above the floor: a stand-in's centre, plus 0.1 m.
 CAMERA_TARGET_HEIGHT = 0.95
@@ -145,6 +170,28 @@ class Camera:
 
 
 @dataclass
+class Light:
+    """A light as far away as the sun, shining from one direction over the whole level."""
+    name: str
+    #: A point in the direction the light comes from, (x, y, z); only the direction matters.
+    source: tuple
+    #: In sRGB, each channel from 0 to 1.
+    color: tuple
+    #: In lux.
+    intensity: float
+    #: How far from the camera its shadows reach, in metres, or None when it casts none.
+    shadow_distance: float = None
+
+
+@dataclass
+class Finish:
+    """How a surface looks: a colour in sRGB and a roughness and metalness, each from 0 to 1."""
+    color: tuple
+    roughness: float
+    metallic: float = 0.0
+
+
+@dataclass
 class Layout:
     ground: Box
     boxes: list
@@ -153,6 +200,7 @@ class Layout:
     markers: list
     pieces: list = field(default_factory=list)
     camera: Camera = None
+    lights: list = field(default_factory=list)
 
 
 class LayoutError(Exception):
@@ -249,10 +297,35 @@ _ENTRIES = {
     "camera": re.compile(
         r"\.camera\(\s*offset:\s*" + _LIST + r"\s*,\s*fieldOfView:\s*" + _NUMBER + r"\s*\)"
     ),
+    "sun": re.compile(
+        r"\.sun\(\s*" + _NAME + r"\s*,\s*from:\s*" + _LIST + r"\s*,\s*color:\s*" + _LIST
+        + r"\s*,\s*intensity:\s*" + _NUMBER + r"\s*(?:,\s*shadowDistance:\s*" + _NUMBER
+        + r"\s*)?\)"
+    ),
 }
-_SECTIONS = ("ground", "boxes", "landmarks", "areas", "markers", "pieces", "camera")
-_KINDS = {"ground": "box", "boxes": "box", "landmarks": "landmark", "areas": "area",
-          "markers": "marker", "pieces": "piece", "camera": "camera"}
+_SECTIONS = ("ground", "boxes", "landmarks", "areas", "markers", "pieces", "camera", "lights")
+#: The kinds of entry each section holds. A section may hold several, as the lights will once the
+#: game has more kinds than the sun.
+_KINDS = {"ground": ("box",), "boxes": ("box",), "landmarks": ("landmark",), "areas": ("area",),
+          "markers": ("marker",), "pieces": ("piece",), "camera": ("camera",), "lights": ("sun",)}
+
+
+#: All that may come before the first section: the layout's opening.
+_LAYOUT_OPENING = re.compile(r"\s*extension\s+\w+\s*\{\s*static\s+let\s+layout\s*=\s*Level\.Layout\(\s*")
+
+
+def _unread(chunk, spans):
+    """What is left of the code once its entries are taken out, apart from the brackets, commas,
+    closing marks and spaces between them: anything else is something the script did not read,
+    which a save would drop."""
+    pieces, at = [], 0
+    for start, finish in sorted(spans):
+        pieces.append(chunk[at:start])
+        at = finish
+    pieces.append(chunk[at:])
+    leftover = "".join(pieces)
+    first = re.search(r"[^\s\[\](),}]", leftover)
+    return " ".join(leftover[first.start():].split())[:48] if first else ""
 
 
 def _numbers(text, count, name):
@@ -265,41 +338,54 @@ def _numbers(text, count, name):
         raise LayoutError(f"{name}: [{text}] is not a list of numbers.") from None
 
 
-def parse_layout(text):
-    """Read a layout file. Anything that is not read exactly raises, so Save never drops it."""
+def parse_layout(text, surfaces=None):
+    """Read a layout file. Anything that is not read exactly raises, so Save never drops it. Given
+    the palette's surfaces, every box and piece must have one of them."""
     code = re.sub(r"//[^\n]*", "", text)
-    starts = {}
+    heads, starts = {}, {}
     for section in _SECTIONS:
         found = list(re.finditer(rf"\b{section}:", code))
         if len(found) != 1:
             raise LayoutError(f"The layout needs exactly one '{section}:' section.")
-        starts[section] = found[0].end()
+        heads[section], starts[section] = found[0].start(), found[0].end()
     if sorted(_SECTIONS, key=starts.get) != list(_SECTIONS):
         raise LayoutError("The sections must come in order: " + ", ".join(_SECTIONS) + ".")
+    if not re.fullmatch(_LAYOUT_OPENING, code[:heads[_SECTIONS[0]]]):
+        raise LayoutError(
+            "Before 'ground:', the file should only open the layout: "
+            "extension … { static let layout = Level.Layout(")
     entries = {}
     for index, section in enumerate(_SECTIONS):
-        end = starts[_SECTIONS[index + 1]] if index + 1 < len(_SECTIONS) else len(code)
+        end = heads[_SECTIONS[index + 1]] if index + 1 < len(_SECTIONS) else len(code)
         chunk = code[starts[section]:end]
-        kind = _KINDS[section]
-        found = _ENTRIES[kind].findall(chunk)
-        written = chunk.count(f".{kind}(")
+        kinds = _KINDS[section]
+        # In the order written, whatever their kinds.
+        found = sorted(
+            (match.start(), match.end(), kind, match.groups())
+            for kind in kinds for match in _ENTRIES[kind].finditer(chunk))
+        written = sum(chunk.count(f".{kind}(") for kind in kinds)
         if len(found) != written:
             raise LayoutError(
                 f"{written - len(found)} entry or entries in '{section}:' could not be read. "
                 f"Write each as the others are."
             )
-        entries[section] = found
+        unread = _unread(chunk, [(start, finish) for start, finish, _, _ in found])
+        if unread:
+            raise LayoutError(
+                f"'{section}:' holds something the script cannot read: {unread}… "
+                f"Write each entry as the others are.")
+        entries[section] = [(kind, groups) for _, _, kind, groups in found]
     if len(entries["ground"]) != 1:
         raise LayoutError("The layout needs exactly one ground box.")
     if len(entries["camera"]) != 1:
         raise LayoutError("The layout needs exactly one camera.")
 
     def box(entry):
-        name, at, size, surface = entry
+        _, (name, at, size, surface) = entry
         return Box(name, _numbers(at, 3, name), _numbers(size, 3, name), surface)
 
     def piece(entry):
-        name, at, size, turn, surface = entry
+        _, (name, at, size, turn, surface) = entry
         rotation = IDENTITY
         if turn:
             # Kept exactly as written, so that reading and writing the file changes nothing.
@@ -307,31 +393,38 @@ def parse_layout(text):
             rotation = (w, x, y, z)
         return Piece(name, _numbers(at, 3, name), _numbers(size, 3, name), surface, rotation)
 
-    offset, field_of_view = entries["camera"][0]
+    def light(entry):
+        _, (name, source, colour, intensity, shadow) = entry
+        return Light(name, _numbers(source, 3, name), _numbers(colour, 3, name), float(intensity),
+                     None if shadow is None else float(shadow))
+
+    _, (offset, field_of_view) = entries["camera"][0]
     layout = Layout(
         ground=box(entries["ground"][0]),
         boxes=[box(entry) for entry in entries["boxes"]],
         landmarks=[
             Landmark(name, _numbers(at, 3, name), _numbers(size, 3, name))
-            for name, at, size in entries["landmarks"]
+            for _, (name, at, size) in entries["landmarks"]
         ],
         areas=[
             Area(name, _numbers(low, 2, name), _numbers(high, 2, name))
-            for name, low, high in entries["areas"]
+            for _, (name, low, high) in entries["areas"]
         ],
-        markers=[Marker(name, _numbers(at, 2, name)) for name, at in entries["markers"]],
+        markers=[Marker(name, _numbers(at, 2, name)) for _, (name, at) in entries["markers"]],
         pieces=[piece(entry) for entry in entries["pieces"]],
         camera=Camera(_numbers(offset, 3, "camera"), float(field_of_view)),
+        lights=[light(entry) for entry in entries["lights"]],
     )
-    _check_names(layout)
+    _check_names(layout, surfaces)
     return layout
 
 
-def _check_names(layout):
+def _check_names(layout, surfaces=None):
     problems = []
     for kind, items in (
         ("box", [layout.ground] + layout.boxes), ("landmark", layout.landmarks),
         ("area", layout.areas), ("marker", layout.markers), ("piece", layout.pieces),
+        ("light", layout.lights),
     ):
         seen = set()
         for item in items:
@@ -342,15 +435,42 @@ def _check_names(layout):
             if re.search(r"\.\d{3}$", item.name):
                 problems.append(
                     f"{item.name} has Blender's duplicate suffix; give it a name of its own.")
-    for item in [layout.ground] + layout.boxes + layout.pieces:
-        if item.surface not in SURFACES:
-            problems.append(f"{item.name} has an unknown surface, {item.surface}.")
+    if surfaces is not None:
+        for item in [layout.ground] + layout.boxes + layout.pieces:
+            if item.surface not in surfaces:
+                problems.append(f"{item.name} has an unknown surface, {item.surface}.")
     if layout.camera is None:
         problems.append("The layout needs a camera.")
     elif not 10 <= layout.camera.field_of_view <= 120:
         problems.append("The camera's field of view should be between 10 and 120 degrees.")
+    problems += _light_problems(layout.lights)
     if problems:
         raise LayoutError(" ".join(problems))
+
+
+def _light_problems(lights):
+    """The visual direction's budget for lights, and lights the game can use."""
+    problems = []
+    if not lights:
+        problems.append("The layout needs a light.")
+    if len(lights) > MOST_LIGHTS:
+        problems.append(
+            f"The visual direction allows at most {MOST_LIGHTS} lights, not {len(lights)}.")
+    shadowed = [light.name for light in lights if light.shadow_distance is not None]
+    if len(shadowed) > MOST_SHADOWED_LIGHTS:
+        problems.append(
+            f"The visual direction allows {MOST_SHADOWED_LIGHTS} light with shadows, but "
+            f"{len(shadowed)} cast them: {', '.join(shadowed)}.")
+    for light in lights:
+        if light.intensity <= 0:
+            problems.append(f"{light.name} needs some intensity.")
+        if any(not 0 <= value <= 1 for value in light.color):
+            problems.append(f"{light.name}'s colour channels should be between 0 and 1.")
+        if light.shadow_distance is not None and light.shadow_distance <= 0:
+            problems.append(f"{light.name}'s shadow distance should be more than 0.")
+        if all(abs(value) < 1e-6 for value in light.source):
+            problems.append(f"{light.name} needs a direction to shine from.")
+    return problems
 
 
 # MARK: - Writing a layout file
@@ -400,9 +520,17 @@ def _piece_arguments(piece):
     return arguments + [f"surface: .{piece.surface}"]
 
 
-def emit_layout(layout, level):
+def _light_arguments(light):
+    arguments = [f'"{light.name}"', f"from: {_list(light.source)}", f"color: {_list(light.color)}",
+                 f"intensity: {_number(light.intensity)}"]
+    if light.shadow_distance is not None:
+        arguments.append(f"shadowDistance: {_number(light.shadow_distance)}")
+    return arguments
+
+
+def emit_layout(layout, level, surfaces=None):
     """The layout file's text, the same every time for the same layout."""
-    _check_names(layout)
+    _check_names(layout, surfaces)
     lines = list(level.header) + [
         "",
         f"extension {level.owner} {{",
@@ -438,8 +566,89 @@ def emit_layout(layout, level):
     camera = layout.camera
     lines += _call(
         "    ", "camera: .camera",
-        [f"offset: {_list(camera.offset)}", f"fieldOfView: {_number(camera.field_of_view)}"], ")")
-    lines.append("}")
+        [f"offset: {_list(camera.offset)}", f"fieldOfView: {_number(camera.field_of_view)}"], ",")
+    lines.append("    lights: [")
+    for light in layout.lights:
+        lines += _call("      ", ".sun", _light_arguments(light), ",")
+    lines += ["    ])", "}"]
+    return "\n".join(lines) + "\n"
+
+
+# MARK: - The surface palette
+
+_FINISH = re.compile(
+    r"\.(\w+):\s*\.finish\(\s*color:\s*" + _LIST + r"\s*,\s*roughness:\s*" + _NUMBER
+    + r"\s*(?:,\s*metallic:\s*" + _NUMBER + r"\s*)?\)"
+)
+
+
+#: All that may come before the palette's first entry.
+_PALETTE_SCAFFOLD = re.compile(
+    r"\s*enum\s+Surfaces\s*\{\s*static\s+let\s+palette\s*:\s*\[\s*Level\.Surface\s*:\s*"
+    r"Level\.Finish\s*\]\s*=\s*\[\s*"
+)
+
+
+def parse_palette(text):
+    """Read the palette file: each surface's finish, in the file's order. Anything that is not
+    read exactly raises, so Save never drops it."""
+    code = re.sub(r"//[^\n]*", "", text)
+    matches = list(_FINISH.finditer(code))
+    written = code.count(".finish(")
+    if len(matches) != written:
+        raise LayoutError(
+            f"{written - len(matches)} surface or surfaces in the palette could not be read. "
+            f"Write each as the others are.")
+    scaffold = re.fullmatch(_PALETTE_SCAFFOLD, code[:matches[0].start()] if matches else code)
+    unread = _unread(code[matches[0].start():], [
+        (match.start() - matches[0].start(), match.end() - matches[0].start()) for match in matches
+    ]) if matches else ""
+    if scaffold is None or unread:
+        raise LayoutError(
+            "The palette file holds something the script cannot read. Keep it as `enum Surfaces` "
+            "with one `.surface: .finish(...)` entry for each surface.")
+    palette = {}
+    for name, colour, roughness, metallic in (match.groups() for match in matches):
+        if name in palette:
+            raise LayoutError(f"The palette has two finishes for {name}.")
+        palette[name] = Finish(_numbers(colour, 3, name), float(roughness), float(metallic or 0))
+    problems = _palette_problems(palette)
+    if problems:
+        raise LayoutError(" ".join(problems))
+    return palette
+
+
+def _palette_problems(palette):
+    problems = []
+    for name in GAME_LOOKS:
+        if name not in palette:
+            problems.append(f"The palette needs {name}: the game draws vehicles and landmarks with it.")
+    for name, finish in palette.items():
+        if any(not 0 <= value <= 1 for value in finish.color):
+            problems.append(f"{name}'s colour channels should be between 0 and 1.")
+        if not 0 <= finish.roughness <= 1:
+            problems.append(f"{name}'s roughness should be between 0 and 1.")
+        if not 0 <= finish.metallic <= 1:
+            problems.append(f"{name}'s metallic should be between 0 and 1.")
+    return problems
+
+
+def emit_palette(palette):
+    """The palette file's text, the same every time for the same palette."""
+    problems = _palette_problems(palette)
+    if problems:
+        raise LayoutError(" ".join(problems))
+    lines = list(PALETTE_HEADER) + [
+        "",
+        "enum Surfaces {",
+        "  static let palette: [Level.Surface: Level.Finish] = [",
+    ]
+    for name, finish in palette.items():
+        arguments = [f"color: {_list(finish.color)}", f"roughness: {_number(finish.roughness)}"]
+        if _number(finish.metallic) != "0":
+            arguments.append(f"metallic: {_number(finish.metallic)}")
+        lines += _call("    ", f".{name}: .finish", arguments, ",")
+    lines += ["  ]", "}"]
     return "\n".join(lines) + "\n"
 
 
@@ -492,15 +701,135 @@ class CameraShape:
     field_of_view: float
 
 
+@dataclass
+class LightShape:
+    """What Save reads from one Blender light."""
+    name: str
+    #: Blender's kind of light: SUN, POINT, SPOT or AREA.
+    kind: str
+    #: Where the light comes from, as a unit vector in Blender's space: the sun's own +z.
+    direction: tuple
+    #: Scene-linear RGB, as Blender holds it.
+    color: tuple
+    #: Blender's strength, in W/m² for a sun.
+    energy: float
+    shadow: bool
+    #: The shadow distance kept on the light, if it has one.
+    shadow_distance: float = None
+
+
+@dataclass
+class MaterialShape:
+    """What Save reads from one Lauder material, as (scene-linear colour, roughness, metallic):
+    its Principled BSDF, which renders and Material Preview show, and its viewport display
+    settings, which Solid shading shows."""
+    name: str
+    node: tuple = None
+    viewport: tuple = None
+
+
 _TOLERANCE = 0.005
+#: Half the last place that a colour, roughness or metallic is written to.
+_FINISH_TOLERANCE = 0.0005
 
 
-def layout_from_shapes(shapes, level, previous, camera=None):
+def _srgb(linear):
+    """Scene-linear RGB as sRGB, each channel from 0 to 1."""
+    def channel(value):
+        value = min(max(value, 0.0), 1.0)
+        return value * 12.92 if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
+    return tuple(channel(value) for value in linear[:3])
+
+
+def _length(vector):
+    return math.sqrt(sum(value * value for value in vector))
+
+
+def _unit(vector):
+    length = _length(vector) or 1.0
+    return tuple(value / length for value in vector)
+
+
+def _close(a, b, tolerance):
+    return all(abs(x - y) <= tolerance for x, y in zip(a, b))
+
+
+def _known(surface, surfaces):
+    """Whether a box or piece has a Lauder surface: one of the palette's, when it is given."""
+    return surface is not None and (surfaces is None or surface in surfaces)
+
+
+def lights_from_shapes(shapes, previous):
+    """The layout's lights from Blender's, and anything that stops a save. A value that Blender
+    hands back unchanged is kept as written, so a save without edits changes nothing."""
+    before = {light.name: light for light in previous}
+    lights, problems = [], []
+    for shape in shapes:
+        if shape.kind != "SUN":
+            problems.append(
+                f"{shape.name} is a {shape.kind.lower()} light; the game has only sun lights so far.")
+            continue
+        old = before.get(shape.name)
+        direction = _unit(from_blender(shape.direction))
+        if old is not None and sum(a * b for a, b in zip(_unit(old.source), direction)) > 1 - 1e-6:
+            source = old.source
+        else:
+            # Written at the length the file had, so that the numbers stay easy to read.
+            length = _length(old.source) if old is not None else 10.0
+            source = tuple(round(value * length, 2) for value in direction)
+        colour = tuple(round(value, 3) for value in _srgb(shape.color))
+        if old is not None and _close(colour, old.color, _FINISH_TOLERANCE):
+            colour = old.color
+        intensity = shape.energy / SUN_STRENGTH_PER_LUX
+        if old is not None and abs(intensity - old.intensity) <= max(0.01, old.intensity * 1e-5):
+            intensity = old.intensity
+        else:
+            intensity = round(intensity, 1)
+        shadow = None
+        if shape.shadow:
+            shadow = (shape.shadow_distance or (old.shadow_distance if old is not None else None)
+                      or DEFAULT_SHADOW_DISTANCE)
+        lights.append(Light(shape.name, source, colour, intensity, shadow))
+    return lights, problems
+
+
+def finish_reading(finish):
+    """A finish as each of a Lauder material's two settings holds it: (scene-linear colour,
+    roughness, metallic). Load sets both to it, and so does Save once it has written the palette,
+    so that the setting left stale by an edit cannot undo that edit at the next Save."""
+    return (_linear(*finish.color)[:3], finish.roughness, finish.metallic)
+
+
+def palette_from_shapes(shapes, previous):
+    """The palette from Blender's Lauder materials. Each surface takes whichever of its settings
+    was changed, the material's own or the viewport's; when Blender hands both back unchanged, or
+    the material is gone, the finish stays as written."""
+    readings = {shape.name: shape for shape in shapes}
+    palette = {}
+    for name, old in previous.items():
+        finish = old
+        shape = readings.get(name)
+        for reading in (shape.node, shape.viewport) if shape is not None else ():
+            if reading is None:
+                continue
+            colour, roughness, metallic = reading
+            candidate = Finish(tuple(round(value, 3) for value in _srgb(colour)),
+                               round(roughness, 3), round(metallic, 3))
+            if not (_close(candidate.color, old.color, _FINISH_TOLERANCE)
+                    and abs(candidate.roughness - old.roughness) <= _FINISH_TOLERANCE
+                    and abs(candidate.metallic - old.metallic) <= _FINISH_TOLERANCE):
+                finish = candidate
+                break
+        palette[name] = finish
+    return palette
+
+
+def layout_from_shapes(shapes, level, previous, camera=None, lights=None, surfaces=None):
     """Build a layout from what Blender holds, or raise with everything that must change first.
 
     `previous` is the layout last saved. Its landmarks, areas and markers carry the level's words
-    in Swift, so none of them may disappear here. Without a camera in Blender, the previous
-    camera is kept.
+    in Swift, so none of them may disappear here. Without a camera or lights in Blender, the
+    previous ones are kept. Given the palette's surfaces, every box and piece needs one of them.
     """
     problems = []
     ground, boxes, landmarks, areas, markers, pieces = [], [], [], [], [], []
@@ -513,7 +842,7 @@ def layout_from_shapes(shapes, level, previous, camera=None):
             if shape.mirrored:
                 problems.append(f"{shape.name} is mirrored; scale it without negative values.")
                 continue
-            if shape.surface not in SURFACES:
+            if not _known(shape.surface, surfaces):
                 problems.append(
                     f"{shape.name} has no Lauder surface. Give it one of the Lauder materials.")
                 continue
@@ -546,7 +875,7 @@ def layout_from_shapes(shapes, level, previous, camera=None):
                 problems.append(f"{shape.name} is flat; give it some size.")
                 continue
         if shape.role in ("ground", "box"):
-            if shape.surface not in SURFACES:
+            if not _known(shape.surface, surfaces):
                 problems.append(
                     f"{shape.name} has no Lauder surface. Give it one of the Lauder materials.")
                 continue
@@ -596,10 +925,17 @@ def layout_from_shapes(shapes, level, previous, camera=None):
         saved_camera = Camera(from_blender(camera.offset), camera.field_of_view)
     else:
         saved_camera = previous.camera if previous is not None else None
+    if lights is not None:
+        saved_lights, light_problems = lights_from_shapes(
+            lights, previous.lights if previous is not None else [])
+        problems += light_problems
+    else:
+        saved_lights = previous.lights if previous is not None else []
     if problems:
         raise LayoutError(" ".join(problems))
-    layout = Layout(ground[0], boxes, landmarks, areas, markers, pieces, saved_camera)
-    _check_names(layout)
+    layout = Layout(
+        ground[0], boxes, landmarks, areas, markers, pieces, saved_camera, saved_lights)
+    _check_names(layout, surfaces)
     return layout
 
 
@@ -639,34 +975,64 @@ def _linear(red, green, blue):
     return (channel(red), channel(green), channel(blue), 1.0)
 
 
-#: The game's colours (SceneStyle) for each surface and look, and for areas.
-COLOURS = {
-    "concrete": (0.56, 0.57, 0.45), "hazard": (0.59, 0.33, 0.23), "asphalt": (0.27, 0.29, 0.29),
-    "steel": (0.42, 0.48, 0.5), "granite": (0.66, 0.62, 0.54), "vehicle": (0.47, 0.38, 0.33),
-    "metal": (0.16, 0.25, 0.25), "river": (0.13, 0.2, 0.24), "paint": (0.65, 0.68, 0.55),
-    "glass": (0.14, 0.19, 0.21), "landmark": (0.16, 0.25, 0.25), "area": (1.0, 0.75, 0.4),
-}
+#: The areas' colour. The game does not draw areas, so only Blender has it.
+AREA_COLOUR = (1.0, 0.75, 0.4)
 _EDITABLE = (
     ("ground", "Ground"), ("box", "Boxes"), ("landmark", "Landmarks"), ("area", "Areas"),
     ("marker", "Markers"), ("piece", "Pieces"),
 )
 #: A phone's screen in landscape, for the game camera's frame: the baseline iPhone 13 Pro Max.
 _SCREEN = (2778, 1284)
+#: How far from the camera's target Load puts each sun, so that it is easy to find and turn. A
+#: sun's place does not change its light.
+_SUN_DISTANCE = 8
 
 
-def _material(name):
+def _principled(material, create=False):
+    """The material's Principled BSDF, giving the material nodes first when asked. Only a material
+    without nodes, made by Blender before 5, needs `use_nodes`, which Blender 6 removes."""
+    tree = material.node_tree
+    if tree is None and create:
+        material.use_nodes = True
+        tree = material.node_tree
+    if tree is None:
+        return None
+    return next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+
+
+def _material(name, palette):
+    """The Blender material for a surface, set to its finish in the palette: its Principled BSDF,
+    which Material Preview and renders show, and its viewport display, which Solid shading
+    shows."""
     material = bpy.data.materials.get(f"Lauder {name}")
     if material is None:
         material = bpy.data.materials.new(f"Lauder {name}")
-    if name in SURFACES:
-        material["lauder_surface"] = name
-    colour = _linear(*COLOURS[name])
-    material.diffuse_color = colour
-    tree = getattr(material, "node_tree", None)
-    if tree is not None:
-        for node in tree.nodes:
-            if node.type == "BSDF_PRINCIPLED":
-                node.inputs["Base Color"].default_value = colour
+    material["lauder_surface"] = name
+    _apply_finish(material, palette[name])
+    return material
+
+
+def _apply_finish(material, finish):
+    """Set both of a Lauder material's settings to the finish (finish_reading)."""
+    colour, roughness, metallic = finish_reading(finish)
+    material.diffuse_color = colour + (1.0,)
+    material.roughness = roughness
+    material.metallic = metallic
+    node = _principled(material, create=True)
+    if node is not None:
+        node.inputs["Base Color"].default_value = colour + (1.0,)
+        node.inputs["Roughness"].default_value = roughness
+        node.inputs["Metallic"].default_value = metallic
+
+
+def _area_material():
+    material = bpy.data.materials.get("Lauder area")
+    if material is None:
+        material = bpy.data.materials.new("Lauder area")
+    # Earlier versions of this script tagged it like a surface; an area has none.
+    if "lauder_surface" in material:
+        del material["lauder_surface"]
+    material.diffuse_color = _linear(*AREA_COLOUR)
     return material
 
 
@@ -687,22 +1053,34 @@ def _level_collection(level):
     return None
 
 
+def _part(level, role):
+    """One of the level's collections, by role."""
+    root = _level_collection(level)
+    for part in root.children if root is not None else []:
+        if part.get("lauder_role") == role:
+            return part
+    return None
+
+
 def _remove(collection):
     for child in list(collection.children):
         _remove(child)
     for item in list(collection.objects):
         data = item.data
         bpy.data.objects.remove(item, do_unlink=True)
-        if data is not None and data.users == 0:
-            if isinstance(data, bpy.types.Mesh) and data.get("lauder"):
+        if data is not None and data.users == 0 and data.get("lauder"):
+            if isinstance(data, bpy.types.Mesh):
                 bpy.data.meshes.remove(data)
-            elif isinstance(data, bpy.types.Camera) and data.get("lauder"):
+            elif isinstance(data, bpy.types.Camera):
                 bpy.data.cameras.remove(data)
+            elif isinstance(data, bpy.types.Light):
+                bpy.data.lights.remove(data)
     bpy.data.collections.remove(collection)
 
 
-def build_in_blender(layout, level):
-    """Replace the level's collection in the open Blender file with this layout."""
+def build_in_blender(layout, level, palette):
+    """Replace the level's collection in the open Blender file with this layout, its surfaces
+    made from the palette."""
     old = _level_collection(level)
     if old is not None:
         _remove(old)
@@ -711,7 +1089,9 @@ def build_in_blender(layout, level):
     root["lauder_level"] = level.key
     scene.collection.children.link(root)
     parts = {}
-    for role, title in _EDITABLE + (("detail", "Details"), ("camera", "Game camera")):
+    for role, title in _EDITABLE + (
+        ("detail", "Details"), ("camera", "Game camera"), ("light", "Lights"),
+    ):
         part = bpy.data.collections.new(f"{level.title} {title}")
         part["lauder_role"] = role
         root.children.link(part)
@@ -733,7 +1113,7 @@ def build_in_blender(layout, level):
         for part_name, offset, part_size, look in details(box, kind):
             name = f"{owner.name} {part_name}"
             detail = bpy.data.objects.new(name, _cube(name))
-            detail.data.materials.append(_material(look))
+            detail.data.materials.append(_material(look, palette))
             parts["detail"].objects.link(detail)
             detail.parent = owner
             # The owner's scale is its size, so the detail is placed in fractions of it.
@@ -743,10 +1123,10 @@ def build_in_blender(layout, level):
             detail.hide_select = True
 
     block(layout.ground.name, "ground", to_blender(layout.ground.position),
-          size_to_blender(layout.ground.size), _material(layout.ground.surface))
+          size_to_blender(layout.ground.size), _material(layout.ground.surface, palette))
     for box in layout.boxes:
         item = block(box.name, "box", to_blender(box.position), size_to_blender(box.size),
-                     _material(box.surface))
+                     _material(box.surface, palette))
         if box.surface == "vehicle":
             # The game draws a vehicle as a body and windows inside its box: show those, and the
             # box that blocks movement and sight as an outline around them.
@@ -754,14 +1134,15 @@ def build_in_blender(layout, level):
             add_details(item, box, "vehicle")
     for landmark in layout.landmarks:
         x, y, z = landmark.position
+        # The game draws a landmark in metal, with a painted band.
         item = block(landmark.name, "landmark", to_blender((x, y + landmark.size[1] / 2, z)),
-                     size_to_blender(landmark.size), _material("landmark"))
+                     size_to_blender(landmark.size), _material("metal", palette))
         item.show_name = True
         add_details(item, landmark, "landmark")
     for area in layout.areas:
         (x0, z0), (x1, z1) = area.minimum, area.maximum
         item = block(area.name, "area", ((x0 + x1) / 2, -(z0 + z1) / 2, 0.025),
-                     (x1 - x0, z1 - z0, 0.05), _material("area"))
+                     (x1 - x0, z1 - z0, 0.05), _area_material())
         item.display_type = "WIRE"
         item.show_name = True
     for marker in layout.markers:
@@ -773,22 +1154,28 @@ def build_in_blender(layout, level):
         parts["marker"].objects.link(item)
     for piece in layout.pieces:
         block(piece.name, "piece", to_blender(piece.position), size_to_blender(piece.size),
-              _material(piece.surface), rotation_to_blender(piece.rotation))
+              _material(piece.surface, palette), rotation_to_blender(piece.rotation))
     _build_camera(layout, level, parts["camera"])
+    _build_lights(layout, level, parts["light"])
     scene.view_settings.view_transform = "Standard"
     return root
+
+
+def _camera_start(layout, level):
+    """Where the camera's target starts: just above the marker that the level names."""
+    start = next((m.position for m in layout.markers if m.name == level.camera_target), (0, 0))
+    return (start[0], -start[1], CAMERA_TARGET_HEIGHT)
 
 
 def _build_camera(layout, level, collection):
     """The game camera: a target to drag anywhere on the level, and the camera at the game's
     offset from it, looking at it with the game's field of view."""
-    start = next((m.position for m in layout.markers if m.name == level.camera_target), (0, 0))
     target = bpy.data.objects.new("camera-target", None)
     target.empty_display_type = "SPHERE"
     target.empty_display_size = 0.3
     target.show_name = True
     target["lauder_rig"] = "target"
-    target.location = (start[0], -start[1], CAMERA_TARGET_HEIGHT)
+    target.location = _camera_start(layout, level)
     collection.objects.link(target)
     data = bpy.data.cameras.new("game-camera")
     data["lauder"] = True
@@ -810,13 +1197,32 @@ def _build_camera(layout, level, collection):
     scene.render.resolution_x, scene.render.resolution_y = _SCREEN
 
 
+def _build_lights(layout, level, collection):
+    """The lights, as Blender suns. A sun shines along its own -z, so each is turned to shine from
+    its source, and placed above the camera's target in that direction."""
+    start = Vector(_camera_start(layout, level))
+    for light in layout.lights:
+        data = bpy.data.lights.new(light.name, type="SUN")
+        data["lauder"] = True
+        data.color = _linear(*light.color)[:3]
+        data.energy = light.intensity * SUN_STRENGTH_PER_LUX
+        data.use_shadow = light.shadow_distance is not None
+        if light.shadow_distance is not None:
+            data["lauder_shadow_distance"] = light.shadow_distance
+        item = bpy.data.objects.new(light.name, data)
+        direction = Vector(to_blender(light.source)).normalized()
+        item.rotation_euler = Vector((0, 0, 1)).rotation_difference(direction).to_euler("XYZ")
+        item.location = start + direction * _SUN_DISTANCE
+        item.show_name = True
+        collection.objects.link(item)
+
+
 def _rig(level):
-    root = _level_collection(level)
-    for part in root.children if root is not None else []:
-        if part.get("lauder_role") == "camera":
-            items = {item.get("lauder_rig"): item for item in part.objects}
-            if "target" in items and "camera" in items:
-                return items["target"], items["camera"]
+    part = _part(level, "camera")
+    if part is not None:
+        items = {item.get("lauder_rig"): item for item in part.objects}
+        if "target" in items and "camera" in items:
+            return items["target"], items["camera"]
     return None
 
 
@@ -825,6 +1231,9 @@ def shapes_from_blender(level):
     root = _level_collection(level)
     if root is None:
         raise LayoutError(f"This Blender file has no {level.title}; Load it first.")
+    # Bring every object's place up to date, as the interface does between clicks, so that a
+    # Save run straight after a Load or a script's edits reads where things are.
+    bpy.context.view_layer.update()
     editable = {role for role, _ in _EDITABLE}
     shapes = []
     for part in root.children:
@@ -882,23 +1291,86 @@ def camera_from_blender(level):
     return CameraShape(tuple(offset), math.degrees(camera.data.angle_y))
 
 
+def lights_from_blender(level):
+    """What Save reads from the level's lights, or None when the Lights collection is gone."""
+    part = _part(level, "light")
+    if part is None:
+        return None
+    shapes = []
+    for item in part.objects:
+        if item.type != "LIGHT":
+            raise LayoutError(f"{item.name} is in Lights but is not a light.")
+        data = item.data
+        direction = item.matrix_world.to_quaternion() @ Vector((0, 0, 1))
+        distance = data.get("lauder_shadow_distance")
+        shapes.append(LightShape(
+            item.name, data.type, tuple(direction), tuple(data.color), data.energy,
+            data.use_shadow, None if distance is None else float(distance)))
+    return shapes
+
+
+def lights_outside_the_level(level, view_layer):
+    """The visible lights that are not in the level's Lights, such as the one in Blender's default
+    scene. Game Look would show them, but the game has no such light: Save neither writes them
+    nor counts them against the budget."""
+    part = _part(level, "light")
+    own = {item.name for item in part.objects} if part is not None else set()
+    return [item.name for item in view_layer.objects
+            if item.type == "LIGHT" and item.name not in own
+            and item.visible_get(view_layer=view_layer)]
+
+
+def palette_from_blender(previous):
+    """The palette as the Lauder materials hold it. A surface whose material is gone keeps its
+    finish."""
+    shapes = []
+    for name in previous:
+        material = bpy.data.materials.get(f"Lauder {name}")
+        if material is None:
+            continue
+        node = _principled(material)
+        reading = None
+        if node is not None:
+            reading = (tuple(node.inputs["Base Color"].default_value),
+                       node.inputs["Roughness"].default_value,
+                       node.inputs["Metallic"].default_value)
+        viewport = (tuple(material.diffuse_color), material.roughness, material.metallic)
+        shapes.append(MaterialShape(name, reading, viewport))
+    return palette_from_shapes(shapes, previous)
+
+
 def load_level(repository, key="brooklyn-bridge"):
     level = LEVELS[key]
-    layout = parse_layout((Path(repository) / level.path).read_text())
-    build_in_blender(layout, level)
+    root = Path(repository)
+    palette = parse_palette((root / PALETTE_PATH).read_text())
+    layout = parse_layout((root / level.path).read_text(), set(palette))
+    build_in_blender(layout, level, palette)
     return layout
 
 
 def save_level(repository, key="brooklyn-bridge"):
+    """Write what Blender holds to the level's layout file and the palette, after checking both:
+    if anything fails, neither is written. Returns the layout and the files that changed."""
     level = LEVELS[key]
-    path = Path(repository) / level.path
-    previous = parse_layout(path.read_text())
+    root = Path(repository)
+    paths = {level.path: root / level.path, PALETTE_PATH: root / PALETTE_PATH}
+    before = {name: path.read_text() for name, path in paths.items()}
+    palette = palette_from_blender(parse_palette(before[PALETTE_PATH]))
+    surfaces = set(palette)
+    previous = parse_layout(before[level.path], surfaces)
     layout = layout_from_shapes(
-        shapes_from_blender(level), level, previous, camera_from_blender(level))
-    text = emit_layout(layout, level)
-    changed = text != path.read_text()
-    if changed:
-        path.write_text(text)
+        shapes_from_blender(level), level, previous, camera_from_blender(level),
+        lights_from_blender(level), surfaces)
+    after = {level.path: emit_layout(layout, level, surfaces), PALETTE_PATH: emit_palette(palette)}
+    changed = [name for name in paths if after[name] != before[name]]
+    for name in changed:
+        paths[name].write_text(after[name])
+    # Both settings of each material now hold what was written, so the one an edit did not touch
+    # cannot undo that edit at the next Save.
+    for name, finish in palette.items():
+        material = bpy.data.materials.get(f"Lauder {name}")
+        if material is not None:
+            _apply_finish(material, finish)
     return layout, changed
 
 
@@ -913,7 +1385,7 @@ def _guess_repository():
 if bpy is not None:
 
     class LAUDER_OT_load_level(bpy.types.Operator):
-        """Build the level in this Blender file from the game's layout file"""
+        """Build the level in this Blender file from the game's layout file and surface palette"""
         bl_idname = "lauder.load_level"
         bl_label = "Load"
         bl_options = {"REGISTER"}
@@ -934,7 +1406,7 @@ if bpy is not None:
             return {"FINISHED"}
 
     class LAUDER_OT_save_level(bpy.types.Operator):
-        """Check the level against the game's rules and write the game's layout file"""
+        """Check the level against the game's rules and write its layout file and the palette"""
         bl_idname = "lauder.save_level"
         bl_label = "Save"
         bl_options = {"REGISTER"}
@@ -946,8 +1418,38 @@ if bpy is not None:
             except (LayoutError, OSError) as error:
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
-            level = LEVELS[context.scene.lauder_level]
-            self.report({"INFO"}, f"Saved {level.path}." if changed else "No changes to save.")
+            message = f"Saved {' and '.join(changed)}." if changed else "No changes to save."
+            self.report({"INFO"}, message)
+            return {"FINISHED"}
+
+    class LAUDER_OT_game_look(bpy.types.Operator):
+        """Light the view with the level's own lights and show its materials, close to the game;
+        press again to go back to Solid shading"""
+        bl_idname = "lauder.game_look"
+        bl_label = "Game Look"
+        bl_options = {"REGISTER"}
+
+        def execute(self, context):
+            space = context.space_data
+            if space is None or space.type != "VIEW_3D":
+                self.report({"ERROR"}, "Use Game Look from the 3D Viewport's Lauder tab.")
+                return {"CANCELLED"}
+            shading = space.shading
+            if shading.type == "MATERIAL" and shading.use_scene_lights:
+                shading.type = "SOLID"
+                return {"FINISHED"}
+            others = lights_outside_the_level(LEVELS[context.scene.lauder_level], context.view_layer)
+            if others:
+                self.report(
+                    {"ERROR"},
+                    f"Hide {', '.join(others)} first (H): Game Look shows every visible light, "
+                    f"and only the level's Lights reach the game.")
+                return {"CANCELLED"}
+            shading.type = "MATERIAL"
+            # Only the level's own lights, as in the game: no studio light or world.
+            shading.use_scene_lights = True
+            shading.use_scene_world = False
+            shading.studiolight_intensity = 0
             return {"FINISHED"}
 
     class LAUDER_PT_levels(bpy.types.Panel):
@@ -964,8 +1466,9 @@ if bpy is not None:
             row = layout.row()
             row.operator("lauder.load_level")
             row.operator("lauder.save_level")
+            layout.operator("lauder.game_look", icon="LIGHT_SUN")
 
-    _CLASSES = (LAUDER_OT_load_level, LAUDER_OT_save_level, LAUDER_PT_levels)
+    _CLASSES = (LAUDER_OT_load_level, LAUDER_OT_save_level, LAUDER_OT_game_look, LAUDER_PT_levels)
 
     def register():
         for cls in _CLASSES:

@@ -1,9 +1,10 @@
 import simd
 
 extension Level {
-  /// Where a level's things stand, as plain data with stable names (ADR 0005). Blender loads it
-  /// and saves it back through `blender/lauder_levels.py`; the level's content refers to
-  /// its entries by name and adds the words: what each place is called and what it says.
+  /// Where a level's things stand and how it is lit, as plain data with stable names (ADR 0005).
+  /// Blender loads it and saves it back through `blender/lauder_levels.py`; the level's content
+  /// refers to its entries by name and adds the words: what each place is called and what it
+  /// says.
   struct Layout: Sendable {
     /// A block that can be looked at. Its position is the centre of its base, on the floor.
     struct Landmark: Sendable {
@@ -61,6 +62,8 @@ extension Level {
     /// Decoration that blocks nothing.
     let pieces: [Piece]
     let camera: Camera
+    /// The visual direction allows at most two lights, with at most one casting shadows.
+    let lights: [Light]
 
     func box(named name: String) -> Box {
       guard let box = boxes.first(where: { $0.name == name }) else {
@@ -113,6 +116,47 @@ extension Level {
         name: name, position: position, size: size,
         rotation: simd_normalize(simd_quatf(ix: turn.x, iy: turn.y, iz: turn.z, r: turn.w)),
         surface: surface)
+    }
+  }
+}
+
+extension Level {
+  /// A light as far away as the sun, shining from one direction over the whole level: a
+  /// RealityKit directional light. Blender edits it as a sun light (ADR 0005).
+  struct Light: Sendable {
+    let name: String
+    /// A point in the direction the light comes from: it shines from there towards the origin,
+    /// so only the direction matters.
+    let source: SIMD3<Float>
+    /// In sRGB, each channel from 0 to 1.
+    let color: SIMD3<Float>
+    /// In lux.
+    let intensity: Float
+    /// How far from the camera its shadows reach, in metres, or nil when it casts none.
+    let shadowDistance: Float?
+
+    /// A sun in a layout file, written briefly.
+    static func sun(
+      _ name: String, from source: SIMD3<Float>, color: SIMD3<Float>, intensity: Float,
+      shadowDistance: Float? = nil
+    ) -> Self {
+      Self(
+        name: name, source: source, color: color, intensity: intensity,
+        shadowDistance: shadowDistance)
+    }
+  }
+
+  /// How a surface looks, in the terms that Blender's Principled BSDF and RealityKit's materials
+  /// share: a colour in sRGB, each channel from 0 to 1, a roughness from 0 to 1, and how
+  /// metallic it is, from 0 to 1.
+  struct Finish: Equatable, Sendable {
+    let color: SIMD3<Float>
+    let roughness: Float
+    var metallic: Float = 0
+
+    /// A finish in the palette file, written briefly.
+    static func finish(color: SIMD3<Float>, roughness: Float, metallic: Float = 0) -> Self {
+      Self(color: color, roughness: roughness, metallic: metallic)
     }
   }
 }

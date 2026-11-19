@@ -3,6 +3,7 @@
 **Status:** Accepted by the maintainer on 18 November 2026 (**“Yes, as recommended”**) and implemented for the Brooklyn Bridge. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/43#issuecomment-6973768300) (“Yes, merge it”) without an independent review.\
 **Date:** 18 November 2026\
 **Amended:** 18 November 2026, at the maintainer's request: [the decoration and the game camera](#amendment--the-decoration-and-the-game-camera) join the layout file. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/45#issuecomment-6975951390) (“Yes, merge both”) without an independent review\
+**Amended again:** 19 November 2026, at the maintainer's request: [the lights and the surface materials](#amendment--lights-and-surface-materials) are built in Blender too. After trying it in Blender and the Simulator, the maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/49#issuecomment-6996641912) (“Yes, merge it”) without an independent review\
 **Deciders:** Maintainer\
 **Author:** Claude
 
@@ -79,3 +80,42 @@ After playing M3, the maintainer noted that the scene in the game did not look e
   - Turning a cable 30° about the vertical, moving the river, dragging the camera's target and widening the field of view to 50° saved exactly three changes, to a copy of the file: the river's position, the cable's turn, which matched a 30° turn, and the field of view.
   - The view through the game camera matches the game's opening frame in the Simulator, apart from Miki and the lighting.
 - Rendered Simulator runs in a Debug build: `bridge-walk` passed 37 of 37 steps and `ambush` 35 of 35. Frames averaged 16.7 ms in both, and the only frame longer than 34 ms in each was its first. These are Simulator figures, not phone performance; the phone was not checked.
+
+## Amendment — lights and surface materials
+
+**Date:** 19 November 2026
+
+Reviewing a proposed workflow for Blender, the maintainer noted that its lights would only be shown in Blender, not built there, and asked **“can we change so we also build that on Blender ?”**, then **“What about the materials, can we also build on Blender and use on the game ?”** Claude proposed moving both into files that Blender edits. The maintainer chose **“Lights and materials first”**, ahead of the rest of that workflow, and asked to keep them simple but to prepare the pipeline, because **“eventually I want most of the things to be build on blender if not everything”**. This amends decision 1, and the earlier amendment's consequence that Blender does not show the game's lighting or the materials' finish:
+
+1. **The lights are in the layout file.** A `lights:` section follows the camera. Each light is a sun, as RealityKit's directional light: a name, the direction it comes `from`, an sRGB colour, an intensity in lux and, when it casts shadows, how far from the camera they reach. The bridge's two lights moved there from the game's code unchanged.
+   - Load builds each as a Blender sun light, turned to shine from its direction, with its colour, its shadow on or off, and a strength of 1 W/m² for every 700 lux. The factor brings Blender's preview close to the game; it is not a physical conversion.
+   - Save writes back each sun's direction, colour, strength and shadow. A direction keeps the length the file had, and a value that Blender hands back unchanged is kept as written.
+   - Save keeps the [visual direction](../visual-direction.md#rendering-budget)'s budget: at least one light, at most two, and at most one casting shadows. It refuses other kinds of light for now.
+2. **The surfaces' materials are a shared palette,** `apple/sources/content/Surfaces.swift`, for every level: one finish per surface, made of an sRGB colour, a roughness and a metalness. Glass, used for the vehicles' windows, joins the surfaces. The game makes its surface materials from the palette. The stand-ins and the gameplay signals keep their own colours in code, so the palette cannot change them.
+   - Load builds a Lauder material for each surface, setting both its Principled BSDF, which Material Preview shows, and its viewport display, which Solid shading shows.
+   - Save writes whichever of the two was changed, then sets both to what it wrote, so that the setting an edit did not touch cannot undo it at the next Save. It checks the palette and the layout together: if either fails, neither file is written.
+   - The palette's entries are the surfaces Blender accepts, so the script no longer keeps its own copy of the game's colours. Adding a surface still needs a case in `Level.Surface`, and a test checks that the two match.
+3. **Game Look**, a button in the Lauder tab, shows the 3D Viewport in Material Preview, lit only by the level's own lights. It refuses while lights outside the level are visible, such as the one in Blender's default scene, because the game has none. Blender's renderer is not RealityKit, so the view comes close to the game without matching it.
+4. **The recipe for the next move into Blender:** give the thing a typed entry in a Swift data file, read and write that entry exactly in `blender/lauder_levels.py`, build it in Load and read it back in Save, check the game's rules before anything is written, and test the round trip. The formats leave room to grow: another kind of light would be another kind of entry in `lights:`, and a texture another field of a finish.
+
+### Consequences of this amendment
+
+- Blender shows the game's lighting and the surfaces' finish, approximately. It still does not show the characters.
+- Changing a surface's finish changes it everywhere the surface is used, in every level.
+- Point and spot lights and textures wait for a need. Textures also wait for the visual direction's limit on new textures to change.
+
+### Checks
+
+- `./scripts/check` passes: 104 Swift tests in 17 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 31 tests. The new tests cover:
+  - the lights and the palette reading and writing back unchanged;
+  - a turned, brightened and recoloured sun saving as expected, and shadows following each sun's setting;
+  - Save refusing a second shadow, a third light, a point light, no light, a dark light and a duplicate name, and keeping the file's lights when Blender has none;
+  - the layout and palette readers refusing an entry written in any other form, which a save would otherwise drop;
+  - a material changed in its own settings or in its viewport display, a saved change surviving the next save, materials left alone, and palettes the game cannot use;
+  - the game lighting the bridge from the layout file within the budget, and every surface taking its finish from the palette.
+- The game's opening frame in the Simulator is the same, pixel for pixel, from `main` and from this change, as it is between two runs of `main`.
+- In Blender 5.3, run in the background on a copy of the two files:
+  - Load built the two suns, aimed as the file says, and the ten surface materials, and Save with no edits wrote nothing.
+  - Turning `sun-key` to shine from straight above, doubling `sky-fill`'s strength and making steel smoother saved exactly those three changes, and a second Save straight after changed nothing. A second shadow was refused and wrote nothing, and loading again brought the saved values back.
+  - Rendered through the game camera with EEVEE and lit by the two suns, the asphalt's red and green match the game's opening frame to about 1%. The game's light is a little bluer and its shadows softer.
+- Not checked: the Game Look button, which needs an open 3D Viewport; the script in the maintainer's own Blender session; the phone, since the game's frame did not change.
