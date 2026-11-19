@@ -518,10 +518,11 @@
     private static let formations: [Step] =
       toLaura + [
         .expectFormation(.close), .formation, .expectFormation(.spread), .walk([-7, -248]),
-        .mark("spread"), .walk([-7, -254]), .mark("past the car"), .walk([-7, -275]),
-        .mark("spread again"), .formation, .expectFormation(.column), .walk([-7, -300]),
-        .mark("column"), .formation, .expectFormation(.close), .walk([-7, -320]),
-        .mark("close"), .formation, .expectFormation(.spread), .walk([-7, -456.3]),
+        .mark("spread"), .walk([-7, -254]), .mark("past the car"), .walk([-7, -270]),
+        .mark("spread again"), .walk([-7, -275]), .formation, .expectFormation(.column),
+        .walk([-7, -295]), .mark("column"), .walk([-7, -300]), .formation,
+        .expectFormation(.close), .walk([-7, -315]), .mark("close"), .walk([-7, -320]),
+        .formation, .expectFormation(.spread), .walk([-7, -456.3]),
         .mark("second tower in spread"), .walk([-7, -490]), .mark("past the first car"),
         .walk([-7, -496.5]), .mark("past the second car"), .walk([-7, -502.3]), .talk,
         .expectBeat(.arrived), .expectFormation(.spread), .mark("Manhattan, together"),
