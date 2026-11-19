@@ -716,8 +716,12 @@ def levels_using(repository, name):
 #: node trees containing Diffuse BSDF, Principled BSDF, Image Textures, UVMap, and Separate RGB
 #: nodes" into the preview surfaces that RealityKit shows (Blender's manual, USD export). Lauder
 #: keeps to the Principled BSDF and adds the Normal Map node, which carries a normal texture. Math
-#: nodes may feed only Alpha, for a cut-off, as the manual describes.
-SHADER_NODES = frozenset({"TEX_IMAGE", "UVMAP", "SEPARATE_COLOR", "NORMAL_MAP", "REROUTE"})
+#: nodes may feed only Alpha, for a cut-off, as the manual describes. Separate Color is left out:
+#: RealityKit drops a map read from an image's green or blue channel (ADR 0006, step 5b).
+SHADER_NODES = frozenset({"TEX_IMAGE", "UVMAP", "NORMAL_MAP", "REROUTE"})
+#: The surface inputs that may take an image, each checked from Blender into RealityKit (ADR 0006,
+#: step 5b).
+MAPPED_INPUTS = ("Base Color", "Roughness", "Metallic", "Normal", "Emission Color", "Alpha")
 #: The kinds of texture file that a USDZ carries to the game.
 TEXTURE_TYPES = (".png", ".jpg", ".jpeg")
 #: The repository's policy (.gitattributes): a PNG or JPEG over 1 MiB needs a Git LFS rule of its
@@ -766,6 +770,10 @@ class MaterialShape:
     #: For each input of the surface that nodes feed: the input's name, and the kind and label of
     #: each node that feeds it, however indirectly.
     feeds: tuple = ()
+    #: The Strength of each Normal Map node that feeds Normal, and the surface's Emission Strength.
+    #: Blender's USD export leaves both out of the scene file when an image feeds the input.
+    normal_strengths: tuple = ()
+    emission_strength: float = 1.0
 
 
 def _material(material):
@@ -773,9 +781,11 @@ def _material(material):
 
 
 def material_problems(materials):
-    """What stops the game from showing these materials as Blender does (ADR 0006, decision 8): a
-    surface other than a Principled BSDF, nodes that Blender's USD export cannot carry, and names
-    that USD would make the same, which the scene file would merge into one."""
+    """What stops the game from showing these materials as Blender does (ADR 0006, decision 8 and
+    step 5b): a surface other than a Principled BSDF, nodes that Blender's USD export cannot carry,
+    images on inputs not checked in the game, maps that RealityKit drops or that the scene file
+    would show at another strength, and names that USD would make the same, which the scene file
+    would merge into one."""
     problems, by_name = [], {}
     for material in materials:
         by_name.setdefault(usd_name(material.name), []).append(material)
@@ -784,12 +794,37 @@ def material_problems(materials):
                             f"surface; the game shows nothing else.")
             continue
         for socket, nodes in material.feeds:
+            if socket not in MAPPED_INPUTS:
+                problems.append(f"The material {_material(material)} feeds its {socket} with "
+                                f"nodes, and the game takes images only on "
+                                f"{_and(MAPPED_INPUTS)}.")
+                continue
+            if any(kind == "SEPARATE_COLOR" for kind, _ in nodes):
+                problems.append(f"The material {_material(material)} reads its {socket} from one "
+                                f"channel of an image with Separate Color, and RealityKit drops "
+                                f"the green and blue channels: give the map an image of its own "
+                                f"and connect its Color, or its Alpha, straight to {socket}.")
+                continue
             allowed = SHADER_NODES | ({"MATH"} if socket == "Alpha" else set())
             others = sorted({label for kind, label in nodes if kind not in allowed})
             if others:
                 problems.append(f"The material {_material(material)} makes its {socket} with "
                                 f"{_and(others)}, which the game cannot show: bake it into an "
                                 f"image texture.")
+        glowing = any(kind == "TEX_IMAGE" for socket, nodes in material.feeds
+                      if socket == "Emission Color" for kind, _ in nodes)
+        if glowing and not math.isclose(material.emission_strength, 1, abs_tol=1e-4):
+            problems.append(f"The material {_material(material)} has an Emission Strength of "
+                            f"{material.emission_strength:g} on an emission image, which the scene "
+                            f"file leaves out, so the game shows the image at strength 1: set the "
+                            f"strength to 1 and make the image as bright as it should glow, or "
+                            f"disconnect it.")
+        for strength in material.normal_strengths:
+            if not math.isclose(strength, 1, abs_tol=1e-4):
+                problems.append(f"The material {_material(material)} has a Normal Map Strength of "
+                                f"{strength:g}, which the scene file leaves out, so the game shows "
+                                f"the map at full strength: set it to 1, and make the image itself "
+                                f"flatter if its bumps are too strong.")
     for key, same in sorted(by_name.items()):
         if len(same) > 1:
             names = _and([_material(each) for each in same])
@@ -1389,15 +1424,20 @@ def _material_shape(material, root):
     if socket is None or not socket.is_linked:
         return MaterialShape(material.name, source), []
     shader = socket.links[0].from_node
-    feeds, images = [], []
-    if shader.type == "BSDF_PRINCIPLED":
-        for each in shader.inputs:
-            if not each.is_linked:
-                continue
-            nodes = _feeding(each)
-            feeds.append((each.name, tuple(sorted({(node.type, node.bl_label) for node in nodes}))))
-            images += [node.image for node in nodes if node.type == "TEX_IMAGE" and node.image]
-    return MaterialShape(material.name, source, shader.type, tuple(feeds)), images
+    if shader.type != "BSDF_PRINCIPLED":
+        return MaterialShape(material.name, source, shader.type), []
+    feeds, images, strengths = [], [], []
+    for each in shader.inputs:
+        if not each.is_linked:
+            continue
+        nodes = _feeding(each)
+        feeds.append((each.name, tuple(sorted({(node.type, node.bl_label) for node in nodes}))))
+        images += [node.image for node in nodes if node.type == "TEX_IMAGE" and node.image]
+        if each.name == "Normal":
+            strengths += [node.inputs["Strength"].default_value for node in nodes
+                          if node.type == "NORMAL_MAP"]
+    return MaterialShape(material.name, source, shader.type, tuple(feeds), tuple(strengths),
+                         shader.inputs["Emission Strength"].default_value), images
 
 
 def _stored_with_lfs(root, relative):

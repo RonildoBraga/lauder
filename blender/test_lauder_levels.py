@@ -437,6 +437,32 @@ class SceneRuleTests(unittest.TestCase):
         self.assertIn("glow needs a Principled BSDF", problems[2])
         self.assertIn("bare needs a Principled BSDF", problems[3])
 
+    def test_maps_that_the_game_would_show_differently_are_refused(self):
+        packed = replace(self.PAINT, name="packed", feeds=(
+            ("Roughness", (("SEPARATE_COLOR", "Separate Color"), ("TEX_IMAGE", "Image Texture"))),
+        ))
+        sign = replace(self.PAINT, name="sign", feeds=self.PAINT.feeds + (
+            ("Emission Color", (("TEX_IMAGE", "Image Texture"),)),), emission_strength=4)
+        unlit = replace(sign, name="unlit sign", emission_strength=0)
+        gentle = replace(self.PAINT, name="gentle", normal_strengths=(0.25,))
+        coated = replace(self.PAINT, name="coated", feeds=(
+            ("Coat Weight", (("TEX_IMAGE", "Image Texture"),)),))
+        problems = L.material_problems([packed, sign, unlit, gentle, coated])
+        self.assertEqual(len(problems), 5)
+        self.assertIn("packed (from blender/assets/car/car.blend) reads its Roughness from one "
+                      "channel of an image with Separate Color", problems[0])
+        self.assertIn("sign (from blender/assets/car/car.blend) has an Emission Strength of 4",
+                      problems[1])
+        self.assertIn("an Emission Strength of 0", problems[2])
+        self.assertIn("a Normal Map Strength of 0.25", problems[3])
+        self.assertIn("coated (from blender/assets/car/car.blend) feeds its Coat Weight with nodes, "
+                      "and the game takes images only on Base Color, Roughness, Metallic, Normal, "
+                      "Emission Color and Alpha", problems[4])
+        # At strength 1, with roughness from an image's alpha, the game shows them as Blender does.
+        lit = replace(sign, name="lit sign", emission_strength=1, normal_strengths=(1.0,), feeds=(
+            *sign.feeds, ("Roughness", (("TEX_IMAGE", "Image Texture"),))))
+        self.assertEqual(L.material_problems([lit]), [])
+
     def test_materials_that_usd_would_merge_are_refused(self):
         # Blender's USD export writes one material for two of the same name, so one model would
         # show the other's look.
