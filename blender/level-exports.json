@@ -5,11 +5,47 @@
       "blender/assets/car/car.blend": "fcfb293fa68abef16d2aeff33dd5a3330b5c98db18f33f5f57242262871051cc",
       "blender/assets/truck/truck.blend": "f136a0bb759bc61b8349b3c3144b4b08017d06bdaeffb3724e330b20e1316f38",
       "blender/assets/van/van.blend": "747e7d7489bb614b6da68b0915ed905960b5fa9aa134756298f518bfce0ae18b",
-      "blender/levels/brooklyn-bridge.blend": "c79734c2a26263cb35dcd5e72e0d766e02c4c7e9a3dfd55329c639e0009028f7"
+      "blender/levels/brooklyn-bridge.blend": "abc58f3da35b3c46d64c71bf6d320878803c2fb31ed102c5bf7174fad5b2d231"
     },
     "wrote": {
-      "apple/sources/content/BrooklynBridge.usdz": "92f830ed3e38bd4ea2e148ee29339bd0f2c13af9e2fa9b241990cc8d997bde96",
+      "apple/sources/content/BrooklynBridge.usdz": "f5f5b787331cec9cfe8b3e1a87013d603f7171b82ec2573a605a728a67bfb1d0",
       "apple/sources/content/BrooklynBridgeLayout.swift": "5c716d856f3d2354a0949bf8f8beabcffd97c2a807b51d5cfe10a4533ab02c6f"
+    }
+  },
+  "models/hostile": {
+    "format": 1,
+    "made from": {
+      "blender/assets/hostile/hostile.blend": "7f1951101257bd597bb27dbdfc9c195111901a65dcfa4af46dfb51582cc41df2"
+    },
+    "wrote": {
+      "apple/sources/content/models/hostile.usdz": "93df480b1cd981564475f3d4cabd1aac38d2628c3f2de9f5b4b08447248171cb"
+    }
+  },
+  "models/laura": {
+    "format": 1,
+    "made from": {
+      "blender/assets/laura/laura.blend": "292ebf6e6a77f34750bdeedb891e3b2953067ba6a75e397bc1b55e07c1892130"
+    },
+    "wrote": {
+      "apple/sources/content/models/laura.usdz": "c6c15f667239a0a5dc16fdb1a726003ce743fbf71532e52badb2bb988633651a"
+    }
+  },
+  "models/miki": {
+    "format": 1,
+    "made from": {
+      "blender/assets/miki/miki.blend": "9bc3d548aa95219302c3b65417b0144b8a173400e14e070c2895e6e33a854d13"
+    },
+    "wrote": {
+      "apple/sources/content/models/miki.usdz": "a74a575534fab68e6477cec380cbe07809d442c77af685d5b8816837c9eef039"
+    }
+  },
+  "models/tom": {
+    "format": 1,
+    "made from": {
+      "blender/assets/tom/tom.blend": "116e654622f34ecfd031767e240be89af8deffeb997b240db61a3de6881bdc52"
+    },
+    "wrote": {
+      "apple/sources/content/models/tom.usdz": "9ad84f118b8abbe1b434aac31471735284f538b3deb2493ba2f4eea3b452705a"
     }
   }
 }

@@ -44,6 +44,7 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
       BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender (ADR 0006)
       BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender (ADR 0006)
+      models/                   The party's and the hostiles' looks, exported by Blender from their models
       MissionScript.swift       Conversations; the lines are provisional
       character/                Current animated stand-in, editable sources and provenance
         source/                 Editable USD layers; excluded from the app bundle
@@ -59,7 +60,7 @@ scripts/check                   Checks every part: the Blender script, then the 
 .github/                        Pull request template
 ```
 
-Keep a level's look in its Blender file, and the game's own presentation, such as the stand-ins, in SceneStyle. Keep the level's geometry, collision and anchors in its `Level` (BrooklynBridge and its layout file), party, story and fight rules in GameSession/InputRules, conversations in MissionScript, squad movement in NavigationGrid, SquadPlanner and CompanionMotor, and fights in the combat types, StoryDirector and EncounterStage. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them. Each platform and tool keeps its own top-level folder, so that later platforms, such as Android or Steam, can sit beside `apple/`. What a second platform will share, such as the level layouts, stays in `apple/` until then, when it moves to a shared folder in a form both can read.
+Keep a level's look in its Blender file, the look of what the game creates, such as the party and the hostiles, in its model's file, and the game's own presentation, such as the gameplay signals, in SceneStyle. Keep the level's geometry, collision and anchors in its `Level` (BrooklynBridge and its layout file), party, story and fight rules in GameSession/InputRules, conversations in MissionScript, squad movement in NavigationGrid, SquadPlanner and CompanionMotor, and fights in the combat types, StoryDirector and EncounterStage. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them. Each platform and tool keeps its own top-level folder, so that later platforms, such as Android or Steam, can sit beside `apple/`. What a second platform will share, such as the level layouts, stays in `apple/` until then, when it moves to a shared folder in a form both can read.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `apple/sources/content`, so they are not copied into the app; see [target membership](CONTRIBUTING.md#target-membership).
 

@@ -12,8 +12,8 @@ the level's source. Its collections decide where each object goes:
   the game never draws them. A visual part or model parented to a gameplay box moves with it.
 - Lights and Camera: the level's lights, suns, point lights and spot lights, and the game
   camera's rig, written to the layout file too.
-- Preview: the party's stand-ins at their start markers, which the game draws itself. It is never
-  exported.
+- Preview: the party's models at their start markers, which the game places itself. It is never
+  exported, and the files that only it uses are not counted among the level's.
 
 Each model is a Blender file of its own, blender/assets/<model>/<model>.blend, also stored with
 Git LFS. It holds one collection named after the model, at its real size in metres and standing on
@@ -22,6 +22,9 @@ under which licence, and any textures it uses. Levels link the model, so a chang
 every level that uses it: saving a model exports the levels whose last export used it. The intake
 check, Check Model or blender/scripts/check-model.py, says what a model needs before a level can
 use it. blender/scripts/add-model.py brings a model in from a Blender, glTF, FBX, OBJ or USD file.
+The models that the game creates itself, such as the party and the hostiles (SPAWNED), get scene
+files of their own in apple/sources/content/models: saving such a model exports it in the
+background, with blender/scripts/export-model.py.
 
 Install it once: in Blender's Preferences, add a local extension repository at this repository's
 blender/extensions folder, then enable Lauder levels. A Lauder tab appears in the 3D Viewport's
@@ -100,11 +103,17 @@ ROLES = ("ground", "box", "landmark", "area", "marker")
 ASSETS = "blender/assets"
 #: A model's name, which is also its folder's, its file's and its collection's.
 MODEL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+#: The models that the game creates itself while it plays, rather than a level placing them: the
+#: party and the hostiles (ADR 0006, step 5c). Each gets a scene file of its own in
+#: SPAWNED_SCENES, named after it, which the game loads by the model's name.
+SPAWNED = ("hostile", "laura", "miki", "tom")
+SPAWNED_SCENES = "apple/sources/content/models"
 
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"
-#: The script that exports a level in a Blender of its own.
+#: The scripts that export a level, and a model that the game creates, in a Blender of its own.
 EXPORT_SCRIPT = "blender/scripts/export-level.py"
+EXPORT_MODEL_SCRIPT = "blender/scripts/export-model.py"
 #: The scripts that check a model, and that bring one in from a file.
 CHECK_MODEL_SCRIPT = "blender/scripts/check-model.py"
 ADD_MODEL_SCRIPT = "blender/scripts/add-model.py"
@@ -669,36 +678,67 @@ def _records(repository):
         return {}  # Unreadable: every level counts as stale, and the next export rewrites it.
 
 
-def stale_exports(repository, key="brooklyn-bridge"):
-    """Why the level's exports no longer match what they were made from, or None when they do."""
-    level = LEVELS[key]
+def _stale(repository, key, title, source, outputs, what):
+    """Why the export recorded under `key` no longer matches what it was made from, or None. It
+    must have been made from `source` and have written `outputs`; `what` names what to change."""
     root = Path(repository)
+    start = title[0].upper() + title[1:]
     record = _records(repository).get(key)
     if record is None:
-        return f"{level.title} has not been exported."
+        return f"{start} has not been exported."
     if record.get("format") != EXPORT_FORMAT:
-        return f"{level.title} was exported by an earlier version of the Lauder extension."
+        return f"{start} was exported by an earlier version of the Lauder extension."
     made_from, wrote = record.get("made from", {}), record.get("wrote", {})
-    if level.blend not in made_from or {level.layout, level.scene} - set(wrote):
-        return f"{EXPORT_RECORD} does not say how {level.title} was exported."
+    if source not in made_from or set(outputs) - set(wrote):
+        return f"{EXPORT_RECORD} does not say how {title} was exported."
     for name, fingerprint in made_from.items():
         if not (root / name).exists():
             return f"{name} is missing."
         if file_fingerprint(root / name) != fingerprint:
-            return f"{name} changed since {level.title} was exported."
+            return f"{name} changed since {title} was exported."
     for name, fingerprint in wrote.items():
         if not (root / name).exists():
             return f"{name} is missing."
         if file_fingerprint(root / name) != fingerprint:
-            return (f"{name} changed since it was exported. Export writes it: change the level in "
+            return (f"{name} changed since it was exported. Export writes it: change {what} in "
                     f"Blender instead.")
     return None
 
 
-def record_exports(repository, level, made_from, wrote):
-    """Record what the level's export was made from and what it wrote, with fingerprints."""
+def stale_exports(repository, key="brooklyn-bridge"):
+    """Why the level's exports no longer match what they were made from, or None when they do."""
+    level = LEVELS[key]
+    return _stale(repository, key, level.title, level.blend, (level.layout, level.scene),
+                  "the level")
+
+
+def model_file(name):
+    """A model's Blender file, relative to the repository."""
+    return f"{ASSETS}/{name}/{name}.blend"
+
+
+def spawned_scene(name):
+    """The scene file of a model that the game creates (SPAWNED), relative to the repository."""
+    return f"{SPAWNED_SCENES}/{name}.usdz"
+
+
+def _model_key(name):
+    """Where the export record keeps a spawned model's export."""
+    return f"models/{name}"
+
+
+def stale_model_export(repository, name):
+    """Why the scene file of a model that the game creates (SPAWNED) no longer matches its files,
+    or None when it does."""
+    return _stale(repository, _model_key(name), f"the {name} model", model_file(name),
+                  (spawned_scene(name),), "the model")
+
+
+def record_exports(repository, key, made_from, wrote):
+    """Record what the export kept under `key`, a level's key or a spawned model's (_model_key),
+    was made from and what it wrote, with fingerprints."""
     records = _records(repository)
-    records[level.key] = {"format": EXPORT_FORMAT, "made from": made_from, "wrote": wrote}
+    records[key] = {"format": EXPORT_FORMAT, "made from": made_from, "wrote": wrote}
     path = Path(repository) / EXPORT_RECORD
     path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
 
@@ -1057,40 +1097,80 @@ def _export_step(repository, key):
     ], "export.log", key)
 
 
+def _export_model_step(repository, name):
+    """The background step that exports a model that the game creates (SPAWNED) in a Blender of
+    its own: (name, command, log, model)."""
+    blender = bpy.app.binary_path if bpy is not None else "blender"
+    return ("export model", [
+        blender, "-b", "--factory-startup", "--python-exit-code", "1",
+        "--python", str(Path(repository) / EXPORT_MODEL_SCRIPT), "--", name,
+    ], "export-model.log", name)
+
+
 def background_steps(repository, key, play):
     """The background steps that saving (play=False) or Play needs: exporting the level when its
-    exports no longer match its files, then, for Play, building and opening the game. Each is
-    (name, command, log, level)."""
+    exports no longer match its files, then, for Play, exporting each model that the game creates
+    whose scene file no longer matches, and building and opening the game. Each is (name, command,
+    log, level or model)."""
     steps = [_export_step(repository, key)] if stale_exports(repository, key) is not None else []
     if play:
+        steps += [_export_model_step(repository, name) for name in SPAWNED
+                  if stale_model_export(repository, name) is not None]
         steps.append(("play", [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)],
                       "play.log", key))
     return steps
 
 
+#: The background steps that export, a level or a model that the game creates.
+EXPORTS = ("export", "export model")
+
+
 def queue_steps(running, waiting, steps):
     """The steps to add after the background step running, if any, and those waiting. An export
-    of the same level already running or waiting stands in for a new one, which could only race it
-    for the same files: when it finishes, the exports' freshness is checked again
+    of the same level or model already running or waiting stands in for a new one, which could
+    only race it for the same files: when it finishes, the exports' freshness is checked again
     (refresh_needed)."""
-    exporting = {step[3] for step in ([running] if running else []) + list(waiting)
-                 if step[0] == "export"}
-    return [step for step in steps if step[0] != "export" or step[3] not in exporting]
+    exporting = {(step[0], step[3]) for step in ([running] if running else []) + list(waiting)
+                 if step[0] in EXPORTS}
+    return [step for step in steps if step[0] not in EXPORTS or (step[0], step[3]) not in exporting]
+
+
+def _export_kind(step):
+    """The export that brings a finished step's files up to date again: its model's for a model's
+    export, and otherwise its level's."""
+    return "export model" if step[0] == "export model" else "export"
 
 
 def refresh_needed(finished, waiting, stale, refreshes):
-    """Whether to export the finished step's level again before going on, once the step has
-    finished well: when the level's files changed while it ran, such as by a second save, and its
+    """Whether to export the finished step's level or model again before going on, once the step
+    has finished well: when its files changed while it ran, such as by a second save, and its
     export is not next anyway."""
     upcoming = waiting[0] if waiting else None
-    exporting_next = upcoming is not None and upcoming[0] == "export" and upcoming[3] == finished[3]
+    exporting_next = (upcoming is not None and upcoming[0] == _export_kind(finished)
+                      and upcoming[3] == finished[3])
     return stale and not exporting_next and refreshes < MOST_REFRESHES
+
+
+def _step_stale(repository, step):
+    """Whether the files of a finished step's level or model changed since they were exported."""
+    if step[0] == "export model":
+        return stale_model_export(repository, step[3]) is not None
+    return stale_exports(repository, step[3]) is not None
+
+
+def _again(repository, step):
+    """The step that exports a finished step's level or model again (_export_kind)."""
+    if step[0] == "export model":
+        return _export_model_step(repository, step[3])
+    return _export_step(repository, step[3])
 
 
 def _finished(step):
     """What a background step says when it finishes well."""
     if step[0] == "export":
         return f"Exported {LEVELS[step[3]].title}. The game shows it from the next build."
+    if step[0] == "export model":
+        return f"Exported the {step[3]} model. The game shows it from the next build."
     return "The game is running in the Simulator."
 
 
@@ -1134,11 +1214,11 @@ def _watch_job():
     step, path = _JOB["step"], _JOB["path"]
     if process.returncode == 0:
         try:
-            stale = stale_exports(_JOB["repository"], step[3]) is not None
+            stale = _step_stale(_JOB["repository"], step)
         except (OSError, ValueError):
             stale = False
         if refresh_needed(step, _JOB["steps"], stale, _JOB["refreshes"]):
-            _JOB["steps"].insert(0, _export_step(_JOB["repository"], step[3]))
+            _JOB["steps"].insert(0, _again(_JOB["repository"], step))
             _JOB["refreshes"] += 1
         if _JOB["steps"]:
             try:
@@ -1153,9 +1233,15 @@ def _watch_job():
     _JOB["steps"] = []
     lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
     # The export says why it refused in one line; otherwise the log's last lines tell.
-    detail = next((line for line in reversed(lines) if line.startswith("The level was not")),
+    detail = next((line for line in reversed(lines)
+                   if line.startswith(("The level was not", "The model was not"))),
                   " ".join(lines[-3:]))
-    what = f"Exporting {LEVELS[step[3]].title}" if step[0] == "export" else "Play"
+    if step[0] == "export":
+        what = f"Exporting {LEVELS[step[3]].title}"
+    elif step[0] == "export model":
+        what = f"Exporting the {step[3]} model"
+    else:
+        what = "Play"
     _announce(f"{what} failed{': ' + detail if detail else '.'} The log is "
               f".local/play/{path.name}.", error=True)
     return None
@@ -1184,19 +1270,28 @@ def _export_if_stale(repository, key):
 
 
 def _export_levels_using(repository, name):
-    """Export, in the background, each level whose last export used the model and whose exports
-    no longer match its files. Returns the message to show."""
-    relative = f"{ASSETS}/{name}/{name}.blend"
-    keys = levels_using(repository, relative)
+    """Export, in the background, the model's own scene file when the game creates it (SPAWNED),
+    and each level whose last export used the model, when they no longer match their files.
+    Returns the message to show."""
+    keys = levels_using(repository, model_file(name))
+    own = ""
+    if name in SPAWNED:
+        if stale_model_export(repository, name) is not None:
+            _queue(repository, [_export_model_step(repository, name)])
+            own = f"Exporting the {name} model for the game…"
+        else:
+            own = f"The {name} model's scene file is up to date."
+        if not keys:
+            return own
     if not keys:
         return f"No level uses {name} yet: place it in one with Add Model."
     exporting = [LEVELS[key].title for key in keys if stale_exports(repository, key) is not None]
     for key in keys:
         _export_if_stale(repository, key)
     if not exporting:
-        return f"The exports of the levels that use {name} are up to date."
+        return f"{own} The exports of the levels that use {name} are up to date.".strip()
     verb = "uses" if len(exporting) == 1 else "use"
-    return f"Exporting {_and(exporting)}, which {verb} {name}…"
+    return f"{own} Exporting {_and(exporting)}, which {verb} {name}…".strip()
 
 
 def _announce(message, error=False):
@@ -1555,28 +1650,58 @@ def _files_used(repository):
     return sorted(used)
 
 
-def open_level_file(repository, key, attempts=3):
-    """Open the level's Blender file, and return the fingerprints of it and of every file it uses,
-    such as its models and their textures, relative to the repository. Each fingerprint is taken
-    before its file is read, so a save that lands meanwhile leaves the exports stale, to be
-    exported again, and never recorded as current. The level is opened to find the files it uses,
-    then again to read them, until no file it then uses went without a fingerprint first."""
+def _open_for_export(path):
+    """Open a level's or model's Blender file to export it, without its Preview collection, which
+    is never exported, and without the models and textures that only Preview uses, so that they
+    count neither among the files an export is made from nor among what it checks."""
+    bpy.ops.wm.open_mainfile(filepath=str(path), load_ui=False)
+    preview = _collection(PREVIEW)
+    if preview is None:
+        return
+    inside = {preview, *preview.children_recursive}
+    for item in list(preview.all_objects):
+        if set(item.users_collection) <= inside:
+            bpy.data.objects.remove(item, do_unlink=True)
+    for collection in inside:
+        bpy.data.collections.remove(collection)
+    bpy.data.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+    for library in [item for item in bpy.data.libraries if not item.users_id]:
+        bpy.data.libraries.remove(library)
+
+
+def _open_with_fingerprints(repository, blend, attempts=3):
+    """Open a level's or model's Blender file to export it (_open_for_export), and return the
+    fingerprints of it and of every file it uses, such as models and textures, relative to the
+    repository. Each fingerprint is taken before its file is read, so a save that lands meanwhile
+    leaves the export stale, to be exported again, and never recorded as current. The file is
+    opened to find the files it uses, then again to read them, until no file it then uses went
+    without a fingerprint first."""
     root = Path(repository)
-    level = LEVELS[key]
-    made_from = {level.blend: file_fingerprint(root / level.blend)}
-    bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
+    made_from = {blend: file_fingerprint(root / blend)}
+    _open_for_export(root / blend)
     for _ in range(attempts):
         for name in _files_used(root):
             if name not in made_from and (root / name).is_file():
                 made_from[name] = file_fingerprint(root / name)
-        bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
+        _open_for_export(root / blend)
         # A file still missing has no fingerprint, and the export refuses it.
         unread = [name for name in _files_used(root)
                   if name not in made_from and (root / name).is_file()]
         if not unread:
             return made_from
-    raise LayoutError(f"The files {level.blend} uses kept changing while it was read; export it "
-                      f"again.")
+    raise LayoutError(f"The files {blend} uses kept changing while it was read; export it again.")
+
+
+def open_level_file(repository, key, attempts=3):
+    """Open the level's Blender file to export it, with the fingerprints of its files
+    (_open_with_fingerprints)."""
+    return _open_with_fingerprints(repository, LEVELS[key].blend, attempts)
+
+
+def open_model_file(repository, name, attempts=3):
+    """Open the Blender file of a model that the game creates to export it, with the fingerprints
+    of its files (_open_with_fingerprints)."""
+    return _open_with_fingerprints(repository, model_file(name), attempts)
 
 
 def _overwrite(owner, attribute, value):
@@ -1680,8 +1805,53 @@ def export_level(repository, key="brooklyn-bridge", made_from=None):
         if not written.exists() or written.read_text() != text:
             written.write_text(text)
         shutil.copyfile(exported, target)
-    record_exports(repository, level, made_from,
+    record_exports(repository, level.key, made_from,
                    {name: file_fingerprint(root / name) for name in (level.layout, level.scene)})
+    return target
+
+
+def export_model(repository, name, made_from=None):
+    """Write the scene file of a model that the game creates (SPAWNED) from its Blender file, open
+    in this Blender (open_model_file), once the intake check finds nothing to fix, and record what
+    it was made from. It changes the open file, so it runs in a Blender of its own:
+    blender/scripts/export-model.py."""
+    root = Path(repository)
+    if name not in SPAWNED:
+        raise LayoutError(f"The game does not create {name} itself, so it has no scene file of its "
+                          f"own: the levels that use it show it.")
+    problems, _ = check_model(repository)
+    if problems:
+        raise LayoutError(" ".join(problems))
+    made_from = dict(made_from or {})
+    for each in [model_file(name)] + _files_used(root):
+        if not (root / each).is_file():
+            raise LayoutError(f"{each} is missing, and the model's file refers to it.")
+        if each not in made_from:
+            made_from[each] = file_fingerprint(root / each)
+    # Only the model's collection is exported, as the level export exports only Visual. Parts
+    # hidden from renders stay out, as the intake check says.
+    model = next(each for each in bpy.data.collections
+                 if each.library is None and each.name == name)
+    members = set(model.all_objects)
+    scene = bpy.context.scene
+    if model not in list(scene.collection.children):
+        scene.collection.children.link(model)
+    for child in list(scene.collection.children):
+        if child != model:
+            scene.collection.children.unlink(child)
+    for item in list(scene.collection.objects):
+        scene.collection.objects.unlink(item)
+    for item in list(bpy.data.objects):
+        if item.library is None and item not in members:
+            bpy.data.objects.remove(item, do_unlink=True)
+    target = root / spawned_scene(name)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as folder:
+        exported = Path(folder) / target.name
+        bpy.ops.wm.usd_export(filepath=str(exported), **SCENE_EXPORT)
+        shutil.copyfile(exported, target)
+    record_exports(repository, _model_key(name), made_from,
+                   {spawned_scene(name): file_fingerprint(target)})
     return target
 
 

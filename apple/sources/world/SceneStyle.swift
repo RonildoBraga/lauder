@@ -4,19 +4,15 @@ import UIKit
 @MainActor
 struct SceneStyle {
   let unitBox = MeshResource.generateBox(size: 1)
-  let unitSphere = MeshResource.generateSphere(radius: 1)
 
-  // The level's look comes from its scene file, exported by Blender (ADR 0006). The stand-ins
-  // and the gameplay signals keep their own colours here.
+  // The level's look comes from its scene file, and the party's and the hostiles' from their
+  // models' scene files, all exported by Blender (ADR 0006). The gameplay signals keep their own
+  // colours here.
   /// A level without a scene file, such as a test's: its boxes and landmarks as plain blocks.
   let scenery = SimpleMaterial(
     color: UIColor(red: 0.55, green: 0.57, blue: 0.56, alpha: 1), roughness: 0.9,
     isMetallic: false)
-  /// The stand-ins' heads.
-  let head = SimpleMaterial(
-    color: UIColor(red: 0.65, green: 0.68, blue: 0.55, alpha: 1), roughness: 1,
-    isMetallic: false)
-  /// The stand-ins' legs and the carbine.
+  /// The carbine.
   let gear = SimpleMaterial(
     color: UIColor(red: 0.16, green: 0.25, blue: 0.25, alpha: 1), roughness: 0.9,
     isMetallic: false)
@@ -39,17 +35,14 @@ struct SceneStyle {
     return model
   }
 
+  /// A member of the party, from the model named after them in `blender/assets`.
   func partyMember(_ member: PartyMember) -> Entity {
-    switch member {
-    case .miki: standIn(color: UIColor(red: 0.25, green: 0.65, blue: 0.59, alpha: 1), width: 0.38)
-    case .laura: standIn(color: UIColor(red: 0.9, green: 0.61, blue: 0.29, alpha: 1), width: 0.31)
-    case .tom: standIn(color: UIColor(red: 0.38, green: 0.51, blue: 0.81, alpha: 1), width: 0.49)
-    }
+    figure(member.rawValue)
   }
 
-  /// A hostile's stand-in: the same shape as the party's, in a dark red that reads as a threat.
+  /// A hostile, from the `hostile` model: the party's shape in a dark red that reads as a threat.
   func hostile() -> Entity {
-    standIn(color: UIColor(red: 0.55, green: 0.18, blue: 0.17, alpha: 1), width: 0.4)
+    figure("hostile")
   }
 
   /// A carbine held at the right side, pointing ahead; shown while it is drawn.
@@ -57,23 +50,35 @@ struct SceneStyle {
     block(size: [0.07, 0.08, 0.55], at: [0.21, 0.08, -0.22], material: gear)
   }
 
-  private func standIn(color: UIColor, width: Float) -> Entity {
+  /// The models that the game creates, each loaded once from its scene file (ADR 0006, step 5c)
+  /// and copied for every figure that shows it.
+  private static var models: [String: Entity] = [:]
+
+  /// A figure from its model. The model stands on the ground at its origin and faces Blender's
+  /// -y, the game's +z, so it is turned half a turn to face -z, and lowered to stand below the
+  /// body's centre, which the game moves and turns. Its front mark makes facing readable without
+  /// a rig or animation.
+  private func figure(_ name: String) -> Entity {
+    let model = Self.model(named: name).clone(recursive: true)
+    model.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])
+    model.position = [0, -PartyBody.height / 2, 0]
     let visual = Entity()
-    let clothing = SimpleMaterial(color: color, roughness: 1, isMetallic: false)
-    visual.addChild(block(size: [width, 0.72, 0.3], at: [0, 0.04, 0], material: clothing))
-    let head = ModelEntity(mesh: unitSphere, materials: [self.head])
-    head.scale = SIMD3(repeating: 0.16)
-    head.position = [0, 0.57, 0]
-    visual.addChild(head)
-    // A small front mark makes facing readable without a rig or new animation.
-    visual.addChild(block(size: [0.15, 0.2, 0.025], at: [0, 0.12, -0.16], material: signal))
-    for side: Float in [-1, 1] {
-      visual.addChild(
-        block(size: [0.13, 0.55, 0.18], at: [side * 0.105, -0.55, 0], material: gear))
-      visual.addChild(
-        block(size: [0.18, 0.1, 0.28], at: [side * 0.105, -0.8, -0.04], material: clothing))
-    }
+    visual.addChild(model)
     return visual
+  }
+
+  private static func model(named name: String) -> Entity {
+    if let model = models[name] {
+      return model
+    }
+    do {
+      let model = try Entity.load(named: name, in: .main)
+      model.name = "\(name).model"
+      models[name] = model
+      return model
+    } catch {
+      preconditionFailure("The \(name) model's scene file, \(name).usdz, did not load: \(error)")
+    }
   }
 
   /// The level's lights, from its layout file: a sun shines from its source over the whole

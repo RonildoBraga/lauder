@@ -273,10 +273,15 @@ class ExportRecordTests(unittest.TestCase):
     """The record of what each export was made from, which ./scripts/check holds the exports to."""
 
     def scratch(self, folder):
-        """A copy of the bridge's level file, the files it uses, its exports and their record."""
+        """A copy of the bridge's level file and of the models that the game creates, the files
+        they use, their exports and their record."""
         repository = Path(folder)
-        made_from = json.loads((ROOT / L.EXPORT_RECORD).read_text())[BRIDGE.key]["made from"]
-        for name in (BRIDGE.layout, BRIDGE.scene, L.EXPORT_RECORD, *made_from):
+        records = json.loads((ROOT / L.EXPORT_RECORD).read_text())
+        names = {BRIDGE.layout, BRIDGE.scene, L.EXPORT_RECORD, *records[BRIDGE.key]["made from"]}
+        for model in L.SPAWNED:
+            record = records.get(L._model_key(model), {})
+            names |= {*record.get("made from", {}), *record.get("wrote", {})}
+        for name in names:
             (repository / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, repository / name)
         return repository
@@ -285,6 +290,33 @@ class ExportRecordTests(unittest.TestCase):
         reason = L.stale_exports(ROOT)
         self.assertIsNone(reason, f"{reason} Export it again with {L.EXPORT_SCRIPT}, as "
                                   "CONTRIBUTING describes.")
+
+    def test_the_models_the_game_creates_match_their_scene_files(self):
+        for name in L.SPAWNED:
+            reason = L.stale_model_export(ROOT, name)
+            self.assertIsNone(reason, f"{reason} Export it again with {L.EXPORT_MODEL_SCRIPT} -- "
+                                      f"{name}, as CONTRIBUTING describes.")
+            self.assertEqual(L.model_of_path(ROOT, ROOT / L.model_file(name)), name)
+
+    def test_a_models_scene_file_goes_stale_when_its_files_change(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = self.scratch(folder)
+            self.assertIsNone(L.stale_model_export(repository, "miki"))
+            with (repository / L.spawned_scene("miki")).open("ab") as stream:
+                stream.write(b"edited")
+            self.assertEqual(L.stale_model_export(repository, "miki"), (
+                f"{L.spawned_scene('miki')} changed since it was exported. Export writes it: "
+                "change the model in Blender instead."))
+            with (repository / L.model_file("tom")).open("ab") as stream:
+                stream.write(b"saved again")
+            self.assertEqual(L.stale_model_export(repository, "tom"),
+                             f"{L.model_file('tom')} changed since the tom model was exported.")
+            # The level's export does not use the models only its Preview shows.
+            self.assertIsNone(L.stale_exports(repository))
+            self.assertEqual(L.levels_using(repository, L.model_file("tom")), [])
+            (repository / L.EXPORT_RECORD).unlink()
+            self.assertEqual(L.stale_model_export(repository, "laura"),
+                             "The laura model has not been exported.")
 
     def test_exports_go_stale_when_the_level_file_changes(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -356,12 +388,20 @@ class BackgroundTests(unittest.TestCase):
                               L.background_steps(repository, BRIDGE.key, play=True)], ["play"])
             (repository / L.EXPORT_RECORD).unlink()
             steps = L.background_steps(repository, BRIDGE.key, play=True)
+            # Play exports the models that the game creates too, before building.
             self.assertEqual([(name, log, key) for name, _, log, key in steps], [
-                ("export", "export.log", BRIDGE.key), ("play", "play.log", BRIDGE.key)])
+                ("export", "export.log", BRIDGE.key),
+                *[("export model", "export-model.log", name) for name in L.SPAWNED],
+                ("play", "play.log", BRIDGE.key)])
             command = steps[0][1]
             self.assertIn(str(repository / L.EXPORT_SCRIPT), command)
             self.assertEqual(command[-2:], ["--", BRIDGE.key])
             self.assertIn("--factory-startup", command)
+            self.assertIn(str(repository / L.EXPORT_MODEL_SCRIPT), steps[1][1])
+            self.assertEqual(steps[1][1][-2:], ["--", L.SPAWNED[0]])
+            # Saving exports only the level.
+            self.assertEqual([step[0] for step in
+                              L.background_steps(repository, BRIDGE.key, play=False)], ["export"])
 
     def test_an_export_running_or_waiting_stands_in_for_a_new_one(self):
         export = ("export", ["blender"], "export.log", "bridge")
@@ -376,6 +416,14 @@ class BackgroundTests(unittest.TestCase):
         self.assertEqual(L.queue_steps(None, [], [export, play]), [export, play])
         # A model that two levels use: each level's export stands only for its own.
         self.assertEqual(L.queue_steps(export, [], [export, other]), [other])
+        # A model's own export stands in for another of the same model, not of another model or
+        # of a level of the same name.
+        miki = ("export model", ["blender"], "export-model.log", "miki")
+        tom = ("export model", ["blender"], "export-model.log", "tom")
+        self.assertEqual(L.queue_steps(miki, [], [miki, tom]), [tom])
+        self.assertEqual(L.queue_steps(play, [miki], [miki, export]), [export])
+        named_alike = ("export", ["blender"], "export.log", "miki")
+        self.assertEqual(L.queue_steps(miki, [], [named_alike]), [named_alike])
 
     def test_a_level_saved_again_meanwhile_is_exported_again(self):
         export = ("export", ["blender"], "export.log", "bridge")
@@ -387,6 +435,10 @@ class BackgroundTests(unittest.TestCase):
         self.assertFalse(L.refresh_needed(play, [export], stale=True, refreshes=0))
         self.assertFalse(L.refresh_needed(export, [], stale=False, refreshes=0))
         self.assertFalse(L.refresh_needed(export, [], stale=True, refreshes=L.MOST_REFRESHES))
+        # A model saved again while its own export ran is exported again, unless that is next.
+        miki = ("export model", ["blender"], "export-model.log", "miki")
+        self.assertTrue(L.refresh_needed(miki, [export], stale=True, refreshes=0))
+        self.assertFalse(L.refresh_needed(miki, [miki], stale=True, refreshes=0))
 
     def test_saving_a_model_exports_the_levels_that_used_it(self):
         with tempfile.TemporaryDirectory() as folder:
