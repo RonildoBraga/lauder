@@ -28,6 +28,21 @@ struct PartyMotionTests {
     #expect(abs(near.x + radius + 0.002) < 0.000001)
   }
 
+  /// Far from the origin, a Float position rounds by up to half the Float spacing, about 15 µm
+  /// 489 m out, so a contact there can sit a few micrometres inside the clearance. Moving away
+  /// from it stays allowed, as it is near the origin.
+  @Test
+  func aContactFarFromTheOriginCanStillMoveAway() {
+    // A car near the bridge's Manhattan end.
+    let car = PartyMotion.Box(minimum: [-10.8, -491.6], maximum: [-8.8, -487])
+    let motion = PartyMotion(radius: radius, obstacles: [car])
+    for x in stride(from: Float(-10.5), through: -9.1, by: 0.1) {
+      let contact = motion.resolve(start: [x, -480], delta: [0, -10])
+      #expect(abs(contact.y + 487 - radius - 0.002) < 0.0001, "stopped at the car, x = \(x)")
+      #expect(motion.canTraverse(from: contact, to: contact + [0, 1]), "moving away, x = \(x)")
+    }
+  }
+
   @Test(arguments: [Float(0.5), 2.5, 13, 30])
   func grazingAlongAWallRetainsNormalClearanceAndNeverFreezes(degrees: Float) {
     let motion = PartyMotion(radius: radius, obstacles: [wall])

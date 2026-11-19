@@ -182,4 +182,5 @@ The maintainer asked to simplify the bridge: **“I think we should simplify the
    | Second tower to Manhattan | 586–644 m | Three together; the end of the opening |
 3. **Only the road and the towers mimic the bridge.** The lane lines mark three lanes in each roadway, and the river stays. The cables, suspenders, stays and raised walkway, 106 pieces, are gone.
 4. **Walking takes longer.** At the party's 2.6 m/s, the walk from the first tower to Laura and the one from Laura to the second tower each take about 90 s, and the whole crossing about four minutes. The navigation grid covers about 420,000 cells, 2.8 times as many.
-5. **Tests and playtests** walk to the same places, moved by the same rule.
+5. **Collisions allow for distance.** A position is stored as a Float, whose spacing grows with its distance from the origin: about 30 µm at the Manhattan end, against a fraction of a micrometre within 16 m. The check of a straight move allows one Float spacing at its points, never less than a micrometre, all well inside the 2 mm collision skin. Without it, a body stopped against a car near the Manhattan end could be refused when moving away.
+6. **Tests and playtests** walk to the same places, moved by the same rule.
