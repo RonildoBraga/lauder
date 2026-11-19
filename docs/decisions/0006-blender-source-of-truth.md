@@ -52,7 +52,7 @@ RealityKit can take a scene's look from Blender, but not its meaning: nothing in
    Nobody edits a generated file by hand; every change starts in Blender.
 3. **Collections decide where objects go.** A level file has four: **Visual**, exported to the USDZ, and **Gameplay**, **Lights** and **Camera**, exported to the layout. Gameplay objects show in Blender as outlines and the game never draws them. A vehicle is therefore its model in Visual and its box in Gameplay, so the model can change without changing how the level plays. A simple model can serve as its own box.
 4. **Export checks the game's rules first,** as Save does today, and writes nothing when one fails. It runs when the level's file is saved, from Play, and from a script that agents can run in the background.
-5. **The exports are committed,** so the app builds without Blender. Each records the Blender file it came from and a fingerprint of its own content. `./scripts/check` fails when either no longer matches, without running Blender.
+5. **The exports are committed,** so the app builds without Blender. Each records every file it was made from, with a fingerprint of each: the level's Blender file, the models linked into it and their textures. It also records a fingerprint of its own content. `./scripts/check` fails when any of these files is missing or no longer matches, without running Blender.
 6. **The game's code keeps the behaviour:**
    - the story and its words, interactions, fights and AI;
    - movement and navigation, which use Blender's blockers;
@@ -93,7 +93,7 @@ ADR 0005 turned down both halves of this design, and this decision answers its r
 - The game stops drawing the level's look. `SceneStyle` keeps the stand-ins, the gameplay signals and the lights.
 - A `.blend` cannot be read or merged in a pull request. A pull request that changes one also carries the generated Swift, which shows each gameplay change line by line, and a picture through the game camera for the look. Git LFS locks stop two people editing one file.
 - Nobody moves a box by editing Swift any more. Agents use Blender in the background or over MCP.
-- Git LFS storage grows with each committed version. Textures stay separate files, so a change to a level does not store them again.
+- Git LFS storage grows with each committed version of a Blender file or a USDZ. Keeping textures in files of their own keeps them out of the Blender files, but each USDZ packages the textures it uses: every new version of a level's USDZ stores them again, and levels that share a texture each carry a copy. The allowance check has to count both.
 - The scene loads before the first frame instead of being compiled in.
 - Blender's renderer is not RealityKit. Game Look comes close, and Play shows the real result.
 - Tests that check positions read the generated layout, so they keep working.
