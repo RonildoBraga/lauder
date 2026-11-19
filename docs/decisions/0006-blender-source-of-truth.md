@@ -130,7 +130,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 ## Step 2 — the path into the game
 
-**Date:** 19 November 2026. The maintainer assigned it (**“go ahead”**) after this ADR's merge.
+**Date:** 19 November 2026. The maintainer assigned it (**“go ahead”**) after this ADR's merge and, after the phone check, [authorised the merge](RELAY-52-URL) (**“Yes, merge it”**) without an independent review.
 
 1. **The scene file.** `apple/sources/content/BrooklynBridge.usdz` holds everything the game shows of the bridge, as its code drew it:
    - the deck and the boxes;
@@ -148,11 +148,15 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 ### Checks of step 2
 
-- `./scripts/check` passes: the extension's 46 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The new and changed tests cover:
+- `./scripts/check` passes: the extension's 48 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The new and changed tests cover:
   - the scene file holding what the game drew, with names safe for USD, and refusing names that would clash;
   - the bridge's scene file matching its layout file and the palette, and going stale when either changes;
-  - Save and Play exporting only a stale scene file;
+  - Save and Play exporting only a stale scene file, an export already running or waiting standing in for a new one, and a scene file left stale by a later save being exported again;
   - in the game, the ground, every box, vehicle, landmark and piece standing where the layout file puts them, with no part of the scene taking part in physics.
-- In Blender 5.3, run in the background on a copy of the files: moving `car-a1` and saving wrote the layout file and started the export, which made the scene file current again. A save without edits exported nothing.
+- In Blender 5.3, run in the background on copies of the files:
+  - moving `car-a1` and saving wrote the layout file and started the export, which made the scene file current again, and a save without edits exported nothing;
+  - Play pressed after a save queued only its build behind that save's export, and a save made after an export had read the files got an export of its own. Both ended with the scene file current.
 - In the Simulator, the opening frame looks the same as `main`'s. Of its 3.2 million pixels, 24.6% differ: all but 123 of them by one step in 255, and only 36 by more than 8. Two runs of `main` give the same frame, pixel for pixel.
-- Not checked yet: the phone, which comes before the merge.
+- Codex's and Copilot's automatic reviews found the same two problems in the background exports: Play after a save started a second export beside the save's, and a save made during an export was dropped. Both were fixed before the merge.
+- On the baseline iPhone 13 Pro Max, a directly installed Release build of `110617b` held **59.92 fps** over 103 s after the first 15 s of a two-minute recording of the maintainer's play, with frames averaging 16.69 ms. Four frames ran long, one of 50 ms and three of 33 ms, about 80, 81, 88 and 118 s in; as with M4's, their cause is unknown. None was skipped, and the thermal state stayed Nominal. A first attempt stopped after a second, when the phone's connection dropped. The next commit changed only the Blender extension.
+- Not checked: how long the scene file takes to load at start-up, which happens before the first frame; and the Lauder tab's buttons in the maintainer's own Blender, whose functions the background runs called.
