@@ -1941,14 +1941,24 @@ def _baked_uv(item):
     return layers[BAKED_UV]
 
 
+def _unbaked_materials(item):
+    """The materials the part shows unbaked: those it showed before its occlusion was baked, or
+    those it shows now."""
+    if item.get(BAKED_PROPERTY):
+        names = [name for _, name in json.loads(item[UNBAKED_MATERIALS]) if name]
+        return [bpy.data.materials.get(name) for name in names]
+    return [slot.material for slot in item.material_slots if slot.material is not None]
+
+
 def _unbake(item):
-    """Show the part's materials and UV map from before its occlusion was baked."""
+    """Show the part's materials and UV map from before its occlusion was baked, letting go of
+    its baked material."""
     if not item.get(BAKED_PROPERTY):
         return
     for slot, (link, name) in zip(item.material_slots, json.loads(item[UNBAKED_MATERIALS])):
+        slot.link = "OBJECT"
+        slot.material = (bpy.data.materials.get(name) if name else None) if link == "OBJECT" else None
         slot.link = link
-        if link == "OBJECT":
-            slot.material = bpy.data.materials.get(name) if name else None
     before = item.data.uv_layers.get(item.get(UNBAKED_UV, ""))
     if before is not None:
         before.active_render = True
@@ -2083,15 +2093,18 @@ def bake_level(repository, level, chosen=()):
     if not parts:
         raise LayoutError("Select the parts of Visual to bake first. Models linked into the "
                           "level are not baked here.")
-    for item in parts:
-        _unbake(item)
+    # Everything is checked before any part changes, so that a refusal leaves the level as it was.
     problems = []
     for item in parts:
-        shapes = [_material_shape(slot.material, root)[0] for slot in item.material_slots
-                  if slot.material is not None]
-        problems += bake_problems(item.name, shapes)
+        materials = list(dict.fromkeys(_unbaked_materials(item)))
+        if None in materials or len(materials) != 1:
+            problems.append(f"{item.name} shows {len(materials)} materials; give it one to bake.")
+            continue
+        problems += bake_problems(item.name, [_material_shape(materials[0], root)[0]])
     if problems:
         raise LayoutError(" ".join(problems))
+    for item in parts:
+        _unbake(item)
     scene, view_layer = bpy.context.scene, bpy.context.view_layer
     kept = (scene.render.engine, scene.cycles.samples, scene.world, view_layer.objects.active,
             [item for item in view_layer.objects if item.select_get()])
@@ -2102,11 +2115,7 @@ def bake_level(repository, level, chosen=()):
         world.light_settings.distance = BAKE_OCCLUSION_DISTANCE
         scene.world = world
         for item in parts:
-            materials = list(dict.fromkeys(slot.material for slot in item.material_slots
-                                           if slot.material is not None))
-            if len(materials) != 1:
-                raise LayoutError(f"{item.name} shows {len(materials)} materials; give it one "
-                                  f"to bake.")
+            materials = list(dict.fromkeys(_unbaked_materials(item)))
             image = _bake_part(root, level, item, materials)
             if not item.get(BAKED_PROPERTY):
                 item[UNBAKED_MATERIALS] = json.dumps([
