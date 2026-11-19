@@ -3,7 +3,7 @@
 **Status:** Accepted by the maintainer on 18 November 2026 (**“Yes, as recommended”**) and implemented for the Brooklyn Bridge. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/43#issuecomment-6973768300) (“Yes, merge it”) without an independent review.\
 **Date:** 18 November 2026\
 **Amended:** 18 November 2026, at the maintainer's request: [the decoration and the game camera](#amendment--the-decoration-and-the-game-camera) join the layout file. The maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/45#issuecomment-6975951390) (“Yes, merge both”) without an independent review\
-**Amended again:** 19 November 2026, at the maintainer's request: [the lights and the surface materials](#amendment--lights-and-surface-materials) are built in Blender too. Not yet merged\
+**Amended again:** 19 November 2026, at the maintainer's request: [the lights and the surface materials](#amendment--lights-and-surface-materials) are built in Blender too. After trying it in Blender and the Simulator, the maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/49#issuecomment-6996641912) (“Yes, merge it”) without an independent review\
 **Deciders:** Maintainer\
 **Author:** Claude
 
