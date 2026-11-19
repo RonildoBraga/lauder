@@ -234,7 +234,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 
    Both budgets are starting points, until the phone measures real ones.
 6. **Files from elsewhere.** `blender/scripts/add-model.py` makes a model's folder from a Blender, glTF, FBX, OBJ or USD file, and refuses to overwrite one:
-   - the model's Blender file holds the file's objects in the model's collection, without lights, cameras or empty helpers;
+   - the model's Blender file holds what the file shows, in the model's collection: for a Blender file, what its first scene shows, without collections excluded from it. Lights, cameras and empty helpers stay out, and each instance of a collection becomes copies of its parts where it stands, sharing their meshes;
    - each texture it uses is copied into `textures/`, unpacked if need be;
    - its `README.md` leaves the Source and Licence lines to fill in.
 
@@ -265,6 +265,7 @@ Each step is a pull request of its own and needs its own go-ahead.
   - Export refused, and said why, for: a model in Gameplay; the van's paint renamed `car-paint`; the truck's glass made with an Emission shader; a packed texture; the truck's file missing, and as a Git LFS pointer; the van linked by its full path, which saving the level then made relative; and the truck's collection renamed, refused as soon as the truck was saved;
   - a texture in the car's folder reached the export record and the USDZ;
   - add-model brought in one small model from each of a Blender, glTF, FBX, OBJ and USDZ file, with its texture copied. The intake check then asked only for the README's source and licence;
+  - from a Blender file with two instances of a part from an excluded collection, beside an excluded reference and a light, add-model brought in two copies of the part, where the instances stood, and nothing else. Codex's review had found that the first version lost the instances;
   - no saved model or level file held any part of a local path, searched for in the decompressed files: the account's folder, the folders above the repository, and the scratch folders, including where a model brought in from a Blender file came from.
 - Not checked:
   - the Lauder tab's new buttons in the maintainer's own Blender, whose functions the background runs called;

@@ -8,8 +8,9 @@ lowercase letters, digits and hyphens:
 
 It makes blender/assets/<name>, which it refuses to overwrite:
 
-- <name>.blend, holding the file's objects, without its lights and cameras, in one collection
-  named after the model, which levels link;
+- <name>.blend, holding what the file shows, without its lights and cameras, in one collection
+  named after the model, which levels link. From a Blender file, that is what its first scene
+  shows, and each instance of a collection becomes copies of its parts, where it stands;
 - textures/, a copy of every image the model uses, unpacked from the file if need be;
 - README.md, whose Source and Licence lines are left for you to fill in, as CONTRIBUTING asks of
   every asset.
