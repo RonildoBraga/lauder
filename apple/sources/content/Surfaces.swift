@@ -1,8 +1,8 @@
 // How each surface looks (ADR 0005): the game's small shared material palette, for every
-// level. Colours are sRGB, each channel from 0 to 1. Blender edits this file through
-// blender/lauder_levels.py: Load builds Blender's materials from it and Save writes them
-// back. The numbers can also be edited here, and the next Load picks them up. Keep the
-// entries in this form so that the script can read them.
+// level. Colours are sRGB, each channel from 0 to 1. Blender edits this file through its Lauder
+// extension (blender/extensions/lauder_levels): Load builds Blender's materials from it and Save
+// writes them back. The numbers can also be edited here, and the next Load picks them up. Keep
+// the entries in this form so that the script can read them.
 
 enum Surfaces {
   static let palette: [Level.Surface: Level.Finish] = [

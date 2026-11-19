@@ -44,7 +44,7 @@ Do not interpret an ambiguous cleanup request as permission to remove valuable m
 
 ## Work and verify
 
-Use focused branches and pull requests after the initial repository bootstrap. Do not merge or publish releases unless the maintainer has explicitly authorised it.
+Use focused branches and pull requests after the initial repository bootstrap. Do not merge or publish releases unless the maintainer has explicitly authorised it. Since 19 November 2026, the maintainer has authorised Claude to merge its own pull requests without waiting for the maintainer's review ([“you dont need for my reviews, you can always merge it”](https://github.com/RonildoBraga/lauder/pull/50#issuecomment-6997456643)); the checks still pass first, review findings are addressed, and releases, TestFlight uploads and planned phone checks keep their own go-ahead.
 
 Keep narrative and technical references consistent. For documentation changes, check links and claims. For Swift changes, run `./scripts/check`: it checks formatting, builds the shared Lauder scheme and runs Swift Testing on an available iOS 27 or later iPhone simulator. See [CONTRIBUTING.md](CONTRIBUTING.md#validation) for toolchain and destination requirements.
 

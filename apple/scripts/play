@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Build the game and open it in the iOS Simulator, as Blender's Play button does.
+
+    ./apple/scripts/play
+
+Builds the Debug app in .local/play/DerivedData, which Git ignores and which makes later builds
+quick, then installs and launches it on a booted iOS 27 or later iPhone simulator, or the one
+LAUDER_DESTINATION names, with the Simulator in front.
+"""
+
+import importlib.machinery
+import importlib.util
+from pathlib import Path
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def playtest():
+    """The playtest script's helpers for finding, booting and building for a simulator."""
+    loader = importlib.machinery.SourceFileLoader("playtest", str(ROOT / "apple/scripts/playtest"))
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
+
+
+def show_simulator():
+    """Bring the simulator's window to the front: Device Hub in recent Xcode, Simulator before."""
+    developer = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True).stdout.strip()
+    for app in (Path(developer).parent / "Applications/DeviceHub.app",
+                Path(developer) / "Applications/Simulator.app"):
+        if app.exists():
+            subprocess.run(["open", str(app)], check=False)
+            return
+
+
+def main():
+    tools = playtest()
+    tools.check_assets()
+    device = tools.simulator()
+    app = tools.build(device, ROOT / ".local/play/DerivedData")
+    tools.boot(device)
+    show_simulator()
+    if tools.run(["xcrun", "simctl", "install", device, str(app)]).returncode:
+        raise SystemExit("Install failed.")
+    launched = tools.run(
+        ["xcrun", "simctl", "launch", "--terminate-running-process", device, tools.BUNDLE])
+    if launched.returncode:
+        raise SystemExit(f"Launch failed: {launched.stderr.strip()}")
+    tools.say("The game is running in the Simulator.")
+
+
+if __name__ == "__main__":
+    main()

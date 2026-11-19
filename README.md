@@ -50,9 +50,9 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
         Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
   tests/                        Party/session, asset import, movement, input, combat and layout tests
     support/                    Test-only asset validator and the squad tests' yard; not in the app target
-  scripts/                      Simulator playtests, the character asset generator and the app icon
+  scripts/                      Simulator playtests and Play, the character asset generator and the app icon
   .swift-format                 Swift formatting rules
-blender/                        The level editor: the Blender script that loads and saves layouts, and its tests
+blender/                        The level editor: the Lauder extension for Blender, in extensions/lauder_levels, and its tests
 docs/                           Architecture, decisions, prototype plan, opening record and project history
   story/                        Story bible
 scripts/check                   Checks every part: the Blender script, then the app's formatting, build and tests

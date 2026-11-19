@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for lauder_levels.py that need no Blender: reading, writing and checking layouts and the
+"""Tests for the Lauder extension (extensions/lauder_levels) that need no Blender: reading, writing and checking layouts and the
 surface palette.
 
 ./scripts/check runs them. Blender's own part, building and reading objects, is checked by
@@ -14,7 +14,7 @@ import sys
 import unittest
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE / "extensions"))
 sys.dont_write_bytecode = True
 
 import lauder_levels as L  # noqa: E402
@@ -477,6 +477,18 @@ class PaletteTests(unittest.TestCase):
         steel.node = steel.viewport = L.finish_reading(saved["steel"])
         self.assertEqual(L.palette_from_shapes(shapes, saved), saved)
 
+    def test_material_edits_are_found_against_the_palette_blender_last_synced(self):
+        # Steel's roughness went from 0.9 to 0.25 in the material's own setting, and an outside
+        # edit made the same change to the file. Against the outside file, the untouched viewport
+        # setting would look like the edit and win; against the palette Blender last loaded or
+        # saved, as Save Anyway uses, the material's own change is the edit.
+        shapes = self.readings()
+        steel = next(shape for shape in shapes if shape.name == "steel")
+        steel.node = steel.node[:1] + (single(0.25),) + steel.node[2:]
+        outside = L.parse_palette(self.text.replace("roughness: 0.9),", "roughness: 0.25),", 1))
+        self.assertEqual(L.palette_from_shapes(shapes, outside)["steel"].roughness, 0.9)
+        self.assertEqual(L.palette_from_shapes(shapes, self.palette)["steel"].roughness, 0.25)
+
     def test_a_palette_the_game_cannot_use_is_refused(self):
         for broken, words in (
             (self.text.replace("roughness: 0.9),", "roughness: 1.5),", 1), "roughness should be"),
@@ -500,6 +512,83 @@ class PaletteTests(unittest.TestCase):
         with self.assertRaises(L.LayoutError) as caught:
             L.parse_layout(text, set(self.palette))
         self.assertIn("unknown surface, marble", str(caught.exception))
+
+
+class ToolingTests(unittest.TestCase):
+    """Save's guard against overwriting other changes, the working file, the party's figures and
+    the extension's manifest."""
+
+    def setUp(self):
+        self.layout = (ROOT / BRIDGE.path).read_text()
+        self.palette = (ROOT / L.PALETTE_PATH).read_text()
+
+    def changes(self, layout=None, palette=None):
+        return L.changes_since(self.layout, self.palette, layout or self.layout,
+                               palette or self.palette)
+
+    def test_files_unchanged_since_the_last_load_or_save_let_save_go_ahead(self):
+        self.assertEqual(self.changes(), [])
+
+    def test_changes_made_since_are_named(self):
+        moved = self.layout.replace('.box("car-b4", at: [9.4, 0.75, 44]',
+                                    '.box("car-b4", at: [9.4, 0.75, 42]')
+        self.assertEqual(self.changes(moved), ["car-b4 changed"])
+        edited = moved.replace('      .marker("attacker.stand", at: [7.6, 26.6]),\n', "").replace(
+            "    pieces: [\n",
+            '    pieces: [\n      .piece("crate", at: [1, 0.5, 2], size: [1, 1, 1], surface: .hazard),\n')
+        edited = edited.replace("fieldOfView: 42)", "fieldOfView: 45)").replace(
+            "intensity: 600)", "intensity: 900)")
+        self.assertEqual(self.changes(edited), [
+            "car-b4 changed", "attacker.stand removed", "the camera changed", "sky-fill changed",
+            "crate added",
+        ])
+        recoloured = self.palette.replace("[0.42, 0.48, 0.5]", "[0.5, 0.5, 0.5]")
+        self.assertEqual(self.changes(palette=recoloured), ["the steel surface changed"])
+        self.assertEqual(self.changes(self.layout + "\n// A note.\n"),
+                         ["the layout file's comments or spacing"])
+        self.assertEqual(self.changes(self.layout.replace("lights: [", "lamps: [")),
+                         ["the layout file, in a form the script cannot read"])
+
+    def test_the_refusal_says_what_changed_and_how_to_go_on(self):
+        message = str(L.FilesChanged(["car-b4 changed", "the steel surface changed"]))
+        for words in ("car-b4 changed, the steel surface changed", "Load", "Save Anyway"):
+            self.assertIn(words, message)
+        self.assertIn("and more", str(L.FilesChanged([f"box-{n} changed" for n in range(9)])))
+
+    def test_the_working_file_lives_in_local_where_git_ignores_it(self):
+        self.assertEqual(L.working_file(Path("/repo"), BRIDGE),
+                         Path("/repo/.local/blender/brooklyn-bridge.blend"))
+        self.assertIn(".local/", (ROOT / ".gitignore").read_text().splitlines())
+
+    def test_the_script_finds_the_repository_it_was_installed_from(self):
+        self.assertEqual(Path(L._guess_repository()), ROOT)
+        self.assertTrue((ROOT / L.PLAY_SCRIPT).is_file())
+
+    def test_each_figure_stands_on_the_floor_as_the_game_draws_it(self):
+        for member, (_, width) in L.PARTY.items():
+            parts = {name: (centre, size) for name, centre, size, _ in L.figure(member)}
+            bottom = min(centre[1] - size[1] / 2 for centre, size in parts.values())
+            self.assertAlmostEqual(bottom, 0, places=6)
+            self.assertEqual(parts["body"][1][0], width)
+            # The head's top, and the front mark on the side facing Manhattan, at -z.
+            head, head_size = parts["head"]
+            self.assertAlmostEqual(head[1] + head_size[1] / 2, L.FIGURE_CENTRE + 0.73, places=6)
+            self.assertLess(parts["front"][0][2], 0)
+
+    def test_the_extension_manifest_has_what_blender_needs(self):
+        try:
+            import tomllib
+        except ImportError:
+            self.skipTest("tomllib needs Python 3.11")
+        manifest = tomllib.loads((HERE / "extensions/lauder_levels/blender_manifest.toml").read_text())
+        for key in ("schema_version", "id", "version", "name", "tagline", "maintainer", "type",
+                    "blender_version_min", "license"):
+            self.assertIn(key, manifest)
+        self.assertEqual((manifest["id"], manifest["type"]), ("lauder_levels", "add-on"))
+        self.assertLessEqual(len(manifest["tagline"]), 64)
+        self.assertNotIn(manifest["tagline"][-1], ".!?")
+        self.assertEqual(manifest["license"], ["SPDX:MIT"])
+        self.assertIn("files", manifest["permissions"])
 
 
 if __name__ == "__main__":
