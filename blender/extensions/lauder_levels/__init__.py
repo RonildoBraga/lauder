@@ -10,8 +10,8 @@ the level's source. Its collections decide where each object goes:
   fight areas, and the markers where people start and stand, each with its role. Export writes
   them to the level's layout file, typed Swift that the game compiles. They show as outlines, and
   the game never draws them. A visual part or model parented to a gameplay box moves with it.
-- Lights and Camera: the level's sun lights and the game camera's rig, written to the layout file
-  too.
+- Lights and Camera: the level's lights, suns, point lights and spot lights, and the game
+  camera's rig, written to the layout file too.
 - Preview: the party's stand-ins at their start markers, which the game draws itself. It is never
   exported.
 
@@ -113,8 +113,9 @@ EXPORT_RECORD = "blender/level-exports.json"
 #: Raised whenever Export changes what it writes, so that every level is exported again.
 EXPORT_FORMAT = 1
 
-#: The visual direction's budget (docs/visual-direction.md).
-MOST_LIGHTS = 2
+#: The visual direction's budget (docs/visual-direction.md): at most four lights since the
+#: maintainer's choice of 19 November 2026, with at most one casting shadows.
+MOST_LIGHTS = 4
 MOST_SHADOWED_LIGHTS = 1
 #: The shadow distance a light gets when its shadow is turned on in Blender.
 DEFAULT_SHADOW_DISTANCE = 25
@@ -123,6 +124,11 @@ DEFAULT_SHADOW_DISTANCE = 25
 SUN_STRENGTH_PER_LUX = 1 / 700
 #: How far from the origin the layout file puts a light's source. Only its direction matters.
 SOURCE_LENGTH = 10
+#: Lumens for each watt of a Blender point or spot light: 683 lm/W, the luminous efficacy that
+#: defines the candela. As with the sun, the game shows the real result.
+LUMENS_PER_WATT = 683
+#: How far along a spot light's beam the layout file puts the point it shines towards.
+TARGET_LENGTH = 10
 
 
 # MARK: - Layouts, in the game's coordinates
@@ -169,16 +175,32 @@ class Camera:
 
 @dataclass
 class Light:
-    """A light as far away as the sun, shining from one direction over the whole level."""
+    """A light on the level: a sun, as far away as the sun and shining from one direction over the
+    whole level; a point light; or a spot light."""
     name: str
-    #: A point in the direction the light comes from, (x, y, z); only the direction matters.
+    #: For a sun, a point in the direction the light comes from, (x, y, z): only the direction
+    #: matters. None for a point or spot light.
     source: tuple
     #: In sRGB, each channel from 0 to 1.
     color: tuple
-    #: In lux.
+    #: In lux for a sun, and in lumens for a point or spot light.
     intensity: float
-    #: How far from the camera its shadows reach, in metres, or None when it casts none.
+    #: For a sun, how far from the camera its shadows reach, in metres, or None when it casts none.
     shadow_distance: float = None
+    #: sun, point or spot.
+    kind: str = "sun"
+    #: For a point or spot light: where it stands, (x, y, z), and how far it reaches, in metres.
+    position: tuple = None
+    radius: float = None
+    #: For a spot light: a point it shines towards, (x, y, z); the full-strength and outer widths
+    #: of its cone, in degrees; and whether it casts the level's shadow.
+    target: tuple = None
+    angles: tuple = None
+    shadow: bool = False
+
+    @property
+    def casts_shadows(self):
+        return self.shadow_distance is not None if self.kind == "sun" else self.shadow
 
 
 @dataclass
@@ -267,7 +289,7 @@ def _light_problems(lights):
     if len(lights) > MOST_LIGHTS:
         problems.append(
             f"The visual direction allows at most {MOST_LIGHTS} lights, not {len(lights)}.")
-    shadowed = [light.name for light in lights if light.shadow_distance is not None]
+    shadowed = [light.name for light in lights if light.casts_shadows]
     if len(shadowed) > MOST_SHADOWED_LIGHTS:
         problems.append(
             f"The visual direction allows {MOST_SHADOWED_LIGHTS} light with shadows, but "
@@ -277,10 +299,20 @@ def _light_problems(lights):
             problems.append(f"{light.name} needs some intensity.")
         if any(not 0 <= value <= 1 for value in light.color):
             problems.append(f"{light.name}'s colour channels should be between 0 and 1.")
-        if light.shadow_distance is not None and light.shadow_distance <= 0:
-            problems.append(f"{light.name}'s shadow distance should be more than 0.")
-        if all(abs(value) < 1e-6 for value in light.source):
-            problems.append(f"{light.name} needs a direction to shine from.")
+        if light.kind == "sun":
+            if light.shadow_distance is not None and light.shadow_distance <= 0:
+                problems.append(f"{light.name}'s shadow distance should be more than 0.")
+            if all(abs(value) < 1e-6 for value in light.source):
+                problems.append(f"{light.name} needs a direction to shine from.")
+            continue
+        if light.radius is None or light.radius <= 0:
+            problems.append(f"{light.name} should reach further than 0 m.")
+        if light.kind == "spot":
+            inner, outer = light.angles
+            if not 0 < outer <= 180 or not 0 <= inner <= outer:
+                problems.append(f"{light.name}'s cone should open between 0° and 180°.")
+            if all(abs(a - b) < 1e-6 for a, b in zip(light.position, light.target)):
+                problems.append(f"{light.name} needs a direction to shine in.")
     return problems
 
 
@@ -323,12 +355,23 @@ def _box_arguments(box):
     return [f'"{box.name}"', f"at: {_list(box.position)}", f"size: {_list(box.size)}"]
 
 
-def _light_arguments(light):
-    arguments = [f'"{light.name}"', f"from: {_list(light.source)}", f"color: {_list(light.color)}",
-                 f"intensity: {_number(light.intensity)}"]
+def _light_call(light):
+    """A light's entry in the layout file: its kind's name, and its arguments."""
+    colour, intensity = f"color: {_list(light.color)}", f"intensity: {_number(light.intensity)}"
+    if light.kind == "point":
+        return ".point", [f'"{light.name}"', f"at: {_list(light.position)}", colour, intensity,
+                          f"radius: {_number(light.radius)}"]
+    if light.kind == "spot":
+        arguments = [f'"{light.name}"', f"at: {_list(light.position)}",
+                     f"toward: {_list(light.target)}", colour, intensity,
+                     f"radius: {_number(light.radius)}", f"angles: {_list(light.angles)}"]
+        if light.shadow:
+            arguments.append("shadow: true")
+        return ".spot", arguments
+    arguments = [f'"{light.name}"', f"from: {_list(light.source)}", colour, intensity]
     if light.shadow_distance is not None:
         arguments.append(f"shadowDistance: {_number(light.shadow_distance)}")
-    return arguments
+    return ".sun", arguments
 
 
 def layout_header(level):
@@ -383,7 +426,8 @@ def emit_layout(layout, level):
         [f"offset: {_list(camera.offset)}", f"fieldOfView: {_number(camera.field_of_view)}"], ",")
     lines.append("    lights: [")
     for light in layout.lights:
-        lines += _call("      ", ".sun", _light_arguments(light), ",")
+        head, arguments = _light_call(light)
+        lines += _call("      ", head, arguments, ",")
     lines += ["    ])", "}"]
     return "\n".join(lines) + "\n"
 
@@ -420,15 +464,24 @@ class LightShape:
     name: str
     #: Blender's kind of light: SUN, POINT, SPOT or AREA.
     kind: str
-    #: Where the light comes from, as a unit vector in Blender's space: the sun's own +z.
+    #: Where the light comes from, as a unit vector in Blender's space: the light's own +z. A spot
+    #: light shines the other way.
     direction: tuple
     #: Scene-linear RGB, as Blender holds it.
     color: tuple
-    #: Blender's strength, in W/m² for a sun.
+    #: Blender's strength: in W/m² for a sun, and in W for a point or spot light.
     energy: float
     shadow: bool
     #: The shadow distance kept on the light, if it has one.
     shadow_distance: float = None
+    #: Where the light stands, in Blender's space.
+    position: tuple = (0, 0, 0)
+    #: Blender's Custom Distance: whether it is on, and how far the light reaches with it.
+    custom_distance: bool = False
+    cutoff: float = 40.0
+    #: A spot light's cone: its full width in radians, and how soft its edge is, from 0 to 1.
+    spot_size: float = 0.0
+    spot_blend: float = 0.0
 
 
 _TOLERANCE = 0.005
@@ -457,19 +510,51 @@ def names_the_story_uses(repository, level):
     return required_names(written.read_text(), story.read_text())
 
 
+def spot_inner_angle(spot_size, spot_blend):
+    """The full width, in degrees, of the cone in which a Blender spot light shines at full
+    strength. Blender fades it over the outer `spot_blend` of the cone's cosine range."""
+    edge = math.cos(spot_size / 2)
+    return 2 * math.degrees(math.acos(min(1.0, edge + (1 - edge) * spot_blend)))
+
+
 def lights_from_shapes(shapes):
     """The layout's lights from Blender's, and anything that stops an export."""
     lights, problems = [], []
     for shape in shapes:
-        if shape.kind != "SUN":
-            problems.append(
-                f"{shape.name} is a {shape.kind.lower()} light; the game has only sun lights so far.")
-            continue
-        source = tuple(round(value * SOURCE_LENGTH, 2) for value in _unit(from_blender(shape.direction)))
         colour = tuple(round(value, 3) for value in _srgb(shape.color))
-        intensity = round(shape.energy / SUN_STRENGTH_PER_LUX, 1)
-        shadow = (shape.shadow_distance or DEFAULT_SHADOW_DISTANCE) if shape.shadow else None
-        lights.append(Light(shape.name, source, colour, intensity, shadow))
+        if shape.kind == "SUN":
+            source = tuple(round(value * SOURCE_LENGTH, 2)
+                           for value in _unit(from_blender(shape.direction)))
+            intensity = round(shape.energy / SUN_STRENGTH_PER_LUX, 1)
+            shadow = (shape.shadow_distance or DEFAULT_SHADOW_DISTANCE) if shape.shadow else None
+            lights.append(Light(shape.name, source, colour, intensity, shadow))
+            continue
+        if shape.kind not in ("POINT", "SPOT"):
+            problems.append(f"{shape.name} is an {shape.kind.lower()} light; the game has sun, "
+                            f"point and spot lights.")
+            continue
+        kind = shape.kind.lower()
+        if kind == "point" and shape.shadow:
+            problems.append(f"{shape.name} is a point light with its shadow on, and the game draws "
+                            f"no shadows from point lights: turn its shadow off.")
+            continue
+        if not shape.custom_distance:
+            problems.append(f"{shape.name} needs its Custom Distance on: the game's {kind} light "
+                            f"reaches only that far, as Blender's preview then does.")
+            continue
+        position = tuple(round(value, 3) for value in from_blender(shape.position))
+        intensity = round(shape.energy * LUMENS_PER_WATT, 1)
+        radius = round(shape.cutoff, 3)
+        if kind == "point":
+            lights.append(Light(shape.name, None, colour, intensity, kind="point",
+                                position=position, radius=radius))
+            continue
+        beam = _unit(from_blender(tuple(-value for value in shape.direction)))
+        target = tuple(round(p + b * TARGET_LENGTH, 3) for p, b in zip(position, beam))
+        angles = (round(spot_inner_angle(shape.spot_size, shape.spot_blend), 2),
+                  round(math.degrees(shape.spot_size), 2))
+        lights.append(Light(shape.name, None, colour, intensity, kind="spot", position=position,
+                            radius=radius, target=target, angles=angles, shadow=shape.shadow))
     return lights, problems
 
 
@@ -1210,7 +1295,10 @@ def lights_from_blender():
         distance = data.get("lauder_shadow_distance")
         shapes.append(LightShape(
             item.name, data.type, tuple(direction), tuple(data.color), data.energy,
-            data.use_shadow, None if distance is None else float(distance)))
+            data.use_shadow, None if distance is None else float(distance),
+            position=tuple(item.matrix_world.translation),
+            custom_distance=data.use_custom_distance, cutoff=data.cutoff_distance,
+            spot_size=getattr(data, "spot_size", 0.0), spot_blend=getattr(data, "spot_blend", 0.0)))
     return shapes
 
 

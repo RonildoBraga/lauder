@@ -76,23 +76,49 @@ struct SceneStyle {
     return visual
   }
 
-  /// The level's lights, from its layout file: each shines from its source over the whole level.
+  /// The level's lights, from its layout file: a sun shines from its source over the whole
+  /// level, and a point or spot light from where it stands.
   func addLights(_ lights: [Level.Light], to root: Entity) {
     for light in lights {
-      let entity = DirectionalLight()
-      entity.name = light.name
-      entity.light.color = Self.color(light.color)
-      entity.light.intensity = light.intensity
-      if let distance = light.shadowDistance {
-        var shadow = DirectionalLightComponent.Shadow(
-          shadowProjection: .automatic(maximumDistance: distance), depthBias: 1)
-        shadow.cascades = .fixed(1)
-        entity.shadow = shadow
-      } else {
-        // The light casts shadows only while it has the component; its `shadow` always reads.
-        entity.components.remove(DirectionalLightComponent.Shadow.self)
+      let color = Self.color(light.color)
+      let entity: Entity
+      switch light.kind {
+      case .sun(let source, let shadowDistance):
+        let sun = DirectionalLight()
+        sun.light.color = color
+        sun.light.intensity = light.intensity
+        if let shadowDistance {
+          var shadow = DirectionalLightComponent.Shadow(
+            shadowProjection: .automatic(maximumDistance: shadowDistance), depthBias: 1)
+          shadow.cascades = .fixed(1)
+          sun.shadow = shadow
+        } else {
+          // The light casts shadows only while it has the component; its `shadow` always reads.
+          sun.components.remove(DirectionalLightComponent.Shadow.self)
+        }
+        sun.look(at: .zero, from: source, relativeTo: nil)
+        entity = sun
+      case .point(let position, let radius):
+        let point = PointLight()
+        point.light = PointLightComponent(
+          color: color, intensity: light.intensity, attenuationRadius: radius)
+        point.position = position
+        entity = point
+      case .spot(let position, let target, let radius, let innerAngle, let outerAngle, let shadow):
+        let spot = SpotLight()
+        spot.light = SpotLightComponent(
+          color: color, intensity: light.intensity, innerAngleInDegrees: innerAngle,
+          outerAngleInDegrees: outerAngle, attenuationRadius: radius)
+        if shadow {
+          spot.components.set(SpotLightComponent.Shadow())
+        } else {
+          spot.components.remove(SpotLightComponent.Shadow.self)
+        }
+        // A spot light shines along its own -z.
+        spot.look(at: target, from: position, relativeTo: nil)
+        entity = spot
       }
-      entity.look(at: .zero, from: light.source, relativeTo: nil)
+      entity.name = light.name
       root.addChild(entity)
     }
   }
