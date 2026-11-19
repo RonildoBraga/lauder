@@ -1480,11 +1480,11 @@ def export_level(repository, key="brooklyn-bridge", made_from=None):
     root = Path(repository)
     text = emit_layout(check_level(repository, level), level)
     made_from = dict(made_from or {})
-    made_from.setdefault(level.blend, file_fingerprint(root / level.blend))
-    for name in _files_used(root):
+    for name in [level.blend] + _files_used(root):
         if not (root / name).is_file():
             raise LayoutError(f"{name} is missing, and the level file refers to it.")
-        made_from.setdefault(name, file_fingerprint(root / name))
+        if name not in made_from:
+            made_from[name] = file_fingerprint(root / name)
     # Only the Visual collection is exported, each of its own parts where it stands in the world;
     # the models it shows come with their instances, from their own files.
     visual = _collection(VISUAL)
@@ -1861,14 +1861,15 @@ if bpy is not None:
             self.report({"INFO"}, message)
             return {"FINISHED"}
 
-    #: The models Add Model offers, kept here because Blender needs its list to stay alive.
+    #: The models Add Model offers, kept here because Blender needs its list to stay alive. NONE
+    #: stands for an empty list, and is no model's name, which is in lowercase.
     _MODEL_ITEMS = []
 
     def _model_items(self, context):
         found = _open_level()
         names = available_models(found[0]) if found is not None else []
         _MODEL_ITEMS[:] = [(name, name, f"{ASSETS}/{name}") for name in names] or [
-            ("", "No models", f"There is no model in {ASSETS} yet")]
+            ("NONE", "No models", f"There is no model in {ASSETS} yet")]
         return _MODEL_ITEMS
 
     def _gameplay_box(item):
@@ -1897,8 +1898,8 @@ if bpy is not None:
 
         def execute(self, context):
             found = _open_level()
-            if found is None or not self.model:
-                self.report({"ERROR"}, "Open the level, and choose a model.")
+            if found is None or self.model == "NONE":
+                self.report({"ERROR"}, f"Open the level, and add a model to {ASSETS} first.")
                 return {"CANCELLED"}
             box = _gameplay_box(context.active_object)
             try:
