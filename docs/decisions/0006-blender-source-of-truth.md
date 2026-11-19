@@ -313,7 +313,7 @@ It was [merged](https://github.com/RonildoBraga/lauder/pull/56#issuecomment-7006
    - **Alpha**, from an image's alpha or a greyscale mask, either blended or cut off at one half through a Math node.
 2. **Export and the intake check refuse what the game would show differently:**
    - Separate Color, since RealityKit drops a map read from an image's green or blue channel: each map packed into one image needs an image of its own;
-   - a Normal Map Strength other than 1, and an Emission Strength other than 1 on an emission image. Blender's USD export leaves both out, so the game would show the normal map at full strength, and the emission image at strength 1 even where Blender shows no glow;
+   - a Normal Map Strength other than 1 or fed by nodes, and an Emission Strength other than 1 on an emission image. Blender's USD export leaves both out, so the game would show the normal map at full strength, and the emission image at strength 1 even where Blender shows no glow;
    - images or other nodes on any other input, until each is checked.
 3. **Ambient occlusion has no way in yet:** the Principled BSDF has no input for it, and Blender's USD export writes none.
 4. **The bridge's materials are plain colours,** so its exports do not change. The [visual direction](../visual-direction.md) still allows no new textures; this step readies the pipeline for them.
@@ -326,6 +326,6 @@ It was [merged](https://github.com/RonildoBraga/lauder/pull/56#issuecomment-7006
   - the striped normal map looked the same at both strengths, and the emission image at strength 4 looked as at 1;
   - checkerboard alpha showed the backdrop through its holes, soft-edged when blended and sharp when cut off;
   - metallic from an image's alpha followed the checkerboard held in the alpha, not the image's even red.
-- In Blender 5.3, run in the background on a copy of the repository, export refused each cube added to the bridge's Visual collection, saying why: Separate Color on Roughness, a Normal Map Strength of 0.25, an emission image at Blender's default Emission Strength of 0, and an image on Coat Weight. A cube with every checked map was exported, and the scene file carried its five images.
+- In Blender 5.3, run in the background on a copy of the repository, export refused each cube added to the bridge's Visual collection, saying why: Separate Color on Roughness, a Normal Map Strength of 0.25 and one fed by an image, an emission image at Blender's default Emission Strength of 0, and an image on Coat Weight. A cube with every checked map was exported, and the scene file carried its five images.
 - The extension's 44 tests cover each refusal.
 - Not checked: the phone, texture memory and compression, Image Texture settings such as interpolation and extension, and normal maps baked in object space.

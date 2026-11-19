@@ -770,8 +770,9 @@ class MaterialShape:
     #: For each input of the surface that nodes feed: the input's name, and the kind and label of
     #: each node that feeds it, however indirectly.
     feeds: tuple = ()
-    #: The Strength of each Normal Map node that feeds Normal, and the surface's Emission Strength.
-    #: Blender's USD export leaves both out of the scene file when an image feeds the input.
+    #: The Strength of each Normal Map node that feeds Normal, or None where nodes feed it, and the
+    #: surface's Emission Strength. Blender's USD export leaves both out of the scene file when an
+    #: image feeds the input.
     normal_strengths: tuple = ()
     emission_strength: float = 1.0
 
@@ -820,7 +821,11 @@ def material_problems(materials):
                             f"strength to 1 and make the image as bright as it should glow, or "
                             f"disconnect it.")
         for strength in material.normal_strengths:
-            if not math.isclose(strength, 1, abs_tol=1e-4):
+            if strength is None:
+                problems.append(f"The material {_material(material)} feeds a Normal Map's Strength "
+                                f"with nodes, which the scene file leaves out, so the game shows "
+                                f"the map at full strength: disconnect them and set it to 1.")
+            elif not math.isclose(strength, 1, abs_tol=1e-4):
                 problems.append(f"The material {_material(material)} has a Normal Map Strength of "
                                 f"{strength:g}, which the scene file leaves out, so the game shows "
                                 f"the map at full strength: set it to 1, and make the image itself "
@@ -1434,8 +1439,9 @@ def _material_shape(material, root):
         feeds.append((each.name, tuple(sorted({(node.type, node.bl_label) for node in nodes}))))
         images += [node.image for node in nodes if node.type == "TEX_IMAGE" and node.image]
         if each.name == "Normal":
-            strengths += [node.inputs["Strength"].default_value for node in nodes
-                          if node.type == "NORMAL_MAP"]
+            strengths += [None if node.inputs["Strength"].is_linked
+                          else node.inputs["Strength"].default_value
+                          for node in nodes if node.type == "NORMAL_MAP"]
     return MaterialShape(material.name, source, shader.type, tuple(feeds), tuple(strengths),
                          shader.inputs["Emission Strength"].default_value), images
 

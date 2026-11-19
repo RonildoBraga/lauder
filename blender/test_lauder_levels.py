@@ -447,8 +447,10 @@ class SceneRuleTests(unittest.TestCase):
         gentle = replace(self.PAINT, name="gentle", normal_strengths=(0.25,))
         coated = replace(self.PAINT, name="coated", feeds=(
             ("Coat Weight", (("TEX_IMAGE", "Image Texture"),)),))
-        problems = L.material_problems([packed, sign, unlit, gentle, coated])
-        self.assertEqual(len(problems), 5)
+        # Nodes feed a Normal Map's Strength, which Blender's reader gives as None.
+        driven = replace(self.PAINT, name="driven", normal_strengths=(None,))
+        problems = L.material_problems([packed, sign, unlit, gentle, coated, driven])
+        self.assertEqual(len(problems), 6)
         self.assertIn("packed (from blender/assets/car/car.blend) reads its Roughness from one "
                       "channel of an image with Separate Color", problems[0])
         self.assertIn("sign (from blender/assets/car/car.blend) has an Emission Strength of 4",
@@ -458,6 +460,8 @@ class SceneRuleTests(unittest.TestCase):
         self.assertIn("coated (from blender/assets/car/car.blend) feeds its Coat Weight with nodes, "
                       "and the game takes images only on Base Color, Roughness, Metallic, Normal, "
                       "Emission Color and Alpha", problems[4])
+        self.assertIn("driven (from blender/assets/car/car.blend) feeds a Normal Map's Strength with "
+                      "nodes", problems[5])
         # At strength 1, with roughness from an image's alpha, the game shows them as Blender does.
         lit = replace(sign, name="lit sign", emission_strength=1, normal_strengths=(1.0,), feeds=(
             *sign.feeds, ("Roughness", (("TEX_IMAGE", "Image Texture"),))))
