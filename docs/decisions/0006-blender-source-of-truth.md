@@ -356,6 +356,8 @@ The maintainer's choice reversed decision 6's rule that the code keeps the stand
 
 ### 5d — baked occlusion
 
+It was [merged](https://github.com/RonildoBraga/lauder/pull/59#issuecomment-7008064842) under the standing permission, without an independent review.
+
 The maintainer chose **“Baked lighting”**, described as baking light into textures in Blender for the scene file. A trial found two limits. The game's RealityView adds RealityKit's built-in sky light, which neither Blender nor an offscreen RealityKit render can reproduce. And a fully baked surface, shown through emission, stops showing live shadows, such as Miki's on the road. Asked how to go on, the maintainer chose **“Bake occlusion”**: Blender bakes soft ambient occlusion into each chosen part's colour image, and the game's suns, sky light and shadows still light it.
 
 1. **Bake Occlusion,** in the Lauder tab, bakes the selected parts of Visual and every part already baked.
