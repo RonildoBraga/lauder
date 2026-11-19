@@ -482,6 +482,11 @@ class LightShape:
     #: A spot light's cone: its full width in radians, and how soft its edge is, from 0 to 1.
     spot_size: float = 0.0
     spot_blend: float = 0.0
+    #: Blender's Exposure, which multiplies the strength by 2^exposure; Normalize, which keeps the
+    #: light's power the same at any size; and whether Temperature sets its colour.
+    exposure: float = 0.0
+    normalize: bool = True
+    temperature: bool = False
 
 
 _TOLERANCE = 0.005
@@ -521,11 +526,20 @@ def lights_from_shapes(shapes):
     """The layout's lights from Blender's, and anything that stops an export."""
     lights, problems = [], []
     for shape in shapes:
+        if shape.temperature:
+            problems.append(f"{shape.name} takes its colour from Temperature, which the game does "
+                            f"not read: turn Temperature off and set its Color instead.")
+            continue
+        if not shape.normalize:
+            problems.append(f"{shape.name} has Normalize off, so Blender makes it brighter as it "
+                            f"grows, and the game does not: turn Normalize on.")
+            continue
+        energy = shape.energy * 2 ** shape.exposure
         colour = tuple(round(value, 3) for value in _srgb(shape.color))
         if shape.kind == "SUN":
             source = tuple(round(value * SOURCE_LENGTH, 2)
                            for value in _unit(from_blender(shape.direction)))
-            intensity = round(shape.energy / SUN_STRENGTH_PER_LUX, 1)
+            intensity = round(energy / SUN_STRENGTH_PER_LUX, 1)
             shadow = (shape.shadow_distance or DEFAULT_SHADOW_DISTANCE) if shape.shadow else None
             lights.append(Light(shape.name, source, colour, intensity, shadow))
             continue
@@ -543,7 +557,7 @@ def lights_from_shapes(shapes):
                             f"reaches only that far, as Blender's preview then does.")
             continue
         position = tuple(round(value, 3) for value in from_blender(shape.position))
-        intensity = round(shape.energy * LUMENS_PER_WATT, 1)
+        intensity = round(energy * LUMENS_PER_WATT, 1)
         radius = round(shape.cutoff, 3)
         if kind == "point":
             lights.append(Light(shape.name, None, colour, intensity, kind="point",
@@ -1298,7 +1312,8 @@ def lights_from_blender():
             data.use_shadow, None if distance is None else float(distance),
             position=tuple(item.matrix_world.translation),
             custom_distance=data.use_custom_distance, cutoff=data.cutoff_distance,
-            spot_size=getattr(data, "spot_size", 0.0), spot_blend=getattr(data, "spot_blend", 0.0)))
+            spot_size=getattr(data, "spot_size", 0.0), spot_blend=getattr(data, "spot_blend", 0.0),
+            exposure=data.exposure, normalize=data.normalize, temperature=data.use_temperature))
     return shapes
 
 

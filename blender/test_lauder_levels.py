@@ -256,6 +256,17 @@ class LayoutTests(unittest.TestCase):
         self.refused("Custom Distance", lights=[lights[0], replace(lights[3], custom_distance=False)])
         self.refused("needs a light", lights=[])
         self.refused("needs some intensity", lights=[replace(lights[0], energy=0), lights[1]])
+        # Blender would preview these lights in a colour or brightness that the game cannot read.
+        self.refused("Temperature", lights=[replace(lights[0], temperature=True), lights[1]])
+        self.refused("Normalize on", lights=[lights[0], replace(lights[2], normalize=False)])
+
+    def test_exposure_multiplies_a_lights_strength_as_in_blender(self):
+        lights = lights_for(SAMPLE)
+        brighter = read(lights=[replace(light, exposure=1) for light in lights]).lights
+        for light, doubled in zip(read().lights, brighter):
+            self.assertAlmostEqual(doubled.intensity, 2 * light.intensity, delta=0.2)
+        dimmer = read(lights=[lights[0], lights[1], replace(lights[2], exposure=-2)]).lights
+        self.assertAlmostEqual(dimmer[2].intensity, 20490 / 4, delta=0.2)
 
 
 class ExportRecordTests(unittest.TestCase):

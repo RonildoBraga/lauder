@@ -105,6 +105,8 @@ struct SceneStyle {
         point.position = position
         entity = point
       case .spot(let position, let target, let radius, let innerAngle, let outerAngle, let shadow):
+        // RealityKit's spot angles are full cone widths, as the layout's are: a 60° outer angle
+        // 10 m above the ground lights a radius of 10 tan 30° = 5.77 m (ADR 0006, checks of 5a).
         let spot = SpotLight()
         spot.light = SpotLightComponent(
           color: color, intensity: light.intensity, innerAngleInDegrees: innerAngle,
