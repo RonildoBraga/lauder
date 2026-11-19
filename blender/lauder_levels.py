@@ -947,10 +947,12 @@ _SUN_DISTANCE = 8
 
 
 def _principled(material, create=False):
-    """The material's Principled BSDF, giving the material nodes first when asked."""
-    if create and not getattr(material, "use_nodes", True):
+    """The material's Principled BSDF, giving the material nodes first when asked. Only a material
+    without nodes, made by Blender before 5, needs `use_nodes`, which Blender 6 removes."""
+    tree = material.node_tree
+    if tree is None and create:
         material.use_nodes = True
-    tree = getattr(material, "node_tree", None)
+        tree = material.node_tree
     if tree is None:
         return None
     return next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
@@ -985,6 +987,9 @@ def _area_material():
     material = bpy.data.materials.get("Lauder area")
     if material is None:
         material = bpy.data.materials.new("Lauder area")
+    # Earlier versions of this script tagged it like a surface; an area has none.
+    if "lauder_surface" in material:
+        del material["lauder_surface"]
     material.diffuse_color = _linear(*AREA_COLOUR)
     return material
 
