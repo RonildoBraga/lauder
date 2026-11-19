@@ -285,6 +285,8 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 ### 5a — point and spot lights
 
+It was [merged](https://github.com/RonildoBraga/lauder/pull/56#issuecomment-7006540355) under the standing permission, without an independent review.
+
 1. **The budget is four lights.** At most one may cast shadows, as before. The [visual direction](../visual-direction.md#rendering-budget) and the export's check say so.
 2. **Point and spot lights travel as data,** like the suns, since RealityKit drops a spot light's cone from USD. The layout file holds, for each:
    - its place, colour and intensity, in lumens: 683 lm for each watt in Blender, the luminous efficacy that defines the candela;
