@@ -1646,6 +1646,35 @@ def _copy_textures(folder):
         image.reload()
 
 
+def _realize_instances(collection):
+    """Turn each of the collection's instances of other collections into copies of the parts it
+    shows, where they stand, sharing their meshes and named after the instance, so that a model is
+    one collection of its own parts. Instances within instances take further rounds."""
+    for _ in range(8):
+        holders = [item for item in collection.objects
+                   if item.instance_type == "COLLECTION" and item.instance_collection is not None]
+        if not holders:
+            return
+        for item in bpy.context.selected_objects:
+            item.select_set(False)
+        for holder in holders:
+            holder.select_set(True)
+        bpy.context.view_layer.objects.active = holders[0]
+        before = set(bpy.data.objects)
+        # Each copy comes parented to the instance that showed it, which names it.
+        bpy.ops.object.duplicates_make_real(use_base_parent=True)
+        for made in set(bpy.data.objects) - before:
+            holder, place = made.parent, made.matrix_world.copy()
+            made.parent = None
+            made.matrix_world = place
+            part = re.sub(r"[.]\d{3}$", "", made.name)
+            made.name = f"{holder.name} {part}" if holder is not None else part
+        for holder in holders:
+            bpy.data.objects.remove(holder, do_unlink=True)
+    raise LayoutError("The file's instances nest too deeply to bring in; make them real first, "
+                      "with Object › Apply › Make Instances Real.")
+
+
 def _readme_template(name, source, model):
     """A model's README.md as add-model.py writes it, with its source and licence to fill in."""
     today = datetime.date.today()
@@ -1693,26 +1722,40 @@ def add_model(repository, source, name):
     bpy.context.scene.collection.children.link(collection)
     layers = bpy.context.view_layer.layer_collection.children
     bpy.context.view_layer.active_layer_collection = layers[collection.name]
+    # What the file shows: for a Blender file, what its first scene's view layer shows, which
+    # leaves out collections excluded from it, such as an instance's source.
     if kind == ".blend":
         with bpy.data.libraries.load(str(source), link=False) as (available, wanted):
-            wanted.objects = list(available.objects)
+            wanted.scenes = available.scenes[:1]
+        if not wanted.scenes or wanted.scenes[0] is None:
+            raise LayoutError(f"{source.name} has no scene to bring in.")
+        layer = wanted.scenes[0].view_layers[0]
     else:
         group, operator = IMPORTERS[kind].split(".")
         getattr(getattr(bpy.ops, group), operator)(filepath=str(source))
+        layer = bpy.context.view_layer
+    layer.update()
+    for item in list(layer.objects):
+        if collection not in item.users_collection:
+            collection.objects.link(item)
+    _realize_instances(collection)
     # Lights and cameras would not reach the game, and empties holding nothing, such as the one a
     # USD file's material scope becomes, show nothing.
-    for item in list(bpy.data.objects):
+    for item in list(collection.objects):
         if item.type in ("LIGHT", "CAMERA") or (
                 item.type == "EMPTY" and not item.children and item.instance_collection is None):
             bpy.data.objects.remove(item, do_unlink=True)
-    for item in bpy.data.objects:
-        if collection not in item.users_collection:
-            collection.objects.link(item)
+    # Only the model's collection holds anything now, in the file's one scene.
+    for scene in [each for each in bpy.data.scenes if each != bpy.context.scene]:
+        bpy.data.scenes.remove(scene)
+    for item in collection.objects:
         for other in list(item.users_collection):
             if other is not collection:
                 other.objects.unlink(item)
     for other in [each for each in bpy.data.collections if each is not collection]:
         bpy.data.collections.remove(other)
+    for item in [each for each in bpy.data.objects if not each.users_collection]:
+        bpy.data.objects.remove(item)
     _copy_textures(folder)
     forget_local_paths()
     bpy.ops.wm.save_mainfile(relative_remap=True)
