@@ -95,7 +95,7 @@ Reviewing a proposed workflow for Blender, the maintainer noted that its lights 
    - Load builds a Lauder material for each surface, setting both its Principled BSDF, which Material Preview shows, and its viewport display, which Solid shading shows.
    - Save writes whichever of the two was changed, then sets both to what it wrote, so that the setting an edit did not touch cannot undo it at the next Save. It checks the palette and the layout together: if either fails, neither file is written.
    - The palette's entries are the surfaces Blender accepts, so the script no longer keeps its own copy of the game's colours. Adding a surface still needs a case in `Level.Surface`, and a test checks that the two match.
-3. **Game Look**, a button in the Lauder tab, shows the 3D Viewport in Material Preview, lit only by the level's own lights. Blender's renderer is not RealityKit, so the view comes close to the game without matching it.
+3. **Game Look**, a button in the Lauder tab, shows the 3D Viewport in Material Preview, lit only by the level's own lights. It refuses while lights outside the level are visible, such as the one in Blender's default scene, because the game has none. Blender's renderer is not RealityKit, so the view comes close to the game without matching it.
 4. **The recipe for the next move into Blender:** give the thing a typed entry in a Swift data file, read and write that entry exactly in `blender/lauder_levels.py`, build it in Load and read it back in Save, check the game's rules before anything is written, and test the round trip. The formats leave room to grow: another kind of light would be another kind of entry in `lights:`, and a texture another field of a finish.
 
 ### Consequences of this amendment
@@ -110,6 +110,7 @@ Reviewing a proposed workflow for Blender, the maintainer noted that its lights 
   - the lights and the palette reading and writing back unchanged;
   - a turned, brightened and recoloured sun saving as expected, and shadows following each sun's setting;
   - Save refusing a second shadow, a third light, a point light, no light, a dark light and a duplicate name, and keeping the file's lights when Blender has none;
+  - the layout and palette readers refusing an entry written in any other form, which a save would otherwise drop;
   - a material changed in its own settings or in its viewport display, a saved change surviving the next save, materials left alone, and palettes the game cannot use;
   - the game lighting the bridge from the layout file within the budget, and every surface taking its finish from the palette.
 - The game's opening frame in the Simulator is the same, pixel for pixel, from `main` and from this change, as it is between two runs of `main`.

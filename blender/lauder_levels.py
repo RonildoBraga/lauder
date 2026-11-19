@@ -310,6 +310,24 @@ _KINDS = {"ground": ("box",), "boxes": ("box",), "landmarks": ("landmark",), "ar
           "markers": ("marker",), "pieces": ("piece",), "camera": ("camera",), "lights": ("sun",)}
 
 
+#: All that may come before the first section: the layout's opening.
+_LAYOUT_OPENING = re.compile(r"\s*extension\s+\w+\s*\{\s*static\s+let\s+layout\s*=\s*Level\.Layout\(\s*")
+
+
+def _unread(chunk, spans):
+    """What is left of the code once its entries are taken out, apart from the brackets, commas,
+    closing marks and spaces between them: anything else is something the script did not read,
+    which a save would drop."""
+    pieces, at = [], 0
+    for start, finish in sorted(spans):
+        pieces.append(chunk[at:start])
+        at = finish
+    pieces.append(chunk[at:])
+    leftover = "".join(pieces)
+    first = re.search(r"[^\s\[\](),}]", leftover)
+    return " ".join(leftover[first.start():].split())[:48] if first else ""
+
+
 def _numbers(text, count, name):
     parts = [part.strip() for part in text.split(",") if part.strip()]
     if len(parts) != count:
@@ -324,22 +342,26 @@ def parse_layout(text, surfaces=None):
     """Read a layout file. Anything that is not read exactly raises, so Save never drops it. Given
     the palette's surfaces, every box and piece must have one of them."""
     code = re.sub(r"//[^\n]*", "", text)
-    starts = {}
+    heads, starts = {}, {}
     for section in _SECTIONS:
         found = list(re.finditer(rf"\b{section}:", code))
         if len(found) != 1:
             raise LayoutError(f"The layout needs exactly one '{section}:' section.")
-        starts[section] = found[0].end()
+        heads[section], starts[section] = found[0].start(), found[0].end()
     if sorted(_SECTIONS, key=starts.get) != list(_SECTIONS):
         raise LayoutError("The sections must come in order: " + ", ".join(_SECTIONS) + ".")
+    if not re.fullmatch(_LAYOUT_OPENING, code[:heads[_SECTIONS[0]]]):
+        raise LayoutError(
+            "Before 'ground:', the file should only open the layout: "
+            "extension … { static let layout = Level.Layout(")
     entries = {}
     for index, section in enumerate(_SECTIONS):
-        end = starts[_SECTIONS[index + 1]] if index + 1 < len(_SECTIONS) else len(code)
+        end = heads[_SECTIONS[index + 1]] if index + 1 < len(_SECTIONS) else len(code)
         chunk = code[starts[section]:end]
         kinds = _KINDS[section]
         # In the order written, whatever their kinds.
         found = sorted(
-            (match.start(), kind, match.groups())
+            (match.start(), match.end(), kind, match.groups())
             for kind in kinds for match in _ENTRIES[kind].finditer(chunk))
         written = sum(chunk.count(f".{kind}(") for kind in kinds)
         if len(found) != written:
@@ -347,7 +369,12 @@ def parse_layout(text, surfaces=None):
                 f"{written - len(found)} entry or entries in '{section}:' could not be read. "
                 f"Write each as the others are."
             )
-        entries[section] = [(kind, groups) for _, kind, groups in found]
+        unread = _unread(chunk, [(start, finish) for start, finish, _, _ in found])
+        if unread:
+            raise LayoutError(
+                f"'{section}:' holds something the script cannot read: {unread}… "
+                f"Write each entry as the others are.")
+        entries[section] = [(kind, groups) for _, _, kind, groups in found]
     if len(entries["ground"]) != 1:
         raise LayoutError("The layout needs exactly one ground box.")
     if len(entries["camera"]) != 1:
@@ -555,18 +582,33 @@ _FINISH = re.compile(
 )
 
 
+#: All that may come before the palette's first entry.
+_PALETTE_SCAFFOLD = re.compile(
+    r"\s*enum\s+Surfaces\s*\{\s*static\s+let\s+palette\s*:\s*\[\s*Level\.Surface\s*:\s*"
+    r"Level\.Finish\s*\]\s*=\s*\[\s*"
+)
+
+
 def parse_palette(text):
     """Read the palette file: each surface's finish, in the file's order. Anything that is not
     read exactly raises, so Save never drops it."""
     code = re.sub(r"//[^\n]*", "", text)
-    found = _FINISH.findall(code)
+    matches = list(_FINISH.finditer(code))
     written = code.count(".finish(")
-    if len(found) != written:
+    if len(matches) != written:
         raise LayoutError(
-            f"{written - len(found)} surface or surfaces in the palette could not be read. "
+            f"{written - len(matches)} surface or surfaces in the palette could not be read. "
             f"Write each as the others are.")
+    scaffold = re.fullmatch(_PALETTE_SCAFFOLD, code[:matches[0].start()] if matches else code)
+    unread = _unread(code[matches[0].start():], [
+        (match.start() - matches[0].start(), match.end() - matches[0].start()) for match in matches
+    ]) if matches else ""
+    if scaffold is None or unread:
+        raise LayoutError(
+            "The palette file holds something the script cannot read. Keep it as `enum Surfaces` "
+            "with one `.surface: .finish(...)` entry for each surface.")
     palette = {}
-    for name, colour, roughness, metallic in found:
+    for name, colour, roughness, metallic in (match.groups() for match in matches):
         if name in palette:
             raise LayoutError(f"The palette has two finishes for {name}.")
         palette[name] = Finish(_numbers(colour, 3, name), float(roughness), float(metallic or 0))
@@ -1267,6 +1309,17 @@ def lights_from_blender(level):
     return shapes
 
 
+def lights_outside_the_level(level, view_layer):
+    """The visible lights that are not in the level's Lights, such as the one in Blender's default
+    scene. Game Look would show them, but the game has no such light: Save neither writes them
+    nor counts them against the budget."""
+    part = _part(level, "light")
+    own = {item.name for item in part.objects} if part is not None else set()
+    return [item.name for item in view_layer.objects
+            if item.type == "LIGHT" and item.name not in own
+            and item.visible_get(view_layer=view_layer)]
+
+
 def palette_from_blender(previous):
     """The palette as the Lauder materials hold it. A surface whose material is gone keeps its
     finish."""
@@ -1385,6 +1438,13 @@ if bpy is not None:
             if shading.type == "MATERIAL" and shading.use_scene_lights:
                 shading.type = "SOLID"
                 return {"FINISHED"}
+            others = lights_outside_the_level(LEVELS[context.scene.lauder_level], context.view_layer)
+            if others:
+                self.report(
+                    {"ERROR"},
+                    f"Hide {', '.join(others)} first (H): Game Look shows every visible light, "
+                    f"and only the level's Lights reach the game.")
+                return {"CANCELLED"}
             shading.type = "MATERIAL"
             # Only the level's own lights, as in the game: no studio light or world.
             shading.use_scene_lights = True

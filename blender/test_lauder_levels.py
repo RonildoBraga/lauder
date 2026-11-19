@@ -201,6 +201,12 @@ class BridgeLayoutTests(unittest.TestCase):
             self.text.replace("camera: .camera(", "", 1),
             self.text.replace('.sun("sky-fill", from:', '.sun("sky-fill", towards:'),
             self.text.replace("    lights: [", "    lamps: ["),
+            # Entries in another form, which the count of known entries alone would miss.
+            re.sub(r'\.sun\("sky-fill"[^)]*\)',
+                   '.init(name: "sky-fill", source: [3, 5, -4], color: [0.67, 0.81, 0.85], '
+                   'intensity: 600, shadowDistance: nil)', self.text),
+            self.text.replace('.box("car-a1", at:', 'Level.Box(name: "car-a1", at:', 1),
+            self.text.replace("  static let layout", "  static let spare = 1\n  static let layout"),
         ):
             with self.subTest(broken=broken[:0]), self.assertRaises(L.LayoutError):
                 L.parse_layout(broken)
@@ -479,6 +485,10 @@ class PaletteTests(unittest.TestCase):
              "could not be read"),
             (self.text.replace("    .glass:", "    // .glass:"), "needs glass"),
             (self.text.replace("    .river:", "    .steel:"), "two finishes for steel"),
+            # An entry in another form, which the count of known entries alone would miss.
+            (self.text.replace(".glass: .finish(", ".glass: Level.Finish("), "cannot read"),
+            (self.text.replace("enum Surfaces {", "enum Surfaces {\n  static let spare = 1"),
+             "cannot read"),
         ):
             with self.subTest(words=words):
                 with self.assertRaises(L.LayoutError) as caught:
