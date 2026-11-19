@@ -130,7 +130,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 ## Step 2 — the path into the game
 
-**Date:** 19 November 2026. The maintainer assigned it (**“go ahead”**) after this ADR's merge and, after the phone check, [authorised the merge](RELAY-52-URL) (**“Yes, merge it”**) without an independent review.
+**Date:** 19 November 2026. The maintainer assigned it (**“go ahead”**) after this ADR's merge and, after the phone check, [authorised the merge](https://github.com/RonildoBraga/lauder/pull/52#issuecomment-7000152015) (**“Yes, merge it”**) without an independent review.
 
 1. **The scene file.** `apple/sources/content/BrooklynBridge.usdz` holds everything the game shows of the bridge, as its code drew it:
    - the deck and the boxes;
