@@ -85,13 +85,14 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
-Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `apple/sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration and the game camera. Blender loads and saves it:
+Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `apple/sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration, the game camera and the lights. How each surface looks, for every level, is `apple/sources/content/Surfaces.swift`. Blender loads and saves both:
 
 1. In Blender (checked with 5.3), open `blender/lauder_levels.py` in the Text Editor and press **Run Script**. A **Lauder** tab appears in the 3D Viewport's sidebar (press N).
 2. Check the **Repository** folder, which defaults to the folder the script came from, and press **Load**. The bridge appears in a **Lauder Brooklyn Bridge** collection:
-   - the deck, the boxes coloured by surface, the landmarks, the areas drawn as outlines and the named markers;
+   - the deck, the boxes with a Lauder material for each surface, the landmarks, the areas drawn as outlines and the named markers;
    - the decoration's pieces, such as the walkway and the cables;
-   - the game camera.
+   - the game camera;
+   - the lights, as sun lights.
 
    Vehicles show the game's body and cabin, or windows, inside an outline of their box, and landmarks show their band. These details follow their box and are not saved. Loading again discards changes made in Blender.
 3. Move, resize, duplicate or delete boxes and pieces, and move areas and markers. Follow the game's rules:
@@ -101,10 +102,11 @@ Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor
 
    Pieces block nothing and do not follow the boxes, so if you move a tower or a divider, move its top, walkway and cables with it. A new vehicle shows its details after you save and load again.
 4. To see the game's view, look through the camera (Numpad 0) and drag **camera-target** to where the leader would stand. The frame is the baseline iPhone's screen. Moving **game-camera** changes the game's camera offset, and its **Field of View**, in the camera's properties, changes the game's. Keep its **Sensor Fit** at Vertical.
-5. Press **Save**. It checks the game's rules and writes the file, or explains what to fix and writes nothing.
-6. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
+5. To change the lighting, turn the suns in the **Lights** collection and change their **Color**, **Strength** and **Shadow** in the light's properties. Keep to the visual direction's budget: at most two lights, one casting shadows. To change how a surface looks everywhere, edit its **Lauder** material's **Base Color**, **Roughness** and **Metallic**. Press **Game Look** to see the scene lit by its own lights, close to the game, and press it again for Solid shading.
+6. Press **Save**. It checks the game's rules and writes the layout file and the palette, or explains what to fix and writes nothing.
+7. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
 
-The file stays the source of truth. Its numbers can also be edited directly, keeping each entry's form, and the next Load picks them up. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the script's own tests, which need no Blender.
+The files stay the source of truth. Their numbers can also be edited directly, keeping each entry's form, and the next Load picks them up. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the script's own tests, which need no Blender.
 
 ## TestFlight builds
 

@@ -10,7 +10,7 @@ The game opens on a greybox **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-
 
 - **M1 to M3 are merged:** the bridge with Miki alone, the stranger's fight with assisted aim and cover, and the search, the ambush and Tom joining. After playing M2 and M3 on the baseline iPhone, the maintainer reported “It read well” and “It played well”. The [opening record](docs/opening.md) lists what each milestone built and how it was checked; none had an independent review.
 - **M4 is assigned:** Laura, the medical kit and the end of the slice, with the opening's phone checkpoint.
-- **Blender is the level editor** ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The bridge's layout, decoration and game camera are a plain-data Swift file that Blender loads and saves, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes; the game still builds from the Swift file.
+- **Blender is the level editor** ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The bridge's layout, decoration, game camera and lights, and the surfaces' shared palette, are plain-data Swift files that Blender loads and saves, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes; the game still builds from the Swift files.
 - **Companions follow as a squad** in a Close formation ([ADR 0003](docs/decisions/0003-squad-movement.md), phase S1). The trio's [combat identities](docs/story/story-bible.md#combat-identities) and [The Quiet Yard](docs/encounters/the-quiet-yard.md) are agreed working designs; formations and further combat need their own assignment, after the [review gate](docs/prototype-plan.md#combat-design-review-gate).
 - **The earlier Relay House slice**, Stages 1 and 2 and Parties A to C, is summarised in the [project history](docs/history.md), with its phone results and the checks still open. The maintainer removed its level on 18 November 2026.
 - TestFlight build 0.1.0 (2), from M3's branch at `ecb1031`, is available to internal testers; see [TestFlight builds](CONTRIBUTING.md#testflight-builds). Debug builds can run [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests).
@@ -43,7 +43,8 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
     content/
       Level.swift               A playable place as a value, and the party's shared body
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
-      BrooklynBridgeLayout.swift Where everything on the bridge stands, its decoration and camera, edited in Blender (ADR 0005)
+      BrooklynBridgeLayout.swift Where everything on the bridge stands, its decoration, camera and lights, edited in Blender (ADR 0005)
+      Surfaces.swift            How each surface looks, for every level, edited in Blender (ADR 0005)
       MissionScript.swift       Conversations; the lines are provisional
       character/                Current animated stand-in, editable sources and provenance
         source/                 Editable USD layers; excluded from the app bundle

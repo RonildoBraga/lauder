@@ -1,8 +1,8 @@
-// Where everything on the Brooklyn Bridge stands (ADR 0005), in metres: x across the
-// deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits
-// this file through blender/lauder_levels.py: Load builds the layout in
-// Blender and Save writes it back. The numbers can also be edited here, and the next
-// Load picks them up. Keep the entries in this form so that the script can read them.
+// Where everything on the Brooklyn Bridge stands and how it is lit (ADR 0005), in metres: x
+// across the deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits
+// this file through blender/lauder_levels.py: Load builds the layout in Blender and Save writes
+// it back. The numbers can also be edited here, and the next Load picks them up. Keep the
+// entries in this form so that the script can read them.
 
 extension BrooklynBridge {
   static let layout = Level.Layout(
@@ -350,5 +350,10 @@ extension BrooklynBridge {
         "stay-east-manhattan-4", at: [12.4, 13.05, -66], size: [0.07, 0.07, 36.813],
         turn: [0.346, 0, 0, 0.9382], surface: .metal),
     ],
-    camera: .camera(offset: [0, 10, 9.9], fieldOfView: 42))
+    camera: .camera(offset: [0, 10, 9.9], fieldOfView: 42),
+    lights: [
+      .sun(
+        "sun-key", from: [-3, 8, 5], color: [1, 0.91, 0.74], intensity: 4500, shadowDistance: 25),
+      .sun("sky-fill", from: [3, 5, -4], color: [0.67, 0.81, 0.85], intensity: 600),
+    ])
 }
