@@ -71,6 +71,16 @@ struct GameView: View {
             Text("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
               .font(.caption)
           }
+          if world.session.formationsAvailable {
+            // The squad's formation (ADR 0003, phase S2), and the button that changes it.
+            HStack(spacing: 8) {
+              Text("Formation · \(world.session.formation.name)").font(.caption)
+              if !world.controls.touchControlsEnabled && !talking {
+                Text("\(world.controls.formationButtonName) · Change").font(.caption)
+                  .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+              }
+            }
+          }
           if !talking {
             Text(world.observation).font(.caption)
           }
@@ -222,6 +232,7 @@ struct GameView: View {
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
+          showsFormation: world.session.formationsAvailable,
           mode: world.session.mode)
       }
     }

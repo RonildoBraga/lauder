@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Updated:** 20 November 2026\
-**Status:** The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built. What follows needs its own assignment.\
+**Status:** The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included. What follows needs its own assignment.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -34,7 +34,7 @@ Nina-specific dialogue is excluded while kinship remains undecided. The full cha
 | **M2** The first fight | Fire, assisted aim, line of sight, hits, the stranger, the retry | Built |
 | **M3** Search, ambush, Tom | Searching and loot, the ambush, Tom's shot, recruitment, following with one companion | Built |
 | **M4** Laura and onwards | Helping, the medical kit, the third member, the end of the opening | Built |
-| **M5** Formations | [ADR 0003](decisions/0003-squad-movement.md)'s phase S2 on the open deck | Next, when assigned |
+| **M5** Formations | [ADR 0003](decisions/0003-squad-movement.md)'s phase S2 on the open deck | Built |
 
 Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of-truth.md)), as [Editing a level in Blender](../CONTRIBUTING.md#editing-a-level-in-blender) describes.
 
@@ -45,15 +45,16 @@ Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of
 | Move active character | Left stick | Bottom-left analog stick | WASD |
 | Contextual action / advance text | Cross / A | Look, showing the action where there is one | E |
 | Cycle leader, once there are two | R1 / RB | Next: name | Q |
+| Change formation, once there are two companions | Triangle / Y | Formation | R |
 | Fire | R2 / RT | Fire, during a fight or once the carbine is drawn | F |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
 
 Xbox RB and RT use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
 
-- Switching is available only while exploring. Pause and dialogue ignore switch presses rather than queueing them.
+- Switching and changing formation are available only while exploring. Pause and dialogue ignore their presses rather than queueing them.
 - A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party.
 - Held movement may continue on the new leader, including a stick touch held alongside **Next: name**. Switching alone does not close the neutral-input gate. Source changes cancel old captures and require neutral input. After Pause, interruption or reconnection, all keys, buttons and fingers must release; a centred-stick finger still counts as held input.
-- Consume a switch edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts for the new leader.
+- Consume a switch or formation edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts.
 - Prompts describe what the leader can do from an accessible approach. On press, revalidate the leader, the approach and the current progress; a stale prompt cannot act through a wall.
 
 | Interaction | Who | Result |
@@ -63,7 +64,7 @@ Xbox RB and RT use the same input path as PS5, but hardware delivery remains unv
 
 ## Verification and performance
 
-Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Each change adds focused Swift Testing cases with its implementation, and scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, and `opening` for the whole sequence. Pure rule tests alone cannot establish spatial behaviour or feel.
+Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Each change adds focused Swift Testing cases with its implementation, and scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening` for the whole sequence, and `formations`. Pure rule tests alone cannot establish spatial behaviour or feel.
 
 Milestones that change controls, feel or performance get a phone checkpoint on the baseline **iPhone 13 Pro Max**: controls with touch and a controller, combat feel, Pause/Resume and recovery, and measured frame pacing. The target is **60 fps** on that phone, measured during representative play. Record the build, conditions and results; adjust scope or budget if missed. Simulator timing is not phone evidence, and Xbox controllers remain untested on hardware.
 
@@ -75,7 +76,7 @@ Then repeat full runs and restarts on the physical phone over roughly **15–20 
 
 ## Outside the first playable
 
-Free jumping and climbing, formation orders before M5, separate character inventories, skill trees, multiplayer, health and hunger systems, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what ADR 0004 brings into the opening: assisted aim, a placeholder hit rule and one ammunition count. Expand only in response to a concrete playtest need.
+Free jumping and climbing, squad orders and combat positioning ([ADR 0003](decisions/0003-squad-movement.md)'s phases S3 and S4), separate character inventories, skill trees, multiplayer, health and hunger systems, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what ADR 0004 brings into the opening: assisted aim, a placeholder hit rule and one ammunition count. Expand only in response to a concrete playtest need.
 
 ## Combat design review gate
 

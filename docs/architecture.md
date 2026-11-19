@@ -1,7 +1,7 @@
 # Lauder — architecture
 
-**Updated:** 19 November 2026\
-**Status:** Swift and RealityKit ([ADR 0001](decisions/0001-engine.md)). The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), whose Blender file is its source ([ADR 0002](decisions/0002-blender-source-of-truth.md)): Blender exports the bridge's scene file and layout file. Companions move as a squad under [ADR 0003](decisions/0003-squad-movement.md) phase S1. Persistence remains later hardening; this design does not settle open relationships.
+**Updated:** 20 November 2026\
+**Status:** Swift and RealityKit ([ADR 0001](decisions/0001-engine.md)). The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), whose Blender file is its source ([ADR 0002](decisions/0002-blender-source-of-truth.md)): Blender exports the bridge's scene file and layout file. Companions move as a squad under [ADR 0003](decisions/0003-squad-movement.md) phases S1 and S2. Persistence remains later hardening; this design does not settle open relationships.
 
 ## Decision and platform
 
@@ -16,7 +16,7 @@ Keep **one app target**, one Swift Testing target and ordinary feature folders. 
 | Part | Responsibility | Boundary |
 |---|---|---|
 | App composition | Own stable session/world instances and launch/teardown | SwiftUI reevaluation does not recreate them |
-| GameSession | Mode, who is in the party, active leader, fired trigger areas, the story's beat, a fight's hits, rounds and defeated hostiles, bodies searched and the shared inventory; accept/reject commands | Plain Swift values and rules, no entities or views |
+| GameSession | Mode, who is in the party, active leader, the squad's formation, fired trigger areas, the story's beat, a fight's hits, rounds and defeated hostiles, bodies searched and the shared inventory; accept/reject commands | Plain Swift values and rules, no entities or views |
 | GameWorld | A body for each member, hidden until they join, camera, collision, following, fights, scenes and owned update/load work | Owns entity state; uses plain Swift motion, routes, formation and combat rules |
 | Combat | Weapon timing, sight lines, assisted aim, each hostile's states and an encounter's timed cues | Plain Swift values, no entities; the world drives them each step |
 | Interface/input | Poll hardware, hold input-rule state, present coarse session/world state | Supplies intents; does not own a second gameplay mode |
@@ -48,6 +48,7 @@ The party uses three named, differently coloured primitive stand-ins, each a Ble
 
 - Mode: exploring, dialogue or paused. Pausing records whether to resume exploring or the current dialogue; pauses do not nest or lose the dialogue cursor.
 - Who is in the party, in switching order, and the active leader among them. The bridge starts with Miki alone, and members join through the story; **Next** appears only when there is someone to switch to.
+- The squad's formation: Close, Spread or Column. It changes only while exploring and once the leader has two companions; a change of leader keeps it, and Restart returns it to Close.
 - The trigger areas that have shown their line in this run.
 - The story's beat: Miki alone, the stranger, the ambush, travelling with Tom, Laura found, helping her, travelling with Laura, and arriving at the Manhattan end. A beat begins only after the one before, once and while exploring. During a fight the session also holds the leader's hits, the carbine's rounds, the hostiles that are down and the checkpoint that a retry returns to. It holds the bodies searched and a small shared inventory with the medical kits, and adds a member to the party when the conversation that recruits them ends.
 - The current conversation and line, and the pause menu's choice.
@@ -73,7 +74,7 @@ The owned world update coordinates this sequence. Rules do not retain RealityKit
 
 ## Input and command routing
 
-Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Mappings: left stick/WASD movement, Cross/A/E action, R1/RB/Q to cycle the leader, R2/RT/F to fire, and Options/Menu/Escape Pause. R1 is read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder) and R2 through the right trigger; Xbox hardware delivery remains unverified. [Touch controls](touch-controls.md) supply the same intents: a fixed bottom-left analog stick, **Look**, **Next: name**, **Pause/Resume** and, during a fight or once the carbine is drawn, **Fire**. Touch is automatic without an extended controller; an attached controller is preferred unless **Use touch controls** is selected, and **Use controller** returns to it. The preference is in memory, not persisted.
+Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Mappings: left stick/WASD movement, Cross/A/E action, R1/RB/Q to cycle the leader, Triangle/Y/R to change formation, R2/RT/F to fire, and Options/Menu/Escape Pause. R1 is read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), Triangle through button Y and R2 through the right trigger; Xbox hardware delivery remains unverified. [Touch controls](touch-controls.md) supply the same intents: a fixed bottom-left analog stick, **Look**, **Next: name**, **Formation** once there are two companions, **Pause/Resume** and, during a fight or once the carbine is drawn, **Fire**. Touch is automatic without an extended controller; an attached controller is preferred unless **Use touch controls** is selected, and **Use controller** returns to it. The preference is in memory, not persisted.
 
 GameControls samples hardware and TouchInput state; InputRules resolves all sources with the same mode, priority and fresh-edge history. Touch controls do not call GameSession or world actions directly. Independent zones support a stick finger alongside button fingers. Source changes and inactivity cancel captures through a generation token so stale callbacks cannot affect the new source. Pause leaves capture mounted and preserves held contacts: all fingers must lift, including a centred-stick finger, before the neutral gate clears.
 
@@ -101,7 +102,7 @@ All three stand-ins use the same circular footprint. PartyMotion resolves contin
 Companions move as a squad under [ADR 0003](decisions/0003-squad-movement.md). Each step:
 
 1. The leader moves from the stick, and a short **route memory** records their last 6 m.
-2. **SquadPlanner** places a **Close** formation slot for each companion, 0.9 m to the side and 0.9 m behind, turned towards the leader's heading at up to 180° per second. A slot is used only where a body fits outside doorway-like passages and the straight line from the leader is clear. Otherwise it is pulled halfway in, then moved onto the leader's route; it spreads out again once it has fitted for 0.3 s. A waiting companion stands clear of doorways.
+2. **SquadPlanner** places a slot of the session's formation for each companion, turned towards the leader's heading at up to 180° per second: **Close**, 0.9 m to the side and 0.9 m behind, or **Spread**, 2.2 m to the side and 0.5 m behind. A slot is used only where a body fits outside doorway-like passages and the straight line from the leader is clear. Otherwise it is pulled halfway in, then moved onto the leader's route; it spreads out again once it has fitted for 0.3 s. **Column** puts the companions on that route, 1 m and 2 m back. A new formation assigns its places afresh, by least walking in total, so the companions' ways to them do not cross. A waiting companion stands clear of doorways.
 3. **CompanionMotor** steers each companion: straight to the slot when the line is clear, matching the leader's movement and closing the gap; otherwise along an A* route on **NavigationGrid**, a 0.2 m grid over the level's authored rectangles, straightened against the same footprints. When the grid is built, each rectangle checks only the cells within its reach, which gives the same grid as checking every cell and suits the long bridge. Companions may reach 1.25× the leader's speed to catch up, accelerate and turn at limited rates, settle without shuffling and keep about 0.75 m of personal space. Laura reacts first and Tom last, by a fraction of a second.
 4. Every movement, the leader's included, is resolved by PartyMotion.
 
@@ -151,7 +152,7 @@ A scene ends after its last cue, once its hostiles are down. What a conversation
 
 Restart resets the existing session and world in place, chosen from the pause menu through the selected input path:
 
-1. The session resets: exploring, the level's starting party with its first member (Miki) leading, no trigger fired, the first story beat with no fight under way, full rounds, no hits, nobody down, no body searched and an empty inventory, no conversation, and the pause menu back on Resume.
+1. The session resets: exploring, the level's starting party with its first member (Miki) leading, the Close formation, no trigger fired, the first story beat with no fight under way, full rounds, no hits, nobody down, no body searched and an empty inventory, no conversation, and the pause menu back on Resume.
 2. The world puts every body back on its level's spawn point, facing the level's starting direction, shows only the members in the party and marks the leader. Route memory restarts at the leader's spawn; the formation planner, each companion motor, the companion targets and the stall warning start afresh.
 3. The camera transition is cancelled and the camera target returns to the start. Owed simulation time is dropped and the next step is skipped.
 4. The encounter stage puts every hostile back unseen and holsters the carbine, members who have not joined are hidden again or lie hurt again where they wait, and a scene or a retry in progress is cancelled with its fade.
@@ -171,13 +172,13 @@ Save meaningful changes with one ordered atomic writer. Restart invalidates olde
 
 ## Checks
 
-Swift Testing covers the input rules, the session's modes, leadership, beats, fights, inventory and Restart, exact collision regressions and fixed-seed whole-party runs with wall contact and leader changes, the navigation grid, the squad's formation, stillness, doorways and switching, sight lines, assisted aim, hostile timing, cues, scenes, and the level's content. Squad-movement tests run in a test-only yard with a 1.8 m opening, since the bridge has no doorway that narrow. Unit tests do not prove the rendered route: Debug builds also contain scripted playtests that `apple/scripts/playtest` runs in the rendered Simulator app, feeding scripted input through the normal controls and recording traces; they are compiled out of Release builds, and the standard check also drives them without rendering.
+Swift Testing covers the input rules, the session's modes, leadership, beats, fights, inventory and Restart, exact collision regressions and fixed-seed whole-party runs with wall contact, leader changes and formation changes, the navigation grid, the squad's formations, how each squeezes through a doorway and re-forms, changing formation without crossing paths, stillness and switching, sight lines, assisted aim, hostile timing, cues, scenes, and the level's content. Squad-movement tests run in a test-only yard with a 1.8 m opening, since the bridge has no doorway that narrow. Unit tests do not prove the rendered route: Debug builds also contain scripted playtests that `apple/scripts/playtest` runs in the rendered Simulator app, feeding scripted input through the normal controls and recording traces; they are compiled out of Release builds, and the standard check also drives them without rendering.
 
 Use Simulator keyboard and single-pointer touch input for everyday iteration. Live PS5 input did not work in the tested Simulator setup; enumeration does not prove delivery. [Touch controls](touch-controls.md#checking) separates what the Simulator checks from what was checked on the phone: multi-touch, Pause and recovery. Device behaviour and performance need the phone; Simulator timing is not phone evidence. Sustained 15–20 minute thermal and memory checks remain later hardening.
 
 ## Deliberately deferred
 
-Finished character art and animation, free jumping and climbing, formation orders, separate inventories, generic navigation/ECS/inventory/quest frameworks, additional packages, networking, cloud saves, monetisation and scene streaming.
+Finished character art and animation, free jumping and climbing, squad orders and combat positioning, separate inventories, generic navigation/ECS/inventory/quest frameworks, additional packages, networking, cloud saves, monetisation and scene streaming.
 
 The [future squad and combat design](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) describe intended experiences. Their [design gate](prototype-plan.md#combat-design-review-gate) precedes any implementation assignment beyond the opening's first fight. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation and formation design; phase S2 is the opening's M5.
 

@@ -21,6 +21,7 @@ struct PartySoakTests {
     var remaining = 0
     var coverage = [0, 0, 0]
     var switches = 0
+    var formations: Set<GameSession.Formation> = []
 
     for frame in 0..<5_000 {
       if frame > 0 && frame % 211 == 0 {
@@ -28,6 +29,9 @@ struct PartySoakTests {
         if random.next(upperBound: 2) == 1 { world.session.cycleLeader() }
         switches += 1
       }
+      // Every formation takes its turn against the walls, out of step with the switches.
+      if frame > 0 && frame % 157 == 0 { world.session.cycleFormation() }
+      formations.insert(world.session.formation)
       let previous = bodies.map { SIMD2($0.position.x, $0.position.z) }
       let leader = previous[members.firstIndex(of: world.session.leader)!]
       if remaining == 0 {
@@ -95,6 +99,7 @@ struct PartySoakTests {
     }
     #expect(coverage.allSatisfy { $0 > 0 }, "seed \(seed): every heading family was exercised")
     #expect(switches > 0)
+    #expect(formations.count == GameSession.Formation.allCases.count)
     #expect(world.diagnostic == nil)
   }
 

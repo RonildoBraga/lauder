@@ -1,10 +1,13 @@
 import simd
 
-/// Chooses where each companion should be: a Close formation slot around the leader, pulled
-/// in or moved onto the leader's route where the slot does not fit (ADR 0003, phase S1).
+/// Chooses where each companion should be: a slot of the session's formation around the
+/// leader, pulled in or moved onto the leader's route where the slot does not fit, or for the
+/// Column formation a place on that route (ADR 0003, phases S1 and S2).
 struct SquadPlanner {
   /// Close formation: (to the side, behind the leader), in metres.
   static let closeSlots: [SIMD2<Float>] = [[0.9, 0.9], [-0.9, 0.9]]
+  /// Spread formation: a wider front for open ground.
+  static let spreadSlots: [SIMD2<Float>] = [[2.2, 0.5], [-2.2, 0.5]]
   static let turnRate: Float = .pi
   /// A sharper change of direction flips the formation at once instead of swinging it round
   /// through the leader's new path; companions keep their sides and let the leader pass.
@@ -22,6 +25,8 @@ struct SquadPlanner {
   }
 
   private(set) var heading: SIMD2<Float>
+  /// The formation the current places belong to.
+  private var formation = GameSession.Formation.close
   /// Companions in slot order.
   private var order: [PartyMember] = []
   private var sinceSwap: Float = 0
@@ -41,19 +46,33 @@ struct SquadPlanner {
     let leaderVelocity: SIMD2<Float>
     let positions: [PartyMember: SIMD2<Float>]
     let route: RouteMemory
+    var formation = GameSession.Formation.close
     let dt: Float
+  }
+
+  /// The slots of a formation with slots. Column has none of its own: its companions take
+  /// places on the leader's route, and Close's slots only order them.
+  static func slots(for formation: GameSession.Formation) -> [SIMD2<Float>] {
+    formation == .spread ? spreadSlots : closeSlots
   }
 
   mutating func targets(
     for input: Input, grid: NavigationGrid, isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
   ) -> [PartyMember: SIMD2<Float>] {
+    if input.formation != formation {
+      // A new shape gets its places afresh, by least walking in total, so the companions'
+      // ways to them do not cross.
+      formation = input.formation
+      reset()
+    }
     let flipped = turn(towards: input.leaderVelocity, dt: input.dt)
     // Whoever is in the party with the leader: two companions, or one before the last joins.
     let companions = PartyMember.allCases.filter {
       $0 != input.leader && input.positions[$0] != nil
     }
     if flipped { order = [] }
-    assign(companions, input: input)
+    let slots = Self.slots(for: formation)
+    assign(companions, slots: slots, input: input)
 
     let leader = input.leaderPosition
     let side = SIMD2(-heading.y, heading.x)
@@ -61,25 +80,25 @@ struct SquadPlanner {
     orderColumn(companions, input: input)
     var result: [PartyMember: SIMD2<Float>] = [:]
     for (index, member) in order.enumerated() {
-      let offset = Self.closeSlots[index]
+      let offset = slots[index]
       let slot = leader + side * offset.x - heading * offset.y
       let pulledIn = leader + (slot - leader) / 2
       func fits(_ point: SIMD2<Float>) -> Bool {
         grid.isRoomy(point) && isClear(leader, point)
       }
-      let slotFits = fits(slot)
-      fitTime[member] = slotFits ? (fitTime[member] ?? 0) + input.dt : 0
-      // Compress at once; spread out again only after the slot has fitted for a moment, so a
-      // slot brushing a wall edge does not flicker between places.
-      let current = placement[member] ?? .slot
-      let restored = (fitTime[member] ?? 0) >= Self.restoreDelay
-      var next: Placement
-      if slotFits && (current == .slot || restored) {
-        next = .slot
-      } else if fits(pulledIn) && (current != .column || restored) {
-        next = .pulledIn
-      } else {
-        next = .column
+      var next = Placement.column
+      if formation != .column {
+        let slotFits = fits(slot)
+        fitTime[member] = slotFits ? (fitTime[member] ?? 0) + input.dt : 0
+        // Compress at once; spread out again only after the slot has fitted for a moment, so a
+        // slot brushing a wall edge does not flicker between places.
+        let current = placement[member] ?? .slot
+        let restored = (fitTime[member] ?? 0) >= Self.restoreDelay
+        if slotFits && (current == .slot || restored) {
+          next = .slot
+        } else if fits(pulledIn) && (current != .column || restored) {
+          next = .pulledIn
+        }
       }
       placement[member] = next
 
@@ -176,12 +195,14 @@ struct SquadPlanner {
     return false
   }
 
-  private mutating func assign(_ companions: [PartyMember], input: Input) {
+  private mutating func assign(
+    _ companions: [PartyMember], slots: [SIMD2<Float>], input: Input
+  ) {
     sinceSwap += input.dt
     let leader = input.leaderPosition
     let side = SIMD2(-heading.y, heading.x)
     func cost(_ candidate: [PartyMember]) -> Float {
-      zip(candidate, Self.closeSlots).reduce(0) { total, pair in
+      zip(candidate, slots).reduce(0) { total, pair in
         let slot = leader + side * pair.1.x - heading * pair.1.y
         return total + simd_distance(input.positions[pair.0] ?? leader, slot)
       }

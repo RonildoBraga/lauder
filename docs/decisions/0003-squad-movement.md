@@ -39,7 +39,7 @@ Slots are positions relative to the leader, turned to match the leader's heading
 1. **Heading.** The formation turns towards the leader's movement at up to 180° a second, and only while the leader moves faster than 0.5 m/s. A standing leader leaves the formation where it is, so companions do not shuffle.
 2. **Validity.** A slot is used only if a body fits there and the straight line from the leader to it is clear (`PartyMotion.canTraverse`), so a slot never lands behind a thin wall.
 3. **Compression.** An invalid slot is first pulled halfway towards the leader. If that also fails, the companion takes their Column slot on the leader's route. That makes single file in a narrow passage, and the group re-forms afterwards.
-4. **Assignment.** Which companion takes which slot minimises the total distance, and changes only when it saves more than 0.5 m, so companions do not swap sides back and forth or cross paths.
+4. **Assignment.** Which companion takes which slot minimises the total distance, and changes only when it saves more than 0.5 m, so companions do not swap sides back and forth or cross paths. A change of formation assigns the new places afresh.
 5. **Keep-clear.** Slots are pushed out of very tight cells, and later out of interaction approach areas, so companions do not settle in a doorway or in front of something to use.
 6. **Route memory.** A short record of the leader's last 6 m places Column slots and the compression fallback; companions still steer to them.
 
@@ -106,7 +106,7 @@ Each phase is its own assignment and pull request.
 | Phase | Adds | Exit check |
 |---|---|---|
 | **S1** Natural following, built | Grid, routes, the Close formation, motion, switching, and keep-clear for tight cells | No companion gets stuck; while the leader runs in open ground, each companion is within 0.6 m of their slot 90% of the time; a settled companion stays still while the leader stands; soak tests show no stuck member, no overlap with blockers and nothing non-finite |
-| **S2** Formations | Spread and Column, the cycle button, compression and the HUD label | Each shape holds in open ground, compresses through narrow passages and re-forms; changing formation mid-run crosses no paths |
+| **S2** Formations, built | Spread and Column, the cycle button, compression and the HUD label | Each shape holds in open ground, compresses through narrow passages and re-forms; changing formation mid-run crosses no paths |
 | **S3** Orders | D-pad and touch commands, markers | Orders reach their spots; unreachable spots are refused visibly; switching while holding follows the rule; the touch long-press never fights the stick or buttons; a phone check of the controls |
 | **S4** Combat positioning | Cover choice, personality weights, sight-aware routes | Designed and checked with the combat systems |
 

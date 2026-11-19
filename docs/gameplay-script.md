@@ -35,15 +35,15 @@ Miki can search the body for ammunition and a medical kit. While she searches, a
 
 Laura lies hurt, face down, beside a car just past the gap in the divider, in view from the start. Once Tom has joined, crossing the gap finds her: she calls out, "Please. Over here.", and the objective becomes "Help the woman between the cars." Beside her, the action reads **Help**, for whoever leads. It uses the medical kit from the first body, and a short scene holds the party: she stands, she and Miki turn to each other, and the exchange gives only her name. When it ends she joins, and Tom and Laura follow in the Close formation.
 
-### 5. Onwards (M4, built; formations in M5)
+### 5. Onwards (M4 and M5, built)
 
-The three cross the second tower together to the Manhattan end, where the party stops for a short closing exchange and the objective reads "Manhattan, together.": the end of the opening. With two companions, the formations of [ADR 0003](decisions/0003-squad-movement.md) come into play on the open deck in M5.
+The three cross the second tower together to the Manhattan end, where the party stops for a short closing exchange and the objective reads "Manhattan, together.": the end of the opening. With two companions, the formations of [ADR 0003](decisions/0003-squad-movement.md) come into play on the open deck (M5). **Formation** cycles **Close**; **Spread**, a wider front; and **Column**, single file on the leader's route. Squeezing past the cars, Spread pulls in or falls into single file, then spreads out again beyond them. The HUD names the formation, the closing exchange and a change of leader keep it, and Restart returns to Close.
 
 Lines stay provisional and brief. None of the scenes explains anyone's past beyond what the moment needs.
 
 ## What the opening has
 
-The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad in a Close formation ([ADR 0003](decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. The stranger's fight has assisted aim, cover, the placeholder hit rule and a retry; then come the search, the ambush and Tom joining, and Laura and the end of the opening. [Touch controls](touch-controls.md) give the phone a second input path.
+The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad ([ADR 0003](decisions/0003-squad-movement.md) phases S1 and S2) rather than on the leader's exact path: in the Close formation, and once Laura joins in whichever formation the player chooses. The stranger's fight has assisted aim, cover, the placeholder hit rule and a retry; then come the search, the ambush and Tom joining, and Laura and the end of the opening. [Touch controls](touch-controls.md) give the phone a second input path.
 
 ## Readable controls and party feedback
 
@@ -54,12 +54,13 @@ The current input mappings use the same movement, action, switching and Pause ru
 | Move the leader | Left stick | Left stick | Bottom-left analog stick | WASD |
 | Act / advance a line / confirm a menu choice | Cross | A | Look, the leader's action, Continue in a conversation, or Restart while paused | E |
 | Cycle leader through who has joined | R1 | RB | Next: name | Q |
+| Change formation, once there are two companions | Triangle | Y | Formation | R |
 | Pause / resume | Options | Menu | Pause / Resume | Escape |
 | Fire at the assisted target: press to draw, hold to keep firing | R2 | RT | Fire, shown during a fight | F |
 
 Touch appears automatically without an extended controller. With a controller attached, it remains the default unless the player chooses **Use touch controls**; **Use controller** returns to it. The selection is not persisted across app launches. Q remains the keyboard switch key. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently coloured stand-ins are sufficient, with text so colour alone carries no essential information; no new art is a prerequisite.
 
-Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
+Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward. The formation button follows the same rules: it works only while exploring, and pressed with the action it changes the formation alone.
 
 Pause and dialogue suspend switching and world movement. Release guidance and fresh-input recovery apply after source changes, interruption, reconnection and pause transitions. On touch, lift every finger before continuing, even one resting at the stick centre. The stick and buttons can be held together; Pause keeps their contacts tracked while gameplay is frozen. The [party architecture](architecture.md) records command routing and ownership.
 
@@ -67,7 +68,7 @@ Pause and dialogue suspend switching and world movement. Release guidance and fr
 
 Exploration and salvage lead; occasional, tense encounters offer meaningful avoidance and withdrawal. The [story bible owns the combat identities](story/story-bible.md#combat-identities): Miki offers precision and disruption, Laura mobility and useful angles, and Tom protection and close-range stopping power. All three carry a weapon in this future design and can defend themselves. Their existing inspection, route-reading and load-handling contributions continue between encounters. Weapons and signature abilities are working choices for review, not implemented equipment or settled balance.
 
-The future movement goal gives companions reachable nearby destinations and room to cooperate, rather than requiring them to repeat every footstep. Proposed **Close** and **Spread** formations change spacing; narrow passages compress the group automatically before it reforms. A proposed positioning order uses a visible destination and clear acknowledgement. A **Regroup** intent returns companions to supporting distance through traversable space, without a teleport. Individual placement, formation cycling, D-pad assignments and equivalent touch controls are set out in the accepted [ADR 0003](decisions/0003-squad-movement.md); the current input table above is not a combat mapping.
+The future movement goal gives companions reachable nearby destinations and room to cooperate, rather than requiring them to repeat every footstep. The **Close**, **Spread** and **Column** formations, built for the opening in M5, change spacing, and narrow passages compress the group automatically before it re-forms. A proposed positioning order uses a visible destination and clear acknowledgement. A **Regroup** intent returns companions to supporting distance through traversable space, without a teleport. Individual placement, formation cycling, D-pad assignments and equivalent touch controls are set out in the accepted [ADR 0003](decisions/0003-squad-movement.md); the current input table above is not a combat mapping.
 
 **Proposed input budget.** A starting point for review, not settled bindings. Each character's combat identity fits one signature button, so switching changes what that button does rather than adding buttons.
 
@@ -82,7 +83,7 @@ The future movement goal gives companions reachable nearby destinations and room
 | Look / act | Cross | A | Look |
 | Pause / resume | Options | Menu | Pause |
 
-Fire stays a deliberate press so that a quiet approach never starts a fight by accident; companions fire automatically only once a fight is under way. Touch has no D-pad; [ADR 0003](decisions/0003-squad-movement.md#orders) uses pressing and holding on the ground, which opens a small menu at the finger. Five buttons around the right thumb is about the limit that stays comfortable on a phone, so a later addition should replace one rather than add a sixth. Simulator keyboard keys follow when these are implemented; Fire, built with M2, is F.
+Fire stays a deliberate press so that a quiet approach never starts a fight by accident; companions fire automatically only once a fight is under way. Touch has no D-pad; [ADR 0003](decisions/0003-squad-movement.md#orders) uses pressing and holding on the ground, which opens a small menu at the finger. Five buttons around the right thumb is about the limit that stays comfortable on a phone, so a later addition should replace one rather than add a sixth. Simulator keyboard keys follow when these are implemented; Fire, built with M2, is F, and Formation, built with M5, is R.
 
 For the proposed first combat experiment, the player directs the current leader's attack and signature ability while companions use ordinary weapons and defensive positioning. Companions favour the group's immediate threats, useful weapon distance, clear firing lines and reachable cover. They do not initiate a fight with a visible patrol, pursue enemies far from the group or activate remote specialist interactions. Withdrawal takes priority over maintaining a firing position. Personality affects preferred positions without making orders unreliable. Switching preserves positions and changes the ability the player can trigger; it does not require a fixed Miki → Laura → Tom combat sequence.
 

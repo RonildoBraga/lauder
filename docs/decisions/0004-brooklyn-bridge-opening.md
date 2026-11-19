@@ -48,7 +48,7 @@ A `Level` value holds a place's floor, blocker boxes, points of interest, intera
 
 ### 3. The party grows during play
 
-`GameSession` holds the recruited members, starting with Miki alone, and a `recruit` command. Switching cycles only through recruited members, and the HUD hides **Next** until there are two. All three bodies are created at load, so Restart adds no entities: Tom waits out of sight until his beat, and Laura lies at her spot. `SquadPlanner` and `GameWorld` take the recruited companions, so Tom follows alone in the Close formation until Laura joins ([ADR 0003](0003-squad-movement.md)).
+`GameSession` holds the recruited members, starting with Miki alone, and a `recruit` command. Switching cycles only through recruited members, and the HUD hides **Next** until there are two. All three bodies are created at load, so Restart adds no entities: Tom waits out of sight until his beat, and Laura lies at her spot. `SquadPlanner` and `GameWorld` take the recruited companions, so Tom follows alone in the Close formation until Laura joins ([ADR 0003](0003-squad-movement.md)). From then on the formation button cycles Close, Spread and Column (M5).
 
 ### 4. A story director runs the beats
 
@@ -88,7 +88,7 @@ A downed enemy adds a **Search** interaction around the body: an entry in the le
 
 ### 8. Restart, tests and playtests
 
-Restart returns to the Brooklyn end with Miki alone and every beat, enemy and piece of loot reset, without adding entities. Unit tests cover beat order, triggers firing once, targeting, line of sight, hits, loot, recruitment and Restart. Scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, and `opening` for the whole sequence.
+Restart returns to the Brooklyn end with Miki alone, the Close formation and every beat, enemy and piece of loot reset, without adding entities. Unit tests cover beat order, triggers firing once, targeting, line of sight, hits, loot, recruitment, formations and Restart. Scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening` for the whole sequence, and `formations`.
 
 ### 9. `GameWorld` stays manageable
 
@@ -111,7 +111,7 @@ Restart returns to the Brooklyn end with Miki alone and every beat, enemy and pi
 | **M2** The first fight | Fire, assisted aim, line of sight, hits, the stranger, the retry | Built |
 | **M3** Search, ambush, Tom | Searching and loot, the ambush, Tom's shot, recruitment, following with one companion | Built |
 | **M4** Laura and onwards | Helping, the medical kit, the third member, the end of the opening | Built |
-| **M5** Formations | [ADR 0003](0003-squad-movement.md)'s phase S2 on the open deck | Next, when assigned |
+| **M5** Formations | [ADR 0003](0003-squad-movement.md)'s phase S2 on the open deck | Built |
 
 ## What this does not settle
 

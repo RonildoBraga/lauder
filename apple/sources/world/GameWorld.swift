@@ -280,6 +280,8 @@ final class GameWorld {
         showLeaderMarker()
         updateNearby()
       }
+      // The squad's planner takes the new formation in the next step (ADR 0003, phase S2).
+      if input.formationPressed { session.cycleFormation() }
     }
   }
 
@@ -430,7 +432,7 @@ final class GameWorld {
     let targets = planner.targets(
       for: SquadPlanner.Input(
         leader: leader, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
-        positions: current, route: route, dt: dt),
+        positions: current, route: route, formation: session.formation, dt: dt),
       grid: grid, isClear: isClear)
     companionTargets = targets
     for member in session.party where member != leader {
@@ -685,7 +687,7 @@ final class GameWorld {
         leader: session.leader, party: session.party, positions: positions, mode: session.mode,
         firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
-        retrying: isRetrying)
+        retrying: isRetrying, formation: session.formation)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
