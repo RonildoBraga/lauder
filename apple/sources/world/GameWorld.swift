@@ -104,18 +104,23 @@ final class GameWorld {
     let style = SceneStyle()
     stage = EncounterStage(level: level, style: style)
     root.name = level.id
-    for box in [level.ground] + level.boxes {
-      let entity: Entity =
-        box.surface == .vehicle
-        ? style.vehicle(size: box.size, at: box.position)
-        : style.block(size: box.size, at: box.position, material: style.material(for: box.surface))
-      entity.name = box.name
-      root.addChild(entity)
-    }
-    for point in level.points {
-      let entity = style.landmark(for: point)
-      entity.name = point.id
-      root.addChild(entity)
+    if let scene = level.scene {
+      root.addChild(Self.loadScene(named: scene, for: level))
+    } else {
+      for box in [level.ground] + level.boxes {
+        let entity: Entity =
+          box.surface == .vehicle
+          ? style.vehicle(size: box.size, at: box.position)
+          : style.block(
+            size: box.size, at: box.position, material: style.material(for: box.surface))
+        entity.name = box.name
+        root.addChild(entity)
+      }
+      for point in level.points {
+        let entity = style.landmark(for: point)
+        entity.name = point.id
+        root.addChild(entity)
+      }
     }
     // Every action the session can refer to here must be defined exactly once, checked at load.
     for interaction in level.interactions {
@@ -124,7 +129,9 @@ final class GameWorld {
         "\(level.id) defines \(interaction.id.rawValue) more than once.")
     }
     root.addChild(stage.container)
-    SceneDressing.add(to: root, style: style, level: level)
+    if level.scene == nil {
+      SceneDressing.add(to: root, style: style, level: level)
+    }
     style.addLights(level.lights, to: root)
     camera.camera.fieldOfViewInDegrees = level.fieldOfView
     camera.name = "camera"
@@ -153,6 +160,18 @@ final class GameWorld {
         startPlaytest(scenario, style: style)
       }
     #endif
+  }
+
+  /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
+  /// 0006). It loads once, while the world is made; Restart keeps it.
+  private static func loadScene(named name: String, for level: Level) -> Entity {
+    do {
+      let scene = try Entity.load(named: name, in: .main)
+      scene.name = "\(level.id).scene"
+      return scene
+    } catch {
+      preconditionFailure("\(level.id)'s scene file, \(name).usdz, did not load: \(error)")
+    }
   }
 
   private static func startingCameraTarget(_ level: Level) -> SIMD3<Float> {

@@ -42,8 +42,8 @@ def run(command, **options):
 
 
 def check_assets():
-    for name in ("Idle", "Walk"):
-        path = ROOT / "apple/sources/content/character" / f"{name}.usdz"
+    for name in ("BrooklynBridge", "character/Idle", "character/Walk"):
+        path = ROOT / "apple/sources/content" / f"{name}.usdz"
         with path.open("rb") as stream:
             if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
                 raise SystemExit(f"{path.relative_to(ROOT)} is a Git LFS pointer; run 'git lfs pull'.")

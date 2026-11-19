@@ -85,7 +85,7 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
-[ADR 0006](docs/decisions/0006-blender-source-of-truth.md) will replace this workflow: each level becomes a committed Blender file, and Export generates the files the game reads. It is not built yet; until it is, the steps below apply.
+[ADR 0006](docs/decisions/0006-blender-source-of-truth.md) will replace this workflow step by step: each level becomes a committed Blender file, and Export generates the files the game reads. So far the game shows the bridge from a scene file that Blender exports; until the rest lands, the steps below apply.
 
 Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `apple/sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration, the game camera and the lights. How each surface looks, for every level, is `apple/sources/content/Surfaces.swift`. Blender loads and saves both:
 
@@ -114,10 +114,20 @@ Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor
 6. Press ⌘S. Saving the working file also checks the game's rules and writes the layout file and the palette. If a rule fails, it explains what to fix and saves only the Blender file. **Save** writes the level's files from any Blender file.
 
    Saving refuses to overwrite changes made to the level's files since your last Load or Save, such as an agent's edit, a pull or a branch switch, and names them. Press **Load** to take those changes, or **Save Anyway** to replace them with what Blender holds.
-7. Press **Play** to see the level in the game. It saves the level, then builds the app and opens it in the iOS Simulator through `./apple/scripts/play`, which can also be run on its own. The first build takes a few minutes; later ones take a few seconds.
+
+   When the layout file or the palette changed, saving also exports the level's scene file, `apple/sources/content/BrooklynBridge.usdz`: everything the game shows of the bridge, which the game loads instead of drawing boxes. The export runs in a Blender of its own in the background, in about two seconds, and the Lauder tab says when it is done.
+7. Press **Play** to see the level in the game. It saves the level, exports the scene file if it is out of date, then builds the app and opens it in the iOS Simulator through `./apple/scripts/play`, which can also be run on its own. The first build takes a few minutes; later ones take a few seconds.
 8. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
 
 The files stay the source of truth. Their numbers can also be edited directly, keeping each entry's form, and the next Load picks them up. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender.
+
+After editing the layout file or the palette outside Blender, export the scene file again, giving the path of your Blender:
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-scene.py
+```
+
+`blender/scene-exports.json` records what each scene file was made from, and `./scripts/check` fails while the scene file no longer matches the layout file and the palette. The scene file is stored with Git LFS.
 
 ## TestFlight builds
 

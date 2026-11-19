@@ -3,6 +3,7 @@
 // this file through its Lauder extension (blender/extensions/lauder_levels): Load builds the
 // layout in Blender and Save writes it back. The numbers can also be edited here, and the next
 // Load picks them up. Keep the entries in this form so that the script can read them.
+// After an edit here, export the scene file again: blender/scripts/export-scene.py.
 
 extension BrooklynBridge {
   static let layout = Level.Layout(

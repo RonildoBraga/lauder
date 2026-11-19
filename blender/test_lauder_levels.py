@@ -6,11 +6,14 @@ surface palette.
 loading and saving a level in Blender (CONTRIBUTING).
 """
 
+import copy
 import math
 from pathlib import Path
 import re
+import shutil
 import struct
 import sys
+import tempfile
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -589,6 +592,128 @@ class ToolingTests(unittest.TestCase):
         self.assertNotIn(manifest["tagline"][-1], ".!?")
         self.assertEqual(manifest["license"], ["SPDX:MIT"])
         self.assertIn("files", manifest["permissions"])
+
+
+class SceneFileTests(unittest.TestCase):
+    """The level's scene file (ADR 0006): what it holds, and the record that shows when it no
+    longer matches the level's files."""
+
+    def setUp(self):
+        self.layout = L.parse_layout((ROOT / BRIDGE.path).read_text())
+
+    def scratch(self, folder):
+        """A copy of what the bridge's scene file depends on, in a scratch repository."""
+        repository = Path(folder)
+        for name in (BRIDGE.path, L.PALETTE_PATH, BRIDGE.scene, L.SCENE_RECORD):
+            (repository / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, repository / name)
+        return repository
+
+    def test_the_scene_holds_what_the_game_drew_from_the_layout(self):
+        parts = {part.name: part for part in L.scene_parts(self.layout)}
+        vehicles = [box for box in self.layout.boxes if box.surface == "vehicle"]
+        others = len(self.layout.boxes) - len(vehicles)
+        self.assertEqual(len(parts), 1 + others + 2 * len(vehicles)
+                         + 2 * len(self.layout.landmarks) + len(self.layout.pieces))
+        # A vehicle is its body and windows inside its box, and the box itself only blocks.
+        self.assertNotIn("car-b4", parts)
+        box = next(box for box in vehicles if box.name == "car-b4")
+        for name in ("car-b4 body", "car-b4 cabin"):
+            part = parts[name]
+            for centre, size, middle, extent in zip(part.centre, part.size, box.position, box.size):
+                self.assertGreaterEqual(centre - size / 2, middle - extent / 2 - 1e-9)
+                self.assertLessEqual(centre + size / 2, middle + extent / 2 + 1e-9)
+        # A landmark stands on the deck, in metal, with its painted band.
+        landmark = self.layout.landmarks[0]
+        self.assertEqual(parts[landmark.name].surface, "metal")
+        self.assertAlmostEqual(parts[landmark.name].centre[1],
+                               landmark.position[1] + landmark.size[1] / 2)
+        self.assertEqual(parts[f"{landmark.name} band"].surface, "paint")
+        # A piece keeps its turn.
+        turned = next(piece for piece in self.layout.pieces if not L.is_identity(piece.rotation))
+        self.assertEqual(parts[turned.name].rotation, turned.rotation)
+        # Areas and markers stay out: the game draws its own signals and makes its own lights.
+        for name in [area.name for area in self.layout.areas] + [m.name for m in self.layout.markers]:
+            self.assertNotIn(name, parts)
+
+    def test_names_keep_only_letters_digits_and_underscores(self):
+        self.assertEqual(L.usd_name("car-a1 body"), "car_a1_body")
+        self.assertEqual(L.usd_name("spawn.miki"), "spawn_miki")
+        self.assertEqual(L.usd_name("3-way"), "_3_way")
+
+    def test_names_that_would_clash_in_the_scene_file_are_refused(self):
+        layout = copy.deepcopy(self.layout)
+        layout.pieces.append(L.Piece("railing_west", (0, 0.5, 0), (1, 1, 1), "steel"))
+        with self.assertRaises(L.LayoutError) as refusal:
+            L.scene_parts(layout)
+        self.assertIn("railing_west", str(refusal.exception))
+
+    def test_the_bridges_scene_file_matches_its_layout_file_and_the_palette(self):
+        reason = L.stale_scene(ROOT)
+        self.assertIsNone(reason, f"{reason} Export it again with blender/scripts/export-scene.py, "
+                                  "as CONTRIBUTING describes.")
+        self.assertTrue((ROOT / L.EXPORT_SCRIPT).is_file())
+
+    def test_a_scene_file_goes_stale_when_what_it_was_made_from_changes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = self.scratch(folder)
+            self.assertIsNone(L.stale_scene(repository))
+            layout = repository / BRIDGE.path
+            written = layout.read_text()
+            layout.write_text(written.replace("at: [9.4, 0.75, 44]", "at: [9.4, 0.75, 42]"))
+            self.assertEqual(L.stale_scene(repository),
+                             f"{BRIDGE.path} changed since {BRIDGE.scene} was exported.")
+            layout.write_text(written)
+            palette = repository / L.PALETTE_PATH
+            palette.write_text(palette.read_text().replace("[0.42, 0.48, 0.5]", "[0.5, 0.5, 0.5]"))
+            self.assertIn(L.PALETTE_PATH, L.stale_scene(repository))
+            shutil.copyfile(ROOT / L.PALETTE_PATH, palette)
+            (repository / BRIDGE.scene).write_bytes(b"not the exported scene")
+            self.assertEqual(L.stale_scene(repository), f"{BRIDGE.scene} changed since it was exported.")
+            (repository / L.SCENE_RECORD).unlink()
+            self.assertEqual(L.stale_scene(repository), f"{BRIDGE.scene} has not been exported.")
+
+    def test_a_git_lfs_pointer_stands_for_its_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pointer = Path(folder) / "scene.usdz"
+            oid = "ab" * 32
+            pointer.write_text(f"version https://git-lfs.github.com/spec/v1\noid sha256:{oid}\nsize 9\n")
+            self.assertEqual(L.file_fingerprint(pointer), oid)
+
+    def test_save_and_play_export_the_scene_only_when_it_is_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = self.scratch(folder)
+            self.assertEqual(L.background_steps(repository, BRIDGE.key, play=False), [])
+            self.assertEqual([name for name, _, _ in
+                              L.background_steps(repository, BRIDGE.key, play=True)], ["play"])
+            (repository / L.SCENE_RECORD).unlink()
+            steps = L.background_steps(repository, BRIDGE.key, play=True)
+            self.assertEqual([(name, log) for name, _, log in steps],
+                             [("export", "export.log"), ("play", "play.log")])
+            command = steps[0][1]
+            self.assertIn(str(repository / L.EXPORT_SCRIPT), command)
+            self.assertEqual(command[-2:], ["--", BRIDGE.key])
+            self.assertIn("--factory-startup", command)
+
+    def test_an_export_running_or_waiting_stands_in_for_a_new_one(self):
+        export = ("export", ["blender"], "export.log")
+        play = ("play", ["python"], "play.log")
+        # Play just after a save started an export: only the build is added, after that export.
+        self.assertEqual(L.queue_steps("export", [], [export, play]), [play])
+        # A save while the game builds: its export waits for the build.
+        self.assertEqual(L.queue_steps("play", [], [export]), [export])
+        # Another save while that export waits: nothing more.
+        self.assertEqual(L.queue_steps("play", [export], [export]), [])
+        self.assertEqual(L.queue_steps(None, [], [export, play]), [export, play])
+
+    def test_a_scene_left_stale_by_a_later_save_is_exported_again(self):
+        export = ("export", ["blender"], "export.log")
+        play = ("play", ["python"], "play.log")
+        self.assertTrue(L.refresh_needed([], stale=True, refreshes=0))
+        self.assertTrue(L.refresh_needed([play], stale=True, refreshes=0))
+        self.assertFalse(L.refresh_needed([export], stale=True, refreshes=0))
+        self.assertFalse(L.refresh_needed([], stale=False, refreshes=0))
+        self.assertFalse(L.refresh_needed([], stale=True, refreshes=L.MOST_REFRESHES))
 
 
 if __name__ == "__main__":

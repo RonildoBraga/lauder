@@ -3,6 +3,7 @@
 // extension (blender/extensions/lauder_levels): Load builds Blender's materials from it and Save
 // writes them back. The numbers can also be edited here, and the next Load picks them up. Keep
 // the entries in this form so that the script can read them.
+// After an edit here, export the scene file again: blender/scripts/export-scene.py.
 
 enum Surfaces {
   static let palette: [Level.Surface: Level.Finish] = [

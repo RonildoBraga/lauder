@@ -19,12 +19,15 @@ struct PartySceneTests {
       #expect(body.components[CollisionComponent.self] == nil)
       #expect(body.components[PhysicsBodyComponent.self] == nil)
     }
-    for box in [level.ground] + level.boxes {
-      let entity = try #require(world.root.findEntity(named: box.name))
-      #expect(entity.components[CollisionComponent.self] == nil)
-      #expect(entity.components[PhysicsBodyComponent.self] == nil)
-      #expect(entity.position == box.position)
-      if box.name == level.ground.name { continue }
+    // The scenery comes from the bridge's scene file, which BridgeTests checks against the layout
+    // file. None of it takes part in physics: movement uses the boxes' authored footprints.
+    var scenery = [try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))]
+    while let part = scenery.popLast() {
+      #expect(part.components[CollisionComponent.self] == nil, "\(part.name) has no collision")
+      #expect(part.components[PhysicsBodyComponent.self] == nil, "\(part.name) has no body")
+      scenery.append(contentsOf: part.children)
+    }
+    for box in level.boxes {
       let centre = SIMD2(box.position.x, box.position.z)
       let half = SIMD2(box.size.x, box.size.z) / 2
       #expect(
@@ -35,10 +38,8 @@ struct PartySceneTests {
     #expect(world.root.components[PhysicsSimulationComponent.self] == nil)
     #expect(level.obstacles.count == level.boxes.count + level.points.count)
     for point in level.points {
-      let entity = try #require(world.root.findEntity(named: point.id))
-      let size = point.size
-      let centre = SIMD2(entity.position.x, entity.position.z)
-      let half = SIMD2(size.x, size.z) / 2
+      let centre = SIMD2(point.position.x, point.position.z)
+      let half = SIMD2(point.size.x, point.size.z) / 2
       #expect(
         level.obstacles.contains {
           $0.minimum == centre - half && $0.maximum == centre + half
