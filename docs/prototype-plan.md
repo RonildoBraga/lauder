@@ -36,7 +36,7 @@ ADR 0004's five milestones are each assigned separately, with `./scripts/check`,
 | **M4** Laura and onwards | Helping, the medical kit, the third member, the end of the slice; a phone checkpoint | Merged: assigned by the maintainer (“Yes, start M4”). At the phone checkpoint, a five-minute run averaged 59.97 fps with four long frames, and the maintainer reported “I did not noticed any stutters and everything worked as expected”, then [authorised the merge](https://github.com/RonildoBraga/lauder/pull/47#issuecomment-6996988166) (“merge #47”) |
 | **M5** Formations | ADR 0003 phase S2 on the open deck | Not assigned |
 
-**The bridge at real tower spacing:** in review. The maintainer asked to simplify the bridge to the road and the towers at correct dimensions, and chose the real tower spacing (“Real tower spacing”), as [ADR 0004's amendment](decisions/0004-brooklyn-bridge-opening.md#amendment--the-bridge-at-its-real-tower-spacing) records. The deck is now 644 m long.
+**The bridge at real tower spacing:** [merged](https://github.com/RonildoBraga/lauder/pull/55#issuecomment-7005537305) under the standing permission, after the maintainer played it on the baseline iPhone (“I finished play and everything seems ok”). The maintainer asked to simplify the bridge to the road and the towers at correct dimensions, and chose the real tower spacing (“Real tower spacing”), as [ADR 0004's amendment](decisions/0004-brooklyn-bridge-opening.md#amendment--the-bridge-at-its-real-tower-spacing) records. The deck is now 644 m long.
 
 **M1 exit:** Miki walks the whole deck without snagging and the camera reads well; each trigger fires once. Whether the camera reads well was not recorded.
 

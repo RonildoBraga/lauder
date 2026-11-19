@@ -164,7 +164,7 @@ The maintainer [accepted these as recommended](https://github.com/RonildoBraga/l
 
 ## Amendment — the bridge at its real tower spacing
 
-**Date:** 19 November 2026. **Decided by:** the maintainer.
+**Date:** 19 November 2026. **Decided by:** the maintainer. After playing it on the baseline iPhone, the maintainer reported **“I finished play and everything seems ok”**, and it was [merged](https://github.com/RonildoBraga/lauder/pull/55#issuecomment-7005537305) under the standing permission.
 
 The maintainer asked to simplify the bridge: **“I think we should simplify the Brooklyng bridge because at moment it seems we try to mimicate the real bridge and what we need is just mimicate manly where the player will walk through, the pillars and the road so we can make things easier but make the dimensions are correct.”** Asked how far apart the towers should stand, they chose **“Real tower spacing”** over keeping the 250 m deck. Asked what else to keep, they chose **“Lane lines and river (Recommended)”**. The bridge's main span is now at real length, which the options table above turned down; the 1.8 km crossing as a whole stays compressed.
 

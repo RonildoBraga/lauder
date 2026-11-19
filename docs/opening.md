@@ -93,6 +93,10 @@ On 19 November 2026 the maintainer asked to simplify the bridge to the road and 
 - **What moved.** Each scene kept its place beside the nearest tower. The Brooklyn end, the stranger, the knife attack and Tom are unchanged; Laura, the bus and the gap moved to the new mid-span, and the Manhattan end moved with the second tower. The bus widened to 10.2 m, so that it still closes the whole east roadway. The cables, suspenders, stays and raised walkway are gone.
 - **Walking.** The walks from the first tower to Laura and from Laura to the second tower each take about 90 s, and the navigation grid has about 420,000 cells.
 
+**Checks.** `./scripts/check` passed, with the six playtest scenarios driven without rendering on the new routes. The rendered Simulator runs passed: `bridge-walk` in 256.7 s, `laura` in 168.7 s and `opening` in 264.5 s, with frames averaging 16.7 ms. Codex's and Copilot's reviews found a way past the bus on the wider deck and Float rounding 500 m from the origin, both fixed.
+
+**Phone playtest.** Claude installed a Release build of `e9e5ed1` on the baseline iPhone 13 Pro Max. The maintainer played it without a frame-pacing recording, reported **“I finished play and everything seems ok”**, and the change was [merged](https://github.com/RonildoBraga/lauder/pull/55#issuecomment-7005537305) under the standing permission. Phone performance on the longer level is unmeasured.
+
 ## Open across the opening
 
 - **On the phone,** the maintainer's report does not say which inputs were used, so a new player's first unaided try with touch and with a controller is still worth confirming. The full run's four long frames are unexplained, and sustained play over 15 to 20 minutes, with thermals, is unmeasured.
