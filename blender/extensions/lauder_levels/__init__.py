@@ -693,9 +693,9 @@ def material_problems(materials):
                                 f"image texture.")
     for key, same in sorted(by_name.items()):
         if len(same) > 1:
-            problems.append(f"The materials {_and([_material(each) for each in same])} would all be "
-                            f"{key} in the scene file, where one replaces the others: give each "
-                            f"a name of its own.")
+            names = _and([_material(each) for each in same])
+            problems.append(f"The materials {names} would all be {key} in the scene file, where "
+                            f"one replaces the others: give each a name of its own.")
     return problems
 
 
@@ -1720,11 +1720,11 @@ def _readme_template(name, source, model):
 
 
 def add_model(repository, source, name):
-    """Make the model blender/assets/<name> from a file: a Blender file's objects, or what Blender
-    imports from a glTF, FBX, OBJ or USD file, in a collection named after the model, with its
-    textures copied beside it and a README.md whose source and licence are to fill in. Returns the
-    intake check's findings, (problems, notes). It replaces the open file, so it runs in a Blender
-    of its own: blender/scripts/add-model.py."""
+    """Make the model blender/assets/<name> from a file: what a Blender file's first scene shows,
+    or what Blender imports from a glTF, FBX, OBJ or USD file, in a collection named after the
+    model, with its textures copied beside it and a README.md whose source and licence are to fill
+    in. Returns the intake check's findings, (problems, notes). It replaces the open file, so it
+    runs in a Blender of its own: blender/scripts/add-model.py."""
     root = Path(repository)
     source = Path(source).resolve()
     kind = source.suffix.lower()

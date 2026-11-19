@@ -209,7 +209,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 ## Step 4 — models and files from elsewhere
 
-**Date:** 19 November 2026. The maintainer assigned it (**“Start step 4”**).
+**Date:** 19 November 2026. The maintainer assigned it (**“Start step 4”**). It was [merged](https://github.com/RonildoBraga/lauder/pull/54#issuecomment-7003938273) under the standing permission, without an independent review.
 
 1. **The models.** Each model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, stored with Git LFS. Beside it are a `README.md` with its source and licence, and any textures it uses. One collection, named after the model, holds it, at its real size in metres and standing on the ground at its origin. [The library's README](../../blender/assets/README.md) sets out the rest of the contract. The first three models, `car`, `van` and `truck`, are the bridge's greybox vehicles. Each was made from its parts in the level file: their meshes, moved to the model's origin, and copies of their materials, renamed after the model, such as `car paint`.
 2. **Levels link them.** A model appears in a level as an instance of its collection, in Visual and parented to its gameplay box, so that moving the box moves it. The bridge's 20 vehicles are copies of the three models now, in place of 40 parts of their own. `car-b4`, a 4 m car turned across the lanes, is the car turned and shortened to fill its box. The Lauder tab's **Add Model** places a model on the selected box, turned along the box's longer side, or at the 3D cursor. **Open Model** opens the selected model's file.

@@ -306,8 +306,8 @@ class BackgroundTests(unittest.TestCase):
                               L.background_steps(repository, BRIDGE.key, play=True)], ["play"])
             (repository / L.EXPORT_RECORD).unlink()
             steps = L.background_steps(repository, BRIDGE.key, play=True)
-            self.assertEqual([(name, log, key) for name, _, log, key in steps],
-                             [("export", "export.log", BRIDGE.key), ("play", "play.log", BRIDGE.key)])
+            self.assertEqual([(name, log, key) for name, _, log, key in steps], [
+                ("export", "export.log", BRIDGE.key), ("play", "play.log", BRIDGE.key)])
             command = steps[0][1]
             self.assertIn(str(repository / L.EXPORT_SCRIPT), command)
             self.assertEqual(command[-2:], ["--", BRIDGE.key])
