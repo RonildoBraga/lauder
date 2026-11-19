@@ -362,8 +362,9 @@ The maintainer chose **“Baked lighting”**, described as baking light into te
    - Cycles bakes each part's colour and its ambient occlusion, within 1.5 m, through a UV map of the part's own, `baked`, made with Smart UV Project.
    - It multiplies them into a PNG in `blender/levels/baked/<level>/`.
    - The part then shows a copy of its material, `<part> baked`, with that image as Base Color.
-   - Its earlier materials and UV map stay in the file. **Clear Occlusion** gives them back and removes the image.
-2. **What bakes:** a part of the level's own with one material, a Principled BSDF fed by nodes only at Base Color, since the game reads one UV map, the baked colour's. Other parts are refused, saying why, and linked models are not baked in a level. A part's image grows with its size, at 8 texels a metre, as a power of two from 64 to 1,024 pixels on a side. A long part, such as the bridge's 644 m deck, gets coarse texels along its length, and is better split first.
+   - Its earlier materials and UV map stay in the file, a material held only by the part's own slot with a fake user. **Clear Occlusion** gives them back, and removes the UV map, material and image the bake made, unless something else, such as a duplicate of the part, still shows them.
+   - A bake marks the material and image it makes with the part's name, and replaces or removes only those, never one that merely shares the name. A part sharing its mesh with others gets a copy of its own first, so that its UV maps stay its own.
+2. **What bakes:** a part of the level's own with one material, a Principled BSDF fed by nodes only at Base Color, since the game reads one UV map, the baked colour's, and with no UV map of its own named `baked`. Other parts are refused, saying why, before anything changes, and linked models are not baked in a level. A part's image grows with its size, at 8 texels a metre, as a power of two from 64 to 1,024 pixels on a side. A long part, such as the bridge's 644 m deck, gets coarse texels along its length, and is better split first.
 3. **The game needs no change:** a baked part shows an ordinary material with an image on Base Color, which step 5b checked. Occlusion darkens the part under every light, not only the sky light, as a colour image must.
 4. **The bridge bakes nothing,** since the [visual direction](../visual-direction.md) allows no new textures yet.
 
@@ -379,5 +380,12 @@ The maintainer chose **“Baked lighting”**, described as baking light into te
   - Clear Occlusion gave the barricade back its material, and removed its baked UV map and its image;
   - a cube coloured by an image kept that image's colours where nothing shades it, and a cube with an image on Roughness was refused, leaving everything unbaked.
 - In the iOS 27 Simulator, with those five parts baked, the opening frame changed in 6.8% of its pixels, every one darker. Miki's live shadow stayed on the road.
+- Reviews by Codex and Copilot, and Claude's own reading, found ways a bake could harm data it did not make. Each case was fixed and then checked in a background Blender:
+  - a refused selection now changes nothing;
+  - a material held only by a part's own slot survived saving and reopening the level;
+  - parts sharing a mesh, and an Alt-D duplicate of a baked part, kept their UV maps when another was baked or cleared;
+  - a part's own texture, and an unrelated material, named like what a bake makes, survived baking and clearing;
+  - a part with a UV map named `baked` was refused;
+  - a Shift-D duplicate kept its baked image's file when the original was cleared.
 - The extension's 49 tests cover the images' sizes and names, and which parts can bake.
 - Not checked: the phone, and how baked images weigh on its memory.
