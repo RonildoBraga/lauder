@@ -19,7 +19,7 @@ A visual pass keeps the route, collision layout, camera framing, interaction anc
 
 ## Rendering budget
 
-Build decoration once, in the level's Blender file, and keep its materials few and shared. Decorative details do not need their own physics bodies.
+Build decoration once, in the level's Blender file, and keep its materials few and shared. A model in `blender/assets` brings materials of its own, named after it. Decorative details do not need their own physics bodies.
 
 - At most two explicit lights, with at most one casting shadows. Blender's export checks this for each level's lights.
 - No new textures, particles or postprocessing effects.

@@ -1,11 +1,12 @@
 schema_version = "1.0.0"
 
-# Lauder's level editor (ADR 0005). Install it once from this repository: in Blender's
-# Preferences, add a local extension repository at blender/extensions, then enable Lauder levels.
+# Lauder's levels and models in Blender (ADR 0006). Install it once from this repository: in
+# Blender's Preferences, add a local extension repository at blender/extensions, then enable
+# Lauder levels.
 id = "lauder_levels"
-version = "2.0.0"
+version = "2.1.0"
 name = "Lauder levels"
-tagline = "Edit Lauder's levels, save them for the game and play them"
+tagline = "Edit Lauder's levels and models, export them and play them"
 maintainer = "Lauder contributors"
 type = "add-on"
 
@@ -15,4 +16,4 @@ license = ["SPDX:MIT"]
 copyright = ["2026 RonildoBraga and contributors"]
 
 [permissions]
-files = "Read and write the level's Swift files and working file"
+files = "Read and write levels, models and the game files made from them"

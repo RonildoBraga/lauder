@@ -164,9 +164,9 @@ struct BridgeTests {
 
   /// The bridge's look comes from its scene file, which Blender exports with the layout file from
   /// the level's Blender file (ADR 0006). While the bridge is a greybox, each box's look is a block
-  /// that fills it, a vehicle's body and windows sit inside its box, and each landmark stands on
-  /// the deck; the decoration is in the scene file alone, and the camera takes the layout file's
-  /// offset and field of view.
+  /// that fills it, each vehicle is a model from `blender/assets` that fills its box, and each
+  /// landmark stands on the deck; the decoration is in the scene file alone, and the camera takes
+  /// the layout file's offset and field of view.
   @Test
   func theSceneFileShowsTheBridgeWhereItsBoxesStand() throws {
     let layout = BrooklynBridge.layout
@@ -183,14 +183,17 @@ struct BridgeTests {
         #expect(simd_distance(bounds.extents, box.size) < 0.001, "\(box.name)'s look fills it")
         continue
       }
-      // A vehicle is a body and windows inside its box, which blocks movement and sight.
-      let body = try #require(part("\(box.name) body"), "\(box.name) has a look")
-      let bounds = body.visualBounds(relativeTo: nil)
-      let low = box.position - box.size / 2 - 0.001
-      let high = box.position + box.size / 2 + 0.001
-      #expect(all(bounds.min .>= low) && all(bounds.max .<= high), "\(box.name) fits its box")
-      let windows = ["cabin", "windows"].compactMap { part("\(box.name) \($0)") }
-      #expect(windows.count == 1, "\(box.name) has its windows")
+      // A vehicle is a model, its body and windows, filling its box, which blocks movement and
+      // sight. A van's or truck's windows stand a centimetre out from its sides.
+      let model = try #require(part("\(box.name) model"), "\(box.name) has a look")
+      let bounds = model.visualBounds(relativeTo: nil)
+      #expect(simd_distance(bounds.center, box.position) < 0.001, "\(box.name) stands as written")
+      #expect(all(abs(bounds.extents - box.size) .<= 0.021), "\(box.name)'s model fills it")
+      let parts = model.children.map(\.name)
+      #expect(parts.contains { $0.contains("body") }, "\(box.name) has its body")
+      #expect(
+        parts.contains { $0.contains("cabin") || $0.contains("windows") },
+        "\(box.name) has its windows")
     }
     for landmark in layout.landmarks {
       let block = try #require(part("\(landmark.name) block"), "\(landmark.name) has a look")

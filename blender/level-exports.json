@@ -2,10 +2,13 @@
   "brooklyn-bridge": {
     "format": 1,
     "made from": {
-      "blender/levels/brooklyn-bridge.blend": "bc7cc00c7ad8a96219fe2d590aea9d00f3f1a8e628f5da301172abdacf0b6f84"
+      "blender/assets/car/car.blend": "fcfb293fa68abef16d2aeff33dd5a3330b5c98db18f33f5f57242262871051cc",
+      "blender/assets/truck/truck.blend": "f136a0bb759bc61b8349b3c3144b4b08017d06bdaeffb3724e330b20e1316f38",
+      "blender/assets/van/van.blend": "747e7d7489bb614b6da68b0915ed905960b5fa9aa134756298f518bfce0ae18b",
+      "blender/levels/brooklyn-bridge.blend": "e0981cfdd7b482edd70f7b34072723d60639fdaa190367b0fbbd7447ca087ede"
     },
     "wrote": {
-      "apple/sources/content/BrooklynBridge.usdz": "bf2673e61f19c3dd890316b729578eacb113bd7deb4dce54412dd36f15efaaec",
+      "apple/sources/content/BrooklynBridge.usdz": "aacf192019212fc8bcacc8fd8828657441b363fea01a9ac644d1feb0f2420251",
       "apple/sources/content/BrooklynBridgeLayout.swift": "8b55229a931177133fe99222f0d7b15b5dd981e3a6cc48ac634670d5e644416b"
     }
   }
