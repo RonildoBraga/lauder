@@ -133,6 +133,9 @@ BAKED_PROPERTY = "lauder_baked"
 UNBAKED_MATERIALS, UNBAKED_UV = "lauder_unbaked_materials", "lauder_unbaked_uv"
 #: The UV map, made for each baked part, that its baked colour uses.
 BAKED_UV = "baked"
+#: The property that marks a material or an image as one that Bake Occlusion made, with the name
+#: of the part it was made for: only those are ever replaced or removed.
+BAKED_FOR = "lauder_baked_for"
 #: Texels of baked colour for each metre, and the smallest and largest images, in pixels on a side.
 BAKE_TEXELS_PER_METRE = 8
 BAKE_PIXELS = (64, 1024)
@@ -1980,6 +1983,12 @@ def _unbake(item):
         before.active_render = True
 
 
+def _made_by_bake(collection, item):
+    """The material or image that Bake Occlusion made for the part (BAKED_FOR), or None."""
+    return next((each for each in collection
+                 if each.library is None and each.get(BAKED_FOR) == item.name), None)
+
+
 def _surface(material):
     """The material's Principled BSDF and its output, or (None, None)."""
     tree = material.node_tree if material is not None else None
@@ -2051,10 +2060,8 @@ def _bake_part(root, level, item, materials):
     relative = baked_image(level.key, item.name)
     path = root / relative
     path.parent.mkdir(parents=True, exist_ok=True)
-    image = bpy.data.images.get(Path(relative).name)
-    if image is not None and image.library is None:
-        bpy.data.images.remove(image)
-    image = bpy.data.images.new(Path(relative).name, side, side, alpha=False)
+    image = bpy.data.images.new(baked_material(item.name), side, side, alpha=False)
+    image[BAKED_FOR] = item.name
     image.colorspace_settings.name = "sRGB"
     rgba = numpy.ones((side * side, 4), dtype=numpy.float32)
     rgba[:, :3] = encoded
@@ -2070,11 +2077,9 @@ def _bake_part(root, level, item, materials):
 def _baked_look(item, image, material):
     """A material of the part's own: a copy of what it showed, with the baked colour as its Base
     Color through the part's baked UV map."""
-    look = bpy.data.materials.get(baked_material(item.name))
-    if look is not None and look.library is None:
-        bpy.data.materials.remove(look)
     look = material.copy()
     look.name = baked_material(item.name)
+    look[BAKED_FOR] = item.name
     tree = look.node_tree
     shader, _ = _surface(look)
     for link in list(shader.inputs["Base Color"].links):
@@ -2117,14 +2122,17 @@ def bake_level(repository, level, chosen=()):
             problems.append(f"{item.name} shows {len(materials)} materials; give it one to bake.")
             continue
         problems += bake_problems(item.name, [_material_shape(materials[0], root)[0]])
+        if not item.get(BAKED_PROPERTY) and BAKED_UV in item.data.uv_layers:
+            problems.append(f"{item.name} already has a UV map named {BAKED_UV}: rename it to "
+                            f"bake.")
     if problems:
         raise LayoutError(" ".join(problems))
     for item in parts:
-        _unbake(item)
         # A mesh of its own, so that its UV map for baking, and the UV map the game reads, are
         # the part's alone, not those of the other parts sharing its mesh.
         if item.data.users > 1:
             item.data = item.data.copy()
+        _unbake(item)
     scene, view_layer = bpy.context.scene, bpy.context.view_layer
     kept = (scene.render.engine, scene.cycles.samples, scene.world, view_layer.objects.active,
             [item for item in view_layer.objects if item.select_get()])
@@ -2136,6 +2144,8 @@ def bake_level(repository, level, chosen=()):
         scene.world = world
         for item in parts:
             materials = list(dict.fromkeys(_unbaked_materials(item)))
+            earlier = (_made_by_bake(bpy.data.materials, item),
+                       _made_by_bake(bpy.data.images, item))
             image = _bake_part(root, level, item, materials)
             if not item.get(BAKED_PROPERTY):
                 _keep_unbaked(item)
@@ -2147,6 +2157,10 @@ def bake_level(repository, level, chosen=()):
                 slot.material = look
             item.data.uv_layers[BAKED_UV].active_render = True
             item[BAKED_PROPERTY] = True
+            # The earlier bake's material and image go, unless something else still shows them.
+            for made, kind in zip(earlier, (bpy.data.materials, bpy.data.images)):
+                if made is not None and made.users == 0:
+                    kind.remove(made)
     finally:
         engine, samples, world_before, active, selected = kept
         scene.render.engine, scene.cycles.samples, scene.world = engine, samples, world_before
@@ -2159,26 +2173,30 @@ def bake_level(repository, level, chosen=()):
 
 def clear_occlusion(repository, level, chosen):
     """Give the chosen baked parts back the materials and UV map they showed before, and remove
-    their baked colour: its material, its UV map and its image file. Returns their names."""
+    what their bake made: its UV map, and its material and image, with the image's file, unless
+    something else, such as a duplicate of the part, still shows them. Returns their names."""
     root = Path(repository)
     parts = [item for item in chosen if item.library is None and item.get(BAKED_PROPERTY)]
     for item in parts:
+        # A mesh of its own, so that removing the UV map for baking spares a linked duplicate.
+        if item.data.users > 1:
+            item.data = item.data.copy()
+        look, image = _made_by_bake(bpy.data.materials, item), _made_by_bake(bpy.data.images, item)
         _unbake(item)
         for entry in json.loads(item[UNBAKED_MATERIALS]):
             material = bpy.data.materials.get(entry[1]) if entry[2] else None
             if material is not None:
                 material.use_fake_user = False
-        look = bpy.data.materials.get(baked_material(item.name))
-        if look is not None and look.users == 0:
-            bpy.data.materials.remove(look)
         layer = item.data.uv_layers.get(BAKED_UV)
         if layer is not None:
             item.data.uv_layers.remove(layer)
-        relative = baked_image(level.key, item.name)
-        image = bpy.data.images.get(Path(relative).name)
+        if look is not None and look.users == 0:
+            bpy.data.materials.remove(look)
         if image is not None and image.users == 0:
+            path = Path(bpy.path.abspath(image.filepath)).resolve()
             bpy.data.images.remove(image)
-        (root / relative).unlink(missing_ok=True)
+            if path == (root / baked_image(level.key, item.name)).resolve():
+                path.unlink(missing_ok=True)
         for key in (BAKED_PROPERTY, UNBAKED_MATERIALS, UNBAKED_UV):
             if key in item:
                 del item[key]
