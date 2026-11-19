@@ -30,9 +30,9 @@ level = lauder_levels.LEVELS[key]
 blend = REPOSITORY / level.blend
 if lauder_levels.is_lfs_pointer(blend):
     sys.exit(f"{level.blend} is not downloaded yet: run git lfs pull.")
-bpy.ops.wm.open_mainfile(filepath=str(blend), load_ui=False)
 try:
-    lauder_levels.export_level(str(REPOSITORY), key)
+    loaded = lauder_levels.open_level_file(str(REPOSITORY), key)
+    lauder_levels.export_level(str(REPOSITORY), key, loaded)
 except lauder_levels.LayoutError as error:
     sys.exit(f"The level was not exported: {error}")
 print(f"Exported {level.layout} and {level.scene} from {level.blend}.")

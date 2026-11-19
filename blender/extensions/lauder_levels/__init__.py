@@ -883,6 +883,18 @@ def _files_used(repository):
     return sorted(used)
 
 
+def open_level_file(repository, key, attempts=3):
+    """Open the level's Blender file and return its fingerprint as it was read. A save that lands
+    while it is read shows as a different fingerprint after, and the file is read again."""
+    path = Path(repository) / LEVELS[key].blend
+    for _ in range(attempts):
+        before = file_fingerprint(path)
+        bpy.ops.wm.open_mainfile(filepath=str(path), load_ui=False)
+        if file_fingerprint(path) == before:
+            return before
+    raise LayoutError(f"{LEVELS[key].blend} kept changing while it was read; export it again.")
+
+
 def forget_folders():
     """Point Blender's file browsers at the level's own folder, so that a level file in the public
     repository keeps no paths from the computer it was saved on, such as the home folder that a
@@ -895,13 +907,15 @@ def forget_folders():
                     params.directory = b"//" if isinstance(params.directory, bytes) else "//"
 
 
-def export_level(repository, key="brooklyn-bridge"):
+def export_level(repository, key="brooklyn-bridge", loaded=None):
     """Write the level's layout file and scene file from its Blender file, open in this Blender,
-    and record what they were made from. It changes the open file, so it runs in a Blender of its
-    own: blender/scripts/export-level.py."""
+    and record what they were made from. `loaded` is the fingerprint of the Blender file as it was
+    read (open_level_file), so that a save made since counts as a change. It changes the open
+    file, so it runs in a Blender of its own: blender/scripts/export-level.py."""
     level = LEVELS[key]
     root = Path(repository)
-    made_from = {name: file_fingerprint(root / name) for name in [level.blend] + _files_used(root)}
+    made_from = {name: file_fingerprint(root / name) for name in _files_used(root)}
+    made_from[level.blend] = loaded or file_fingerprint(root / level.blend)
     text = emit_layout(layout_from_blender(repository, level), level)
     written = root / level.layout
     if not written.exists() or written.read_text() != text:
