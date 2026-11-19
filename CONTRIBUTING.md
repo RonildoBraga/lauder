@@ -85,6 +85,8 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
+[ADR 0006](docs/decisions/0006-blender-source-of-truth.md) will replace this workflow: each level becomes a committed Blender file, and Export generates the files the game reads. It is not built yet; until it is, the steps below apply.
+
 Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `apple/sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration, the game camera and the lights. How each surface looks, for every level, is `apple/sources/content/Surfaces.swift`. Blender loads and saves both:
 
 1. Install the Lauder extension once, in Blender 5.3 or later:

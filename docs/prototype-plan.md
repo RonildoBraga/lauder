@@ -1,6 +1,6 @@
 # Lauder — first playable prototype
 
-**Updated:** 18 November 2026\
+**Updated:** 19 November 2026\
 **Status:** The game opens on a greybox Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md). Milestones M1 to M4 are merged, completing the opening; what follows needs its own assignment. The maintainer assigned M4, **“Yes, start M4”**, and [authorised its merge](https://github.com/RonildoBraga/lauder/pull/47#issuecomment-6996988166), **“merge #47”**, after its phone checkpoint, where a five-minute run averaged 59.97 fps with four long frames, and the maintainer reported **“I did not noticed any stutters and everything worked as expected”**. The [opening record](opening.md) lists what each milestone built and how it was checked. The earlier Relay House slice, Stages 1 and 2, Parties A to C and squad movement S1, is summarised in the [project history](history.md); the maintainer removed its level on 18 November 2026. TestFlight build 0.1.0 (3), from M4's branch at `c6af7c1`, is available to internal testers.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
@@ -43,6 +43,18 @@ ADR 0004's five milestones are each assigned separately, with `./scripts/check`,
 **M3 exit:** the beat plays the same way every time; Tom follows along the deck without snagging.
 
 **M4 exit:** the whole opening plays through, with a phone checkpoint for controls, combat feel and frame pacing.
+
+## Blender pipeline
+
+[ADR 0006](decisions/0006-blender-source-of-truth.md), which the maintainer accepted on 19 November 2026 (“Yes, record it”), makes Blender files the source of levels and models. Each step is its own pull request and needs its own go-ahead:
+
+| Step | Adds | State |
+|---|---|---|
+| **1** The decision | ADR 0006 and the documents it changes | In review |
+| **2** The path into the game | The game loads the bridge's look from a USDZ that Blender exports, instead of drawing boxes; a phone check | Not assigned |
+| **3** Blender as the source | The committed level file, Export and the freshness check; Load, safe Save, the working file and the palette retire | Not assigned |
+| **4** Models and provided files | Linked models, the intake check and provenance notes | Not assigned |
+| **5** Art and richer light | Models, textures, more kinds of light and baked lighting | Not assigned; follows a change to the [visual direction](visual-direction.md) |
 
 ## Input and interaction contract
 
