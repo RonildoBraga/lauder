@@ -1,6 +1,6 @@
 # ADR 0006 — Blender as the source of levels and models
 
-**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended.\
+**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended. [Step 5](#step-5--art-and-richer-light) is under way.\
 **Date:** 19 November 2026\
 **Supersedes:** ADR 0005's decision 3 and its Load and Save round trip, once step 3 lands. [ADR 0004](0004-brooklyn-bridge-opening.md)'s typed level data stays, generated from Blender.\
 **Deciders:** Maintainer\
@@ -65,7 +65,7 @@ RealityKit can take a scene's look from Blender, but not its meaning: nothing in
    - names are lowercase, unique and stable, and the exporter maps them predictably to USD's;
    - lengths are in metres, on the game's axes;
    - materials use Principled BSDF with image textures, and anything else is baked into images first;
-   - lights keep the [visual direction](../visual-direction.md#rendering-budget)'s budget, at most two with one casting shadows, at 1 W/m² of sun for every 700 lux, as ADR 0005 set.
+   - lights keep the [visual direction](../visual-direction.md#rendering-budget)'s budget, at most two with one casting shadows, at 1 W/m² of sun for every 700 lux, as ADR 0005 set. Step 5 raised the budget to four and added point and spot lights.
 
 ADR 0005 turned down both halves of this design, and this decision answers its reasons:
 
@@ -278,3 +278,28 @@ Each step is a pull request of its own and needs its own go-ahead.
   - files made outside Blender, rather than exported from it;
   - normal, roughness and metallic maps;
   - the phone, since the game shows and plays the same.
+
+## Step 5 — art and richer light
+
+**Date:** 19 November 2026. The maintainer assigned it: **“proceed with the next step”** and **“lets focus in finisging that pipeline”**. Asked which parts to build, they chose all four: **“Point and spot lights”**, **“Full texture maps”**, **“Models the code spawns”** and **“Baked lighting”**. Asked how many lights the visual direction should allow, they chose **“Up to 4, 1 shadowed”**. Each part is a pull request of its own.
+
+### 5a — point and spot lights
+
+It was [merged](https://github.com/RonildoBraga/lauder/pull/56#issuecomment-7006540355) under the standing permission, without an independent review.
+
+1. **The budget is four lights.** At most one may cast shadows, as before. The [visual direction](../visual-direction.md#rendering-budget) and the export's check say so.
+2. **Point and spot lights travel as data,** like the suns, since RealityKit drops a spot light's cone from USD. The layout file holds, for each:
+   - its place, colour and intensity, in lumens: 683 lm for each watt in Blender, the luminous efficacy that defines the candela;
+   - its reach, which is Blender's Custom Distance;
+   - for a spot light, the point it shines towards and its cone. The cone's outer width is Blender's spot size, and its full-strength width comes from the spot blend, as Blender fades it. Both are full widths, as RealityKit's spot angles are.
+3. **The game makes RealityKit's own lights:** a `PointLight` and a `SpotLight` beside each sun's `DirectionalLight`. A spot light may cast the level's one shadow.
+4. **Export refuses** a point light with its shadow on, since the game draws no shadows from point lights: RealityKit's point light component offers none, though a newer shadow component has not been tried. It also refuses a point or spot light without Custom Distance, which Blender's preview would then show reaching further than the game, area lights, more than four lights, and more than one light casting shadows. Blender's Exposure multiplies a light's strength in the layout file, as it does in the preview. Export refuses a light whose colour comes from Temperature, or with Normalize off, which makes it brighter as it grows: the game reads neither.
+5. **The bridge keeps its two suns.** Under its 4,500 lux sun, a 30 W lamp adds about 180 lux three metres below it, so point and spot lights show only when very strong, in Blender's preview as in the game.
+
+### Checks of 5a
+
+- The extension's 43 tests cover the layout file's point and spot lights, their cones, Exposure, and each refusal. The Swift tests check that the game builds a point light where the layout puts it, with its intensity and reach, and a spot light aimed at its target with its cone and shadow.
+- In Blender 5.3, run in the background on a copy of the repository, a point light and a spot light added beside the two suns were exported as written. A new point light with Blender's default shadow, a spot light without Custom Distance and a spot light's shadow beside the sun's were each refused, saying why.
+- In the Simulator, a 30 W lamp beside Miki's start showed nothing in daylight, as Blender's preview predicts. At 3,000 W, its warm light lay on the road where the layout put it.
+- RealityKit's spot angles are full cone widths. Rendered offscreen on the Mac with RealityKit, a spot light 10 m above a white plane, with angles of 58° and 60°, lit a circle of 5.7 m radius: 10 tan 30° is 5.77 m, while a 60° angle from the beam would light 17.3 m.
+- Not checked: how the lights look and perform on the phone, and RealityKit's spot falloff between the cone's two widths, which may differ from Blender's.

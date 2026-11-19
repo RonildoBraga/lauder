@@ -9,6 +9,7 @@ exporting them, runs in the scripts in blender/scripts, as CONTRIBUTING describe
 
 from dataclasses import replace
 import json
+import math
 from pathlib import Path
 import shutil
 import sys
@@ -39,6 +40,10 @@ SAMPLE = L.Layout(
     [
         L.Light("sun-key", (-6, 8, 0), (1, 0.91, 0.74), 4500, 25),
         L.Light("sky-fill", (0, 6, -8), (0.67, 0.81, 0.85), 600),
+        # 30 W and 60 W in Blender.
+        L.Light("lamp", None, (1, 0.8, 0.6), 20490, kind="point", position=(3, 2.5, 100), radius=12),
+        L.Light("searchlight", None, (0.9, 0.95, 1), 40980, kind="spot", position=(-6, 8, 90),
+                target=(-6, 2, 82), radius=30, angles=(30, 45)),
     ],
 )
 
@@ -73,12 +78,29 @@ def camera_for(layout):
 
 
 def lights_for(layout):
-    return [
-        L.LightShape(light.name, "SUN", L._unit(L.to_blender(light.source)), L._linear(*light.color),
-                     light.intensity * L.SUN_STRENGTH_PER_LUX, light.shadow_distance is not None,
-                     light.shadow_distance)
-        for light in layout.lights
-    ]
+    """What Export reads from the Blender lights that give this layout's lights."""
+    shapes = []
+    for light in layout.lights:
+        colour = L._linear(*light.color)
+        if light.kind == "sun":
+            shapes.append(L.LightShape(
+                light.name, "SUN", L._unit(L.to_blender(light.source)), colour,
+                light.intensity * L.SUN_STRENGTH_PER_LUX, light.shadow_distance is not None,
+                light.shadow_distance))
+            continue
+        energy, position = light.intensity / L.LUMENS_PER_WATT, L.to_blender(light.position)
+        if light.kind == "point":
+            shapes.append(L.LightShape(light.name, "POINT", (0, 0, 1), colour, energy, False,
+                                       position=position, custom_distance=True, cutoff=light.radius))
+            continue
+        beam = L._unit(L.to_blender(tuple(t - p for t, p in zip(light.target, light.position))))
+        inner, outer = (math.radians(angle) for angle in light.angles)
+        edge = math.cos(outer / 2)
+        shapes.append(L.LightShape(
+            light.name, "SPOT", tuple(-value for value in beam), colour, energy, light.shadow,
+            position=position, custom_distance=True, cutoff=light.radius, spot_size=outer,
+            spot_blend=(math.cos(inner / 2) - edge) / (1 - edge)))
+    return shapes
 
 
 def read(shapes=None, camera=None, lights=None, required=()):
@@ -197,7 +219,7 @@ class LayoutTests(unittest.TestCase):
         lights[0].direction = (0, 0, 1)
         lights[1].energy *= 2
         lights[1].color = L._linear(0.5, 0.6, 0.7)
-        key, fill = read(lights=lights).lights
+        key, fill, *_ = read(lights=lights).lights
         self.assertEqual(key.source, (0, 10, 0))
         self.assertEqual(fill.intensity, 1200)
         self.assertEqual(fill.color, (0.5, 0.6, 0.7))
@@ -206,17 +228,45 @@ class LayoutTests(unittest.TestCase):
         lights = lights_for(SAMPLE)
         lights[0].shadow, lights[0].shadow_distance = False, None
         lights[1].shadow = True
-        key, fill = read(lights=lights).lights
+        key, fill, *_ = read(lights=lights).lights
         self.assertIsNone(key.shadow_distance)
         self.assertEqual(fill.shadow_distance, L.DEFAULT_SHADOW_DISTANCE)
 
+    def test_point_and_spot_lights_are_written_where_blender_holds_them(self):
+        lamp, searchlight = read().lights[2:]
+        self.assertEqual((lamp.kind, lamp.position, lamp.radius, lamp.intensity),
+                         ("point", (3, 2.5, 100), 12, 20490))
+        self.assertEqual((searchlight.kind, searchlight.position, searchlight.target),
+                         ("spot", (-6, 8, 90), (-6, 2, 82)))
+        self.assertEqual((searchlight.radius, searchlight.angles, searchlight.shadow), (30, (30, 45), False))
+        text = L.emit_layout(read(), BRIDGE)
+        self.assertIn('.point("lamp", at: [3, 2.5, 100], color: [1, 0.8, 0.6], intensity: 20490, '
+                      'radius: 12)', text)
+        self.assertIn('.spot(\n        "searchlight", at: [-6, 8, 90], toward: [-6, 2, 82]', text)
+        # Blender softens a spot light's edge over the outer part of its cone.
+        self.assertAlmostEqual(L.spot_inner_angle(math.radians(45), 0), 45)
+        self.assertAlmostEqual(L.spot_inner_angle(math.radians(45), 1), 0)
+
     def test_lights_beyond_the_visual_direction_or_the_game_are_refused(self):
         lights = lights_for(SAMPLE)
-        self.refused("at most 2 lights", lights=lights + [replace(lights[1], name="third")])
-        self.refused("1 light with shadows", lights=[lights[0], replace(lights[1], shadow=True)])
-        self.refused("point light", lights=[replace(lights[0], kind="POINT"), lights[1]])
+        self.refused("at most 4 lights", lights=lights + [replace(lights[1], name="fifth")])
+        self.refused("1 light with shadows", lights=lights[:3] + [replace(lights[3], shadow=True)])
+        self.refused("area light", lights=[replace(lights[0], kind="AREA"), lights[1]])
+        self.refused("no shadows from point lights", lights=[lights[0], replace(lights[2], shadow=True)])
+        self.refused("Custom Distance", lights=[lights[0], replace(lights[3], custom_distance=False)])
         self.refused("needs a light", lights=[])
         self.refused("needs some intensity", lights=[replace(lights[0], energy=0), lights[1]])
+        # Blender would preview these lights in a colour or brightness that the game cannot read.
+        self.refused("Temperature", lights=[replace(lights[0], temperature=True), lights[1]])
+        self.refused("Normalize on", lights=[lights[0], replace(lights[2], normalize=False)])
+
+    def test_exposure_multiplies_a_lights_strength_as_in_blender(self):
+        lights = lights_for(SAMPLE)
+        brighter = read(lights=[replace(light, exposure=1) for light in lights]).lights
+        for light, doubled in zip(read().lights, brighter):
+            self.assertAlmostEqual(doubled.intensity, 2 * light.intensity, delta=0.2)
+        dimmer = read(lights=[lights[0], lights[1], replace(lights[2], exposure=-2)]).lights
+        self.assertAlmostEqual(dimmer[2].intensity, 20490 / 4, delta=0.2)
 
 
 class ExportRecordTests(unittest.TestCase):

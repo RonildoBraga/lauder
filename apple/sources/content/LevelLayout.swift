@@ -94,28 +94,74 @@ extension Level {
 }
 
 extension Level {
-  /// A light as far away as the sun, shining from one direction over the whole level: a
-  /// RealityKit directional light. In the level's Blender file it is a sun light (ADR 0006).
+  /// A light on the level, from the Lights collection of its Blender file (ADR 0006): a sun, a
+  /// point light or a spot light.
   struct Light: Sendable {
+    enum Kind: Sendable {
+      /// As far away as the sun, shining from `source`'s direction over the whole level: a
+      /// RealityKit directional light. Its shadow, if any, reaches `shadowDistance` metres from
+      /// the camera.
+      case sun(source: SIMD3<Float>, shadowDistance: Float?)
+      /// At `position`, shining every way as far as `radius` metres. The game draws no shadows
+      /// from point lights.
+      case point(position: SIMD3<Float>, radius: Float)
+      /// At `position`, shining towards `target` as far as `radius` metres, at full strength
+      /// within a cone of `innerAngle` degrees and fading to nothing at `outerAngle`, both the
+      /// cone's full width.
+      case spot(
+        position: SIMD3<Float>, target: SIMD3<Float>, radius: Float, innerAngle: Float,
+        outerAngle: Float, shadow: Bool)
+    }
+
     let name: String
-    /// A point in the direction the light comes from: it shines from there towards the origin,
-    /// so only the direction matters.
-    let source: SIMD3<Float>
+    let kind: Kind
     /// In sRGB, each channel from 0 to 1.
     let color: SIMD3<Float>
-    /// In lux.
+    /// In lux for a sun, and in lumens for a point or spot light.
     let intensity: Float
-    /// How far from the camera its shadows reach, in metres, or nil when it casts none.
-    let shadowDistance: Float?
 
-    /// A sun in a layout file, written briefly.
+    var castsShadows: Bool {
+      switch kind {
+      case .sun(_, let shadowDistance): shadowDistance != nil
+      case .point: false
+      case .spot(_, _, _, _, _, let shadow): shadow
+      }
+    }
+
+    /// A sun in a layout file, written briefly: it shines from `source` towards the origin, so
+    /// only the direction matters.
     static func sun(
       _ name: String, from source: SIMD3<Float>, color: SIMD3<Float>, intensity: Float,
       shadowDistance: Float? = nil
     ) -> Self {
       Self(
-        name: name, source: source, color: color, intensity: intensity,
-        shadowDistance: shadowDistance)
+        name: name, kind: .sun(source: source, shadowDistance: shadowDistance), color: color,
+        intensity: intensity)
+    }
+
+    /// A point light in a layout file, written briefly.
+    static func point(
+      _ name: String, at position: SIMD3<Float>, color: SIMD3<Float>, intensity: Float,
+      radius: Float
+    ) -> Self {
+      Self(
+        name: name, kind: .point(position: position, radius: radius), color: color,
+        intensity: intensity)
+    }
+
+    /// A spot light in a layout file, written briefly: `angles` are the full-strength and outer
+    /// widths of its cone, in degrees.
+    static func spot(
+      _ name: String, at position: SIMD3<Float>, toward target: SIMD3<Float>,
+      color: SIMD3<Float>, intensity: Float, radius: Float, angles: SIMD2<Float>,
+      shadow: Bool = false
+    ) -> Self {
+      Self(
+        name: name,
+        kind: .spot(
+          position: position, target: target, radius: radius, innerAngle: angles.x,
+          outerAngle: angles.y, shadow: shadow),
+        color: color, intensity: intensity)
     }
   }
 }

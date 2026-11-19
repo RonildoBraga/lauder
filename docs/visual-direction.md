@@ -21,7 +21,7 @@ A visual pass keeps the route, collision layout, camera framing, interaction anc
 
 Build decoration once, in the level's Blender file, and keep its materials few and shared. A model in `blender/assets` brings materials of its own, named after it. Decorative details do not need their own physics bodies.
 
-- At most two explicit lights, with at most one casting shadows. Blender's export checks this for each level's lights.
+- At most four explicit lights, with at most one casting shadows: the maintainer raised the budget from two on 19 November 2026 (“Up to 4, 1 shadowed”). Suns, point lights and spot lights count alike, and only a sun or a spot light can cast the shadow. Blender's export checks this for each level's lights. Under the bridge's daylight sun, a point or spot light shows only when it is very strong, in Blender's preview as in the game.
 - No new textures, particles or postprocessing effects.
 - No added visual animation or per-frame visual work; existing character movement, skeletal animation and camera follow continue as before.
 
