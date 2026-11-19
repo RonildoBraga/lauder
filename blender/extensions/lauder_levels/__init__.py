@@ -1590,7 +1590,20 @@ def _start_play(repository):
         [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)], cwd=repository,
         stdout=log, stderr=subprocess.STDOUT)
     _PLAY.update(process=process, log=log, path=path)
-    bpy.app.timers.register(_watch_play, first_interval=1.0)
+    # Persistent, so that opening another Blender file, such as the working file, keeps watching.
+    bpy.app.timers.register(_watch_play, first_interval=1.0, persistent=True)
+
+
+def _play_running():
+    """Whether Play's build is still running. One that stopped while nothing watched it is
+    finished off here, so that Play is never stuck."""
+    process = _PLAY["process"]
+    if process is None:
+        return False
+    if process.poll() is None:
+        return True
+    _watch_play()
+    return False
 
 
 def _watch_play():
@@ -1605,7 +1618,8 @@ def _watch_play():
         _announce("The game is running in the Simulator.")
     else:
         lines = [line.strip() for line in _PLAY["path"].read_text().splitlines() if line.strip()]
-        _announce("Play failed: " + " ".join(lines[-3:]) + " The log is .local/play/play.log.",
+        detail = " ".join(lines[-3:])
+        _announce(f"Play failed{': ' + detail if detail else '.'} The log is .local/play/play.log.",
                   error=True)
     return None
 
@@ -1813,7 +1827,7 @@ if bpy is not None:
             if named is None:
                 self.report({"ERROR"}, "Set the repository folder first.")
                 return {"CANCELLED"}
-            if _PLAY["process"] is not None:
+            if _play_running():
                 self.report({"WARNING"}, "The game is still building; it opens when it is ready.")
                 return {"CANCELLED"}
             repository, level = named
