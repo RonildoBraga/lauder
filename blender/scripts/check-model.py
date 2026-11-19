@@ -1,4 +1,4 @@
-"""Check a Lauder model against what the levels and the game need: the intake check (ADR 0006).
+"""Check a Lauder model against what the levels and the game need: the intake check (ADR 0002).
 
 Run it with Blender in the background, from any folder, naming a model in blender/assets:
 

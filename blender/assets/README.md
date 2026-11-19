@@ -1,6 +1,6 @@
 # Models
 
-Each model is a Blender file of its own, in a folder named after it, `<model>/<model>.blend`, stored with Git LFS ([ADR 0006](../../docs/decisions/0006-blender-source-of-truth.md)). Levels link it, so a change to the model reaches every level that uses it. [Models](../../CONTRIBUTING.md#models) in CONTRIBUTING describes placing one in a level, changing it, and bringing one in from a file.
+Each model is a Blender file of its own, in a folder named after it, `<model>/<model>.blend`, stored with Git LFS ([ADR 0002](../../docs/decisions/0002-blender-source-of-truth.md)). Levels link it, so a change to the model reaches every level that uses it. [Models](../../CONTRIBUTING.md#models) in CONTRIBUTING describes placing one in a level, changing it, and bringing one in from a file.
 
 A model's file follows the contract between Blender and the game:
 

@@ -18,10 +18,10 @@ from .common import (
 #: nodes" into the preview surfaces that RealityKit shows (Blender's manual, USD export). Lauder
 #: keeps to the Principled BSDF and adds the Normal Map node, which carries a normal texture. Math
 #: nodes may feed only Alpha, for a cut-off, as the manual describes. Separate Color is left out:
-#: RealityKit drops a map read from an image's green or blue channel (ADR 0006, step 5b).
+#: RealityKit drops a map read from an image's green or blue channel (ADR 0002).
 SHADER_NODES = frozenset({"TEX_IMAGE", "UVMAP", "NORMAL_MAP", "REROUTE"})
-#: The surface inputs that may take an image, each checked from Blender into RealityKit (ADR 0006,
-#: step 5b).
+#: The surface inputs that may take an image, each checked from Blender into RealityKit (ADR
+#: 0002).
 MAPPED_INPUTS = ("Base Color", "Roughness", "Metallic", "Normal", "Emission Color", "Alpha")
 #: The kinds of texture file that a USDZ carries to the game.
 TEXTURE_TYPES = (".png", ".jpg", ".jpeg")
@@ -53,11 +53,10 @@ def _material(material):
 
 
 def material_problems(materials):
-    """What stops the game from showing these materials as Blender does (ADR 0006, decision 8 and
-    step 5b): a surface other than a Principled BSDF, nodes that Blender's USD export cannot carry,
-    images on inputs not checked in the game, maps that RealityKit drops or that the scene file
-    would show at another strength, and names that USD would make the same, which the scene file
-    would merge into one."""
+    """What stops the game from showing these materials as Blender does (ADR 0002): a surface
+    other than a Principled BSDF, nodes that Blender's USD export cannot carry, images on inputs not
+    checked in the game, maps that RealityKit drops or that the scene file would show at another
+    strength, and names that USD would make the same, which the scene file would merge into one."""
     problems, by_name = [], {}
     for material in materials:
         by_name.setdefault(usd_name(material.name), []).append(material)

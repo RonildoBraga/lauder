@@ -6,15 +6,13 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-The game opens on a greybox **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md)): Miki crosses alone towards Manhattan and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue. It is built in five milestones, each assigned separately.
+The game opens on a greybox **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md)): Miki crosses alone towards Manhattan and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue, and the three reach the Manhattan end together.
 
-- **M1 to M4 are merged, completing the opening:** the bridge with Miki alone, the stranger's fight with assisted aim and cover, the search, the ambush and Tom joining, and then Laura found hurt at mid-span, **Help** with the medical kit, Laura joining and the end of the opening at the Manhattan end. After playing M2 and M3 on the baseline iPhone, the maintainer reported “It read well” and “It played well”. At M4's phone checkpoint, a five-minute run averaged 59.97 fps with four long frames, and the maintainer reported **“I did not noticed any stutters and everything worked as expected”**. The [opening record](docs/opening.md) lists what each milestone built and how it was checked; none had an independent review. What follows needs its own assignment.
-- **Blender holds the levels** ([ADR 0006](docs/decisions/0006-blender-source-of-truth.md)). The bridge's source is its Blender file, `blender/levels/brooklyn-bridge.blend`. Saving it in Blender exports the scene file the game shows and the layout file it plays from, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes. Levels link [models](CONTRIBUTING.md#models) from `blender/assets`, such as the bridge's vehicles, so a change to a model reaches every level that uses it. Step 5 of ADR 0006 finishes the pipeline with point and spot lights, full texture maps, models the code spawns and baked occlusion. On the baseline iPhone, the maintainer reported “everything is working”.
-- **Companions follow as a squad** in a Close formation ([ADR 0003](docs/decisions/0003-squad-movement.md), phase S1). The trio's [combat identities](docs/story/story-bible.md#combat-identities) and [The Quiet Yard](docs/encounters/the-quiet-yard.md) are agreed working designs; formations and further combat need their own assignment, after the [review gate](docs/prototype-plan.md#combat-design-review-gate).
-- **The earlier Relay House slice**, Stages 1 and 2 and Parties A to C, is summarised in the [project history](docs/history.md), with its phone results and the checks still open. The maintainer removed its level on 18 November 2026.
-- TestFlight build 0.1.0 (3), from M4's branch at `c6af7c1`, is available to internal testers; see [TestFlight builds](CONTRIBUTING.md#testflight-builds). Debug builds can run [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests).
+- **Blender holds the levels and models** ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). The bridge's source is its Blender file, `blender/levels/brooklyn-bridge.blend`. Saving it exports the scene file the game shows and the layout file it plays from, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes. Levels link [models](CONTRIBUTING.md#models) from `blender/assets`, such as the bridge's vehicles, and the party and the hostiles are models too.
+- **Companions follow as a squad** in a Close formation ([ADR 0003](docs/decisions/0003-squad-movement.md), phase S1). Formations come next, as the opening's M5; further combat waits for the [combat design review gate](docs/prototype-plan.md#combat-design-review-gate). Each needs its own assignment.
+- TestFlight builds reach internal testers; see [TestFlight builds](CONTRIBUTING.md#testflight-builds). Debug builds can run [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests).
 
-The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Scenes are built in Swift; the validated USDZ pipeline is preserved while the prototype uses primitives. Controller inputs are left stick to move, Cross/A to look, act or continue a conversation, R1/RB to cycle leader, R2/RT to fire and Options/Menu to pause/resume. In the pause menu, up or down chooses Resume or Restart and Cross/A confirms. Touch controls appear without an attached extended controller: a bottom-left analog stick, **Look** (showing the action, such as **Search**, where one is available, **Continue** in a conversation and **Restart** while paused), **Next: name**, **Pause/Resume** and, once a fight begins, **Fire**. An attached controller is preferred unless **Use touch controls** is selected; **Use controller** returns to it. The selection is not persisted across app launches. Simulator keyboard controls are WASD, E, Q, F to fire and Escape. The [touch-control decision](docs/touch-controls.md) supersedes the earlier no-touch rule.
+The technical direction is Swift, RealityKit and SwiftUI, with iPhone first ([ADR 0001](docs/decisions/0001-engine.md)). Controller inputs are left stick to move, Cross/A to look, act or continue a conversation, R1/RB to cycle leader, R2/RT to fire and Options/Menu to pause/resume. In the pause menu, up or down chooses Resume or Restart and Cross/A confirms. Touch controls appear without an attached extended controller: a bottom-left analog stick, **Look** (showing the action, such as **Search**, where one is available, **Continue** in a conversation and **Restart** while paused), **Next: name**, **Pause/Resume** and, once a fight begins, **Fire**. An attached controller is preferred unless **Use touch controls** is selected; **Use controller** returns to it. The selection is not kept across launches. Simulator keyboard controls are WASD, E, Q, F to fire and Escape. [Touch controls](docs/touch-controls.md) describes the touch layout.
 
 ## Start here
 
@@ -22,9 +20,8 @@ The technical direction is Swift, RealityKit and SwiftUI, with iPhone first. Sce
 - [Gameplay walkthrough](docs/gameplay-script.md): the Brooklyn Bridge opening and its controls, and the future squad and combat design.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, a proposal, not assigned for implementation.
 - [Architecture](docs/architecture.md): ownership, input, movement, fights, scenes, Restart and later saving.
-- [First playable prototype](docs/prototype-plan.md): the opening's milestones, the input contract and the checks.
-- [Opening record](docs/opening.md): what each milestone built, how it was checked and what stays open.
-- [Project history](docs/history.md): Stages 1 and 2 and Parties A to C, their phone results and the checks still open.
+- [Decision records](docs/decisions): the engine, Blender as the source of levels and models, squad movement and the Brooklyn Bridge opening.
+- [First playable prototype](docs/prototype-plan.md): the scope, the input contract, the checks and what comes next.
 
 The proposed cast has Miki, Laura and Tom as the playable trio and Nina as a supporting character. The three meet as strangers on the Brooklyn Bridge; their role assignments, enhancement histories and relationships remain proposals that unfold through play.
 
@@ -42,20 +39,18 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
     content/
       Level.swift               A playable place as a value, and the party's shared body
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
-      BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender (ADR 0006)
-      BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender (ADR 0006)
+      BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender
+      BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender
       models/                   The party's and the hostiles' looks, exported by Blender from their models
       MissionScript.swift       Conversations; the lines are provisional
-      character/                Current animated stand-in, editable sources and provenance
-        source/                 Editable USD layers; excluded from the app bundle
-        Idle.usdz, Walk.usdz    Validated delivery assets preserved for later characters
-  tests/                        Party/session, asset import, movement, input, combat and layout tests
-    support/                    Test-only asset validator and the squad tests' yard; not in the app target
-  scripts/                      Simulator playtests and Play, the character asset generator and the app icon
+  tests/                        Party/session, movement, input, combat, layout and look tests
+    support/                    The squad tests' yard; not in the app target
+  scripts/                      Simulator playtests, Play and the app icon
   .swift-format                 Swift formatting rules
 blender/                        The levels' Blender files, in levels/, the models they link, in assets/, and the Lauder extension for Blender, in extensions/lauder_levels, with its tests
-docs/                           Architecture, decisions, prototype plan, opening record and project history
+docs/                           Architecture, decision records, the prototype plan, the gameplay walkthrough, touch controls and the visual direction
   story/                        Story bible
+  encounters/                   Encounter designs
 scripts/check                   Checks every part: the Blender script, then the app's formatting, build and tests
 .github/                        Pull request template
 ```
@@ -66,7 +61,7 @@ For new art, group an asset's editable inputs, deliberate delivery exports and p
 
 ## First prototype
 
-The first playable is the Brooklyn Bridge opening, built milestone by milestone with simple shapes and colours, as the [prototype plan](docs/prototype-plan.md) sets out. Each milestone is checked with tests, scripted Simulator playtests and a maintainer playtest. The opening's phone checkpoint comes with M4; the performance target remains 60 fps on an iPhone 13 Pro Max. A playthrough's duration will come from testing.
+The first playable is the Brooklyn Bridge opening, made with simple shapes and colours, as the [prototype plan](docs/prototype-plan.md) sets out. Changes are checked with tests, scripted Simulator playtests and a maintainer playtest, and milestones on the baseline iPhone 13 Pro Max, where the target is 60 fps. A playthrough's duration will come from testing.
 
 The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-ins when testing. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). Narrative proposals do not imply implemented interactions or approval of every detail.
 

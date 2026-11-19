@@ -6,7 +6,7 @@ struct SceneStyle {
   let unitBox = MeshResource.generateBox(size: 1)
 
   // The level's look comes from its scene file, and the party's and the hostiles' from their
-  // models' scene files, all exported by Blender (ADR 0006). The gameplay signals keep their own
+  // models' scene files, all exported by Blender (ADR 0002). The gameplay signals keep their own
   // colours here.
   /// A level without a scene file, such as a test's: its boxes and landmarks as plain blocks.
   let scenery = SimpleMaterial(
@@ -50,7 +50,7 @@ struct SceneStyle {
     block(size: [0.07, 0.08, 0.55], at: [0.21, 0.08, -0.22], material: gear)
   }
 
-  /// The models that the game creates, each loaded once from its scene file (ADR 0006, step 5c)
+  /// The models that the game creates, each loaded once from its scene file (ADR 0002)
   /// and copied for every figure that shows it.
   private static var models: [String: Entity] = [:]
 
@@ -111,7 +111,7 @@ struct SceneStyle {
         entity = point
       case .spot(let position, let target, let radius, let innerAngle, let outerAngle, let shadow):
         // RealityKit's spot angles are full cone widths, as the layout's are: a 60° outer angle
-        // 10 m above the ground lights a radius of 10 tan 30° = 5.77 m (ADR 0006, checks of 5a).
+        // 10 m above the ground lights a radius of 10 tan 30° = 5.77 m (ADR 0002).
         let spot = SpotLight()
         spot.light = SpotLightComponent(
           color: color, intensity: light.intensity, innerAngleInDegrees: innerAngle,

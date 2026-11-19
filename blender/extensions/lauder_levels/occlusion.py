@@ -10,7 +10,7 @@ from .looks import _material_shape
 
 
 #: Where each level's baked occlusion is kept, relative to the repository: a PNG for each baked
-#: part, in a folder named after the level (ADR 0006, step 5d).
+#: part, in a folder named after the level (ADR 0002).
 BAKED = "blender/levels/baked"
 #: A baked part's properties: that its occlusion is baked, and the materials and UV map it showed
 #: before, which Clear Occlusion gives back. Each material is kept as its slot's link, its name,
@@ -251,7 +251,7 @@ def _baked_look(item, image, material):
 
 def bake_level(repository, level, chosen=()):
     """Bake ambient occlusion into the colour of each chosen part of the open level's Visual, and
-    of each part already baked (ADR 0006, step 5d). Cycles bakes the part's colour and its
+    of each part already baked (ADR 0002). Cycles bakes the part's colour and its
     occlusion, within BAKE_OCCLUSION_DISTANCE, into an image in BAKED, and the part then shows a
     copy of its material with that image as Base Color. The game's lights, shadows and sky light
     light it as before. Linked models are not baked here. Returns the baked parts' names."""

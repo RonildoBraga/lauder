@@ -1,47 +1,34 @@
-# ADR-0001: Use Swift and RealityKit for the iPhone prototype
+# ADR 0001 — Swift and RealityKit for the iPhone game
 
 **Status:** Accepted\
-**Date:** 16 November 2026\
-**Decider:** Project owner
+**Date:** 16 November 2026
 
 ## Context
 
-Lauder is Apple-only, with iPhone first, an elevated perspective camera and a small exploration-and-salvage prototype. The priorities are a lean codebase, maintainability and a practical workflow for a solo maintainer. Cross-platform reach is not a requirement. The [architecture](../architecture.md) records the deployment target and responsibility boundaries.
+Lauder is Apple-only, with the iPhone first, an elevated perspective camera and a small party exploring a ruined world. The priorities are a lean codebase, maintainability and a workflow that one maintainer can keep up. Reaching other platforms is not a requirement. The [architecture](../architecture.md) records the deployment target and who owns what.
 
 ## Decision
 
-Use Swift and RealityKit for gameplay and the 3D world, SwiftUI for the interface, and Xcode to build, sign, test and profile the iPhone app. The project is **code-first**, as [confirmed by the maintainer](https://github.com/RonildoBraga/lauder/issues/9#issuecomment-6907224023).
+Use Swift and RealityKit for gameplay and the 3D world, SwiftUI for the interface, and Xcode to build, sign, test and profile the iPhone app.
 
-Assemble scenes in Swift. For planned Stages 2–3, use one small typed Swift layout definition for spawn, obstacles and interaction placements with stable IDs. GameWorld constructs the scene and validates bindings; mission rules remain separate.
+The project is **code-first**. The game composes its scenes in Swift: it loads the scene files that Blender exports for each level and for each model the game creates ([ADR 0002](0002-blender-source-of-truth.md)), and builds what plays from typed Swift data. Reality Composer Pro is not used.
 
-Load the USDZ character assets directly and construct the named idle/walk animation library in Swift. Apple supports [programmatic animation-library construction](https://developer.apple.com/documentation/realitykit/animationlibrarycomponent). The [asset pipeline](../../apple/sources/content/character/README.md) records editable sources, regeneration and provenance; [Stage 1 evidence](https://github.com/RonildoBraga/lauder/blob/a6b23a9/docs/stage-1.md) records the performed import and device checks.
-
-RealityKit supports a fully virtual world with a perspective camera; this game does not need an AR session. Its existing rendering, animation, collision and character-controller capabilities suit the proposed scope without owning a rendering engine. Apple's [native game sample](https://developer.apple.com/documentation/realitykit/bringing-your-scenekit-projects-to-realitykit) demonstrates camera, character, touch-input and SwiftUI integration.
-
-Reality Composer Pro is excluded from the project by maintainer decision.
+The world is fully virtual, with a perspective camera, and the game runs no AR session. RealityKit's rendering, lights, shadows and image-based light suit the scope without the project owning a rendering engine. Apple's [native game sample](https://developer.apple.com/documentation/realitykit/bringing-your-scenekit-projects-to-realitykit) shows camera, character, touch-input and SwiftUI integration.
 
 ## Alternatives considered
 
 | Alternative | Why it was not selected |
 |---|---|
-| Godot | A credible compact game engine, but its separate scripting/editor/export workflow is not needed to obtain cross-platform support for this Apple-only project. Reconsider if the native workflow fails the prototype's requirements. |
-| Unity | A credible 3D mobile engine with extensive game tooling, but its editor/package workflow adds a larger toolchain than this prototype currently needs. |
-| SpriteKit | Appropriate for 2D games; reproducing this 3D world with sprites would add art and depth-management work. |
+| Godot | A credible compact game engine, but its separate scripting, editor and export workflow is not needed for cross-platform support in an Apple-only project. |
+| Unity | A credible 3D mobile engine with extensive game tooling, but its editor and package workflow adds a larger toolchain than the game needs. |
+| SpriteKit | Suited to 2D games; reproducing this 3D world with sprites would add art and depth-management work. |
 | SceneKit | Apple deprecated it and recommends RealityKit for new projects. |
-| Direct Metal | Would make the project own rendering pipelines and GPU resource handling without a demonstrated gameplay requirement. |
+| Direct Metal | Would make the project own rendering pipelines and GPU resource handling without a gameplay need. |
 
-These are scope and workflow judgments, not comparative performance benchmarks. References: [Godot iOS workflow](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_ios.html), [Unity iOS workflow](https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/iphone/ios-building-and-delivering/build-process), [SpriteKit](https://developer.apple.com/documentation/spritekit), [SceneKit deprecation](https://developer.apple.com/videos/play/wwdc2025/288/), [Metal responsibilities](https://developer.apple.com/documentation/metal/setting-up-a-command-structure).
+These are scope and workflow judgements, not performance benchmarks. References: [Godot iOS workflow](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_ios.html), [Unity iOS workflow](https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/iphone/ios-building-and-delivering/build-process), [SpriteKit](https://developer.apple.com/documentation/spritekit), [SceneKit deprecation](https://developer.apple.com/videos/play/wwdc2025/288/), [Metal responsibilities](https://developer.apple.com/documentation/metal/setting-up-a-command-structure).
 
-## Costs and validation
+## Costs
 
-- The project is tied to Apple platforms and Apple's toolchain. A later non-Apple release would require substantial adaptation.
-- Code-based placement still needs inspection in the running app for readable routes, framing, occlusion and comfortable controls. Source review and asset-import tests cannot establish those qualities.
-- Individual RealityKit runtime APIs must fit the agreed deployment target.
-- The USD asset workflow must preserve the representative character's rig, idle/walk animation, materials and scale. Verify that pipeline before producing content. [Apple asset guidance](https://developer.apple.com/documentation/usd/creating-usd-files-for-apple-devices)
-- Framework choice does not prove control usability, sustained performance or reliable saves. Those remain physical-device exit criteria in the [prototype plan](../prototype-plan.md).
-
-## Stage 1 stop criterion
-
-If a rigged character with idle and walk animation is not running in a scene on the baseline iPhone after **three focused work sessions**, stop, document the blocker and the attempts made, and reassess with the maintainer before building anything else. Record each session's attempt and outcome so the limit is visible. This is a review checkpoint, not automatic permission to switch engines or expand scope.
-
-The three-session limit is the [recorded maintainer decision](https://github.com/RonildoBraga/lauder/issues/2#issuecomment-6905646208). This decision record and the prototype plan do not themselves authorise starting Stage 1.
+- The project is tied to Apple platforms and Apple's toolchain. A release elsewhere would need substantial adaptation.
+- How the game reads and feels still needs checking in the running app and on the phone: readable routes, framing, comfortable controls and sustained performance. Tests cannot establish those.
+- RealityKit's APIs must fit the deployment target, iOS 27.

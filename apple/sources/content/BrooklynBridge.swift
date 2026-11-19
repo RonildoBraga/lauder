@@ -7,7 +7,7 @@ import simd
 /// it, and a car on the west roadway near the gap.
 ///
 /// Where everything stands, the decoration, the camera and the lights are in `layout`
-/// (BrooklynBridgeLayout.swift), which Blender edits (ADR 0005). This file adds the words: what
+/// (BrooklynBridgeLayout.swift), which Blender exports (ADR 0002). This file adds the words: what
 /// each place is called and what it says.
 enum BrooklynBridge {
   /// Where each tower's centre stands along the deck.

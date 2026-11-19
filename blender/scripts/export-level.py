@@ -1,5 +1,5 @@
-"""Export a Lauder level (ADR 0006): its layout file, typed Swift for what plays, and its scene file,
-a USDZ for what the player sees, both from the level's Blender file in blender/levels.
+"""Export a Lauder level (ADR 0002): its layout file, typed Swift for what plays, and its scene
+file, a USDZ for what the player sees, both from the level's Blender file in blender/levels.
 
 Run it with Blender in the background, from any folder:
 

@@ -3,7 +3,7 @@ import simd
 extension Level {
   /// Where everything that plays on a level stands and how it is lit, as plain data with stable
   /// names. Blender's Lauder extension, `blender/extensions/lauder_levels`, writes it from the
-  /// level's Blender file (ADR 0006); the level's content refers to its entries by name and adds
+  /// level's Blender file (ADR 0002); the level's content refers to its entries by name and adds
   /// the words: what each place is called and what it says.
   struct Layout: Sendable {
     /// A block that can be looked at. Its position is the centre of its base, on the floor.
@@ -94,7 +94,7 @@ extension Level {
 }
 
 extension Level {
-  /// A light on the level, from the Lights collection of its Blender file (ADR 0006): a sun, a
+  /// A light on the level, from the Lights collection of its Blender file (ADR 0002): a sun, a
   /// point light or a spot light.
   struct Light: Sendable {
     enum Kind: Sendable {

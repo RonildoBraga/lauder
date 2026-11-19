@@ -1,9 +1,9 @@
 # Lauder — gameplay walkthrough
 
 **Date:** 18 November 2026\
-**Status:** The game opens on the Brooklyn Bridge, as the maintainer accepted in [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026. M1 to M3 are merged and M4 is in review, as the [opening record](opening.md) describes. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines staged checks.
+**Status:** The game opens on the Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines staged checks.
 
-The maintainer has endorsed the occasional-combat direction and assigned the [combat-role and Quiet Yard documentation](#future-squad-and-combat-design) for Claude's review before implementation. That separate design gate precedes any combat or formation work beyond the opening's milestones.
+Combat stays occasional. The [future squad and combat design](#future-squad-and-combat-design) passes a design gate before any combat or formation work beyond the opening.
 
 ## The game we are building
 
@@ -35,15 +35,15 @@ Miki can search the body for ammunition and a medical kit. While she searches, a
 
 Laura lies hurt, face down, beside a car just past the gap in the divider, in view from the start. Once Tom has joined, crossing the gap finds her: she calls out, "Please. Over here.", and the objective becomes "Help the woman between the cars." Beside her, the action reads **Help**, for whoever leads. It uses the medical kit from the first body, and a short scene holds the party: she stands, she and Miki turn to each other, and the exchange gives only her name. When it ends she joins, and Tom and Laura follow in the Close formation.
 
-### 5. Onwards (M4 built, M5)
+### 5. Onwards (M4, built; formations in M5)
 
 The three cross the second tower together to the Manhattan end, where the party stops for a short closing exchange and the objective reads "Manhattan, together.": the end of the opening. With two companions, the formations of [ADR 0003](decisions/0003-squad-movement.md) come into play on the open deck in M5.
 
 Lines stay provisional and brief. None of the scenes explains anyone's past beyond what the moment needs.
 
-## What exists today
+## What the opening has
 
-The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad in a Close formation ([ADR 0003](decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. [M2](opening.md#m2--the-first-fight) adds the stranger's fight, with assisted aim, cover, the placeholder hit rule and a retry, [M3](opening.md#m3--the-search-the-ambush-and-tom) the search, the ambush and Tom joining, and [M4](opening.md#m4--laura-and-the-end-of-the-opening) Laura and the end of the opening. The authorised [touch-control option](touch-controls.md) adds a second phone input path; its validation is recorded separately.
+The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad in a Close formation ([ADR 0003](decisions/0003-squad-movement.md) phase S1) rather than on the leader's exact path. The stranger's fight has assisted aim, cover, the placeholder hit rule and a retry; then come the search, the ambush and Tom joining, and Laura and the end of the opening. [Touch controls](touch-controls.md) give the phone a second input path.
 
 ## Readable controls and party feedback
 
@@ -57,7 +57,7 @@ The current input mappings use the same movement, action, switching and Pause ru
 | Pause / resume | Options | Menu | Pause / Resume | Escape |
 | Fire at the assisted target: press to draw, hold to keep firing | R2 | RT | Fire, shown during a fight | F |
 
-The maintainer's [touch request](touch-controls.md#authorisation) supersedes the earlier no-touch decision. Touch appears automatically without an extended controller. With a controller attached, it remains the default unless the player chooses **Use touch controls**; **Use controller** returns to it. The selection is not persisted across app launches. Q remains the keyboard switch key. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently shaped or coloured stand-ins are sufficient, with text so colour alone carries no essential information. The current character asset may be reused where useful; no new art is a prerequisite.
+Touch appears automatically without an extended controller. With a controller attached, it remains the default unless the player chooses **Use touch controls**; **Use controller** returns to it. The selection is not persisted across app launches. Q remains the keyboard switch key. Show the active character's name and role, the next switch target and the appropriate input hint. Three differently coloured stand-ins are sufficient, with text so colour alone carries no essential information; no new art is a prerequisite.
 
 Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterward.
 
@@ -88,4 +88,4 @@ For the proposed first combat experiment, the player directs the current leader'
 
 **The Quiet Yard** is the [complete encounter script](encounters/the-quiet-yard.md), set on the onward journey toward Old Lock after the Relay House scene. The party can leave optional filter components behind, retrieve them through a covered patrol gap, fight two security units, or retreat during an encounter. A recently maintained water pipe provides a local human clue whichever route the player chooses. The encounter neither adds a required regulator nor makes fighting a condition of restoring the transmitter.
 
-This remains a paper design. The [combat design review gate](prototype-plan.md#combat-design-review-gate) owns the next step. These pages implement or authorise no combat controls, formation AI, enemy behaviour, health, ammunition economy or weapon progression. The opening's first fight is a separate assignment under [ADR 0004](decisions/0004-brooklyn-bridge-opening.md): [M2](opening.md#m2--the-first-fight) built Fire with assisted aim, one scripted enemy, the placeholder hit rule and one ammunition count.
+This remains a paper design. The [combat design review gate](prototype-plan.md#combat-design-review-gate) owns the next step. These pages implement or authorise no combat controls, formation AI, enemy behaviour, health, ammunition economy or weapon progression. The opening's fights come from [ADR 0004](decisions/0004-brooklyn-bridge-opening.md): Fire with assisted aim, scripted enemies, the placeholder hit rule and one ammunition count.

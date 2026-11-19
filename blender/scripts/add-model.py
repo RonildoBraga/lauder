@@ -1,4 +1,4 @@
-"""Bring a model into Lauder from a file (ADR 0006): a Blender file, or a glTF, FBX, OBJ or USD
+"""Bring a model into Lauder from a file (ADR 0002): a Blender file, or a glTF, FBX, OBJ or USD
 file that Blender imports.
 
 Run it with Blender in the background, from any folder, with the file and a name for the model in

@@ -1,7 +1,7 @@
 # Lauder — story bible, draft 0.6
 
 **Date:** 18 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The maintainer [agreed the combat identities](https://github.com/RonildoBraga/lauder/pull/29#issuecomment-6943836774) below on 17 November 2026 as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The maintainer [accepted ADR 0004](../decisions/0004-brooklyn-bridge-opening.md) on 18 November 2026: the game now opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers. Milestone M1 rewrote this page's direction, premise, places and Chapter One to match, and renamed Tomas and Lara as Tom and Laura; dated records written earlier keep the old names.
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
 
 ## Agreed direction
 
@@ -20,9 +20,9 @@ The control description is understood as **one human player directing a party of
 
 Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
 
-The previous draft established Miki as widowed, Nina as her daughter, Tom as her father and Laura as her friend. Those exact relationships are reopened by this revision; none should be assumed in the next script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Some earlier ideas may survive if they serve the ensemble. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
+No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
-The [Chapter One outline](#chapter-one--across-the-bridge) below records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses it into what the player sees and does. The superseded family/solo script remains in Git history, rather than alongside the current narrative.
+The [Chapter One outline](#chapter-one--across-the-bridge) below records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses it into what the player sees and does.
 
 ## Premise
 
@@ -32,7 +32,7 @@ On the bridge she meets strangers. One ignores her call of "Friendly!" and opens
 
 They begin with circumstances, not a shared history. Trust grows from what they do for one another. Their biographies, motives and relationships unfold through the journey; the opening does not explain them.
 
-The earlier premise, three travellers who restore a relay shelter's transmitter, survives as the [Relay House scene](#later-scene--relay-house), kept for later.
+A relay shelter's transmitter, which the three restore, is kept for later as the [Relay House scene](#later-scene--relay-house).
 
 The longer story follows the commitment the three come to make. Homecoming can mean finding people and a place with which to build a future. The group gradually chooses what they owe one another and the communities sustaining their journey.
 
@@ -219,7 +219,7 @@ The repaired set serves others as well as the party. It establishes contact and 
 **Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
 **Achievement:** Three strangers reach Manhattan together, each having helped another.
 
-The [decision record](../decisions/0004-brooklyn-bridge-opening.md) builds this in milestones: the bridge, the first fight, the ambush and Tom are built, and Laura's scene and the end of the opening are in review. The dialogue remains to be written.
+The whole opening is built, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Its dialogue remains to be written.
 
 Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 
@@ -247,7 +247,7 @@ The dialogue is not written yet. Lines stay short and reveal nothing about anyon
 
 ## Later scene — Relay House
 
-The earlier Chapter One, built around a transmitter repair at Relay House, is kept as a later scene. The game's prototype of it was removed on 18 November 2026; its code is in Git history. Where it falls in the journey, and how it fits New York, is not decided. By then the three know one another. Its outline:
+A transmitter repair at Relay House is kept as a later scene. Where it falls in the journey, and how it fits New York, is not decided. By then the three know one another. Its outline:
 
 **Immediate goal:** Restore the transmitter and agree a viable onward route.\
 **Emotional movement:** Practical cooperation becomes a deliberate commitment to travel together.\

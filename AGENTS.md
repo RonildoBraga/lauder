@@ -5,8 +5,8 @@
 Read [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md) and the documents relevant to the assigned task. The source of shared project decisions is this repository, not private assistant memory.
 
 - Narrative: [story bible](docs/story/story-bible.md) and [Chapter One outline](docs/story/story-bible.md#chapter-one--across-the-bridge).
-- Player experience: the ensemble outline in the [story bible](docs/story/story-bible.md) and the current three-character [gameplay script](docs/gameplay-script.md), proposed for review before implementation.
-- Technical work: [architecture](docs/architecture.md) and [prototype plan](docs/prototype-plan.md).
+- Player experience: the ensemble outline in the [story bible](docs/story/story-bible.md) and the [gameplay walkthrough](docs/gameplay-script.md).
+- Technical work: [architecture](docs/architecture.md), the [decision records](docs/decisions) and the [prototype plan](docs/prototype-plan.md).
 
 Do not duplicate those documents here or silently turn a working proposal into an agreed fact.
 
@@ -53,8 +53,6 @@ Use Swift 6 language mode, Swift Testing and toolchain `swift format` with the c
 When application code exists, run checks appropriate to the change. Device behaviour and performance need physical-device evidence. Record what was actually tested and what remains unverified.
 
 Use Simulator for everyday iteration and automated checks, with WASD movement, E action and Escape Pause/Resume. Live game-controller input has not worked in the tested Simulator setup; enumeration alone does not establish input delivery. At milestones, before merging playable features, verify the affected controls, lifecycle and performance on the baseline iPhone.
-
-The maintainer deferred PR #11's refreshed phone check, and the prepared-work integration retains that verification gap. Preserve it in the Stage 2 section of the [project history](docs/history.md#stage-2--movement-and-controls); do not report it as a passed device check. Future gameplay milestones retain their planned phone checks.
 
 Phone gameplay supports the shared PS5 DualSense/Xbox extended-gamepad path and the authorised [touch-control path](docs/touch-controls.md). Touch is automatic without an extended controller; an attached controller is preferred unless the user selects **Use touch controls**. **Use controller** returns to it. Keyboard WASD/E/Q/Escape remains available. Route every input through shared InputRules, preserving session authority and command priority. Source changes cancel captures through generation tokens and require neutral input. Keep touch capture mounted on Pause so every finger, including a centred-stick contact, must lift to clear the release gate. Keep the screen awake while the game is active in the foreground, including the pause screen, and restore the idle timer on leaving the app.
 

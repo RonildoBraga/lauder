@@ -1,4 +1,4 @@
-"""Lauder's levels and models in Blender (ADR 0006), as a Blender extension.
+"""Lauder's levels and models in Blender (ADR 0002), as a Blender extension.
 
 Each level is a Blender file in the repository, blender/levels/<level>.blend, stored with Git LFS:
 the level's source. Its collections decide where each object goes:
