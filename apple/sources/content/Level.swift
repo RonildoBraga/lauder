@@ -4,22 +4,12 @@ import simd
 /// looked at, the contextual actions and the areas that show a line once. Content only: the
 /// session owns progress and the world owns the bodies (ADR 0004).
 struct Level {
-  /// What a box or piece is made of. How each one looks is in the shared palette,
-  /// `Surfaces.swift`, which Blender edits with the layouts (ADR 0005).
-  enum Surface: String, CaseIterable, Sendable {
-    case concrete, hazard, asphalt, steel, granite, vehicle
-    /// For decoration: rails, posts and cables, the river far below, and painted lines.
-    case metal, river, paint
-    /// For windows, such as the vehicles' cabins.
-    case glass
-  }
-
-  /// Visible scenery. Every box blocks movement with its footprint; the ground is separate.
+  /// A box that blocks movement and sight with its footprint; the ground is separate. How it
+  /// looks is up to the level's scene file (ADR 0006).
   struct Box {
     let name: String
     let position: SIMD3<Float>
     let size: SIMD3<Float>
-    let surface: Surface
 
     var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
   }
@@ -153,10 +143,9 @@ struct Level {
   /// The floor. It bounds the navigation grid and blocks nothing.
   let ground: Box
   let boxes: [Box]
-  /// Decoration that blocks nothing, such as the bridge's walkway and cables.
-  var pieces: [Piece] = []
   /// The scene file that shows the level, exported by Blender (ADR 0006): the name of a USDZ in
-  /// the app's bundle. Without one, the game draws the ground, boxes, landmarks and pieces itself.
+  /// the app's bundle. Without one, such as in a test, the game draws the ground, boxes and
+  /// landmarks as plain blocks.
   var scene: String?
   let points: [PointOfInterest]
   let interactions: [Interaction]

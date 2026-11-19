@@ -52,7 +52,7 @@ ADR 0004's five milestones are each assigned separately, with `./scripts/check`,
 |---|---|---|
 | **1** The decision | ADR 0006 and the documents it changes | Merged: accepted by the maintainer (“Yes, record it”) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the standing permission. Codex's automatic review found nothing, and Copilot's two findings were fixed |
 | **2** The path into the game | The game loads the bridge's look from a USDZ that Blender exports, instead of drawing boxes; a phone check | Merged: assigned by the maintainer (“go ahead”). On the baseline iPhone it held 59.92 fps over 103 s, with four long frames, and the maintainer [authorised the merge](https://github.com/RonildoBraga/lauder/pull/52#issuecomment-7000152015) (“Yes, merge it”). Codex's and Copilot's findings were fixed |
-| **3** Blender as the source | The committed level file, Export and the freshness check; Load, safe Save, the working file and the palette retire | Not assigned |
+| **3** Blender as the source | The committed level file, Export and the freshness check; Load, safe Save, the working file and the palette retire | In review: assigned by the maintainer (“Yes, start step 3”) |
 | **4** Models and provided files | Linked models, the intake check and provenance notes | Not assigned |
 | **5** Art and richer light | Models, textures, more kinds of light and baked lighting | Not assigned; follows a change to the [visual direction](visual-direction.md) |
 

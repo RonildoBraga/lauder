@@ -85,49 +85,40 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
-[ADR 0006](docs/decisions/0006-blender-source-of-truth.md) will replace this workflow step by step: each level becomes a committed Blender file, and Export generates the files the game reads. So far the game shows the bridge from a scene file that Blender exports; until the rest lands, the steps below apply.
+Each level is a Blender file in the repository, the level's source ([ADR 0006](docs/decisions/0006-blender-source-of-truth.md)): for the Brooklyn Bridge, `blender/levels/brooklyn-bridge.blend`, stored with Git LFS. Saving it in Blender exports the two files the game reads:
 
-Blender is the level editor ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The Brooklyn Bridge's layout is `apple/sources/content/BrooklynBridgeLayout.swift`: where everything stands, the decoration, the game camera and the lights. How each surface looks, for every level, is `apple/sources/content/Surfaces.swift`. Blender loads and saves both:
+- `apple/sources/content/BrooklynBridge.usdz`, the scene file: everything the player sees;
+- `apple/sources/content/BrooklynBridgeLayout.swift`, the layout file: where everything that plays stands, and the lights and camera.
+
+Never edit those two by hand; change the level in Blender instead.
 
 1. Install the Lauder extension once, in Blender 5.3 or later:
    - In **Preferences › Get Extensions**, open the **Repositories** menu, choose **+ › Add Local Repository**, and pick this repository's `blender/extensions` folder.
    - In **Preferences › Add-ons**, enable **Lauder levels**.
 
    A **Lauder** tab appears in the 3D Viewport's sidebar (press N). The extension runs from the repository, so after a pull or a branch switch it is up to date once Blender restarts.
-2. Check the **Repository** folder, which defaults to the repository the extension came from, and press **Open Level**. Blender opens the level's working file, `.local/blender/brooklyn-bridge.blend`, which Git ignores; the first time, it makes the file from the level's files. The bridge is in a **Lauder Brooklyn Bridge** collection:
-   - the deck, the boxes with a Lauder material for each surface, the landmarks, the areas drawn as outlines and the named markers;
-   - the decoration's pieces, such as the walkway and the cables;
-   - the game camera;
-   - the lights, as sun lights.
-
-   Vehicles show the game's body and cabin, or windows, inside an outline of their box, landmarks show their band, and the party stands at its start markers. These follow their box or marker and are not saved.
-
-   When the level's files changed while the working file was closed, opening it loads them again and says what changed. If the working file also holds level edits that were never saved to the files, it changes nothing and says so. **Load** rebuilds the level from its files at any time, discarding changes made in Blender.
-3. Move, resize, duplicate or delete boxes and pieces, and move areas and markers. Follow the game's rules:
-   - turn boxes only in quarter turns about the vertical; pieces may turn any way;
+2. Check the **Repository** folder, which defaults to the repository the extension came from, and press **Open Level**. The level file's collections decide where each object goes:
+   - **Visual**: everything the player sees, exported to the scene file. Each box's look is a block parented to its gameplay box, each vehicle's is its body and windows, and the decoration, such as the walkway and the cables, stands on its own. Reshape or replace any of it.
+   - **Gameplay**: the ground, the boxes that block movement and sight, the landmarks, the trigger and fight areas, and the named markers, drawn as outlines. Each has a role, which the Lauder tab shows for the selected object; a new mesh counts as a box and a new empty as a marker.
+   - **Lights**: the suns. **Camera**: the game camera and its target.
+   - **Preview**: the party's stand-ins at their start markers, which the game draws itself. It is never exported.
+3. Move, resize, duplicate or delete what you need. Moving a gameplay box moves the look parented to it. Gameplay objects follow the game's rules:
+   - turn boxes only in quarter turns about the vertical;
    - keep boxes and landmarks on the deck;
-   - give a new box or piece a name of its own and one of the Lauder materials, which sets its surface.
-
-   Pieces block nothing and do not follow the boxes, so if you move a tower or a divider, move its top, walkway and cables with it. A new vehicle shows its details after you save and load again.
+   - give each a name of its own, and keep the names that `BrooklynBridge.swift` uses.
 4. To see the game's view, look through the camera (Numpad 0) and drag **camera-target** to where the leader would stand. The frame is the baseline iPhone's screen. Moving **game-camera** changes the game's camera offset, and its **Field of View**, in the camera's properties, changes the game's. Keep its **Sensor Fit** at Vertical.
-5. To change the lighting, turn the suns in the **Lights** collection and change their **Color**, **Strength** and **Shadow** in the light's properties. Keep to the visual direction's budget: at most two lights, one casting shadows. To change how a surface looks everywhere, edit its **Lauder** material's **Base Color**, **Roughness** and **Metallic**. Press **Game Look** to see the scene lit by its own lights, close to the game, and press it again for Solid shading. It asks you to hide any light that is not in the level's **Lights** first.
-6. Press ⌘S. Saving the working file also checks the game's rules and writes the layout file and the palette. If a rule fails, it explains what to fix and saves only the Blender file. **Save** writes the level's files from any Blender file.
+5. To change the lighting, turn the suns in **Lights** and change their **Color**, **Strength** and **Shadow** in the light's properties. Keep to the visual direction's budget: at most two lights, one casting shadows. To change how something looks, edit its material's Principled BSDF: **Base Color**, **Roughness** and **Metallic** reach the game. Press **Game Look** to see the scene lit by its own lights, close to the game, and press it again for Solid shading. It asks you to hide any light that is not in **Lights** first.
+6. Press ⌘S. Saving checks the game's rules: if one fails, it explains what to fix, and only the Blender file is saved. Otherwise it exports, in a Blender of its own in the background, in about two seconds, and the Lauder tab says when it is done. **Export** does the same for a file you have not changed, for example after a pull.
+7. Press **Play** to see the level in the game. It saves the level, exports it if needed, then builds the app and opens it in the iOS Simulator through `./apple/scripts/play`, which can also be run on its own. The first build takes a few minutes; later ones take a few seconds.
+8. Run `./scripts/check`. Tests that check the layout, such as the cover near the stranger, may need updating to match what you moved.
 
-   Saving refuses to overwrite changes made to the level's files since your last Load or Save, such as an agent's edit, a pull or a branch switch, and names them. Press **Load** to take those changes, or **Save Anyway** to replace them with what Blender holds.
-
-   When the layout file or the palette changed, saving also exports the level's scene file, `apple/sources/content/BrooklynBridge.usdz`: everything the game shows of the bridge, which the game loads instead of drawing boxes. The export runs in a Blender of its own in the background, in about two seconds, and the Lauder tab says when it is done.
-7. Press **Play** to see the level in the game. It saves the level, exports the scene file if it is out of date, then builds the app and opens it in the iOS Simulator through `./apple/scripts/play`, which can also be run on its own. The first build takes a few minutes; later ones take a few seconds.
-8. Run `./scripts/check`. Tests that check today's layout, such as the cover near the stranger, may need updating to match what you moved.
-
-The files stay the source of truth. Their numbers can also be edited directly, keeping each entry's form, and the next Load picks them up. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender.
-
-After editing the layout file or the palette outside Blender, export the scene file again, giving the path of your Blender:
+To change a level without Blender's interface, for example with a script in a background Blender, export it afterwards, giving the path of your Blender:
 
 ```bash
-/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-scene.py
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-level.py
 ```
 
-`blender/scene-exports.json` records what each scene file was made from, and `./scripts/check` fails while the scene file no longer matches the layout file and the palette. The scene file is stored with Git LFS.
+`blender/level-exports.json` records the fingerprints of the level's Blender file and of its two exports, and `./scripts/check` fails while they no longer match, including after an edit by hand. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender. Earlier versions kept a working file in `.local/blender`; it is no longer used.
 
 ## TestFlight builds
 

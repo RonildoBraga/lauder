@@ -1,10 +1,10 @@
 import simd
 
 extension Level {
-  /// Where a level's things stand and how it is lit, as plain data with stable names (ADR 0005).
-  /// Blender loads it and saves it back through the Lauder extension,
-  /// `blender/extensions/lauder_levels`; the level's content refers to its entries by name and
-  /// adds the words: what each place is called and what it says.
+  /// Where everything that plays on a level stands and how it is lit, as plain data with stable
+  /// names. Blender's Lauder extension, `blender/extensions/lauder_levels`, writes it from the
+  /// level's Blender file (ADR 0006); the level's content refers to its entries by name and adds
+  /// the words: what each place is called and what it says.
   struct Layout: Sendable {
     /// A block that can be looked at. Its position is the centre of its base, on the floor.
     struct Landmark: Sendable {
@@ -59,8 +59,6 @@ extension Level {
     let landmarks: [Landmark]
     let areas: [Area]
     let markers: [Marker]
-    /// Decoration that blocks nothing.
-    let pieces: [Piece]
     let camera: Camera
     /// The visual direction allows at most two lights, with at most one casting shadows.
     let lights: [Light]
@@ -96,33 +94,8 @@ extension Level {
 }
 
 extension Level {
-  /// Decoration that blocks nothing, such as the bridge's walkway and cables: a box, turned as
-  /// it needs. Blender edits pieces like everything else in a layout (ADR 0005).
-  struct Piece: Sendable {
-    let name: String
-    /// The centre.
-    let position: SIMD3<Float>
-    /// Along the piece's own axes.
-    let size: SIMD3<Float>
-    var rotation = simd_quatf(ix: 0, iy: 0, iz: 0, r: 1)
-    let surface: Surface
-
-    /// A piece in a layout file, written briefly; `turn` is a quaternion as (x, y, z, w).
-    static func piece(
-      _ name: String, at position: SIMD3<Float>, size: SIMD3<Float>,
-      turn: SIMD4<Float> = [0, 0, 0, 1], surface: Surface
-    ) -> Self {
-      Self(
-        name: name, position: position, size: size,
-        rotation: simd_normalize(simd_quatf(ix: turn.x, iy: turn.y, iz: turn.z, r: turn.w)),
-        surface: surface)
-    }
-  }
-}
-
-extension Level {
   /// A light as far away as the sun, shining from one direction over the whole level: a
-  /// RealityKit directional light. Blender edits it as a sun light (ADR 0005).
+  /// RealityKit directional light. In the level's Blender file it is a sun light (ADR 0006).
   struct Light: Sendable {
     let name: String
     /// A point in the direction the light comes from: it shines from there towards the origin,
@@ -145,27 +118,11 @@ extension Level {
         shadowDistance: shadowDistance)
     }
   }
-
-  /// How a surface looks, in the terms that Blender's Principled BSDF and RealityKit's materials
-  /// share: a colour in sRGB, each channel from 0 to 1, a roughness from 0 to 1, and how
-  /// metallic it is, from 0 to 1.
-  struct Finish: Equatable, Sendable {
-    let color: SIMD3<Float>
-    let roughness: Float
-    var metallic: Float = 0
-
-    /// A finish in the palette file, written briefly.
-    static func finish(color: SIMD3<Float>, roughness: Float, metallic: Float = 0) -> Self {
-      Self(color: color, roughness: roughness, metallic: metallic)
-    }
-  }
 }
 
 extension Level.Box {
   /// A box in a level's layout file, written briefly.
-  static func box(
-    _ name: String, at position: SIMD3<Float>, size: SIMD3<Float>, surface: Level.Surface
-  ) -> Self {
-    Self(name: name, position: position, size: size, surface: surface)
+  static func box(_ name: String, at position: SIMD3<Float>, size: SIMD3<Float>) -> Self {
+    Self(name: name, position: position, size: size)
   }
 }

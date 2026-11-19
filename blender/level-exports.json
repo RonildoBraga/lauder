@@ -1,0 +1,12 @@
+{
+  "brooklyn-bridge": {
+    "format": 1,
+    "made from": {
+      "blender/levels/brooklyn-bridge.blend": "bc7cc00c7ad8a96219fe2d590aea9d00f3f1a8e628f5da301172abdacf0b6f84"
+    },
+    "wrote": {
+      "apple/sources/content/BrooklynBridge.usdz": "bf2673e61f19c3dd890316b729578eacb113bd7deb4dce54412dd36f15efaaec",
+      "apple/sources/content/BrooklynBridgeLayout.swift": "8b55229a931177133fe99222f0d7b15b5dd981e3a6cc48ac634670d5e644416b"
+    }
+  }
+}

@@ -6,11 +6,12 @@ struct SceneStyle {
   let unitBox = MeshResource.generateBox(size: 1)
   let unitSphere = MeshResource.generateSphere(radius: 1)
 
-  /// The level's surfaces, made from the shared palette that Blender edits (`Surfaces.swift`).
-  private let surfaces: [Level.Surface: SimpleMaterial]
-
-  // The stand-ins and the gameplay signals keep their own colours here: they are not level
-  // surfaces, so the palette does not change them.
+  // The level's look comes from its scene file, exported by Blender (ADR 0006). The stand-ins
+  // and the gameplay signals keep their own colours here.
+  /// A level without a scene file, such as a test's: its boxes and landmarks as plain blocks.
+  let scenery = SimpleMaterial(
+    color: UIColor(red: 0.55, green: 0.57, blue: 0.56, alpha: 1), roughness: 0.9,
+    isMetallic: false)
   /// The stand-ins' heads.
   let head = SimpleMaterial(
     color: UIColor(red: 0.65, green: 0.68, blue: 0.55, alpha: 1), roughness: 1,
@@ -24,53 +25,8 @@ struct SceneStyle {
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
 
-  init(palette: [Level.Surface: Level.Finish] = Surfaces.palette) {
-    surfaces = palette.mapValues { Self.makeMaterial($0) }
-  }
-
-  func material(for surface: Level.Surface) -> SimpleMaterial {
-    guard let material = surfaces[surface] else {
-      preconditionFailure("The palette has no finish for \(surface).")
-    }
-    return material
-  }
-
-  private static func makeMaterial(_ finish: Level.Finish) -> SimpleMaterial {
-    var material = SimpleMaterial(
-      color: color(finish.color), roughness: .float(finish.roughness), isMetallic: false)
-    material.metallic = .float(finish.metallic)
-    return material
-  }
-
   private static func color(_ value: SIMD3<Float>) -> UIColor {
     UIColor(red: CGFloat(value.x), green: CGFloat(value.y), blue: CGFloat(value.z), alpha: 1)
-  }
-
-  /// A greybox vehicle filling its footprint `size`: a car's lower body and cabin, or a taller
-  /// van, bus or truck with a band of dark windows.
-  func vehicle(size: SIMD3<Float>, at position: SIMD3<Float>) -> Entity {
-    let body = material(for: .vehicle)
-    let glass = material(for: .glass)
-    let vehicle = Entity()
-    vehicle.position = position
-    let alongZ = size.z >= size.x
-    let length = max(size.x, size.z)
-    if size.y > 2 {
-      vehicle.addChild(block(size: size, at: .zero, material: body))
-      let band: SIMD3<Float> =
-        alongZ ? [size.x + 0.02, 0.5, length * 0.9] : [length * 0.9, 0.5, size.z + 0.02]
-      vehicle.addChild(block(size: band, at: [0, size.y * 0.25, 0], material: glass))
-    } else {
-      let lower = size.y * 0.55
-      vehicle.addChild(
-        block(size: [size.x, lower, size.z], at: [0, (lower - size.y) / 2, 0], material: body))
-      let cabin: SIMD3<Float> =
-        alongZ
-        ? [size.x * 0.9, size.y - lower, length * 0.5]
-        : [length * 0.5, size.y - lower, size.z * 0.9]
-      vehicle.addChild(block(size: cabin, at: [0, (size.y - cabin.y) / 2, 0], material: glass))
-    }
-    return vehicle
   }
 
   // Only visual children are scaled; parent entities keep their authored layout transforms.
@@ -118,18 +74,6 @@ struct SceneStyle {
         block(size: [0.18, 0.1, 0.28], at: [side * 0.105, -0.8, -0.04], material: clothing))
     }
     return visual
-  }
-
-  func landmark(for point: Level.PointOfInterest) -> ModelEntity {
-    let entity = ModelEntity()
-    let size = point.size
-    entity.position = point.position + [0, size.y / 2, 0]
-    entity.addChild(block(size: size, at: .zero, material: material(for: .metal)))
-    entity.addChild(
-      block(
-        size: [size.x * 0.85, size.y * 0.15, size.z * 1.03], at: [0, -size.y * 0.27, 0],
-        material: material(for: .paint)))
-    return entity
   }
 
   /// The level's lights, from its layout file: each shines from its source over the whole level.

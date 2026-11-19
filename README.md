@@ -9,7 +9,7 @@ The player switches between three characters while the other two follow. Their d
 The game opens on a greybox **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md)): Miki crosses alone towards Manhattan and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue. It is built in five milestones, each assigned separately.
 
 - **M1 to M4 are merged, completing the opening:** the bridge with Miki alone, the stranger's fight with assisted aim and cover, the search, the ambush and Tom joining, and then Laura found hurt at mid-span, **Help** with the medical kit, Laura joining and the end of the opening at the Manhattan end. After playing M2 and M3 on the baseline iPhone, the maintainer reported “It read well” and “It played well”. At M4's phone checkpoint, a five-minute run averaged 59.97 fps with four long frames, and the maintainer reported **“I did not noticed any stutters and everything worked as expected”**. The [opening record](docs/opening.md) lists what each milestone built and how it was checked; none had an independent review. What follows needs its own assignment.
-- **Blender is the level editor** ([ADR 0005](docs/decisions/0005-blender-level-editor.md)). The bridge's layout, decoration, game camera and lights, and the surfaces' shared palette, are plain-data Swift files that Blender loads and saves, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes; the game builds from the Swift files. The maintainer has since accepted [ADR 0006](docs/decisions/0006-blender-source-of-truth.md): Blender files will become the source of levels and models, and the files the game reads will be generated from them. Its step 2 is built: the game shows the bridge from a scene file that Blender exports. Each later step needs its own go-ahead.
+- **Blender holds the levels** ([ADR 0006](docs/decisions/0006-blender-source-of-truth.md)). The bridge's source is its Blender file, `blender/levels/brooklyn-bridge.blend`. Saving it in Blender exports the scene file the game shows and the layout file it plays from, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes. Steps 4 and 5 of ADR 0006, models and files from elsewhere, then art, each need their own go-ahead.
 - **Companions follow as a squad** in a Close formation ([ADR 0003](docs/decisions/0003-squad-movement.md), phase S1). The trio's [combat identities](docs/story/story-bible.md#combat-identities) and [The Quiet Yard](docs/encounters/the-quiet-yard.md) are agreed working designs; formations and further combat need their own assignment, after the [review gate](docs/prototype-plan.md#combat-design-review-gate).
 - **The earlier Relay House slice**, Stages 1 and 2 and Parties A to C, is summarised in the [project history](docs/history.md), with its phone results and the checks still open. The maintainer removed its level on 18 November 2026.
 - TestFlight build 0.1.0 (3), from M4's branch at `c6af7c1`, is available to internal testers; see [TestFlight builds](CONTRIBUTING.md#testflight-builds). Debug builds can run [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests).
@@ -42,8 +42,8 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
     content/
       Level.swift               A playable place as a value, and the party's shared body
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
-      BrooklynBridgeLayout.swift Where everything on the bridge stands, its decoration, camera and lights, edited in Blender (ADR 0005)
-      Surfaces.swift            How each surface looks, for every level, edited in Blender (ADR 0005)
+      BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender (ADR 0006)
+      BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender (ADR 0006)
       MissionScript.swift       Conversations; the lines are provisional
       character/                Current animated stand-in, editable sources and provenance
         source/                 Editable USD layers; excluded from the app bundle
@@ -52,14 +52,14 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
     support/                    Test-only asset validator and the squad tests' yard; not in the app target
   scripts/                      Simulator playtests and Play, the character asset generator and the app icon
   .swift-format                 Swift formatting rules
-blender/                        The level editor: the Lauder extension for Blender, in extensions/lauder_levels, and its tests
+blender/                        The levels' Blender files, in levels/, and the Lauder extension for Blender, in extensions/lauder_levels, with its tests
 docs/                           Architecture, decisions, prototype plan, opening record and project history
   story/                        Story bible
 scripts/check                   Checks every part: the Blender script, then the app's formatting, build and tests
 .github/                        Pull request template
 ```
 
-Keep presentation in SceneStyle and SceneDressing, the level's geometry, collision and anchors in its `Level` (BrooklynBridge and its layout file), party, story and fight rules in GameSession/InputRules, conversations in MissionScript, squad movement in NavigationGrid, SquadPlanner and CompanionMotor, and fights in the combat types, StoryDirector and EncounterStage. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them. Each platform and tool keeps its own top-level folder, so that later platforms, such as Android or Steam, can sit beside `apple/`. What a second platform will share, such as the level layouts, stays in `apple/` until then, when it moves to a shared folder in a form both can read.
+Keep a level's look in its Blender file, and the game's own presentation, such as the stand-ins, in SceneStyle. Keep the level's geometry, collision and anchors in its `Level` (BrooklynBridge and its layout file), party, story and fight rules in GameSession/InputRules, conversations in MissionScript, squad movement in NavigationGrid, SquadPlanner and CompanionMotor, and fights in the combat types, StoryDirector and EncounterStage. Persistence remains planned. Keep one app target and one test target; add folders or shared abstractions when real content requires them. Each platform and tool keeps its own top-level folder, so that later platforms, such as Android or Steam, can sit beside `apple/`. What a second platform will share, such as the level layouts, stays in `apple/` until then, when it moves to a shared folder in a form both can read.
 
 For new art, group an asset's editable inputs, deliberate delivery exports and provenance together, following the [asset policy](CONTRIBUTING.md#assets-and-attribution). Sources and runtime exports serve different purposes; retain both. Review Xcode target exclusions before adding authoring files beneath `apple/sources/content`, so they are not copied into the app; see [target membership](CONTRIBUTING.md#target-membership).
 
