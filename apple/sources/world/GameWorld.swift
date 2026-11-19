@@ -125,7 +125,7 @@ final class GameWorld {
     }
     root.addChild(stage.container)
     SceneDressing.add(to: root, style: style, level: level)
-    style.addLighting(to: root)
+    style.addLights(level.lights, to: root)
     camera.camera.fieldOfViewInDegrees = level.fieldOfView
     camera.name = "camera"
     root.addChild(camera)

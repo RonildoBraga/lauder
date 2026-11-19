@@ -6,7 +6,7 @@ import simd
 /// Vehicles stand where the later scenes need them: cover before the first tower, a van beside
 /// it, and a car on the west roadway near the gap.
 ///
-/// Where everything stands, the decoration and the camera are in `layout`
+/// Where everything stands, the decoration, the camera and the lights are in `layout`
 /// (BrooklynBridgeLayout.swift), which Blender edits (ADR 0005). This file adds the words: what
 /// each place is called and what it says.
 enum BrooklynBridge {
@@ -136,6 +136,7 @@ enum BrooklynBridge {
     ],
     lying: [.laura],
     heading: [0, -1], cameraOffset: cameraOffset, fieldOfView: layout.camera.fieldOfView,
+    lights: layout.lights,
     opening: "The Brooklyn end of the bridge. Manhattan is on the far side.",
     objective: "Cross the bridge to Manhattan.",
     objectiveChanges: [

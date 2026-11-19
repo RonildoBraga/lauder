@@ -4,10 +4,14 @@ import simd
 /// looked at, the contextual actions and the areas that show a line once. Content only: the
 /// session owns progress and the world owns the bodies (ADR 0004).
 struct Level {
-  enum Surface: Sendable {
+  /// What a box or piece is made of. How each one looks is in the shared palette,
+  /// `Surfaces.swift`, which Blender edits with the layouts (ADR 0005).
+  enum Surface: String, CaseIterable, Sendable {
     case concrete, hazard, asphalt, steel, granite, vehicle
     /// For decoration: rails, posts and cables, the river far below, and painted lines.
     case metal, river, paint
+    /// For windows, such as the vehicles' cabins.
+    case glass
   }
 
   /// Visible scenery. Every box blocks movement with its footprint; the ground is separate.
@@ -170,6 +174,8 @@ struct Level {
   let cameraOffset: SIMD3<Float>
   /// The camera's vertical field of view, in degrees.
   var fieldOfView: Float = 42
+  /// The lights, from the level's layout file (ADR 0005).
+  var lights: [Light] = []
   /// The first line a run shows.
   let opening: String
   /// The objective line when a run starts.
