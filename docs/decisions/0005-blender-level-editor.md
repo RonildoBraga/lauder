@@ -93,7 +93,7 @@ Reviewing a proposed workflow for Blender, the maintainer noted that its lights 
    - Save keeps the [visual direction](../visual-direction.md#rendering-budget)'s budget: at least one light, at most two, and at most one casting shadows. It refuses other kinds of light for now.
 2. **The surfaces' materials are a shared palette,** `apple/sources/content/Surfaces.swift`, for every level: one finish per surface, made of an sRGB colour, a roughness and a metalness. Glass, used for the vehicles' windows, joins the surfaces. The game makes its surface materials from the palette. The stand-ins and the gameplay signals keep their own colours in code, so the palette cannot change them.
    - Load builds a Lauder material for each surface, setting both its Principled BSDF, which Material Preview shows, and its viewport display, which Solid shading shows.
-   - Save writes whichever of the two was changed. It checks the palette and the layout together: if either fails, neither file is written.
+   - Save writes whichever of the two was changed, then sets both to what it wrote, so that the setting an edit did not touch cannot undo it at the next Save. It checks the palette and the layout together: if either fails, neither file is written.
    - The palette's entries are the surfaces Blender accepts, so the script no longer keeps its own copy of the game's colours. Adding a surface still needs a case in `Level.Surface`, and a test checks that the two match.
 3. **Game Look**, a button in the Lauder tab, shows the 3D Viewport in Material Preview, lit only by the level's own lights. Blender's renderer is not RealityKit, so the view comes close to the game without matching it.
 4. **The recipe for the next move into Blender:** give the thing a typed entry in a Swift data file, read and write that entry exactly in `blender/lauder_levels.py`, build it in Load and read it back in Save, check the game's rules before anything is written, and test the round trip. The formats leave room to grow: another kind of light would be another kind of entry in `lights:`, and a texture another field of a finish.
@@ -106,15 +106,15 @@ Reviewing a proposed workflow for Blender, the maintainer noted that its lights 
 
 ### Checks
 
-- `./scripts/check` passes: 104 Swift tests in 17 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 30 tests. The new tests cover:
+- `./scripts/check` passes: 104 Swift tests in 17 suites on the iPhone 17 / iOS 27 Simulator, and the layout script's 31 tests. The new tests cover:
   - the lights and the palette reading and writing back unchanged;
   - a turned, brightened and recoloured sun saving as expected, and shadows following each sun's setting;
   - Save refusing a second shadow, a third light, a point light, no light, a dark light and a duplicate name, and keeping the file's lights when Blender has none;
-  - a material changed in its own settings or in its viewport display, materials left alone, and palettes the game cannot use;
+  - a material changed in its own settings or in its viewport display, a saved change surviving the next save, materials left alone, and palettes the game cannot use;
   - the game lighting the bridge from the layout file within the budget, and every surface taking its finish from the palette.
 - The game's opening frame in the Simulator is the same, pixel for pixel, from `main` and from this change, as it is between two runs of `main`.
 - In Blender 5.3, run in the background on a copy of the two files:
   - Load built the two suns, aimed as the file says, and the ten surface materials, and Save with no edits wrote nothing.
-  - Turning `sun-key` to shine from straight above, doubling `sky-fill`'s strength and making steel smoother saved exactly those three changes. A second shadow was refused and wrote nothing, and loading again brought the saved values back.
+  - Turning `sun-key` to shine from straight above, doubling `sky-fill`'s strength and making steel smoother saved exactly those three changes, and a second Save straight after changed nothing. A second shadow was refused and wrote nothing, and loading again brought the saved values back.
   - Rendered through the game camera with EEVEE and lit by the two suns, the asphalt's red and green match the game's opening frame to about 1%. The game's light is a little bluer and its shadows softer.
 - Not checked: the Game Look button, which needs an open 3D Viewport; the script in the maintainer's own Blender session; the phone, since the game's frame did not change.

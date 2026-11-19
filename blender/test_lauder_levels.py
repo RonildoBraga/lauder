@@ -460,6 +460,17 @@ class PaletteTests(unittest.TestCase):
         others = [line for line in text.splitlines() if ".river:" not in line]
         self.assertEqual(others, [line for line in self.text.splitlines() if ".river:" not in line])
 
+    def test_a_saved_material_change_survives_the_next_save(self):
+        shapes = self.readings()
+        steel = next(shape for shape in shapes if shape.name == "steel")
+        steel.node = steel.node[:1] + (single(0.4),) + steel.node[2:]
+        saved = L.palette_from_shapes(shapes, self.palette)
+        self.assertEqual(saved["steel"].roughness, 0.4)
+        # The viewport setting still says 0.9 until Save sets both settings to what it wrote, as
+        # Load does. Left stale, it would look like a new edit and undo the change.
+        steel.node = steel.viewport = L.finish_reading(saved["steel"])
+        self.assertEqual(L.palette_from_shapes(shapes, saved), saved)
+
     def test_a_palette_the_game_cannot_use_is_refused(self):
         for broken, words in (
             (self.text.replace("roughness: 0.9),", "roughness: 1.5),", 1), "roughness should be"),

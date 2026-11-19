@@ -751,6 +751,13 @@ def lights_from_shapes(shapes, previous):
     return lights, problems
 
 
+def finish_reading(finish):
+    """A finish as each of a Lauder material's two settings holds it: (scene-linear colour,
+    roughness, metallic). Load sets both to it, and so does Save once it has written the palette,
+    so that the setting left stale by an edit cannot undo that edit at the next Save."""
+    return (_linear(*finish.color)[:3], finish.roughness, finish.metallic)
+
+
 def palette_from_shapes(shapes, previous):
     """The palette from Blender's Lauder materials. Each surface takes whichever of its settings
     was changed, the material's own or the viewport's; when Blender hands both back unchanged, or
@@ -957,17 +964,21 @@ def _material(name, palette):
     if material is None:
         material = bpy.data.materials.new(f"Lauder {name}")
     material["lauder_surface"] = name
-    finish = palette[name]
-    colour = _linear(*finish.color)
-    material.diffuse_color = colour
-    material.roughness = finish.roughness
-    material.metallic = finish.metallic
+    _apply_finish(material, palette[name])
+    return material
+
+
+def _apply_finish(material, finish):
+    """Set both of a Lauder material's settings to the finish (finish_reading)."""
+    colour, roughness, metallic = finish_reading(finish)
+    material.diffuse_color = colour + (1.0,)
+    material.roughness = roughness
+    material.metallic = metallic
     node = _principled(material, create=True)
     if node is not None:
-        node.inputs["Base Color"].default_value = colour
-        node.inputs["Roughness"].default_value = finish.roughness
-        node.inputs["Metallic"].default_value = finish.metallic
-    return material
+        node.inputs["Base Color"].default_value = colour + (1.0,)
+        node.inputs["Roughness"].default_value = roughness
+        node.inputs["Metallic"].default_value = metallic
 
 
 def _area_material():
@@ -1296,6 +1307,12 @@ def save_level(repository, key="brooklyn-bridge"):
     changed = [name for name in paths if after[name] != before[name]]
     for name in changed:
         paths[name].write_text(after[name])
+    # Both settings of each material now hold what was written, so the one an edit did not touch
+    # cannot undo that edit at the next Save.
+    for name, finish in palette.items():
+        material = bpy.data.materials.get(f"Lauder {name}")
+        if material is not None:
+            _apply_finish(material, finish)
     return layout, changed
 
 
