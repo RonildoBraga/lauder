@@ -334,7 +334,7 @@ struct AmbushTests {
     let offset = BrooklynBridge.cameraOffset
     let forward = -simd_normalize(SIMD2(offset.x, offset.z))
     let right = SIMD2(-forward.y, forward.x)
-    for _ in 0..<(60 * 40) {
+    for _ in 0..<(60 * 120) {
       let towards = point - position(world, world.session.leader)
       if simd_length(towards) < 0.15 { return }
       let unit = simd_normalize(towards)

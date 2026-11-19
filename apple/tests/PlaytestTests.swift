@@ -29,7 +29,7 @@
             targets: world.companionTargets, warning: world.diagnostic,
             simulationMilliseconds: 0))
         frames += 1
-        try #require(frames < 60 * 300, "\(name) did not finish in five minutes")
+        try #require(frames < 60 * 600, "\(name) did not finish in ten minutes")
       }
       let summary = try #require(runner.summary)
       #expect(summary.passed, "\(name): \(summary.failures)")

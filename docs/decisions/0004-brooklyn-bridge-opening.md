@@ -1,6 +1,6 @@
 # ADR 0004 — the Brooklyn Bridge opening
 
-**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment. M1, M2 and M3 are implemented and merged, as the [opening record](../opening.md) describes, and M4 is assigned (“Yes, start M4”), implemented and in review; M5 is not assigned. Recommendation 3 kept Relay House as a second level; on 18 November 2026 the maintainer chose the alternative and removed it (“Remove it”), as the [project history](../history.md#the-opening-moves-to-the-bridge) records.\
+**Status:** Accepted by the maintainer on 18 November 2026 ([“Accept as recommended”](https://github.com/RonildoBraga/lauder/pull/40#issuecomment-6971154778)), including the nine recommendations at the end. Each milestone is a separate assignment. M1 to M4 are implemented and merged, as the [opening record](../opening.md) describes; M5 is not assigned. On 19 November 2026 the maintainer [amended](#amendment--the-bridge-at-its-real-tower-spacing) the bridge to its real tower spacing. Recommendation 3 kept Relay House as a second level; on 18 November 2026 the maintainer chose the alternative and removed it (“Remove it”), as the [project history](../history.md#the-opening-moves-to-the-bridge) records.\
 **Date:** 18 November 2026\
 **Deciders:** Maintainer\
 **Author:** Claude
@@ -161,3 +161,26 @@ The maintainer [accepted these as recommended](https://github.com/RonildoBraga/l
 7. **Tom's rescue.** Fully scripted, from close by. Recommended, rather than a timed challenge.
 8. **Searching and Laura.** One shared inventory, with the medical kit from the first body used to help Laura. Recommended.
 9. **Order of work.** M1 to M5 as above, each assigned separately. Recommended.
+
+## Amendment — the bridge at its real tower spacing
+
+**Date:** 19 November 2026. **Decided by:** the maintainer. After playing it on the baseline iPhone, the maintainer reported **“I finished play and everything seems ok”**, and it was [merged](https://github.com/RonildoBraga/lauder/pull/55#issuecomment-7005537305) under the standing permission.
+
+The maintainer asked to simplify the bridge: **“I think we should simplify the Brooklyng bridge because at moment it seems we try to mimicate the real bridge and what we need is just mimicate manly where the player will walk through, the pillars and the road so we can make things easier but make the dimensions are correct.”** Asked how far apart the towers should stand, they chose **“Real tower spacing”** over keeping the 250 m deck. Asked what else to keep, they chose **“Lane lines and river (Recommended)”**. The bridge's main span is now at real length, which the options table above turned down; the 1.8 km crossing as a whole stays compressed.
+
+1. **The structure at published sizes.** The figures come from Wikipedia, Structurae and STRUCTURE magazine; published tower heights differ by up to 1.4 m.
+   - The deck is 25.9 m wide: two roadways of 10.3 m, each as wide as a tower's arch, either side of a 5.3 m median, the walkway's base.
+   - The towers stand 486.3 m apart. Each is 43 m wide, 18 m deep and 47 m above the road, with arches 10.3 m wide and 35.7 m tall.
+   - The river lies 38.7 m below the deck.
+2. **The deck is 644 m long,** and each beat keeps its place beside the nearest tower. The first tower's Brooklyn face stays where it was, so everything from the Brooklyn end to Tom is unchanged. Laura, the bus and the gap in the median moved to the new mid-span. The second tower's approach and the Manhattan end moved with the second tower. The bus, which closes the east roadway, widened from 9.3 m to 10.2 m so that it still reaches the railing.
+
+   | Stretch | From the Brooklyn end | Beats |
+   |---|---|---|
+   | Before the first tower | 50–90 m | The stranger: "Friendly!" and the first fight |
+   | First tower | 90–118 m | Searching the body, the knife attack, Tom |
+   | Mid-span | 118–586 m | Laura on the ground at about 360 m; helping her |
+   | Second tower to Manhattan | 586–644 m | Three together; the end of the opening |
+3. **Only the road and the towers mimic the bridge.** The lane lines mark three lanes in each roadway, and the river stays. The cables, suspenders, stays and raised walkway, 106 pieces, are gone.
+4. **Walking takes longer.** At the party's 2.6 m/s, the walk from the first tower to Laura and the one from Laura to the second tower each take about 90 s, and the whole crossing about four minutes. The navigation grid covers about 420,000 cells, 2.8 times as many.
+5. **Collisions allow for distance.** A position is stored as a Float, whose spacing grows with its distance from the origin: about 30 µm at the Manhattan end, against a fraction of a micrometre within 16 m. The check of a straight move allows one Float spacing at its points, never less than a micrometre, all well inside the 2 mm collision skin. Without it, a body stopped against a car near the Manhattan end could be refused when moving away.
+6. **Tests and playtests** walk to the same places, moved by the same rule.

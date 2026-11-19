@@ -5,11 +5,11 @@
       "blender/assets/car/car.blend": "fcfb293fa68abef16d2aeff33dd5a3330b5c98db18f33f5f57242262871051cc",
       "blender/assets/truck/truck.blend": "f136a0bb759bc61b8349b3c3144b4b08017d06bdaeffb3724e330b20e1316f38",
       "blender/assets/van/van.blend": "747e7d7489bb614b6da68b0915ed905960b5fa9aa134756298f518bfce0ae18b",
-      "blender/levels/brooklyn-bridge.blend": "e0981cfdd7b482edd70f7b34072723d60639fdaa190367b0fbbd7447ca087ede"
+      "blender/levels/brooklyn-bridge.blend": "c79734c2a26263cb35dcd5e72e0d766e02c4c7e9a3dfd55329c639e0009028f7"
     },
     "wrote": {
-      "apple/sources/content/BrooklynBridge.usdz": "aacf192019212fc8bcacc8fd8828657441b363fea01a9ac644d1feb0f2420251",
-      "apple/sources/content/BrooklynBridgeLayout.swift": "8b55229a931177133fe99222f0d7b15b5dd981e3a6cc48ac634670d5e644416b"
+      "apple/sources/content/BrooklynBridge.usdz": "92f830ed3e38bd4ea2e148ee29339bd0f2c13af9e2fa9b241990cc8d997bde96",
+      "apple/sources/content/BrooklynBridgeLayout.swift": "5c716d856f3d2354a0949bf8f8beabcffd97c2a807b51d5cfe10a4533ab02c6f"
     }
   }
 }
