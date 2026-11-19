@@ -334,6 +334,8 @@ It was [merged](https://github.com/RonildoBraga/lauder/pull/57#issuecomment-7007
 
 ### 5c — models the code spawns
 
+It was [merged](https://github.com/RonildoBraga/lauder/pull/58#issuecomment-7007658513) under the standing permission, without an independent review.
+
 The maintainer's choice reversed decision 6's rule that the code keeps the stand-ins: **“Models the code spawns”**, described as models that the game creates at runtime getting USDZ files of their own, with the stand-ins becoming the first, with the same look.
 
 1. **The stand-ins are models.** `miki`, `tom` and `laura` are the party's, and `hostile` is every hostile's. Each was made from the sizes and colours that `SceneStyle` drew its stand-in with: a body, a head, two legs and two feet, and a front mark that glows, as the code drew it unlit. As the models' contract asks, each stands on the ground at its origin with its front towards −y, so the game turns it half a turn to face its −z.
