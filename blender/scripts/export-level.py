@@ -6,9 +6,9 @@ Run it with Blender in the background, from any folder:
     blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-level.py -- [level]
 
 The level defaults to brooklyn-bridge. The Lauder extension runs this by itself when the level's
-Blender file is saved, and Play runs it before building. Run it by hand after changing the Blender
-file outside Blender's interface, such as with a script: ./scripts/check fails until the exports
-match the Blender file again.
+Blender file is saved, or a model that the level uses, and Play runs it before building. Run it by
+hand after changing the level or its models outside Blender's interface, such as with a script, or
+after changing a texture: ./scripts/check fails until the exports match their files again.
 """
 
 from pathlib import Path
@@ -31,8 +31,8 @@ blend = REPOSITORY / level.blend
 if lauder_levels.is_lfs_pointer(blend):
     sys.exit(f"{level.blend} is not downloaded yet: run git lfs pull.")
 try:
-    loaded = lauder_levels.open_level_file(str(REPOSITORY), key)
-    lauder_levels.export_level(str(REPOSITORY), key, loaded)
+    made_from = lauder_levels.open_level_file(str(REPOSITORY), key)
+    lauder_levels.export_level(str(REPOSITORY), key, made_from)
 except lauder_levels.LayoutError as error:
     sys.exit(f"The level was not exported: {error}")
 print(f"Exported {level.layout} and {level.scene} from {level.blend}.")

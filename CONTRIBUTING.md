@@ -98,7 +98,7 @@ Never edit those two by hand; change the level in Blender instead.
 
    A **Lauder** tab appears in the 3D Viewport's sidebar (press N). The extension runs from the repository, so after a pull or a branch switch it is up to date once Blender restarts.
 2. Check the **Repository** folder, which defaults to the repository the extension came from, and press **Open Level**. The level file's collections decide where each object goes:
-   - **Visual**: everything the player sees, exported to the scene file. Each box's look is a block parented to its gameplay box, each vehicle's is its body and windows, and the decoration, such as the walkway and the cables, stands on its own. Reshape or replace any of it.
+   - **Visual**: everything the player sees, exported to the scene file. Each box's look is a block parented to its gameplay box, each vehicle's is a [model](#models) parented to its box, and the decoration, such as the walkway and the cables, stands on its own. Reshape or replace any of it.
    - **Gameplay**: the ground, the boxes that block movement and sight, the landmarks, the trigger and fight areas, and the named markers, drawn as outlines. Each has a role, which the Lauder tab shows for the selected object; a new mesh counts as a box and a new empty as a marker.
    - **Lights**: the suns. **Camera**: the game camera and its target.
    - **Preview**: the party's stand-ins at their start markers, which the game draws itself. It is never exported.
@@ -107,7 +107,7 @@ Never edit those two by hand; change the level in Blender instead.
    - keep boxes and landmarks on the deck;
    - give each a name of its own, and keep the names that `BrooklynBridge.swift` uses.
 4. To see the game's view, look through the camera (Numpad 0) and drag **camera-target** to where the leader would stand. The frame is the baseline iPhone's screen. Moving **game-camera** changes the game's camera offset, and its **Field of View**, in the camera's properties, changes the game's. Keep its **Sensor Fit** at Vertical.
-5. To change the lighting, turn the suns in **Lights** and change their **Color**, **Strength** and **Shadow** in the light's properties. Keep to the visual direction's budget: at most two lights, one casting shadows. To change how something looks, edit its material's Principled BSDF: **Base Color**, **Roughness** and **Metallic** reach the game. Press **Game Look** to see the scene lit by its own lights, close to the game, and press it again for Solid shading. It asks you to hide any light that is not in **Lights** first.
+5. To change the lighting, turn the suns in **Lights** and change their **Color**, **Strength** and **Shadow** in the light's properties. Keep to the visual direction's budget: at most two lights, one casting shadows. To change how something looks, edit its material's Principled BSDF: **Base Color**, **Roughness** and **Metallic** reach the game, and so do image textures. Export refuses other shaders, so bake a procedural look into an image first. It also refuses two materials whose names would be the same in USD, such as `car paint` and `car-paint`. Press **Game Look** to see the scene lit by its own lights, close to the game, and press it again for Solid shading. It asks you to hide any light that is not in **Lights** first.
 6. Press ⌘S. Saving checks the game's rules: if one fails, it explains what to fix, and only the Blender file is saved. Otherwise it exports, in a Blender of its own in the background, in about two seconds, and the Lauder tab says when it is done. **Export** does the same for a file you have not changed, for example after a pull.
 7. Press **Play** to see the level in the game. It saves the level, exports it if needed, then builds the app and opens it in the iOS Simulator through `./apple/scripts/play`, which can also be run on its own. The first build takes a few minutes; later ones take a few seconds.
 8. Run `./scripts/check`. Tests that check the layout, such as the cover near the stranger, may need updating to match what you moved.
@@ -118,7 +118,30 @@ To change a level without Blender's interface, for example with a script in a ba
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-level.py
 ```
 
-`blender/level-exports.json` records the fingerprints of the level's Blender file and of its two exports, and `./scripts/check` fails while they no longer match, including after an edit by hand. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender. Earlier versions kept a working file in `.local/blender`; it is no longer used.
+`blender/level-exports.json` records the fingerprints of the level's Blender file, of the models and textures it uses, and of its two exports. `./scripts/check` fails while they no longer match, including after an edit by hand. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender. Earlier versions kept a working file in `.local/blender`; it is no longer used.
+
+## Models
+
+A model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, stored with Git LFS ([ADR 0006](docs/decisions/0006-blender-source-of-truth.md)). Beside it are a `README.md`, which says where the model comes from and under which licence, and any textures it uses. One collection, named after the model, holds it, at its real size in metres and standing on the ground at its origin. Levels link the model, so a change to it reaches every level that uses it. The bridge's vehicles are the first models: `car`, `van` and `truck`. The [models' README](blender/assets/README.md) sets out the rest of what a model's file needs.
+
+- **Place a model in a level:** with the level open, select the gameplay box the model belongs to, press **Add Model** in the Lauder tab, and choose the model. It stands on the box's base, turned along the box's longer side, in Visual and parented to the box, so that it moves with the box. Without a box selected, it stands at the 3D cursor. The game blocks movement and sight with the box, not the model, so give the box the model's size.
+- **Change a model:** select it in the level and press **Open Model**, or open its file. Change it and save: each level whose export used it exports again. **Open Level** goes back. A level cannot change a linked model; a variant, such as a red car, is a model of its own.
+- **Check a model:** press **Check Model** with the model open, or run the intake check, giving the path of your Blender:
+
+  ```bash
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/check-model.py -- car
+  ```
+
+  It lists what must change before a level can use the model, such as a material the game cannot show, a texture outside the model's folder, or a README without the model's source and licence. Then it notes what is worth a look, such as the model's size.
+- **Bring in a model from a file:** run `add-model.py` with the file and a name for the model, in lowercase letters, digits and hyphens:
+
+  ```bash
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/add-model.py -- taxi.glb taxi
+  ```
+
+  It takes Blender files, and the glTF, FBX, OBJ and USD files that Blender imports. It makes the model's folder: the model's Blender file, holding what the file shows, without its lights and cameras; a copy of every texture it uses; and a `README.md`. From a Blender file it takes what the first scene shows, and each instance of a collection becomes copies of its parts. Fill in the README's **Source** and **Licence** lines before committing, as [Assets and attribution](#assets-and-attribution) asks, then open the model in Blender to look at it.
+
+A model follows the same rules as the rest of a level's look, and Export refuses a level whose models break them. Its materials use a Principled BSDF with image textures, each named after the model so that no two share a name. Its textures are PNG or JPEG files in its own folder, never packed into the Blender file; the [visual direction](docs/visual-direction.md) allows no new ones for now. After changing a texture outside Blender, press **Export** in the level, or run `export-level.py`. `./scripts/check` fails while a model lacks a README naming its source and licence, or while a level's exports no longer match its models.
 
 ## TestFlight builds
 
@@ -155,9 +178,9 @@ Original contributions are submitted under the project's [MIT licence](LICENSE).
 
 Submit original material or material you are entitled to contribute. For third-party art, audio, fonts or models, include the source, licence and required attribution. Do not assume that a downloadable or AI-generated asset is automatically suitable for redistribution.
 
-Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. Keep generated build products and caches out of source control.
+Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. A [model](#models) keeps its Blender file, textures and `README.md` in its own folder in `blender/assets`; each level's scene file is its export. Keep generated build products and caches out of source control.
 
-The supported path generates editable USD sources and USDZ delivery assets, loads the USDZ files directly, and composes scenes in Swift. See the [engine decision](docs/decisions/0001-engine.md).
+The supported path makes levels and models in Blender, exports each level's look as a USDZ that the game loads directly, and composes the rest in Swift. See the [engine decision](docs/decisions/0001-engine.md) and [ADR 0006](docs/decisions/0006-blender-source-of-truth.md).
 
 ### Target membership
 

@@ -1,33 +1,45 @@
-"""Lauder's levels in Blender (ADR 0006), as a Blender extension.
+"""Lauder's levels and models in Blender (ADR 0006), as a Blender extension.
 
 Each level is a Blender file in the repository, blender/levels/<level>.blend, stored with Git LFS:
 the level's source. Its collections decide where each object goes:
 
 - Visual: everything the player sees. Export writes it to the level's scene file, a USDZ that the
-  game loads.
+  game loads. A model appears in it as an instance of the model's collection, linked from the
+  model's own file.
 - Gameplay: the ground, the boxes that block movement and sight, the landmarks, the trigger and
   fight areas, and the markers where people start and stand, each with its role. Export writes
   them to the level's layout file, typed Swift that the game compiles. They show as outlines, and
-  the game never draws them. A visual part parented to a gameplay box moves with it.
+  the game never draws them. A visual part or model parented to a gameplay box moves with it.
 - Lights and Camera: the level's sun lights and the game camera's rig, written to the layout file
   too.
 - Preview: the party's stand-ins at their start markers, which the game draws itself. It is never
   exported.
 
+Each model is a Blender file of its own, blender/assets/<model>/<model>.blend, also stored with
+Git LFS. It holds one collection named after the model, at its real size in metres and standing on
+the ground at its origin. Beside it are a README.md, which says where the model comes from and
+under which licence, and any textures it uses. Levels link the model, so a change to it reaches
+every level that uses it: saving a model exports the levels whose last export used it. The intake
+check, Check Model or blender/scripts/check-model.py, says what a model needs before a level can
+use it. blender/scripts/add-model.py brings a model in from a Blender, glTF, FBX, OBJ or USD file.
+
 Install it once: in Blender's Preferences, add a local extension repository at this repository's
 blender/extensions folder, then enable Lauder levels. A Lauder tab appears in the 3D Viewport's
-sidebar (press N). Open Level opens the level's Blender file. Saving it checks the game's rules,
-then exports in a Blender of its own, in the background, with blender/scripts/export-level.py,
-which agents run too. Play saves, exports when needed, then builds the game and opens it in the iOS
+sidebar (press N). Open Level opens the level's Blender file. Add Model places a model in it, and
+Open Model opens the selected model's own file. Saving a level checks the game's rules, then
+exports in a Blender of its own, in the background, with blender/scripts/export-level.py, which
+agents run too. Play saves, exports when needed, then builds the game and opens it in the iOS
 Simulator through apple/scripts/play. blender/level-exports.json records what each export was made
 from and what it wrote, and ./scripts/check fails when they no longer match.
 
-Writing and checking a layout needs no Blender: blender/test_lauder_levels.py runs those parts in
-./scripts/check. Coordinates in the layout file are the game's, in metres: x across, y up and z
-along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
+Writing and checking a layout, and the intake check's rules, need no Blender:
+blender/test_lauder_levels.py runs those parts in ./scripts/check. Coordinates in the layout file
+are the game's, in metres: x across, y up and z along the level. In Blender, z is up, so a game
+point (x, y, z) sits at (x, -z, y).
 """
 
 from dataclasses import dataclass, field
+import datetime
 import hashlib
 import json
 import math
@@ -42,7 +54,7 @@ import textwrap
 try:
     import bpy
     from bpy.app.handlers import persistent
-    from mathutils import Vector
+    from mathutils import Matrix, Vector
 except ImportError:  # Outside Blender: the tests use the plain functions below.
     bpy = None
 
@@ -84,10 +96,18 @@ VISUAL, GAMEPLAY, LIGHTS, CAMERA, PREVIEW = "Visual", "Gameplay", "Lights", "Cam
 #: an empty is a marker.
 ROLES = ("ground", "box", "landmark", "area", "marker")
 
+#: Where the models are, relative to the repository: blender/assets/<model>/<model>.blend.
+ASSETS = "blender/assets"
+#: A model's name, which is also its folder's, its file's and its collection's.
+MODEL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"
 #: The script that exports a level in a Blender of its own.
 EXPORT_SCRIPT = "blender/scripts/export-level.py"
+#: The scripts that check a model, and that bring one in from a file.
+CHECK_MODEL_SCRIPT = "blender/scripts/check-model.py"
+ADD_MODEL_SCRIPT = "blender/scripts/add-model.py"
 #: Where each export records what it was made from and what it wrote, relative to the repository.
 EXPORT_RECORD = "blender/level-exports.json"
 #: Raised whenever Export changes what it writes, so that every level is exported again.
@@ -584,78 +604,373 @@ def record_exports(repository, level, made_from, wrote):
     path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
 
 
+def levels_using(repository, name):
+    """The levels whose last export used this file, such as a model, relative to the repository."""
+    return [key for key, record in _records(repository).items()
+            if key in LEVELS and name in record.get("made from", {})]
+
+
+# MARK: - Models, and what a scene file can show (ADR 0006)
+
+
+#: The shader nodes that may feed a material's Principled BSDF. Blender's USD export turns "simple
+#: node trees containing Diffuse BSDF, Principled BSDF, Image Textures, UVMap, and Separate RGB
+#: nodes" into the preview surfaces that RealityKit shows (Blender's manual, USD export). Lauder
+#: keeps to the Principled BSDF and adds the Normal Map node, which carries a normal texture. Math
+#: nodes may feed only Alpha, for a cut-off, as the manual describes.
+SHADER_NODES = frozenset({"TEX_IMAGE", "UVMAP", "SEPARATE_COLOR", "NORMAL_MAP", "REROUTE"})
+#: The kinds of texture file that a USDZ carries to the game.
+TEXTURE_TYPES = (".png", ".jpg", ".jpeg")
+#: The repository's policy (.gitattributes): a PNG or JPEG over 1 MiB needs a Git LFS rule of its
+#: own.
+LFS_IMAGE_BYTES = 1_048_576
+#: The intake check's starting budgets for one model. They give notes, not refusals, until phone
+#: measurements set real ones.
+MOST_TRIANGLES = 10_000
+MOST_TEXTURE_PIXELS = 2048
+#: Beyond these sizes, in metres, a model was probably made in other units.
+LARGEST_MODEL, SMALLEST_MODEL = 50, 0.05
+
+
+def _and(items):
+    """Names in a sentence: "a", "a and b", "a, b and c"."""
+    items = list(items)
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def usd_name(name):
+    """The name a Blender name has in USD, which allows only letters, digits and underscores and
+    no digit first: Blender's USD export replaces every other byte with an underscore, so
+    `car-a1 model` becomes `car_a1_model`."""
+    letters = "".join(chr(byte) if chr(byte).isascii() and (chr(byte).isalnum() or byte == 95)
+                      else "_" for byte in name.encode()) or "_"
+    return "_" + letters[1:] if letters[0].isdigit() else letters
+
+
+def name_clashes(names, what):
+    """Problems for names that USD would make the same (usd_name)."""
+    found = {}
+    for name in names:
+        found.setdefault(usd_name(name), []).append(name)
+    return [f"The {what} {_and(sorted(same))} would all be {key} in the scene file: give each a "
+            f"name of its own." for key, same in sorted(found.items()) if len(same) > 1]
+
+
+@dataclass
+class MaterialShape:
+    """What Export and the intake check read from one material that a scene file would show."""
+    name: str
+    #: The model file it comes from, relative to the repository, or None for the open file's own.
+    source: str = None
+    #: The kind of node that makes its surface, such as BSDF_PRINCIPLED, or None when none does.
+    surface: str = None
+    #: For each input of the surface that nodes feed: the input's name, and the kind and label of
+    #: each node that feeds it, however indirectly.
+    feeds: tuple = ()
+
+
+def _material(material):
+    return material.name + (f" (from {material.source})" if material.source else "")
+
+
+def material_problems(materials):
+    """What stops the game from showing these materials as Blender does (ADR 0006, decision 8): a
+    surface other than a Principled BSDF, nodes that Blender's USD export cannot carry, and names
+    that USD would make the same, which the scene file would merge into one."""
+    problems, by_name = [], {}
+    for material in materials:
+        by_name.setdefault(usd_name(material.name), []).append(material)
+        if material.surface != "BSDF_PRINCIPLED":
+            problems.append(f"The material {_material(material)} needs a Principled BSDF as its "
+                            f"surface; the game shows nothing else.")
+            continue
+        for socket, nodes in material.feeds:
+            allowed = SHADER_NODES | ({"MATH"} if socket == "Alpha" else set())
+            others = sorted({label for kind, label in nodes if kind not in allowed})
+            if others:
+                problems.append(f"The material {_material(material)} makes its {socket} with "
+                                f"{_and(others)}, which the game cannot show: bake it into an "
+                                f"image texture.")
+    for key, same in sorted(by_name.items()):
+        if len(same) > 1:
+            names = _and([_material(each) for each in same])
+            problems.append(f"The materials {names} would all be {key} in the scene file, where "
+                            f"one replaces the others: give each a name of its own.")
+    return problems
+
+
+@dataclass
+class TextureShape:
+    """What Export and the intake check read from one image that a material uses."""
+    name: str
+    #: Its file, relative to the repository, or as an absolute path when outside it.
+    path: str = ""
+    #: Blender's source for the image: FILE for an image file, or GENERATED, TILED and others.
+    source: str = "FILE"
+    packed: bool = False
+    exists: bool = True
+    #: The file's size in bytes, and the image's in pixels.
+    bytes: int = 0
+    pixels: tuple = (0, 0)
+    #: Whether Git LFS stores the file, as .gitattributes says, or None when Git cannot tell.
+    lfs: bool = None
+    #: Whether the Blender file holds the image by its full path, rather than relative to itself.
+    full_path: bool = False
+    #: Whether the file is a Git LFS pointer, not yet downloaded with git lfs pull.
+    pointer: bool = False
+
+
+def texture_problems(textures, folder=None):
+    """What stops these textures from reaching the game as image files of their own in the
+    repository, kept out of the Blender files. With a folder, such as a model's, each texture must
+    be in it."""
+    problems = []
+    home = folder or "the repository"
+    for texture in textures:
+        if texture.source != "FILE":
+            problems.append(f"The texture {texture.name} is {texture.source.lower()} in Blender; "
+                            f"save it as a PNG or JPEG file in {home} and use that.")
+        elif texture.packed:
+            problems.append(f"The texture {texture.name} is packed into the Blender file; unpack "
+                            f"it into {home}, so that it stays a file of its own.")
+        elif not texture.exists:
+            problems.append(f"The texture {texture.name} is missing: {texture.path or 'no file'}.")
+        elif texture.pointer:
+            problems.append(f"The texture {texture.name}, {texture.path}, is not downloaded yet: "
+                            f"run git lfs pull.")
+        elif texture.path.startswith("/"):
+            problems.append(f"The texture {texture.name} is outside the repository; copy it into "
+                            f"{home}.")
+        else:
+            if folder and not texture.path.startswith(folder.rstrip("/") + "/"):
+                problems.append(f"The texture {texture.name} is in {Path(texture.path).parent}; "
+                                f"copy it into {folder}.")
+            if Path(texture.path).suffix.lower() not in TEXTURE_TYPES:
+                problems.append(f"The texture {texture.name} is a {Path(texture.path).suffix} "
+                                f"file; the game takes PNG and JPEG.")
+            if texture.bytes > LFS_IMAGE_BYTES and texture.lfs is False:
+                problems.append(f"The texture {texture.name} is over 1 MiB, so the repository "
+                                f"stores it with Git LFS: add a rule for {texture.path} to "
+                                f".gitattributes.")
+            if texture.full_path:
+                problems.append(f"The texture {texture.name} is held by its full path; save its "
+                                f"Blender file with the Lauder extension, which makes it "
+                                f"relative.")
+    return problems
+
+
+def model_of_path(repository, path):
+    """The model whose Blender file this is, blender/assets/<model>/<model>.blend, or None."""
+    if not path:
+        return None
+    try:
+        parts = Path(path).resolve().relative_to(Path(repository).resolve()).parts
+    except ValueError:
+        return None
+    if (len(parts) == 4 and "/".join(parts[:2]) == ASSETS and MODEL_NAME.fullmatch(parts[2])
+            and parts[3] == f"{parts[2]}.blend"):
+        return parts[2]
+    return None
+
+
+def available_models(repository):
+    """The models in blender/assets, by name."""
+    folder = Path(repository) / ASSETS
+    if not folder.is_dir():
+        return []
+    return sorted(item.name for item in folder.iterdir()
+                  if MODEL_NAME.fullmatch(item.name) and (item / f"{item.name}.blend").is_file())
+
+
+def provenance_problems(name, readme):
+    """What the model's README.md lacks: where the model comes from and its licence, which
+    CONTRIBUTING asks of every asset. add-model.py writes a question mark in each, to fill in."""
+    place = f"{ASSETS}/{name}/README.md"
+    if readme is None:
+        return [f"{place} is missing: say there where the model comes from and its licence."]
+    problems = []
+    for field in ("Source", "Licence"):
+        found = re.search(rf"^[ \t]*[-*][ \t]+\*\*{field}:\*\*[ \t]*(.*)$", readme, re.MULTILINE)
+        if found is None or not found.group(1).strip() or found.group(1).startswith("?"):
+            problems.append(f"{place} needs its **{field}:** line filled in.")
+    return problems
+
+
+@dataclass
+class ModelShape:
+    """What the intake check reads from a model's Blender file."""
+    #: The model's name, from where its file is (model_of_path), or None.
+    name: str
+    #: The names of the file's own collections.
+    collections: tuple = ()
+    #: The names of everything in the model's collection, of its parts that have a shape, of its
+    #: lights and cameras, and of its parts hidden from renders.
+    names: tuple = ()
+    shown: tuple = ()
+    lights: tuple = ()
+    hidden: tuple = ()
+    #: Where the model reaches, in metres in Blender's axes: (minimum, maximum), each (x, y, z).
+    bounds: tuple = None
+    triangles: int = 0
+    #: The scene's unit system and unit scale.
+    units: tuple = ("METRIC", 1.0)
+    materials: tuple = ()
+    textures: tuple = ()
+    #: The text of the model's README.md, or None.
+    readme: str = None
+
+
+def _is(names):
+    return "is" if len(names) == 1 else "are"
+
+
+def model_report(model):
+    """The intake check (ADR 0006, decision 7): what must change before a level can use the model,
+    and what is worth a look. Returns (problems, notes)."""
+    if model.name is None:
+        return [f"Keep a model as {ASSETS}/<name>/<name>.blend, its name in lowercase letters, "
+                f"digits and hyphens."], []
+    problems, notes = [], []
+    if model.name not in model.collections:
+        problems.append(f"The file needs a collection named {model.name}, holding the model: "
+                        f"levels link it by that name.")
+    elif not model.shown:
+        problems.append(f"The {model.name} collection holds nothing with a shape.")
+    if model.units[0] != "METRIC" or abs(model.units[1] - 1) > 1e-6:
+        problems.append("Set the scene's Unit System to Metric, with a Unit Scale of 1: the game "
+                        "counts in metres.")
+    if model.lights:
+        problems.append(f"Remove {_and(model.lights)}: a level's light comes from its own Lights, "
+                        f"and the game drops a model's lights and cameras.")
+    problems += material_problems(model.materials)
+    problems += texture_problems(model.textures, f"{ASSETS}/{model.name}")
+    problems += name_clashes(model.names, "parts")
+    problems += provenance_problems(model.name, model.readme)
+    if model.bounds is not None:
+        low, high = model.bounds
+        size = [b - a for a, b in zip(low, high)]
+        notes.append(f"It measures {_number(size[0], 2)} m across, {_number(size[1], 2)} m long "
+                     f"and {_number(size[2], 2)} m high.")
+        if max(size) > LARGEST_MODEL or max(size) < SMALLEST_MODEL:
+            notes.append("That is unusually large or small: check that it was made in metres. A "
+                         "file made in centimetres comes in a hundred times too big.")
+        if abs(low[2]) > 0.01:
+            notes.append(f"Its lowest point is at a height of {_number(low[2], 2)} m, not 0. A "
+                         f"model stands on the ground at its origin, so that it sits on what it "
+                         f"is placed on.")
+        offset = math.hypot((low[0] + high[0]) / 2, (low[1] + high[1]) / 2)
+        if offset > 0.05:
+            notes.append(f"Its middle is {_number(offset, 2)} m from its origin; centre it there, "
+                         f"so that it turns about its middle.")
+    if model.triangles > MOST_TRIANGLES:
+        notes.append(f"It has {model.triangles:,} triangles, more than the starting budget of "
+                     f"{MOST_TRIANGLES:,} for a model: check the phone's frame rate when levels "
+                     f"use it.")
+    if model.textures:
+        notes.append("It uses textures, and the visual direction allows no new textures for now "
+                     "(docs/visual-direction.md).")
+        large = [texture.name for texture in model.textures
+                 if max(texture.pixels) > MOST_TEXTURE_PIXELS]
+        if large:
+            notes.append(f"{_and(large)} {_is(large)} more than {MOST_TEXTURE_PIXELS} pixels on a "
+                         f"side, the starting budget.")
+    if model.hidden:
+        notes.append(f"{_and(model.hidden)} {_is(model.hidden)} hidden from renders, so the game "
+                     f"will not show {'it' if len(model.hidden) == 1 else 'them'}.")
+    suffixed = [name for name in model.names if re.search(r"\.\d{3}$", name)]
+    if suffixed:
+        notes.append(f"{_and(suffixed)} {'has' if len(suffixed) == 1 else 'have'} Blender's "
+                     f"duplicate suffix; give each a name of its own.")
+    return problems, notes
+
+
+def report_text(name, problems, notes):
+    """The intake check's findings as lines to read."""
+    count = f"{len(problems)} {'problem' if len(problems) == 1 else 'problems'}"
+    lines = [f"{name}: {count} to fix before a level can use it." if problems
+             else f"{name} is ready for levels to use."]
+    lines += [f"- {problem}" for problem in problems]
+    if notes:
+        lines += ["Worth a look:"] + [f"- {note}" for note in notes]
+    return "\n".join(lines)
+
+
 # MARK: - Work in the background
 
 
 #: Work running in the background, one step after another, so that Blender stays usable: the
-#: steps still to run; the running step's name, process, log and log's path; the repository and
-#: level the work is for; and how often it exported again because the level's Blender file changed
-#: while it ran.
-_JOB = {"steps": [], "name": None, "process": None, "log": None, "path": None,
-        "repository": None, "key": None, "refreshes": 0}
-#: What each background step says when it finishes well.
-_FINISHED = {
-    "export": "Exported the level. The game shows it from the next build.",
-    "play": "The game is running in the Simulator.",
-}
-#: How often one run of background work exports again while the level's Blender file keeps
-#: changing, so that it cannot go on for ever.
+#: steps still to run; the running step, its process, log and log's path; the repository the work
+#: is for; and how often it exported again because a level's files changed while it ran.
+_JOB = {"steps": [], "step": None, "process": None, "log": None, "path": None,
+        "repository": None, "refreshes": 0}
+#: How often one run of background work exports again while a level's files keep changing, so
+#: that it cannot go on for ever.
 MOST_REFRESHES = 3
 
 
 def _export_step(repository, key):
-    """The background step that exports the level in a Blender of its own."""
+    """The background step that exports the level in a Blender of its own: (name, command, log,
+    level)."""
     blender = bpy.app.binary_path if bpy is not None else "blender"
     return ("export", [
         blender, "-b", "--factory-startup", "--python-exit-code", "1",
         "--python", str(Path(repository) / EXPORT_SCRIPT), "--", key,
-    ], "export.log")
+    ], "export.log", key)
 
 
 def background_steps(repository, key, play):
     """The background steps that saving (play=False) or Play needs: exporting the level when its
-    exports no longer match its Blender file, then, for Play, building and opening the game. Each
-    is (name, command, log)."""
+    exports no longer match its files, then, for Play, building and opening the game. Each is
+    (name, command, log, level)."""
     steps = [_export_step(repository, key)] if stale_exports(repository, key) is not None else []
     if play:
         steps.append(("play", [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)],
-                      "play.log"))
+                      "play.log", key))
     return steps
 
 
 def queue_steps(running, waiting, steps):
-    """The steps to add after the background work already running and waiting. An export already
-    running or waiting stands in for a new one, which could only race it for the same files: when
-    it finishes, the exports' freshness is checked again (refresh_needed)."""
-    names = ([running] if running else []) + [name for name, _, _ in waiting]
-    if "export" in names:
-        return [step for step in steps if step[0] != "export"]
-    return list(steps)
+    """The steps to add after the background step running, if any, and those waiting. An export
+    of the same level already running or waiting stands in for a new one, which could only race it
+    for the same files: when it finishes, the exports' freshness is checked again
+    (refresh_needed)."""
+    exporting = {step[3] for step in ([running] if running else []) + list(waiting)
+                 if step[0] == "export"}
+    return [step for step in steps if step[0] != "export" or step[3] not in exporting]
 
 
-def refresh_needed(waiting, stale, refreshes):
-    """Whether to export again before going on, once a step has finished well: when the level's
-    Blender file changed while it ran, such as by a second save, and no export is next anyway."""
-    upcoming = waiting[0][0] if waiting else None
-    return stale and upcoming != "export" and refreshes < MOST_REFRESHES
+def refresh_needed(finished, waiting, stale, refreshes):
+    """Whether to export the finished step's level again before going on, once the step has
+    finished well: when the level's files changed while it ran, such as by a second save, and its
+    export is not next anyway."""
+    upcoming = waiting[0] if waiting else None
+    exporting_next = upcoming is not None and upcoming[0] == "export" and upcoming[3] == finished[3]
+    return stale and not exporting_next and refreshes < MOST_REFRESHES
 
 
-def _start_job(repository, key, steps):
+def _finished(step):
+    """What a background step says when it finishes well."""
+    if step[0] == "export":
+        return f"Exported {LEVELS[step[3]].title}. The game shows it from the next build."
+    return "The game is running in the Simulator."
+
+
+def _start_job(repository, steps):
     """Run the steps in the background, in order, stopping at the first that fails."""
-    _JOB.update(steps=list(steps), repository=repository, key=key, refreshes=0)
+    _JOB.update(steps=list(steps), repository=repository, refreshes=0)
     _next_step()
     # Persistent, so that opening another Blender file keeps watching.
     bpy.app.timers.register(_watch_job, first_interval=1.0, persistent=True)
 
 
 def _next_step():
-    name, command, log_name = _JOB["steps"].pop(0)
-    path = Path(_JOB["repository"]) / ".local/play" / log_name
+    step = _JOB["steps"].pop(0)
+    path = Path(_JOB["repository"]) / ".local/play" / step[2]
     path.parent.mkdir(parents=True, exist_ok=True)
     log = path.open("w")
-    process = subprocess.Popen(command, cwd=_JOB["repository"], stdout=log,
+    process = subprocess.Popen(step[1], cwd=_JOB["repository"], stdout=log,
                                stderr=subprocess.STDOUT)
-    _JOB.update(name=name, process=process, log=log, path=path)
+    _JOB.update(step=step, process=process, log=log, path=path)
 
 
 def _job_running():
@@ -677,14 +992,14 @@ def _watch_job():
         return 0.5
     _JOB["log"].close()
     _JOB["process"] = None
-    name, path = _JOB["name"], _JOB["path"]
+    step, path = _JOB["step"], _JOB["path"]
     if process.returncode == 0:
         try:
-            stale = stale_exports(_JOB["repository"], _JOB["key"]) is not None
+            stale = stale_exports(_JOB["repository"], step[3]) is not None
         except (OSError, ValueError):
             stale = False
-        if refresh_needed(_JOB["steps"], stale, _JOB["refreshes"]):
-            _JOB["steps"].insert(0, _export_step(_JOB["repository"], _JOB["key"]))
+        if refresh_needed(step, _JOB["steps"], stale, _JOB["refreshes"]):
+            _JOB["steps"].insert(0, _export_step(_JOB["repository"], step[3]))
             _JOB["refreshes"] += 1
         if _JOB["steps"]:
             try:
@@ -694,14 +1009,14 @@ def _watch_job():
                 _announce(f"The next step could not start: {error}", error=True)
                 return None
             return 0.5
-        _announce(_FINISHED[name])
+        _announce(_finished(step))
         return None
     _JOB["steps"] = []
     lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
     # The export says why it refused in one line; otherwise the log's last lines tell.
     detail = next((line for line in reversed(lines) if line.startswith("The level was not")),
                   " ".join(lines[-3:]))
-    what = "The export" if name == "export" else "Play"
+    what = f"Exporting {LEVELS[step[3]].title}" if step[0] == "export" else "Play"
     _announce(f"{what} failed{': ' + detail if detail else '.'} The log is "
               f".local/play/{path.name}.", error=True)
     return None
@@ -711,22 +1026,38 @@ def _queued(name):
     """Whether a background step of this name is running or waiting to run."""
     if not _job_running():
         return False
-    return _JOB["name"] == name or any(step[0] == name for step in _JOB["steps"])
+    return _JOB["step"][0] == name or any(step[0] == name for step in _JOB["steps"])
 
 
-def _queue(repository, key, steps):
+def _queue(repository, steps):
     """Run the steps in the background, after the work already running, if any (queue_steps)."""
     if _job_running():
-        _JOB["steps"].extend(queue_steps(_JOB["name"], _JOB["steps"], steps))
+        _JOB["steps"].extend(queue_steps(_JOB["step"], _JOB["steps"], steps))
     elif steps:
-        _start_job(repository, key, steps)
+        _start_job(repository, steps)
 
 
 def _export_if_stale(repository, key):
-    """Export the level in the background when its exports no longer match its Blender file, after
-    the work already running. Returns whether an export is running or waiting."""
-    _queue(repository, key, background_steps(repository, key, play=False))
+    """Export the level in the background when its exports no longer match its files, after the
+    work already running. Returns whether an export is running or waiting."""
+    _queue(repository, background_steps(repository, key, play=False))
     return _queued("export")
+
+
+def _export_levels_using(repository, name):
+    """Export, in the background, each level whose last export used the model and whose exports
+    no longer match its files. Returns the message to show."""
+    relative = f"{ASSETS}/{name}/{name}.blend"
+    keys = levels_using(repository, relative)
+    if not keys:
+        return f"No level uses {name} yet: place it in one with Add Model."
+    exporting = [LEVELS[key].title for key in keys if stale_exports(repository, key) is not None]
+    for key in keys:
+        _export_if_stale(repository, key)
+    if not exporting:
+        return f"The exports of the levels that use {name} are up to date."
+    verb = "uses" if len(exporting) == 1 else "use"
+    return f"Exporting {_and(exporting)}, which {verb} {name}…"
 
 
 def _announce(message, error=False):
@@ -758,6 +1089,17 @@ def level_of_file(path):
     return None
 
 
+def model_of_file(path):
+    """The repository and model whose Blender file this is, or None."""
+    if not path:
+        return None
+    path = Path(path).resolve()
+    if len(path.parents) < 4:
+        return None
+    name = model_of_path(path.parents[3], path)
+    return (str(path.parents[3]), name) if name else None
+
+
 def _guess_repository():
     """The repository this extension was installed from, found by its folders."""
     try:
@@ -774,8 +1116,11 @@ def _guess_repository():
 
 
 #: Blender's USD export for a scene file: the game's axes (y up, metres), each object as one
-#: prim, the materials as preview surfaces, and nothing that the game makes itself.
+#: prim, the materials as preview surfaces, and nothing that the game makes itself. Each instance
+#: of a model is written out as real meshes: in a test, RealityKit shared each part's mesh among a
+#: model's copies either way, and USD's instancing only added an entity to each part.
 SCENE_EXPORT = {
+    "use_instancing": False,
     "export_materials": True,
     "generate_preview_surface": True,
     "generate_materialx_network": False,
@@ -806,6 +1151,9 @@ def shapes_from_blender():
     bpy.context.view_layer.update()
     shapes = []
     for item in part.all_objects:
+        if item.instance_type == "COLLECTION" and item.instance_collection is not None:
+            raise LayoutError(f"{item.name} shows a model but is in Gameplay; put models in "
+                              f"Visual, parented to their box.")
         role = item.get("lauder_role") or {"MESH": "box", "EMPTY": "marker"}.get(item.type)
         if role not in ROLES:
             raise LayoutError(
@@ -881,6 +1229,169 @@ def layout_from_blender(repository, level):
                               lights_from_blender(), names_the_story_uses(repository, level))
 
 
+def what_collection_shows(collection):
+    """Every object a collection shows: its own, and those of the models and other collections
+    that its instances show, however deep."""
+    shown, waiting = {}, list(collection.all_objects)
+    while waiting:
+        item = waiting.pop()
+        if item in shown:
+            continue
+        shown[item] = None
+        if item.instance_type == "COLLECTION" and item.instance_collection is not None:
+            waiting.extend(item.instance_collection.all_objects)
+    return list(shown)
+
+
+def _relative(path, root):
+    """A path relative to the repository, or as it is when outside it."""
+    try:
+        return str(Path(path).resolve().relative_to(Path(root).resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _library_path(library):
+    """Where a linked Blender file is, resolved from the file that links it."""
+    return Path(bpy.path.abspath(library.filepath, library=library.parent)).resolve()
+
+
+def _model_file_of(item):
+    """The model file whose collection the object shows, or None."""
+    collection = item.instance_collection if item is not None else None
+    if item is None or item.instance_type != "COLLECTION" or collection is None:
+        return None
+    return _library_path(collection.library) if collection.library is not None else None
+
+
+def _feeding(socket):
+    """Every node that feeds an input socket, however indirectly."""
+    found, waiting = {}, [link.from_node for link in socket.links if not link.is_muted]
+    while waiting:
+        node = waiting.pop()
+        if node.name in found:
+            continue
+        found[node.name] = node
+        waiting.extend(link.from_node for each in node.inputs for link in each.links
+                       if not link.is_muted)
+    return list(found.values())
+
+
+def _material_shape(material, root):
+    """What Export reads from a material (MaterialShape), and the images that it shows."""
+    source = _relative(_library_path(material.library), root) if material.library else None
+    tree = material.node_tree
+    output = tree.get_output_node("ALL") if tree is not None else None
+    socket = output.inputs.get("Surface") if output is not None else None
+    if socket is None or not socket.is_linked:
+        return MaterialShape(material.name, source), []
+    shader = socket.links[0].from_node
+    feeds, images = [], []
+    if shader.type == "BSDF_PRINCIPLED":
+        for each in shader.inputs:
+            if not each.is_linked:
+                continue
+            nodes = _feeding(each)
+            feeds.append((each.name, tuple(sorted({(node.type, node.bl_label) for node in nodes}))))
+            images += [node.image for node in nodes if node.type == "TEX_IMAGE" and node.image]
+    return MaterialShape(material.name, source, shader.type, tuple(feeds)), images
+
+
+def _stored_with_lfs(root, relative):
+    """Whether .gitattributes has Git LFS store the file, or None when Git cannot tell."""
+    git = shutil.which("git") or "/usr/bin/git"
+    try:
+        result = subprocess.run([git, "check-attr", "filter", "--", relative], cwd=root,
+                                capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip().endswith(": lfs")
+
+
+def _texture_shape(image, root):
+    """What Export and the intake check read from an image (TextureShape)."""
+    if image.source != "FILE":
+        return TextureShape(image.name, source=image.source)
+    if image.packed_file is not None:
+        return TextureShape(image.name, packed=True)
+    path = Path(bpy.path.abspath(image.filepath, library=image.library)).resolve()
+    if not image.filepath or not path.is_file():
+        return TextureShape(image.name, image.filepath, exists=False)
+    relative = _relative(path, root)
+    if is_lfs_pointer(path):
+        return TextureShape(image.name, relative, pointer=True)
+    size = path.stat().st_size
+    lfs = _stored_with_lfs(root, relative) if size > LFS_IMAGE_BYTES and not relative.startswith(
+        "/") else None
+    return TextureShape(image.name, relative, bytes=size, pixels=tuple(image.size), lfs=lfs,
+                        full_path=not image.filepath.startswith("//"))
+
+
+def _looks(objects, root):
+    """The materials that these objects show, each once (MaterialShape), and their textures
+    (TextureShape)."""
+    materials = {}
+    for item in objects:
+        for slot in getattr(item, "material_slots", ()):
+            if slot.material is not None:
+                materials[slot.material] = None
+    shapes, images = [], {}
+    for material in materials:
+        shape, used = _material_shape(material, root)
+        shapes.append(shape)
+        images.update((image, None) for image in used)
+    return shapes, [_texture_shape(image, root) for image in images]
+
+
+def visual_problems(repository):
+    """What stops the open level's Visual collection from reaching the game as Blender shows it:
+    linked files that are not models or not there, materials beyond the contract or sharing a name,
+    textures that are not image files of their own in the repository, and names that USD would
+    make the same."""
+    root = Path(repository)
+    visual = _collection(VISUAL)
+    if visual is None:
+        return ["This Blender file has no Visual collection; open the level's own file."]
+    problems = []
+    for library in bpy.data.libraries:
+        path = _library_path(library)
+        if model_of_path(root, path) is None:
+            problems.append(f"The level links {_relative(path, root)}, which is not a model: link "
+                            f"models from {ASSETS}/<model>/<model>.blend.")
+        elif path.is_file() and is_lfs_pointer(path):
+            problems.append(f"{_relative(path, root)} is not downloaded yet: run git lfs pull.")
+        elif library.is_missing or not path.is_file():
+            problems.append(f"{_relative(path, root)} is missing, and the level uses it.")
+        elif not library.filepath.startswith("//"):
+            problems.append(f"{_relative(path, root)} is linked by its full path; save the level "
+                            f"with the Lauder extension, which makes it relative.")
+    shown = what_collection_shows(visual)
+    for item in shown:
+        collection = item.instance_collection if item.instance_type == "COLLECTION" else None
+        if (collection is not None and collection.is_missing and collection.library is not None
+                and not collection.library.is_missing):
+            problems.append(f"{item.name} shows {collection.name}, which "
+                            f"{_relative(_library_path(collection.library), root)} no longer has: "
+                            f"keep the model's collection named after it.")
+    materials, textures = _looks(shown, root)
+    problems += material_problems(materials)
+    problems += texture_problems(textures)
+    problems += name_clashes([item.name for item in visual.all_objects], "objects in Visual")
+    return problems
+
+
+def check_level(repository, level):
+    """The layout that the open level file holds, once the game's rules hold for both what plays
+    and what shows."""
+    layout = layout_from_blender(repository, level)
+    problems = visual_problems(repository)
+    if problems:
+        raise LayoutError(" ".join(problems))
+    return layout
+
+
 def _files_used(repository):
     """The files the open Blender file uses besides itself, such as linked models and textures,
     relative to the repository."""
@@ -896,57 +1407,120 @@ def _files_used(repository):
 
 
 def open_level_file(repository, key, attempts=3):
-    """Open the level's Blender file and return its fingerprint as it was read. A save that lands
-    while it is read shows as a different fingerprint after, and the file is read again."""
-    path = Path(repository) / LEVELS[key].blend
+    """Open the level's Blender file, and return the fingerprints of it and of every file it uses,
+    such as its models and their textures, relative to the repository. Each fingerprint is taken
+    before its file is read, so a save that lands meanwhile leaves the exports stale, to be
+    exported again, and never recorded as current. The level is opened to find the files it uses,
+    then again to read them, until no file it then uses went without a fingerprint first."""
+    root = Path(repository)
+    level = LEVELS[key]
+    made_from = {level.blend: file_fingerprint(root / level.blend)}
+    bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
     for _ in range(attempts):
-        before = file_fingerprint(path)
-        bpy.ops.wm.open_mainfile(filepath=str(path), load_ui=False)
-        if file_fingerprint(path) == before:
-            return before
-    raise LayoutError(f"{LEVELS[key].blend} kept changing while it was read; export it again.")
+        for name in _files_used(root):
+            if name not in made_from and (root / name).is_file():
+                made_from[name] = file_fingerprint(root / name)
+        bpy.ops.wm.open_mainfile(filepath=str(root / level.blend), load_ui=False)
+        # A file still missing has no fingerprint, and the export refuses it.
+        unread = [name for name in _files_used(root)
+                  if name not in made_from and (root / name).is_file()]
+        if not unread:
+            return made_from
+    raise LayoutError(f"The files {level.blend} uses kept changing while it was read; export it "
+                      f"again.")
 
 
-def forget_local_paths():
-    """Keep a level file in the public repository free of paths from the computer it was saved
-    on: point Blender's file browsers, which start in the home folder, at the level's own folder,
-    and drop the Repository folder that the Lauder tab stores on a scene. An open level file finds
-    its repository from where it is."""
+def _overwrite(owner, attribute, value):
+    """Set text that Blender keeps in a buffer of fixed size, filling the whole buffer first.
+    Blender saves a buffer's bytes beyond the end of its text, so a shorter text alone would keep
+    the tail of the one before it, such as the end of a home folder's path."""
+    filler = "_" * 1100  # Longer than any such buffer, which keeps what fits.
+    if isinstance(getattr(owner, attribute), bytes):
+        filler, value = filler.encode(), value.encode()
+    setattr(owner, attribute, filler)
+    setattr(owner, attribute, value)
+
+
+def forget_local_paths(path=None):
+    """Keep a level's or model's file in the public repository free of paths from the computer it
+    was saved on, at `path` or where it is:
+
+    - point Blender's file browsers, which start in the home folder, at the file's own folder;
+    - drop the Repository folder that the Lauder tab stores on a scene, since an open level finds
+      its repository from where it is;
+    - hold linked models and textures relative to the file, as Blender's Relative Path does;
+    - forget where appended data came from, which Blender keeps to reuse it when appending again.
+
+    Each is overwritten in full (_overwrite): even when Blender makes a path relative itself, it
+    shortens the full path in place, and the rest of the full path stays behind it."""
     for screen in bpy.data.screens:
         for area in screen.areas:
             for space in area.spaces:
                 params = getattr(space, "params", None)
                 if params is not None and hasattr(params, "directory"):
-                    params.directory = b"//" if isinstance(params.directory, bytes) else "//"
+                    _overwrite(params, "directory", "//")
+                    _overwrite(params, "filename", "")
     for scene in bpy.data.scenes:
         try:
             scene.property_unset("lauder_repository")
         except TypeError:
             pass  # The extension's settings are not registered in this Blender.
+    start = str(Path(path or bpy.data.filepath).parent)
+    # An image's raw path changes without reloading it, which would lose unsaved painting.
+    held = [(item, "filepath") for item in bpy.data.libraries if item.parent is None]
+    held += [(image, "filepath_raw") for image in bpy.data.images
+             if image.library is None and image.source == "FILE" and image.packed_file is None]
+    for item, attribute in held:
+        if item.filepath:
+            _overwrite(item, attribute,
+                       bpy.path.relpath(bpy.path.abspath(item.filepath), start=start))
+    for name in dir(bpy.data):
+        collection = getattr(bpy.data, name, None)
+        if not isinstance(collection, bpy.types.bpy_prop_collection):
+            continue
+        for item in collection:
+            reference = getattr(item, "library_weak_reference", None)
+            if reference is not None and item.library is None:
+                _overwrite(reference, "filepath", "")
+                _overwrite(reference, "id_name", "")
 
 
-def export_level(repository, key="brooklyn-bridge", loaded=None):
+def export_level(repository, key="brooklyn-bridge", made_from=None):
     """Write the level's layout file and scene file from its Blender file, open in this Blender,
-    and record what they were made from. `loaded` is the fingerprint of the Blender file as it was
-    read (open_level_file), so that a save made since counts as a change. It changes the open
-    file, so it runs in a Blender of its own: blender/scripts/export-level.py."""
+    and record what they were made from. `made_from` holds the fingerprints of the level's files
+    from before they were read (open_level_file), so that a save made since counts as a change. It
+    changes the open file, so it runs in a Blender of its own: blender/scripts/export-level.py."""
     level = LEVELS[key]
     root = Path(repository)
-    made_from = {name: file_fingerprint(root / name) for name in _files_used(root)}
-    made_from[level.blend] = loaded or file_fingerprint(root / level.blend)
-    text = emit_layout(layout_from_blender(repository, level), level)
+    text = emit_layout(check_level(repository, level), level)
+    made_from = dict(made_from or {})
+    for name in [level.blend] + _files_used(root):
+        if not (root / name).is_file():
+            raise LayoutError(f"{name} is missing, and the level file refers to it.")
+        if name not in made_from:
+            made_from[name] = file_fingerprint(root / name)
+    # Only the Visual collection is exported, each of its own parts where it stands in the world;
+    # the models it shows come with their instances, from their own files.
     visual = _collection(VISUAL)
-    if visual is None:
-        raise LayoutError("This Blender file has no Visual collection; open the level's own file.")
-    # Only the Visual collection is exported, each part where it stands in the world.
-    shown = list(visual.all_objects)
-    places = {item: item.matrix_world.copy() for item in shown}
-    for item in shown:
+    own = [item for item in visual.all_objects if item.library is None]
+    shown = set(what_collection_shows(visual))
+    places = {item: item.matrix_world.copy() for item in own}
+    for item in own:
         item.parent = None
         item.matrix_world = places[item]
         item.hide_render = False
+    # Nothing else stays in the scene, which the USD export writes whole: not even a model linked
+    # straight into another collection, whose objects belong to its own file.
+    scene = bpy.context.scene
+    if visual not in list(scene.collection.children):
+        scene.collection.children.link(visual)
+    for child in list(scene.collection.children):
+        if child != visual:
+            scene.collection.children.unlink(child)
+    for item in list(scene.collection.objects):
+        scene.collection.objects.unlink(item)
     for item in list(bpy.data.objects):
-        if item not in places:
+        if item.library is None and item not in shown:
             bpy.data.objects.remove(item, do_unlink=True)
     written, target = root / level.layout, root / level.scene
     with tempfile.TemporaryDirectory() as folder:
@@ -962,6 +1536,260 @@ def export_level(repository, key="brooklyn-bridge", loaded=None):
     return target
 
 
+#: The kinds of object with a shape that a scene file shows.
+SHAPED = ("MESH", "CURVE", "SURFACE", "META", "FONT")
+
+
+def _reach(objects):
+    """Where these objects reach, from their shapes as Blender evaluates them: (minimum, maximum),
+    each (x, y, z), or None."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    corners = []
+    for item in objects:
+        evaluated = item.evaluated_get(depsgraph)
+        corners += [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
+    if not corners:
+        return None
+    return (tuple(min(corner[axis] for corner in corners) for axis in range(3)),
+            tuple(max(corner[axis] for corner in corners) for axis in range(3)))
+
+
+def model_from_blender(repository):
+    """What the intake check reads from the open model file (ModelShape)."""
+    root = Path(repository)
+    name = model_of_path(root, bpy.data.filepath)
+    if name is None:
+        return ModelShape(None)
+    own = [collection for collection in bpy.data.collections if collection.library is None]
+    collection = next((each for each in own if each.name == name), None)
+    members = list(collection.all_objects) if collection is not None else []
+    shaped = [item for item in members if item.type in SHAPED]
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    triangles = 0
+    for item in shaped:
+        evaluated = item.evaluated_get(depsgraph)
+        mesh = evaluated.to_mesh()
+        if mesh is not None:
+            triangles += sum(len(polygon.vertices) - 2 for polygon in mesh.polygons)
+        evaluated.to_mesh_clear()
+    materials, textures = _looks(shaped, root)
+    readme = root / ASSETS / name / "README.md"
+    units = bpy.context.scene.unit_settings
+    return ModelShape(
+        name, tuple(each.name for each in own), tuple(item.name for item in members),
+        tuple(item.name for item in shaped),
+        tuple(item.name for item in members if item.type in ("LIGHT", "CAMERA")),
+        tuple(item.name for item in members if item.hide_render), _reach(shaped), triangles,
+        (units.system, units.scale_length), tuple(materials), tuple(textures),
+        readme.read_text() if readme.is_file() else None)
+
+
+def check_model(repository):
+    """The intake check of the open model file: (problems, notes)."""
+    return model_report(model_from_blender(repository))
+
+
+def place_model(repository, name, box=None, cursor=(0, 0, 0)):
+    """Link the model into the open level's Visual collection and return its new instance. With a
+    box, the model stands on the box's base, turned along its longer side, and is parented to it,
+    so that it moves with the box; otherwise it stands at the cursor."""
+    path = Path(repository) / ASSETS / name / f"{name}.blend"
+    visual = _collection(VISUAL)
+    if visual is None:
+        raise LayoutError("This Blender file has no Visual collection; open the level's own file.")
+    if not path.is_file() or is_lfs_pointer(path):
+        raise LayoutError(f"{ASSETS}/{name}/{name}.blend is missing or not downloaded yet: run "
+                          f"git lfs pull.")
+    with bpy.data.libraries.load(bpy.path.relpath(str(path)), link=True,
+                                 relative=True) as (available, wanted):
+        if name not in available.collections:
+            raise LayoutError(f"{ASSETS}/{name}/{name}.blend has no collection named {name}: "
+                              f"check the model.")
+        wanted.collections = [name]
+    model = wanted.collections[0]
+    holder = bpy.data.objects.new(f"{box.name} model" if box is not None else name, None)
+    holder.instance_type = "COLLECTION"
+    holder.instance_collection = model
+    visual.objects.link(holder)
+    if box is None:
+        holder.location = cursor
+        return holder
+    bpy.context.view_layer.update()
+    low, high = _reach([box])
+    parts = _reach([item for item in model.all_objects if item.type in SHAPED])
+    turn = 0.0
+    if parts is not None:
+        box_across = high[0] - low[0] > high[1] - low[1]
+        model_across = parts[1][0] - parts[0][0] > parts[1][1] - parts[0][1]
+        turn = math.pi / 2 if box_across != model_across else 0.0
+    holder.parent = box
+    holder.matrix_parent_inverse = box.matrix_world.inverted()
+    holder.matrix_world = (Matrix.Translation(((low[0] + high[0]) / 2, (low[1] + high[1]) / 2,
+                                               low[2])) @ Matrix.Rotation(turn, 4, "Z"))
+    return holder
+
+
+#: How Blender reads each kind of file that add-model.py takes besides its own.
+IMPORTERS = {
+    ".glb": "import_scene.gltf", ".gltf": "import_scene.gltf", ".fbx": "import_scene.fbx",
+    ".obj": "wm.obj_import", ".usd": "wm.usd_import", ".usda": "wm.usd_import",
+    ".usdc": "wm.usd_import", ".usdz": "wm.usd_import",
+}
+#: The file extension for each image format Blender may have unpacked.
+_IMAGE_SUFFIXES = {"PNG": ".png", "JPEG": ".jpg", "OPEN_EXR": ".exr", "HDR": ".hdr",
+                   "TIFF": ".tif", "TARGA": ".tga", "BMP": ".bmp", "WEBP": ".webp"}
+
+
+def _copy_textures(folder):
+    """Copy every image file that the open model file uses into the model's textures folder,
+    unpacking packed ones, and point each image at its copy, relative to the model's file."""
+    textures, taken = folder / "textures", set()
+    for image in bpy.data.images:
+        if image.source != "FILE" or image.library is not None:
+            continue
+        original = Path(bpy.path.abspath(image.filepath)) if image.filepath else None
+        suffix = (original.suffix.lower() if original is not None and original.suffix
+                  else _IMAGE_SUFFIXES.get(image.file_format, ".png"))
+        stem = re.sub(r"[^a-z0-9]+", "-", Path(image.name).stem.lower()).strip("-") or "texture"
+        file_name, number = stem + suffix, 2
+        while file_name in taken:
+            file_name, number = f"{stem}-{number}{suffix}", number + 1
+        target = textures / file_name
+        if image.packed_file is not None:
+            textures.mkdir(exist_ok=True)
+            target.write_bytes(image.packed_file.data)
+            image.filepath = bpy.path.relpath(str(target))
+            image.unpack(method="REMOVE")
+        elif original is not None and original.is_file():
+            textures.mkdir(exist_ok=True)
+            shutil.copyfile(original, target)
+            image.filepath = bpy.path.relpath(str(target))
+        else:
+            continue  # Missing: the intake check says so.
+        taken.add(file_name)
+        image.reload()
+
+
+def _realize_instances(collection):
+    """Turn each of the collection's instances of other collections into copies of the parts it
+    shows, where they stand, sharing their meshes and named after the instance, so that a model is
+    one collection of its own parts. Instances within instances take further rounds."""
+    for _ in range(8):
+        holders = [item for item in collection.objects
+                   if item.instance_type == "COLLECTION" and item.instance_collection is not None]
+        if not holders:
+            return
+        for item in bpy.context.selected_objects:
+            item.select_set(False)
+        for holder in holders:
+            holder.select_set(True)
+        bpy.context.view_layer.objects.active = holders[0]
+        before = set(bpy.data.objects)
+        # Each copy comes parented to the instance that showed it, which names it.
+        bpy.ops.object.duplicates_make_real(use_base_parent=True)
+        for made in set(bpy.data.objects) - before:
+            holder, place = made.parent, made.matrix_world.copy()
+            made.parent = None
+            made.matrix_world = place
+            part = re.sub(r"[.]\d{3}$", "", made.name)
+            made.name = f"{holder.name} {part}" if holder is not None else part
+        for holder in holders:
+            bpy.data.objects.remove(holder, do_unlink=True)
+    raise LayoutError("The file's instances nest too deeply to bring in; make them real first, "
+                      "with Object › Apply › Make Instances Real.")
+
+
+def _readme_template(name, source, model):
+    """A model's README.md as add-model.py writes it, with its source and licence to fill in."""
+    today = datetime.date.today()
+    size = ""
+    if model.bounds is not None:
+        low, high = model.bounds
+        size = " by ".join(_number(b - a, 2) for a, b in zip(low, high)) + " m, "
+    count = len(model.textures)
+    textures = (f", with {count} {'texture' if count == 1 else 'textures'}" if count
+                else ", without textures")
+    return "\n".join([
+        f"# {name}", "",
+        f"Brought into Lauder from `{source}` on {today.day} {today:%B %Y}, with "
+        f"`{ADD_MODEL_SCRIPT}`.", "",
+        "- **Source:** ? Where it comes from, such as a link, and who made it.",
+        "- **Licence:** ? Its licence, and any attribution that the licence asks for.",
+        f"- **Size:** {size}{model.triangles:,} triangles{textures}.", "",
+    ])
+
+
+def add_model(repository, source, name):
+    """Make the model blender/assets/<name> from a file: what a Blender file's first scene shows,
+    or what Blender imports from a glTF, FBX, OBJ or USD file, in a collection named after the
+    model, with its textures copied beside it and a README.md whose source and licence are to fill
+    in. Returns the intake check's findings, (problems, notes). It replaces the open file, so it
+    runs in a Blender of its own: blender/scripts/add-model.py."""
+    root = Path(repository)
+    source = Path(source).resolve()
+    kind = source.suffix.lower()
+    folder = root / ASSETS / name
+    if not MODEL_NAME.fullmatch(name):
+        raise LayoutError(f"Name the model in lowercase letters, digits and hyphens, not {name!r}.")
+    if folder.exists():
+        raise LayoutError(f"{ASSETS}/{name} already exists; choose another name.")
+    if not source.is_file():
+        raise LayoutError(f"There is no file {source.name} to bring in.")
+    if kind != ".blend" and kind not in IMPORTERS:
+        raise LayoutError(f"Blender cannot bring in {source.suffix or 'such'} files here: use a "
+                          f"Blender, glTF, FBX, OBJ or USD file.")
+    bpy.ops.wm.read_homefile(use_empty=True)
+    folder.mkdir(parents=True)
+    # Saved first, so that // means the model's folder.
+    bpy.ops.wm.save_as_mainfile(filepath=str(folder / f"{name}.blend"))
+    collection = bpy.data.collections.new(name)
+    bpy.context.scene.collection.children.link(collection)
+    layers = bpy.context.view_layer.layer_collection.children
+    bpy.context.view_layer.active_layer_collection = layers[collection.name]
+    # What the file shows: for a Blender file, what its first scene's view layer shows, which
+    # leaves out collections excluded from it, such as an instance's source.
+    if kind == ".blend":
+        with bpy.data.libraries.load(str(source), link=False) as (available, wanted):
+            wanted.scenes = available.scenes[:1]
+        if not wanted.scenes or wanted.scenes[0] is None:
+            raise LayoutError(f"{source.name} has no scene to bring in.")
+        layer = wanted.scenes[0].view_layers[0]
+    else:
+        group, operator = IMPORTERS[kind].split(".")
+        getattr(getattr(bpy.ops, group), operator)(filepath=str(source))
+        layer = bpy.context.view_layer
+    layer.update()
+    for item in list(layer.objects):
+        if collection not in item.users_collection:
+            collection.objects.link(item)
+    _realize_instances(collection)
+    # Lights and cameras would not reach the game, and empties holding nothing, such as the one a
+    # USD file's material scope becomes, show nothing.
+    for item in list(collection.objects):
+        if item.type in ("LIGHT", "CAMERA") or (
+                item.type == "EMPTY" and not item.children and item.instance_collection is None):
+            bpy.data.objects.remove(item, do_unlink=True)
+    # Only the model's collection holds anything now, in the file's one scene.
+    for scene in [each for each in bpy.data.scenes if each != bpy.context.scene]:
+        bpy.data.scenes.remove(scene)
+    for item in collection.objects:
+        for other in list(item.users_collection):
+            if other is not collection:
+                other.objects.unlink(item)
+    for other in [each for each in bpy.data.collections if each is not collection]:
+        bpy.data.collections.remove(other)
+    for item in [each for each in bpy.data.objects if not each.users_collection]:
+        bpy.data.objects.remove(item)
+    _copy_textures(folder)
+    forget_local_paths()
+    bpy.ops.wm.save_mainfile(relative_remap=True)
+    # The first save's copy, which Blender keeps as a backup, is not part of the model.
+    (folder / f"{name}.blend1").unlink(missing_ok=True)
+    (folder / "README.md").write_text(_readme_template(name, source.name,
+                                                       model_from_blender(repository)))
+    return check_model(repository)
+
+
 if bpy is not None:
 
     def _open_level():
@@ -970,20 +1798,30 @@ if bpy is not None:
 
     @persistent
     def _forget_local_paths_before_save(path=None, *_):
-        """A level file keeps no local paths in the repository (forget_local_paths)."""
-        if level_of_file(path if isinstance(path, str) and path else bpy.data.filepath):
-            forget_local_paths()
+        """A level or model file keeps no local paths in the repository (forget_local_paths)."""
+        path = path if isinstance(path, str) and path else bpy.data.filepath
+        if level_of_file(path) or model_of_file(path):
+            forget_local_paths(path)
 
     @persistent
     def _export_after_save(_):
-        """Saving a level's Blender file exports it in the background, once the game's rules hold.
-        The Blender file is saved whatever they find."""
+        """Saving a level's Blender file exports it in the background, once the game's rules hold;
+        saving a model's exports the levels that use it. The Blender file is saved whatever the
+        rules find."""
+        model = model_of_file(bpy.data.filepath)
+        if model is not None:
+            try:
+                _announce(_export_levels_using(*model))
+            except OSError as error:
+                _announce(f"The model is saved, but its levels were not exported: {error}",
+                          error=True)
+            return
         found = _open_level()
         if found is None:
             return
         repository, level = found
         try:
-            layout_from_blender(repository, level)
+            check_level(repository, level)
             exporting = _export_if_stale(repository, level.key)
         except (LayoutError, OSError) as error:
             _announce(f"The Blender file is saved, but the level was not exported: {error}",
@@ -1019,22 +1857,32 @@ if bpy is not None:
             return {"FINISHED"}
 
     class LAUDER_OT_export(bpy.types.Operator):
-        """Save the level's Blender file and export it, when its exports are out of date"""
+        """Save the level's Blender file and export it, or the levels that use the open model,
+        when their exports are out of date"""
         bl_idname = "lauder.export"
         bl_label = "Export"
         bl_options = {"REGISTER"}
 
         def execute(self, context):
-            found = _open_level()
-            if found is None:
+            found, model = _open_level(), model_of_file(bpy.data.filepath)
+            if found is None and model is None:
                 self.report({"ERROR"}, "Open the level first, with Open Level.")
                 return {"CANCELLED"}
             if bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()  # Its handler checks the rules and exports.
                 return {"FINISHED"}
+            if model is not None:
+                try:
+                    message = _export_levels_using(*model)
+                except OSError as error:
+                    self.report({"ERROR"}, str(error))
+                    return {"CANCELLED"}
+                context.window_manager.lauder_message = message
+                self.report({"INFO"}, message)
+                return {"FINISHED"}
             repository, level = found
             try:
-                layout_from_blender(repository, level)
+                check_level(repository, level)
                 exporting = _export_if_stale(repository, level.key)
             except (LayoutError, OSError) as error:
                 context.window_manager.lauder_message = str(error)
@@ -1062,7 +1910,7 @@ if bpy is not None:
                 return {"CANCELLED"}
             repository, level = found
             try:
-                layout_from_blender(repository, level)
+                check_level(repository, level)
             except (LayoutError, OSError) as error:
                 window_manager.lauder_message = str(error)
                 self.report({"ERROR"}, str(error))
@@ -1070,7 +1918,7 @@ if bpy is not None:
             if bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()  # Its handler starts the export; the build waits for it.
             try:
-                _queue(repository, level.key, background_steps(repository, level.key, play=True))
+                _queue(repository, background_steps(repository, level.key, play=True))
             except OSError as error:
                 self.report({"ERROR"}, f"Play could not start: {error}")
                 return {"CANCELLED"}
@@ -1078,6 +1926,104 @@ if bpy is not None:
                        if _queued("export") else "Building the game for the Simulator…")
             window_manager.lauder_message = message
             self.report({"INFO"}, message)
+            return {"FINISHED"}
+
+    #: The models Add Model offers, kept here because Blender needs its list to stay alive. NONE
+    #: stands for an empty list, and is no model's name, which is in lowercase.
+    _MODEL_ITEMS = []
+
+    def _model_items(self, context):
+        found = _open_level()
+        names = available_models(found[0]) if found is not None else []
+        _MODEL_ITEMS[:] = [(name, name, f"{ASSETS}/{name}") for name in names] or [
+            ("NONE", "No models", f"There is no model in {ASSETS} yet")]
+        return _MODEL_ITEMS
+
+    def _gameplay_box(item):
+        """The object, when it is a gameplay box or landmark that a model can stand on."""
+        part = _collection(GAMEPLAY)
+        if item is None or item.type != "MESH" or part is None or item not in set(part.all_objects):
+            return None
+        return item if item.get("lauder_role", "box") in ("box", "landmark") else None
+
+    class LAUDER_OT_add_model(bpy.types.Operator):
+        """Place a model from blender/assets in the level: on the selected gameplay box, parented
+        to it, or at the 3D cursor"""
+        bl_idname = "lauder.add_model"
+        bl_label = "Add Model"
+        bl_options = {"REGISTER", "UNDO"}
+        bl_property = "model"
+
+        model: bpy.props.EnumProperty(name="Model", items=_model_items)
+
+        def invoke(self, context, event):
+            if _open_level() is None:
+                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                return {"CANCELLED"}
+            context.window_manager.invoke_search_popup(self)
+            return {"RUNNING_MODAL"}
+
+        def execute(self, context):
+            found = _open_level()
+            if found is None or self.model == "NONE":
+                self.report({"ERROR"}, f"Open the level, and add a model to {ASSETS} first.")
+                return {"CANCELLED"}
+            box = _gameplay_box(context.active_object)
+            try:
+                holder = place_model(found[0], self.model, box, context.scene.cursor.location)
+            except LayoutError as error:
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            for item in context.selected_objects:
+                item.select_set(False)
+            holder.select_set(True)
+            context.view_layer.objects.active = holder
+            where = f"on {box.name}" if box is not None else "at the 3D cursor"
+            message = f"Placed {self.model} {where}, in Visual."
+            context.window_manager.lauder_message = message
+            self.report({"INFO"}, message)
+            return {"FINISHED"}
+
+    class LAUDER_OT_open_model(bpy.types.Operator):
+        """Open the selected model's own Blender file, to change it for every level that uses it"""
+        bl_idname = "lauder.open_model"
+        bl_label = "Open Model"
+        bl_options = {"REGISTER"}
+
+        def invoke(self, context, event):
+            if bpy.data.is_dirty:
+                return context.window_manager.invoke_confirm(
+                    self, event, title="Open the model?",
+                    message="The open Blender file has unsaved changes, which this discards.")
+            return self.execute(context)
+
+        def execute(self, context):
+            path = _model_file_of(context.active_object)
+            if path is None:
+                self.report({"ERROR"}, "Select a model in Visual first.")
+                return {"CANCELLED"}
+            if not path.is_file() or is_lfs_pointer(path):
+                self.report({"ERROR"}, f"{path.name} is missing or not downloaded yet: run git lfs "
+                                       f"pull.")
+                return {"CANCELLED"}
+            bpy.ops.wm.open_mainfile(filepath=str(path))
+            return {"FINISHED"}
+
+    class LAUDER_OT_check_model(bpy.types.Operator):
+        """Check the open model against what levels and the game need: the intake check"""
+        bl_idname = "lauder.check_model"
+        bl_label = "Check Model"
+        bl_options = {"REGISTER"}
+
+        def execute(self, context):
+            found = model_of_file(bpy.data.filepath)
+            if found is None:
+                self.report({"ERROR"}, f"Open a model from {ASSETS} first.")
+                return {"CANCELLED"}
+            problems, notes = check_model(found[0])
+            text = report_text(found[1], problems, notes)
+            context.window_manager.lauder_message = text
+            self.report({"WARNING" if problems else "INFO"}, text.splitlines()[0])
             return {"FINISHED"}
 
     class LAUDER_OT_game_look(bpy.types.Operator):
@@ -1136,12 +2082,25 @@ if bpy is not None:
             layout.prop(scene, "lauder_repository")
             layout.prop(scene, "lauder_level")
             layout.operator("lauder.open_level", icon="FILE_BLEND")
-            row = layout.row()
-            row.operator("lauder.export", icon="EXPORT")
-            row.operator("lauder.play", icon="PLAY")
-            layout.operator("lauder.game_look", icon="LIGHT_SUN")
+            level, model = _open_level(), model_of_file(bpy.data.filepath)
             item = context.active_object
-            if (item is not None and _open_level() is not None
+            if model is not None:
+                layout.label(text=f"The model {model[1]}", icon="MESH_DATA")
+                layout.operator("lauder.check_model", icon="CHECKMARK")
+                layout.operator("lauder.export", icon="EXPORT")
+                layout.label(text="Saving exports the levels using it.")
+            else:
+                row = layout.row()
+                row.operator("lauder.export", icon="EXPORT")
+                row.operator("lauder.play", icon="PLAY")
+                layout.operator("lauder.game_look", icon="LIGHT_SUN")
+            if level is not None:
+                layout.operator("lauder.add_model", icon="LINKED")
+                shown = _model_file_of(item)
+                if shown is not None:
+                    layout.operator("lauder.open_model", text=f"Open {shown.stem}",
+                                    icon="FILE_BLEND")
+            if (item is not None and level is not None
                     and any(owner.name == GAMEPLAY for owner in item.users_collection)):
                 if "lauder_role" in item:
                     layout.prop(item, '["lauder_role"]', text="Role")
@@ -1150,12 +2109,14 @@ if bpy is not None:
                     layout.label(text=f"{item.name} counts as a {role}")
             if window_manager.lauder_message:
                 box = layout.box()
-                for line in textwrap.wrap(window_manager.lauder_message, 42):
-                    box.label(text=line)
+                for paragraph in window_manager.lauder_message.splitlines():
+                    for line in textwrap.wrap(paragraph, 42) or [""]:
+                        box.label(text=line)
 
     _CLASSES = (
-        LAUDER_OT_open_level, LAUDER_OT_export, LAUDER_OT_play, LAUDER_OT_game_look,
-        LAUDER_OT_report, LAUDER_PT_levels,
+        LAUDER_OT_open_level, LAUDER_OT_export, LAUDER_OT_play, LAUDER_OT_add_model,
+        LAUDER_OT_open_model, LAUDER_OT_check_model, LAUDER_OT_game_look, LAUDER_OT_report,
+        LAUDER_PT_levels,
     )
     _HANDLERS = (
         (bpy.app.handlers.save_pre, _forget_local_paths_before_save),

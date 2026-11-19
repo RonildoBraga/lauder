@@ -1,6 +1,6 @@
 # ADR 0006 — Blender as the source of levels and models
 
-**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game) and [3](#step-3--the-blender-file-as-the-source) are built: each level's Blender file is its source, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended.\
+**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game), [3](#step-3--the-blender-file-as-the-source) and [4](#step-4--models-and-files-from-elsewhere) are built: each level's Blender file is its source, levels link models from `blender/assets`, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended.\
 **Date:** 19 November 2026\
 **Supersedes:** ADR 0005's decision 3 and its Load and Save round trip, once step 3 lands. [ADR 0004](0004-brooklyn-bridge-opening.md)'s typed level data stays, generated from Blender.\
 **Deciders:** Maintainer\
@@ -176,7 +176,7 @@ Each step is a pull request of its own and needs its own go-ahead.
    - Both exports are written only once both are ready, so a refusal leaves the pair as it was.
    - `blender/level-exports.json` records the fingerprints of the Blender file as it was read, of any file it uses, and of both exports. `./scripts/check` fails when any of them no longer matches.
 3. **Names the story uses stay.** Export refuses to drop a layout entry whose name the level's Swift file quotes, since the game would stop at the missing name. Without the layout file it cannot tell which names those are, so it refuses and says how to restore the file.
-4. **No local paths.** A Blender file keeps the folder each file browser last showed, such as the home folder, in its saved interface. Saving a level file points them at the level's own folder first, and drops the Repository folder that the Lauder tab stores, since an open level file finds its repository from where it is. A level file in the public repository holds no paths from the computer it was saved on, and the bridge's file holds none.
+4. **No local paths.** A Blender file keeps the folder each file browser last showed, such as the home folder, in its saved interface. Saving a level file points them at the level's own folder first, and drops the Repository folder that the Lauder tab stores, since an open level file finds its repository from where it is. A level file in the public repository holds no paths from the computer it was saved on, and the bridge's file holds none. Step 4 found this incomplete: the [tail of a home folder's path](#step-4--models-and-files-from-elsewhere) stayed behind the new folder.
 5. **What retired:**
    - Load and the Swift reader, the safe Save and Save Anyway, and the working file in `.local/blender`;
    - the palette file, `Surfaces.swift`, and the boxes' surfaces;
@@ -206,3 +206,75 @@ Each step is a pull request of its own and needs its own go-ahead.
   - a Repository path stored in the level file;
   - a layout file written before an export was refused.
 - Not checked: the Lauder tab's buttons in the maintainer's own Blender, whose functions the background runs called; and the phone, since nothing the game shows or plays changed.
+
+## Step 4 — models and files from elsewhere
+
+**Date:** 19 November 2026. The maintainer assigned it (**“Start step 4”**). It was [merged](https://github.com/RonildoBraga/lauder/pull/54#issuecomment-7003938273) under the standing permission, without an independent review.
+
+1. **The models.** Each model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, stored with Git LFS. Beside it are a `README.md` with its source and licence, and any textures it uses. One collection, named after the model, holds it, at its real size in metres and standing on the ground at its origin. [The library's README](../../blender/assets/README.md) sets out the rest of the contract. The first three models, `car`, `van` and `truck`, are the bridge's greybox vehicles. Each was made from its parts in the level file: their meshes, moved to the model's origin, and copies of their materials, renamed after the model, such as `car paint`.
+2. **Levels link them.** A model appears in a level as an instance of its collection, in Visual and parented to its gameplay box, so that moving the box moves it. The bridge's 20 vehicles are copies of the three models now, in place of 40 parts of their own. `car-b4`, a 4 m car turned across the lanes, is the car turned and shortened to fill its box. The Lauder tab's **Add Model** places a model on the selected box, turned along the box's longer side, or at the 3D cursor. **Open Model** opens the selected model's file.
+3. **Export carries them.** The scene file holds each instance as real meshes, under one entity named after the instance, such as `car_a1_model`. USD's instancing stays off: in a test, RealityKit shared each part's mesh among a model's copies either way, and instancing only added an entity to each part. Export leaves nothing but Visual in the scene, so a model linked straight into another collection stays out of the scene file. The export record lists every model and texture that the level uses. Each is fingerprinted before Blender reads it, so a save that lands during an export leaves the export stale, never current. Saving a model exports each level whose last export used it.
+4. **Export checks what the game would show.** Besides the layout's rules, it refuses:
+   - a linked file that is not a model in `blender/assets`, or a model that is missing or not downloaded;
+   - a material whose surface is not a Principled BSDF, or that is made with other nodes than image textures, UV maps, Separate Color and Normal Map nodes, and Math nodes for Alpha. Blender's USD export cannot carry the rest, so Game Look and the game would differ;
+   - two materials, or two objects in Visual, whose names USD would make the same. A test showed why: when the car's and the van's materials were both named “Lauder vehicle”, Blender's USD export wrote one material for both, and the car lost its texture;
+   - a texture that is packed into a Blender file, missing or not downloaded, outside the repository, not a PNG or JPEG, or over 1 MiB without the Git LFS rule that the repository's policy asks for;
+   - a model in Gameplay.
+5. **The intake check.** `blender/scripts/check-model.py`, or **Check Model** in the Lauder tab, lists what a model must change before a level can use it:
+   - its collection, metric units, and any lights or cameras;
+   - the material and texture rules, with its textures in its own folder;
+   - names that USD would make the same;
+   - its README's source and licence.
+
+   It then notes what is worth a look:
+   - its size, and a lowest point off the ground or a middle away from its origin;
+   - more than 10,000 triangles;
+   - textures, which the visual direction does not allow yet, and any over 2048 pixels on a side;
+   - parts hidden from renders, and Blender's duplicate suffixes.
+
+   Both budgets are starting points, until the phone measures real ones.
+6. **Files from elsewhere.** `blender/scripts/add-model.py` makes a model's folder from a Blender, glTF, FBX, OBJ or USD file, and refuses to overwrite one:
+   - the model's Blender file holds what the file shows, in the model's collection: for a Blender file, what its first scene shows, without collections excluded from it. Lights, cameras and empty helpers stay out, and each instance of a collection becomes copies of its parts where it stands, sharing their meshes;
+   - each texture it uses is copied into `textures/`, unpacked if need be;
+   - its `README.md` leaves the Source and Licence lines to fill in.
+
+   It then runs the intake check. `./scripts/check` fails while a model lacks its Blender file, or a README naming its source and licence.
+7. **Paths are overwritten in full.** Blender keeps each path in a buffer of fixed size and saves the bytes beyond the path's end, so a shorter path written over a longer one keeps the longer one's tail. Step 3's reset of the file browsers left such a tail in the level file it committed: `//`, then the end of a folder path that names the account. The same happens when Blender makes a linked model's or texture's path relative, and when it records where appended data came from. Saving a level or model file now overwrites each of these in full. That covers the file browsers' folders and file names, the paths of linked models and textures, and the source paths of appended data. The bridge's file and the models hold no part of a local path, and `./scripts/check` searches every committed Blender file for one. The level file that step 3 committed keeps its fragment in the repository's history.
+8. **Not done: USDZ files for things the code spawns.** The plan gives characters and other things the game spawns USDZ files of their own. Nothing the game spawns uses a model yet: under decision 6 the code draws the party's stand-ins, and the stage 1 mannequin is a test fixture with a generator of its own. That export arrives with the first such model, when a task asks for one.
+9. **Also not done:**
+   - Git LFS locking, for the reason step 3 gives;
+   - a library of shared materials: each model keeps its own, so the scene file has 14 materials where it had 10, six of them the vehicles' instead of two.
+
+### Checks of step 4
+
+- The layout file exported after the change is the one before it, byte for byte: no box moved.
+- RealityKit on macOS loaded `main`'s scene file and the new one. All 172 parts stand where they stood, with the same colours, to the centimetre. In the new file, the vehicles' 40 parts share 6 meshes.
+- In the Simulator, the opening frame, which shows part of one vehicle, looks the same as `main`'s. Of its 3.2 million pixels, 2 differ, by 2 steps in 255. Two runs of `main` give the same frame, pixel for pixel.
+- `./scripts/check` passes: the extension's 41 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The new and changed tests cover:
+  - names as USD writes them, and the materials, textures and names that Export refuses;
+  - every committed Blender file holding no part of a local path, a test that the level file step 3 committed fails;
+  - the intake check's problems and notes, and a README's source and licence;
+  - every model in the repository having its file and provenance;
+  - the export record going stale when a model changes or goes missing;
+  - a model's save exporting the levels that used it, and each level's export standing in only for its own;
+  - in the game, each vehicle's model filling its box.
+- In Blender 5.3, run in the background on a copy of the repository:
+  - Add Model placed the van on a box longer across than along, turned a quarter, on the deck and parented to the box. Moving the box moved it, and without a box the model stood at the cursor;
+  - Open Model opened the car's file, and Check Model found it ready;
+  - saving the car with a new paint colour exported the bridge, and the scene file showed the colour;
+  - Export refused, and said why, for: a model in Gameplay; the van's paint renamed `car-paint`; the truck's glass made with an Emission shader; a packed texture; the truck's file missing, and as a Git LFS pointer; the van linked by its full path, which saving the level then made relative; and the truck's collection renamed, refused as soon as the truck was saved;
+  - a texture in the car's folder reached the export record and the USDZ, and one that was still a Git LFS pointer failed the intake check;
+  - the car linked straight into the scene, outside Visual, stayed out of the scene file, which kept its 20 vehicles;
+  - add-model brought in one small model from each of a Blender, glTF, FBX, OBJ and USDZ file, with its texture copied. The intake check then asked only for the README's source and licence;
+  - from a Blender file with two instances of a part from an excluded collection, beside an excluded reference and a light, add-model brought in two copies of the part, where the instances stood, and nothing else. Codex's review had found that the first version lost the instances;
+  - no saved model or level file held any part of a local path, searched for in the decompressed files: the account's folder, the folders above the repository, and the scratch folders, including where a model brought in from a Blender file came from.
+- Codex's and Copilot's automatic reviews found four problems, all fixed before the merge:
+  - add-model lost a Blender file's collection instances, which both reviews found;
+  - a file that a level came to use between export's two reads could be fingerprinted after it was read;
+  - a model linked straight into a collection outside Visual reached the scene file;
+  - a texture still a Git LFS pointer passed the intake check.
+- Not checked:
+  - the Lauder tab's new buttons in the maintainer's own Blender, whose functions the background runs called;
+  - files made outside Blender, rather than exported from it;
+  - normal, roughness and metallic maps;
+  - the phone, since the game shows and plays the same.

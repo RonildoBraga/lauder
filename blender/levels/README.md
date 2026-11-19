@@ -6,7 +6,7 @@ Each Blender file here is a level's source ([ADR 0006](../../docs/decisions/0006
 
 The Brooklyn Bridge, the opening's greybox level.
 
-- **Made** for Lauder on 19 November 2026, by the Lauder extension's Load, from the hand-kept layout and palette files that it replaces. It holds no third-party assets, models or textures.
+- **Made** for Lauder on 19 November 2026, by the Lauder extension's Load, from the hand-kept layout and palette files that it replaces. Its vehicles are copies of the `car`, `van` and `truck` models, linked from [blender/assets](../assets/README.md). It holds no third-party assets or textures.
 - **Licence:** the repository's MIT licence.
-- **Size:** about 180 KB, stored with Git LFS. A copy without its payload is a small pointer file; run `git lfs pull`.
-- **Exports:** `apple/sources/content/BrooklynBridge.usdz`, about 14 KB, and `apple/sources/content/BrooklynBridgeLayout.swift`. `blender/level-exports.json` records the fingerprints of all three files.
+- **Size:** about 170 KB, stored with Git LFS. A copy without its payload is a small pointer file; run `git lfs pull`.
+- **Exports:** `apple/sources/content/BrooklynBridge.usdz`, about 15 KB, and `apple/sources/content/BrooklynBridgeLayout.swift`. `blender/level-exports.json` records the fingerprints of both, of the level file, and of the models it links.
