@@ -24,7 +24,8 @@ check, Check Model or blender/scripts/check-model.py, says what a model needs be
 use it. blender/scripts/add-model.py brings a model in from a Blender, glTF, FBX, OBJ or USD file.
 The models that the game creates itself, such as the party and the hostiles (SPAWNED), get scene
 files of their own in apple/sources/content/models: saving such a model exports it in the
-background, with blender/scripts/export-model.py.
+background, with blender/scripts/export-model.py. Bake Occlusion bakes ambient occlusion into the
+colour of the selected parts of a level's Visual, as images in blender/levels/baked.
 
 Install it once: in Blender's Preferences, add a local extension repository at this repository's
 blender/extensions folder, then enable Lauder levels. A Lauder tab appears in the 3D Viewport's
@@ -121,6 +122,25 @@ ADD_MODEL_SCRIPT = "blender/scripts/add-model.py"
 EXPORT_RECORD = "blender/level-exports.json"
 #: Raised whenever Export changes what it writes, so that every level is exported again.
 EXPORT_FORMAT = 1
+
+#: Where each level's baked occlusion is kept, relative to the repository: a PNG for each baked
+#: part, in a folder named after the level (ADR 0006, step 5d).
+BAKED = "blender/levels/baked"
+#: A baked part's properties: that its occlusion is baked, and the materials and UV map it showed
+#: before, which Clear Occlusion gives back.
+BAKED_PROPERTY = "lauder_baked"
+UNBAKED_MATERIALS, UNBAKED_UV = "lauder_unbaked_materials", "lauder_unbaked_uv"
+#: The UV map, made for each baked part, that its baked colour uses.
+BAKED_UV = "baked"
+#: Texels of baked colour for each metre, and the smallest and largest images, in pixels on a side.
+BAKE_TEXELS_PER_METRE = 8
+BAKE_PIXELS = (64, 1024)
+#: How much of a box's faces Blender's Smart UV Project fills, on the whole.
+BAKE_PACKING = 0.6
+#: How far, in metres, ambient occlusion looks for what shades a surface: near enough for the
+#: shade where a part meets another, such as a barrier on the road.
+BAKE_OCCLUSION_DISTANCE = 1.5
+BAKE_SAMPLES = 64
 
 #: The visual direction's budget (docs/visual-direction.md): at most four lights since the
 #: maintainer's choice of 19 November 2026, with at most one casting shadows.
@@ -747,6 +767,49 @@ def levels_using(repository, name):
     """The levels whose last export used this file, such as a model, relative to the repository."""
     return [key for key, record in _records(repository).items()
             if key in LEVELS and name in record.get("made from", {})]
+
+
+# MARK: - Baked occlusion (ADR 0006, step 5d)
+
+
+def bake_size(dimensions):
+    """The side, in pixels, of the square image for a part's baked colour: BAKE_TEXELS_PER_METRE
+    over its box's faces, allowing for the gaps that packing them leaves, as a power of two within
+    BAKE_PIXELS."""
+    x, y, z = (max(value, 0.0) for value in dimensions)
+    wanted = math.sqrt(2 * (x * y + y * z + z * x) / BAKE_PACKING) * BAKE_TEXELS_PER_METRE
+    side = BAKE_PIXELS[0]
+    while side < wanted and side < BAKE_PIXELS[1]:
+        side *= 2
+    return side
+
+
+def baked_image(level_key, name):
+    """Where a part's baked colour is kept, relative to the repository."""
+    return f"{BAKED}/{level_key}/{usd_name(name)}.png"
+
+
+def baked_material(name):
+    """The name of the material that shows a part's baked colour."""
+    return f"{name} baked"
+
+
+def bake_problems(part, materials):
+    """What stops a part's occlusion from being baked into its colour: each of its materials
+    (MaterialShape) needs a Principled BSDF, and nodes may feed only its Base Color, since the
+    baked colour takes a UV map of its own that the part's other images could not share."""
+    problems = []
+    for material in materials:
+        if material.surface != "BSDF_PRINCIPLED":
+            problems.append(f"{part} shows {material.name}, which needs a Principled BSDF to "
+                            f"bake.")
+            continue
+        others = sorted(socket for socket, _ in material.feeds if socket != "Base Color")
+        if others:
+            problems.append(f"{part} shows {material.name}, whose {_and(others)} "
+                            f"{'is' if len(others) == 1 else 'are'} fed by nodes: only its "
+                            f"Base Color can be, to bake.")
+    return problems
 
 
 # MARK: - Models, and what a scene file can show (ADR 0006)
@@ -1855,6 +1918,242 @@ def export_model(repository, name, made_from=None):
     return target
 
 
+def _select_only(item):
+    for other in bpy.context.view_layer.objects:
+        other.select_set(other == item)
+    bpy.context.view_layer.objects.active = item
+
+
+def _baked_uv(item):
+    """The part's UV map for its baked colour, made with Smart UV Project when it has none."""
+    layers = item.data.uv_layers
+    if BAKED_UV not in layers:
+        before = layers.active
+        layers.new(name=BAKED_UV)
+        layers.active = layers[BAKED_UV]
+        _select_only(item)
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.smart_project(island_margin=0.02)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        if before is not None:
+            layers.active = before
+    return layers[BAKED_UV]
+
+
+def _unbake(item):
+    """Show the part's materials and UV map from before its occlusion was baked."""
+    if not item.get(BAKED_PROPERTY):
+        return
+    for slot, (link, name) in zip(item.material_slots, json.loads(item[UNBAKED_MATERIALS])):
+        slot.link = link
+        if link == "OBJECT":
+            slot.material = bpy.data.materials.get(name) if name else None
+    before = item.data.uv_layers.get(item.get(UNBAKED_UV, ""))
+    if before is not None:
+        before.active_render = True
+
+
+def _surface(material):
+    """The material's Principled BSDF and its output, or (None, None)."""
+    tree = material.node_tree if material is not None else None
+    output = tree.get_output_node("ALL") if tree is not None else None
+    socket = output.inputs.get("Surface") if output is not None else None
+    if socket is None or not socket.is_linked:
+        return None, None
+    shader = socket.links[0].from_node
+    return (shader, output) if shader.type == "BSDF_PRINCIPLED" else (None, None)
+
+
+def _bake_into(item, canvas, kind, materials):
+    """Bake one pass of the part into the image: its colour (EMIT, through a temporary Emission
+    shader fed as its Base Color is) or its ambient occlusion (AO)."""
+    added, rewired = [], []
+    for material in materials:
+        tree = material.node_tree
+        shader, output = _surface(material)
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = canvas
+        tree.nodes.active = node
+        added.append((tree, node))
+        if kind == "EMIT":
+            glow = tree.nodes.new("ShaderNodeEmission")
+            source = shader.inputs["Base Color"]
+            if source.is_linked:
+                tree.links.new(source.links[0].from_socket, glow.inputs["Color"])
+            else:
+                glow.inputs["Color"].default_value = source.default_value
+            glow.inputs["Strength"].default_value = 1.0
+            tree.links.new(glow.outputs["Emission"], output.inputs["Surface"])
+            added.append((tree, glow))
+            rewired.append((tree, shader, output))
+    try:
+        _select_only(item)
+        bpy.ops.object.bake(type=kind, margin=4, use_clear=True)
+    finally:
+        for tree, node in reversed(added):
+            tree.nodes.remove(node)
+        for tree, shader, output in rewired:
+            tree.links.new(shader.outputs["BSDF"], output.inputs["Surface"])
+
+
+def _bake_part(root, level, item, materials):
+    """Bake one part's colour times its ambient occlusion into its image (bake_level)."""
+    import numpy
+    side = bake_size(item.dimensions)
+    layers = item.data.uv_layers
+    before = layers.active
+    layers.active = _baked_uv(item)
+    passes = {}
+    try:
+        for kind in ("EMIT", "AO"):
+            canvas = bpy.data.images.new(f"{item.name} {kind.lower()}", side, side,
+                                         float_buffer=True)
+            try:
+                _bake_into(item, canvas, kind, materials)
+                pixels = numpy.empty(side * side * 4, dtype=numpy.float32)
+                canvas.pixels.foreach_get(pixels)
+                passes[kind] = pixels.reshape(-1, 4)
+            finally:
+                bpy.data.images.remove(canvas)
+    finally:
+        if before is not None:
+            layers.active = before
+    colour = numpy.clip(passes["EMIT"][:, :3] * passes["AO"][:, :1], 0.0, 1.0)
+    encoded = numpy.where(colour <= 0.0031308, colour * 12.92,
+                          1.055 * colour ** (1 / 2.4) - 0.055)
+    relative = baked_image(level.key, item.name)
+    path = root / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image = bpy.data.images.get(Path(relative).name)
+    if image is not None and image.library is None:
+        bpy.data.images.remove(image)
+    image = bpy.data.images.new(Path(relative).name, side, side, alpha=False)
+    image.colorspace_settings.name = "sRGB"
+    rgba = numpy.ones((side * side, 4), dtype=numpy.float32)
+    rgba[:, :3] = encoded
+    image.pixels.foreach_set(rgba.ravel())
+    image.filepath_raw = str(path)
+    image.file_format = "PNG"
+    image.save()
+    image.filepath_raw = bpy.path.relpath(str(path))
+    image.reload()
+    return image
+
+
+def _baked_look(item, image, material):
+    """A material of the part's own: a copy of what it showed, with the baked colour as its Base
+    Color through the part's baked UV map."""
+    look = bpy.data.materials.get(baked_material(item.name))
+    if look is not None and look.library is None:
+        bpy.data.materials.remove(look)
+    look = material.copy()
+    look.name = baked_material(item.name)
+    tree = look.node_tree
+    shader, _ = _surface(look)
+    for link in list(shader.inputs["Base Color"].links):
+        tree.links.remove(link)
+    texture = tree.nodes.new("ShaderNodeTexImage")
+    texture.image = image
+    coordinates = tree.nodes.new("ShaderNodeUVMap")
+    coordinates.uv_map = BAKED_UV
+    tree.links.new(coordinates.outputs["UV"], texture.inputs["Vector"])
+    tree.links.new(texture.outputs["Color"], shader.inputs["Base Color"])
+    for node in [node for node in tree.nodes if node.type in ("TEX_IMAGE", "UVMAP", "REROUTE")
+                 and node not in (texture, coordinates) and not any(
+                     socket.is_linked for socket in node.outputs)]:
+        tree.nodes.remove(node)
+    return look
+
+
+def bake_level(repository, level, chosen=()):
+    """Bake ambient occlusion into the colour of each chosen part of the open level's Visual, and
+    of each part already baked (ADR 0006, step 5d). Cycles bakes the part's colour and its
+    occlusion, within BAKE_OCCLUSION_DISTANCE, into an image in BAKED, and the part then shows a
+    copy of its material with that image as Base Color. The game's lights, shadows and sky light
+    light it as before. Linked models are not baked here. Returns the baked parts' names."""
+    root = Path(repository)
+    visual = _collection(VISUAL)
+    if visual is None:
+        raise LayoutError("This Blender file has no Visual collection; open the level's own file.")
+    picked = set(chosen)
+    parts = [item for item in visual.all_objects
+             if item.library is None and item.type == "MESH"
+             and (item in picked or item.get(BAKED_PROPERTY))]
+    if not parts:
+        raise LayoutError("Select the parts of Visual to bake first. Models linked into the "
+                          "level are not baked here.")
+    for item in parts:
+        _unbake(item)
+    problems = []
+    for item in parts:
+        shapes = [_material_shape(slot.material, root)[0] for slot in item.material_slots
+                  if slot.material is not None]
+        problems += bake_problems(item.name, shapes)
+    if problems:
+        raise LayoutError(" ".join(problems))
+    scene, view_layer = bpy.context.scene, bpy.context.view_layer
+    kept = (scene.render.engine, scene.cycles.samples, scene.world, view_layer.objects.active,
+            [item for item in view_layer.objects if item.select_get()])
+    world = bpy.data.worlds.new("Lauder bake")
+    try:
+        scene.render.engine = "CYCLES"
+        scene.cycles.samples = BAKE_SAMPLES
+        world.light_settings.distance = BAKE_OCCLUSION_DISTANCE
+        scene.world = world
+        for item in parts:
+            materials = list(dict.fromkeys(slot.material for slot in item.material_slots
+                                           if slot.material is not None))
+            if len(materials) != 1:
+                raise LayoutError(f"{item.name} shows {len(materials)} materials; give it one "
+                                  f"to bake.")
+            image = _bake_part(root, level, item, materials)
+            if not item.get(BAKED_PROPERTY):
+                item[UNBAKED_MATERIALS] = json.dumps([
+                    [slot.link, slot.material.name if slot.material else ""]
+                    for slot in item.material_slots])
+                item[UNBAKED_UV] = next((layer.name for layer in item.data.uv_layers
+                                         if layer.active_render), "")
+            look = _baked_look(item, image, materials[0])
+            for slot in item.material_slots:
+                slot.link = "OBJECT"
+                slot.material = look
+            item.data.uv_layers[BAKED_UV].active_render = True
+            item[BAKED_PROPERTY] = True
+    finally:
+        engine, samples, world_before, active, selected = kept
+        scene.render.engine, scene.cycles.samples, scene.world = engine, samples, world_before
+        bpy.data.worlds.remove(world)
+        for item in view_layer.objects:
+            item.select_set(item in selected)
+        view_layer.objects.active = active
+    return [item.name for item in parts]
+
+
+def clear_occlusion(repository, level, chosen):
+    """Give the chosen baked parts back the materials and UV map they showed before, and remove
+    their baked colour: its material, its UV map and its image file. Returns their names."""
+    root = Path(repository)
+    parts = [item for item in chosen if item.library is None and item.get(BAKED_PROPERTY)]
+    for item in parts:
+        _unbake(item)
+        look = bpy.data.materials.get(baked_material(item.name))
+        if look is not None and look.users == 0:
+            bpy.data.materials.remove(look)
+        layer = item.data.uv_layers.get(BAKED_UV)
+        if layer is not None:
+            item.data.uv_layers.remove(layer)
+        relative = baked_image(level.key, item.name)
+        image = bpy.data.images.get(Path(relative).name)
+        if image is not None and image.users == 0:
+            bpy.data.images.remove(image)
+        (root / relative).unlink(missing_ok=True)
+        for key in (BAKED_PROPERTY, UNBAKED_MATERIALS, UNBAKED_UV):
+            if key in item:
+                del item[key]
+    return [item.name for item in parts]
+
+
 #: The kinds of object with a shape that a scene file shows.
 SHAPED = ("MESH", "CURVE", "SURFACE", "META", "FONT")
 
@@ -2375,6 +2674,54 @@ if bpy is not None:
             shading.studiolight_intensity = 0
             return {"FINISHED"}
 
+    class LAUDER_OT_bake_occlusion(bpy.types.Operator):
+        """Bake ambient occlusion into the colour of the selected parts of Visual, and again of
+        every part already baked; the game's lights and shadows still light them"""
+        bl_idname = "lauder.bake_occlusion"
+        bl_label = "Bake Occlusion"
+        bl_options = {"REGISTER", "UNDO"}
+
+        def execute(self, context):
+            found = _open_level()
+            if found is None:
+                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                return {"CANCELLED"}
+            repository, level = found
+            try:
+                names = bake_level(repository, level, context.selected_objects)
+            except (LayoutError, RuntimeError) as error:
+                context.window_manager.lauder_message = str(error)
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            parts = names[0] if len(names) == 1 else f"{len(names)} parts"
+            message = (f"Baked occlusion into the colour of {parts}, in {BAKED}/{level.key}. Save "
+                       f"the level to export it.")
+            context.window_manager.lauder_message = message
+            self.report({"INFO"}, message)
+            return {"FINISHED"}
+
+    class LAUDER_OT_clear_occlusion(bpy.types.Operator):
+        """Give the selected baked parts back the materials they showed before, and remove their
+        baked colour"""
+        bl_idname = "lauder.clear_occlusion"
+        bl_label = "Clear Occlusion"
+        bl_options = {"REGISTER", "UNDO"}
+
+        def execute(self, context):
+            found = _open_level()
+            if found is None:
+                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                return {"CANCELLED"}
+            repository, level = found
+            names = clear_occlusion(repository, level, context.selected_objects)
+            if not names:
+                self.report({"ERROR"}, "Select the baked parts to clear first.")
+                return {"CANCELLED"}
+            message = f"Cleared the baked occlusion of {_and(names)}."
+            context.window_manager.lauder_message = message
+            self.report({"INFO"}, message)
+            return {"FINISHED"}
+
     class LAUDER_OT_report(bpy.types.Operator):
         """Show a message from Lauder in the status bar"""
         bl_idname = "lauder.report"
@@ -2415,6 +2762,9 @@ if bpy is not None:
                 layout.operator("lauder.game_look", icon="LIGHT_SUN")
             if level is not None:
                 layout.operator("lauder.add_model", icon="LINKED")
+                row = layout.row()
+                row.operator("lauder.bake_occlusion", icon="RENDER_STILL")
+                row.operator("lauder.clear_occlusion", icon="X")
                 shown = _model_file_of(item)
                 if shown is not None:
                     layout.operator("lauder.open_model", text=f"Open {shown.stem}",
@@ -2434,8 +2784,8 @@ if bpy is not None:
 
     _CLASSES = (
         LAUDER_OT_open_level, LAUDER_OT_export, LAUDER_OT_play, LAUDER_OT_add_model,
-        LAUDER_OT_open_model, LAUDER_OT_check_model, LAUDER_OT_game_look, LAUDER_OT_report,
-        LAUDER_PT_levels,
+        LAUDER_OT_open_model, LAUDER_OT_check_model, LAUDER_OT_game_look, LAUDER_OT_bake_occlusion,
+        LAUDER_OT_clear_occlusion, LAUDER_OT_report, LAUDER_PT_levels,
     )
     _HANDLERS = (
         (bpy.app.handlers.save_pre, _forget_local_paths_before_save),
