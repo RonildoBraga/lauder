@@ -138,7 +138,7 @@ struct BridgeTests {
     #expect(target.y > leader.y)
   }
 
-  /// The layout file that Blender edits (ADR 0005) holds only what the bridge uses, and its
+  /// The layout file that Blender exports (ADR 0002) holds only what the bridge uses, and its
   /// boxes and landmarks stand on the deck.
   @Test
   func theLayoutFileHoldsWhatTheBridgeUses() {
@@ -164,7 +164,7 @@ struct BridgeTests {
   }
 
   /// The bridge's look comes from its scene file, which Blender exports with the layout file from
-  /// the level's Blender file (ADR 0006). While the bridge is a greybox, each box's look is a block
+  /// the level's Blender file (ADR 0002). While the bridge is a greybox, each box's look is a block
   /// that fills it, each vehicle is a model from `blender/assets` that fills its box, and each
   /// landmark stands on the deck; the decoration is in the scene file alone, and the camera takes
   /// the layout file's offset and field of view.

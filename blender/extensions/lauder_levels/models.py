@@ -71,7 +71,7 @@ class ModelShape:
 
 
 def model_report(model):
-    """The intake check (ADR 0006, decision 7): what must change before a level can use the model,
+    """The intake check (ADR 0002): what must change before a level can use the model,
     and what is worth a look. Returns (problems, notes)."""
     if model.name is None:
         return [f"Keep a model as {ASSETS}/<name>/<name>.blend, its name in lowercase letters, "

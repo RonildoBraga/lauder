@@ -1,6 +1,6 @@
 # Levels
 
-Each Blender file here is a level's source ([ADR 0006](../../docs/decisions/0006-blender-source-of-truth.md)). Saving it in Blender, with the Lauder extension, exports the files the game reads, as [Editing a level in Blender](../../CONTRIBUTING.md#editing-a-level-in-blender) describes.
+Each Blender file here is a level's source ([ADR 0002](../../docs/decisions/0002-blender-source-of-truth.md)). Saving it in Blender, with the Lauder extension, exports the files the game reads, as [Editing a level in Blender](../../CONTRIBUTING.md#editing-a-level-in-blender) describes.
 
 ## brooklyn-bridge.blend
 

@@ -4,7 +4,7 @@ import simd
 
 @testable import Lauder
 
-/// The bridge's lights are plain data in the layout file that Blender writes (ADR 0006), and the
+/// The bridge's lights are plain data in the layout file that Blender writes (ADR 0002), and the
 /// game builds its lights from them. Its materials come with the scene file, and the party's and
 /// the hostiles' looks with their models' scene files.
 @MainActor
@@ -64,7 +64,7 @@ struct LevelLookTests {
   }
 
   /// Each member of the party, and each hostile, shows the model that Blender exports to a scene
-  /// file of its own (ADR 0006, step 5c): standing on the ground below its body's centre, 1.58 m
+  /// file of its own (ADR 0002): standing on the ground below its body's centre, 1.58 m
   /// tall, and facing the figure's -z, where its front mark is.
   @Test
   func thePartyAndTheHostilesComeFromTheirModels() throws {

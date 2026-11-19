@@ -1,12 +1,12 @@
 # Visual direction
 
-**Status:** Death's Door remains the accepted visual reference. The earlier small visual pass is implemented. The maintainer has since prioritised graybox gameplay evaluation; further visual polish and asset production are deferred.
+**Status:** Death's Door is the visual reference. Greybox gameplay comes first; visual polish and asset production wait for a playable loop worth keeping.
 
-The main visual reference is [Death's Door, by Acid Nerve / Devolver Digital](https://store.steampowered.com/app/894020/Deaths_Door/). Use its strong silhouettes, restrained detail and readable elevated composition as references for Lauder's own futuristic world. All geometry, colours and materials in this pass are original; no reference-game assets, traced environments or UI are copied.
+The main visual reference is [Death's Door, by Acid Nerve / Devolver Digital](https://store.steampowered.com/app/894020/Deaths_Door/). Use its strong silhouettes, restrained detail and readable elevated composition as references for Lauder's own futuristic world. All geometry, colours and materials are original; no reference-game assets, traced environments or UI are copied.
 
 ## Current priority
 
-Use the greybox bridge, simple colours and primitive stand-ins to test the [opening](gameplay-script.md). New game assets are not a prerequisite. Add only the feedback needed to understand actions and their results. The guidance below records the earlier pass and the later direction, rather than a new art task.
+Use the greybox bridge, simple colours and primitive stand-ins to test the [opening](gameplay-script.md). New game assets are not a prerequisite. Add only the feedback needed to understand actions and their results. The guidance below sets the direction for when art comes, rather than an art task.
 
 ## Applying the reference
 
@@ -21,9 +21,9 @@ A visual pass keeps the route, collision layout, camera framing, interaction anc
 
 Build decoration once, in the level's Blender file, and keep its materials few and shared. A model in `blender/assets` brings materials of its own, named after it. Decorative details do not need their own physics bodies.
 
-- At most four explicit lights, with at most one casting shadows: the maintainer raised the budget from two on 19 November 2026 (“Up to 4, 1 shadowed”). Suns, point lights and spot lights count alike, and only a sun or a spot light can cast the shadow. Blender's export checks this for each level's lights. Under the bridge's daylight sun, a point or spot light shows only when it is very strong, in Blender's preview as in the game.
+- At most four explicit lights, with at most one casting shadows. Suns, point lights and spot lights count alike, and only a sun or a spot light can cast the shadow. Blender's export checks this for each level's lights. Under the bridge's daylight sun, a point or spot light shows only when it is very strong, in Blender's preview as in the game.
 - No new textures, particles or postprocessing effects.
-- No added visual animation or per-frame visual work; existing character movement, skeletal animation and camera follow continue as before.
+- No added visual animation or per-frame visual work; character movement and the camera's follow continue as they are.
 
 These are limits, not measured performance guarantees. Record the actual scene, material and light counts and the validation with the change.
 
@@ -31,4 +31,4 @@ These are limits, not measured performance guarantees. Record the actual scene, 
 
 Review the scene at the landscape phone aspect ratio in Simulator. Miki, the walkable path, obstacles and useful landmarks should remain clear while moving. Run the standard checks.
 
-The target remains **60 fps on iPhone 13 Pro Max**. The earlier visual pass was not measured on the phone. Simulator screenshots and successful checks do not establish device frame pacing, thermals or battery behaviour; report the verification gap explicitly.
+The target is **60 fps on iPhone 13 Pro Max**. Simulator screenshots and successful checks do not establish device frame pacing, thermals or battery behaviour; report the verification gap explicitly.

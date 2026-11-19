@@ -454,7 +454,7 @@ class BackgroundTests(unittest.TestCase):
 
 
 class BakeTests(unittest.TestCase):
-    """Ambient occlusion baked into a part's colour (ADR 0006, step 5d)."""
+    """Ambient occlusion baked into a part's colour (ADR 0002)."""
 
     def test_a_parts_image_grows_with_it_within_limits(self):
         self.assertEqual(L.bake_size((0.1, 0.1, 0.1)), L.BAKE_PIXELS[0])
@@ -489,7 +489,7 @@ class BakeTests(unittest.TestCase):
 
 
 class SceneRuleTests(unittest.TestCase):
-    """What a scene file can show as Blender does (ADR 0006, decision 8)."""
+    """What a scene file can show as Blender does (ADR 0002)."""
 
     PAINT = L.MaterialShape("car paint", "blender/assets/car/car.blend", "BSDF_PRINCIPLED", (
         ("Base Color", (("TEX_IMAGE", "Image Texture"), ("UVMAP", "UV Map"))),
@@ -588,7 +588,7 @@ class SceneRuleTests(unittest.TestCase):
 
 
 class ModelTests(unittest.TestCase):
-    """The models in blender/assets, and the intake check (ADR 0006, decision 7)."""
+    """The models in blender/assets, and the intake check (ADR 0002)."""
 
     README = "# kite\n\n- **Source:** Made for Lauder.\n- **Licence:** MIT, as the repository.\n"
 

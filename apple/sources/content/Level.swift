@@ -5,7 +5,7 @@ import simd
 /// session owns progress and the world owns the bodies (ADR 0004).
 struct Level {
   /// A box that blocks movement and sight with its footprint; the ground is separate. How it
-  /// looks is up to the level's scene file (ADR 0006).
+  /// looks is up to the level's scene file (ADR 0002).
   struct Box {
     let name: String
     let position: SIMD3<Float>
@@ -143,7 +143,7 @@ struct Level {
   /// The floor. It bounds the navigation grid and blocks nothing.
   let ground: Box
   let boxes: [Box]
-  /// The scene file that shows the level, exported by Blender (ADR 0006): the name of a USDZ in
+  /// The scene file that shows the level, exported by Blender (ADR 0002): the name of a USDZ in
   /// the app's bundle. Without one, such as in a test, the game draws the ground, boxes and
   /// landmarks as plain blocks.
   var scene: String?
@@ -166,7 +166,7 @@ struct Level {
   let cameraOffset: SIMD3<Float>
   /// The camera's vertical field of view, in degrees.
   var fieldOfView: Float = 42
-  /// The lights, from the level's layout file (ADR 0005).
+  /// The lights, from the level's layout file (ADR 0002).
   var lights: [Light] = []
   /// The first line a run shows.
   let opening: String

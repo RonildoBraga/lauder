@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 
-# Lauder's levels and models in Blender (ADR 0006). Install it once from this repository: in
+# Lauder's levels and models in Blender (ADR 0002). Install it once from this repository: in
 # Blender's Preferences, add a local extension repository at blender/extensions, then enable
 # Lauder levels.
 id = "lauder_levels"
