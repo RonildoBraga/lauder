@@ -1770,35 +1770,62 @@ def _announce(message, error=False):
 
 
 #: Work running in the background, one step after another, so that Blender stays usable: the
-#: steps still to run, and the running step's name, process, log and log's path.
-_JOB = {"steps": [], "name": None, "process": None, "log": None, "path": None}
+#: steps still to run; the running step's name, process, log and log's path; the repository and
+#: level the work is for; and how often it exported the scene file again because the level's
+#: files changed while it ran.
+_JOB = {"steps": [], "name": None, "process": None, "log": None, "path": None,
+        "repository": None, "key": None, "refreshes": 0}
 #: What each background step says when it finishes well.
 _FINISHED = {
     "export": "Exported the scene file. The game shows it from the next build.",
     "play": "The game is running in the Simulator.",
 }
+#: How often one run of background work exports the scene file again while the level's files keep
+#: changing, so that it cannot go on for ever.
+MOST_REFRESHES = 3
+
+
+def _export_step(repository, key):
+    """The background step that exports the level's scene file in a Blender of its own."""
+    blender = bpy.app.binary_path if bpy is not None else "blender"
+    return ("export", [
+        blender, "-b", "--factory-startup", "--python-exit-code", "1",
+        "--python", str(Path(repository) / EXPORT_SCRIPT), "--", key,
+    ], "export.log")
 
 
 def background_steps(repository, key, play):
     """The background steps that Save (play=False) or Play needs: exporting the level's scene file
     when it no longer matches the level's files, then, for Play, building and opening the game.
     Each is (name, command, log)."""
-    root = Path(repository)
-    steps = []
-    if stale_scene(repository, key) is not None:
-        blender = bpy.app.binary_path if bpy is not None else "blender"
-        steps.append(("export", [
-            blender, "-b", "--factory-startup", "--python-exit-code", "1",
-            "--python", str(root / EXPORT_SCRIPT), "--", key,
-        ], "export.log"))
+    steps = [_export_step(repository, key)] if stale_scene(repository, key) is not None else []
     if play:
-        steps.append(("play", [sys.executable, "-I", str(root / PLAY_SCRIPT)], "play.log"))
+        steps.append(("play", [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)],
+                      "play.log"))
     return steps
 
 
-def _start_job(repository, steps):
+def queue_steps(running, waiting, steps):
+    """The steps to add after the background work already running and waiting. An export already
+    running or waiting stands in for a new one, which could only race it for the same files: when
+    it finishes, the scene file's freshness is checked again (refresh_needed)."""
+    names = ([running] if running else []) + [name for name, _, _ in waiting]
+    if "export" in names:
+        return [step for step in steps if step[0] != "export"]
+    return list(steps)
+
+
+def refresh_needed(waiting, stale, refreshes):
+    """Whether to export the scene file again before going on, once a step has finished well:
+    when the level's files changed while it ran, such as by a second save, and no export is next
+    anyway."""
+    upcoming = waiting[0][0] if waiting else None
+    return stale and upcoming != "export" and refreshes < MOST_REFRESHES
+
+
+def _start_job(repository, key, steps):
     """Run the steps in the background, in order, stopping at the first that fails."""
-    _JOB.update(steps=list(steps), repository=repository)
+    _JOB.update(steps=list(steps), repository=repository, key=key, refreshes=0)
     _next_step()
     # Persistent, so that opening another Blender file, such as the working file, keeps watching.
     bpy.app.timers.register(_watch_job, first_interval=1.0, persistent=True)
@@ -1835,6 +1862,13 @@ def _watch_job():
     _JOB["process"] = None
     name, path = _JOB["name"], _JOB["path"]
     if process.returncode == 0:
+        try:
+            stale = stale_scene(_JOB["repository"], _JOB["key"]) is not None
+        except (OSError, ValueError):
+            stale = False
+        if refresh_needed(_JOB["steps"], stale, _JOB["refreshes"]):
+            _JOB["steps"].insert(0, _export_step(_JOB["repository"], _JOB["key"]))
+            _JOB["refreshes"] += 1
         if _JOB["steps"]:
             try:
                 _next_step()
@@ -1854,15 +1888,26 @@ def _watch_job():
     return None
 
 
-def _export_if_stale(repository, key):
-    """Start exporting the level's scene file when it no longer matches the level's files.
-    Returns whether an export started."""
-    if _job_running():
+def _queued(name):
+    """Whether a background step of this name is running or waiting to run."""
+    if not _job_running():
         return False
-    steps = background_steps(repository, key, play=False)
-    if steps:
-        _start_job(repository, steps)
-    return bool(steps)
+    return _JOB["name"] == name or any(step[0] == name for step in _JOB["steps"])
+
+
+def _queue(repository, key, steps):
+    """Run the steps in the background, after the work already running, if any (queue_steps)."""
+    if _job_running():
+        _JOB["steps"].extend(queue_steps(_JOB["name"], _JOB["steps"], steps))
+    elif steps:
+        _start_job(repository, key, steps)
+
+
+def _export_if_stale(repository, key):
+    """Export the level's scene file in the background when it no longer matches the level's
+    files, after the work already running. Returns whether an export is running or waiting."""
+    _queue(repository, key, background_steps(repository, key, play=False))
+    return _queued("export")
 
 
 def load_level(repository, key="brooklyn-bridge"):
@@ -2086,11 +2131,8 @@ if bpy is not None:
             if named is None:
                 self.report({"ERROR"}, "Set the repository folder first.")
                 return {"CANCELLED"}
-            if _job_running():
-                busy = ("The game is still building; it opens when it is ready."
-                        if _JOB["name"] == "play"
-                        else "The scene file is still exporting; press Play again when it is done.")
-                self.report({"WARNING"}, busy)
+            if _queued("play"):
+                self.report({"WARNING"}, "The game is still building; it opens when it is ready.")
                 return {"CANCELLED"}
             repository, level = named
             try:
@@ -2107,14 +2149,14 @@ if bpy is not None:
             window_manager.lauder_files_changed = False
             if is_working_file(context.scene) and bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()
+            # Saving the working file may already have started an export: the build waits for it.
             try:
-                steps = background_steps(repository, level.key, play=True)
-                _start_job(repository, steps)
+                _queue(repository, level.key, background_steps(repository, level.key, play=True))
             except OSError as error:
                 self.report({"ERROR"}, f"Play could not start: {error}")
                 return {"CANCELLED"}
             message = ("Exporting the scene file, then building the game for the Simulator…"
-                       if steps[0][0] == "export" else "Building the game for the Simulator…")
+                       if _queued("export") else "Building the game for the Simulator…")
             window_manager.lauder_message = message
             self.report({"INFO"}, message)
             return {"FINISHED"}

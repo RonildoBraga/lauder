@@ -695,6 +695,26 @@ class SceneFileTests(unittest.TestCase):
             self.assertEqual(command[-2:], ["--", BRIDGE.key])
             self.assertIn("--factory-startup", command)
 
+    def test_an_export_running_or_waiting_stands_in_for_a_new_one(self):
+        export = ("export", ["blender"], "export.log")
+        play = ("play", ["python"], "play.log")
+        # Play just after a save started an export: only the build is added, after that export.
+        self.assertEqual(L.queue_steps("export", [], [export, play]), [play])
+        # A save while the game builds: its export waits for the build.
+        self.assertEqual(L.queue_steps("play", [], [export]), [export])
+        # Another save while that export waits: nothing more.
+        self.assertEqual(L.queue_steps("play", [export], [export]), [])
+        self.assertEqual(L.queue_steps(None, [], [export, play]), [export, play])
+
+    def test_a_scene_left_stale_by_a_later_save_is_exported_again(self):
+        export = ("export", ["blender"], "export.log")
+        play = ("play", ["python"], "play.log")
+        self.assertTrue(L.refresh_needed([], stale=True, refreshes=0))
+        self.assertTrue(L.refresh_needed([play], stale=True, refreshes=0))
+        self.assertFalse(L.refresh_needed([export], stale=True, refreshes=0))
+        self.assertFalse(L.refresh_needed([], stale=False, refreshes=0))
+        self.assertFalse(L.refresh_needed([], stale=True, refreshes=L.MOST_REFRESHES))
+
 
 if __name__ == "__main__":
     result = unittest.main(exit=False, verbosity=1).result
