@@ -306,6 +306,8 @@ It was [merged](https://github.com/RonildoBraga/lauder/pull/56#issuecomment-7006
 
 ### 5b — texture maps
 
+It was [merged](https://github.com/RonildoBraga/lauder/pull/57#issuecomment-7007123450) under the standing permission, without an independent review.
+
 1. **Six inputs take images.** Each was tried from Blender's USD export into RealityKit, on the Mac and in the iOS Simulator, and arrived where Blender uses it:
    - **Base Color** and **Emission Color**, from an image's colour;
    - **Roughness** and **Metallic**, from a greyscale image's colour or from an image's alpha;
