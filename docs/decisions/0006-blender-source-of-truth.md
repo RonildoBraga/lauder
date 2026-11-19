@@ -213,12 +213,12 @@ Each step is a pull request of its own and needs its own go-ahead.
 
 1. **The models.** Each model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, stored with Git LFS. Beside it are a `README.md` with its source and licence, and any textures it uses. One collection, named after the model, holds it, at its real size in metres and standing on the ground at its origin. [The library's README](../../blender/assets/README.md) sets out the rest of the contract. The first three models, `car`, `van` and `truck`, are the bridge's greybox vehicles. Each was made from its parts in the level file: their meshes, moved to the model's origin, and copies of their materials, renamed after the model, such as `car paint`.
 2. **Levels link them.** A model appears in a level as an instance of its collection, in Visual and parented to its gameplay box, so that moving the box moves it. The bridge's 20 vehicles are copies of the three models now, in place of 40 parts of their own. `car-b4`, a 4 m car turned across the lanes, is the car turned and shortened to fill its box. The Lauder tab's **Add Model** places a model on the selected box, turned along the box's longer side, or at the 3D cursor. **Open Model** opens the selected model's file.
-3. **Export carries them.** The scene file holds each instance as real meshes, under one entity named after the instance, such as `car_a1_model`. USD's instancing stays off: in a test, RealityKit shared each part's mesh among a model's copies either way, and instancing only added an entity to each part. The export record lists every model and texture that the level uses. Each is fingerprinted before Blender reads it, so a save that lands during an export leaves the export stale, never current. Saving a model exports each level whose last export used it.
+3. **Export carries them.** The scene file holds each instance as real meshes, under one entity named after the instance, such as `car_a1_model`. USD's instancing stays off: in a test, RealityKit shared each part's mesh among a model's copies either way, and instancing only added an entity to each part. Export leaves nothing but Visual in the scene, so a model linked straight into another collection stays out of the scene file. The export record lists every model and texture that the level uses. Each is fingerprinted before Blender reads it, so a save that lands during an export leaves the export stale, never current. Saving a model exports each level whose last export used it.
 4. **Export checks what the game would show.** Besides the layout's rules, it refuses:
    - a linked file that is not a model in `blender/assets`, or a model that is missing or not downloaded;
    - a material whose surface is not a Principled BSDF, or that is made with other nodes than image textures, UV maps, Separate Color and Normal Map nodes, and Math nodes for Alpha. Blender's USD export cannot carry the rest, so Game Look and the game would differ;
    - two materials, or two objects in Visual, whose names USD would make the same. A test showed why: when the car's and the van's materials were both named “Lauder vehicle”, Blender's USD export wrote one material for both, and the car lost its texture;
-   - a texture that is packed into a Blender file, missing, outside the repository, not a PNG or JPEG, or over 1 MiB without the Git LFS rule that the repository's policy asks for;
+   - a texture that is packed into a Blender file, missing or not downloaded, outside the repository, not a PNG or JPEG, or over 1 MiB without the Git LFS rule that the repository's policy asks for;
    - a model in Gameplay.
 5. **The intake check.** `blender/scripts/check-model.py`, or **Check Model** in the Lauder tab, lists what a model must change before a level can use it:
    - its collection, metric units, and any lights or cameras;
@@ -263,10 +263,16 @@ Each step is a pull request of its own and needs its own go-ahead.
   - Open Model opened the car's file, and Check Model found it ready;
   - saving the car with a new paint colour exported the bridge, and the scene file showed the colour;
   - Export refused, and said why, for: a model in Gameplay; the van's paint renamed `car-paint`; the truck's glass made with an Emission shader; a packed texture; the truck's file missing, and as a Git LFS pointer; the van linked by its full path, which saving the level then made relative; and the truck's collection renamed, refused as soon as the truck was saved;
-  - a texture in the car's folder reached the export record and the USDZ;
+  - a texture in the car's folder reached the export record and the USDZ, and one that was still a Git LFS pointer failed the intake check;
+  - the car linked straight into the scene, outside Visual, stayed out of the scene file, which kept its 20 vehicles;
   - add-model brought in one small model from each of a Blender, glTF, FBX, OBJ and USDZ file, with its texture copied. The intake check then asked only for the README's source and licence;
   - from a Blender file with two instances of a part from an excluded collection, beside an excluded reference and a light, add-model brought in two copies of the part, where the instances stood, and nothing else. Codex's review had found that the first version lost the instances;
   - no saved model or level file held any part of a local path, searched for in the decompressed files: the account's folder, the folders above the repository, and the scratch folders, including where a model brought in from a Blender file came from.
+- Codex's and Copilot's automatic reviews found four problems, all fixed before the merge:
+  - add-model lost a Blender file's collection instances, which both reviews found;
+  - a file that a level came to use between export's two reads could be fingerprinted after it was read;
+  - a model linked straight into a collection outside Visual reached the scene file;
+  - a texture still a Git LFS pointer passed the intake check.
 - Not checked:
   - the Lauder tab's new buttons in the maintainer's own Blender, whose functions the background runs called;
   - files made outside Blender, rather than exported from it;
