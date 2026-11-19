@@ -101,7 +101,7 @@ Never edit those two by hand; change the level in Blender instead.
    - **Visual**: everything the player sees, exported to the scene file. Each box's look is a block parented to its gameplay box, each vehicle's is a [model](#models) parented to its box, and the decoration, such as the lane lines and the towers' tops, stands on its own. Reshape or replace any of it.
    - **Gameplay**: the ground, the boxes that block movement and sight, the landmarks, the trigger and fight areas, and the named markers, drawn as outlines. Each has a role, which the Lauder tab shows for the selected object; a new mesh counts as a box and a new empty as a marker.
    - **Lights**: the suns, point lights and spot lights. **Camera**: the game camera and its target.
-   - **Preview**: the party's stand-ins at their start markers, which the game draws itself. It is never exported.
+   - **Preview**: the party's models at their start markers, which the game places itself. It is never exported, and the level's exports are not made from the models only it shows.
 3. Move, resize, duplicate or delete what you need. Moving a gameplay box moves the look parented to it. Gameplay objects follow the game's rules:
    - turn boxes only in quarter turns about the vertical;
    - keep boxes and landmarks on the deck;
@@ -118,7 +118,7 @@ To change a level without Blender's interface, for example with a script in a ba
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-level.py
 ```
 
-`blender/level-exports.json` records the fingerprints of the level's Blender file, of the models and textures it uses, and of its two exports. `./scripts/check` fails while they no longer match, including after an edit by hand. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender. Earlier versions kept a working file in `.local/blender`; it is no longer used.
+`blender/level-exports.json` records the fingerprints of the level's Blender file, of the models and textures it uses, and of its two exports, and of each [model the game creates](#models) and its scene file. `./scripts/check` fails while they no longer match, including after an edit by hand. Blender's z axis is up, so a game point (x, y, z) sits at (x, -z, y), with the Manhattan end towards +y. `./scripts/check` runs the extension's own tests, which need no Blender. Earlier versions kept a working file in `.local/blender`; it is no longer used.
 
 ## Models
 
@@ -141,7 +141,15 @@ A model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, st
 
   It takes Blender files, and the glTF, FBX, OBJ and USD files that Blender imports. It makes the model's folder: the model's Blender file, holding what the file shows, without its lights and cameras; a copy of every texture it uses; and a `README.md`. From a Blender file it takes what the first scene shows, and each instance of a collection becomes copies of its parts. Fill in the README's **Source** and **Licence** lines before committing, as [Assets and attribution](#assets-and-attribution) asks, then open the model in Blender to look at it.
 
-A model follows the same rules as the rest of a level's look, and Export refuses a level whose models break them. Its materials use a Principled BSDF with image textures, each named after the model so that no two share a name. Its textures are PNG or JPEG files in its own folder, never packed into the Blender file; the [visual direction](docs/visual-direction.md) allows no new ones for now. After changing a texture outside Blender, press **Export** in the level, or run `export-level.py`. `./scripts/check` fails while a model lacks a README naming its source and licence, or while a level's exports no longer match its models.
+Some models the game creates itself as it plays, rather than a level placing them: the party, `miki`, `tom` and `laura`, and `hostile`, which every hostile shows. The extension's `SPAWNED` list names them. Saving such a model also exports its own scene file, `apple/sources/content/models/<model>.usdz`, which the game loads by the model's name. Play exports any that no longer match, and so does `export-model.py` with the model's name:
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-model.py -- miki
+```
+
+A new kind of thing for the game to create needs its name in `SPAWNED` and code that loads it.
+
+A model follows the same rules as the rest of a level's look, and Export refuses a level whose models break them. Its materials use a Principled BSDF with image textures, each named after the model so that no two share a name. Its textures are PNG or JPEG files in its own folder, never packed into the Blender file; the [visual direction](docs/visual-direction.md) allows no new ones for now. After changing a texture outside Blender, press **Export** in the level, or run `export-level.py`. `./scripts/check` fails while a model lacks a README naming its source and licence, while a level's exports no longer match its models, or while a model the game creates no longer matches its scene file.
 
 ## TestFlight builds
 

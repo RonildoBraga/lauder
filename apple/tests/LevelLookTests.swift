@@ -5,7 +5,8 @@ import simd
 @testable import Lauder
 
 /// The bridge's lights are plain data in the layout file that Blender writes (ADR 0006), and the
-/// game builds its lights from them. Its materials come with the scene file.
+/// game builds its lights from them. Its materials come with the scene file, and the party's and
+/// the hostiles' looks with their models' scene files.
 @MainActor
 struct LevelLookTests {
   /// The lights stay within the visual direction's budget: at most four, with at most one casting
@@ -60,5 +61,30 @@ struct LevelLookTests {
     // A spot light shines along its own -z.
     let shining = simd_normalize(spot.convert(direction: [0, 0, -1], to: nil))
     #expect(simd_dot(shining, simd_normalize(SIMD3<Float>(0, -8, -10))) > 0.9999)
+  }
+
+  /// Each member of the party, and each hostile, shows the model that Blender exports to a scene
+  /// file of its own (ADR 0006, step 5c): standing on the ground below its body's centre, 1.58 m
+  /// tall, and facing the figure's -z, where its front mark is.
+  @Test
+  func thePartyAndTheHostilesComeFromTheirModels() throws {
+    let world = GameWorld(level: BrooklynBridge.level)
+    for member in PartyMember.allCases {
+      let body = try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
+      try expectFigure(in: body, from: member.rawValue)
+    }
+    let hostile = try #require(world.root.findEntity(named: "hostile.attacker"))
+    try expectFigure(in: hostile, from: "hostile")
+  }
+
+  private func expectFigure(in body: Entity, from name: String) throws {
+    let model = try #require(body.findEntity(named: "\(name).model"))
+    let figure = try #require(model.parent)
+    let mark = try #require(model.findEntity(named: "\(name)_mark"))
+    let ahead = mark.position(relativeTo: figure)
+    #expect(abs(ahead.x) < 0.001 && abs(ahead.z + 0.16) < 0.001, "\(name) faces -z")
+    let bounds = model.visualBounds(relativeTo: figure)
+    #expect(abs(bounds.min.y + PartyBody.height / 2) < 0.001, "\(name) stands on the ground")
+    #expect(abs(bounds.max.y - bounds.min.y - 1.58) < 0.001, "\(name) is 1.58 m tall")
   }
 }

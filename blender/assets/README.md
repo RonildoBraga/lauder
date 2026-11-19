@@ -10,4 +10,4 @@ A model's file follows the contract between Blender and the game:
 - **Its textures** are PNG or JPEG files in its folder, such as `textures/`, rather than packed into the Blender file. The [visual direction](../../docs/visual-direction.md) allows no new textures for now.
 - **Its README.md** says where the model comes from and under which licence, as [CONTRIBUTING](../../CONTRIBUTING.md#assets-and-attribution) asks of every asset. `./scripts/check` fails without it.
 
-The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The models so far, `car`, `van` and `truck`, are the Brooklyn Bridge's greybox vehicles.
+The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The models so far are the Brooklyn Bridge's greybox vehicles, `car`, `van` and `truck`, and the stand-ins that the game creates itself: the party's `miki`, `tom` and `laura`, and `hostile`. Saving one of these four also exports its own scene file, as [CONTRIBUTING](../../CONTRIBUTING.md#models) describes.

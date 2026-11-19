@@ -4,7 +4,7 @@ schema_version = "1.0.0"
 # Blender's Preferences, add a local extension repository at blender/extensions, then enable
 # Lauder levels.
 id = "lauder_levels"
-version = "2.3.0"
+version = "2.4.0"
 name = "Lauder levels"
 tagline = "Edit Lauder's levels and models, export them and play them"
 maintainer = "Lauder contributors"

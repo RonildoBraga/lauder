@@ -58,7 +58,7 @@ RealityKit can take a scene's look from Blender, but not its meaning: nothing in
    - movement and navigation, which use Blender's blockers;
    - how light renders, with RealityKit's light components, shadows and image-based light;
    - the camera's behaviour: following, easing and leaning during fights;
-   - the stand-ins, the gameplay signals and future effects;
+   - the gameplay signals and future effects, and the stand-ins until [step 5c](#5c--models-the-code-spawns) made them models;
    - loading the level's scene once at start, which Restart keeps.
 7. **Files the maintainer provides go through an intake check** before use. It reports on units and scale, axes, names, materials and textures, and size budgets. Each file keeps a note of its source and licence, as [CONTRIBUTING](../../CONTRIBUTING.md#assets-and-attribution) requires.
 8. **The contract between Blender and the game:**
@@ -90,7 +90,7 @@ ADR 0005 turned down both halves of this design, and this decision answers its r
   - the palette file, `Surfaces.swift`.
 
   The decoration pieces leave the layout for the USDZ. The extension gets smaller, and the look needs no new code for each new kind of thing.
-- The game stops drawing the level's look. `SceneStyle` keeps the stand-ins, the gameplay signals and the lights.
+- The game stops drawing the level's look. `SceneStyle` keeps the stand-ins, the gameplay signals and the lights. Step 5c later moved the stand-ins into models.
 - A `.blend` cannot be read or merged in a pull request. A pull request that changes one also carries the generated Swift, which shows each gameplay change line by line, and a picture through the game camera for the look. Git LFS locks stop two people editing one file.
 - Nobody moves a box by editing Swift any more. Agents use Blender in the background or over MCP.
 - Git LFS storage grows with each committed version of a Blender file or a USDZ. Keeping textures in files of their own keeps them out of the Blender files, but each USDZ packages the textures it uses: every new version of a level's USDZ stores them again, and levels that share a texture each carry a copy. The allowance check has to count both.
@@ -240,7 +240,7 @@ Each step is a pull request of its own and needs its own go-ahead.
 
    It then runs the intake check. `./scripts/check` fails while a model lacks its Blender file, or a README naming its source and licence.
 7. **Paths are overwritten in full.** Blender keeps each path in a buffer of fixed size and saves the bytes beyond the path's end, so a shorter path written over a longer one keeps the longer one's tail. Step 3's reset of the file browsers left such a tail in the level file it committed: `//`, then the end of a folder path that names the account. The same happens when Blender makes a linked model's or texture's path relative, and when it records where appended data came from. Saving a level or model file now overwrites each of these in full. That covers the file browsers' folders and file names, the paths of linked models and textures, and the source paths of appended data. The bridge's file and the models hold no part of a local path, and `./scripts/check` searches every committed Blender file for one. The level file that step 3 committed keeps its fragment in the repository's history.
-8. **Not done: USDZ files for things the code spawns.** The plan gives characters and other things the game spawns USDZ files of their own. Nothing the game spawns uses a model yet: under decision 6 the code draws the party's stand-ins, and the stage 1 mannequin is a test fixture with a generator of its own. That export arrives with the first such model, when a task asks for one.
+8. **Not done: USDZ files for things the code spawns.** The plan gives characters and other things the game spawns USDZ files of their own. Nothing the game spawns uses a model yet: under decision 6 the code draws the party's stand-ins, and the stage 1 mannequin is a test fixture with a generator of its own. That export arrives with the first such model, when a task asks for one. [Step 5c](#5c--models-the-code-spawns) brought it, with the stand-ins as the first such models.
 9. **Also not done:**
    - Git LFS locking, for the reason step 3 gives;
    - a library of shared materials: each model keeps its own, so the scene file has 14 materials where it had 10, six of them the vehicles' instead of two.
@@ -331,3 +331,23 @@ It was [merged](https://github.com/RonildoBraga/lauder/pull/57#issuecomment-7007
 - In Blender 5.3, run in the background on a copy of the repository, export refused each cube added to the bridge's Visual collection, saying why: Separate Color on Roughness, a Normal Map Strength of 0.25 and one fed by an image, an emission image at Blender's default Emission Strength of 0, and an image on Coat Weight. A cube with every checked map was exported, and the scene file carried its five images.
 - The extension's 44 tests cover each refusal.
 - Not checked: the phone, texture memory and compression, Image Texture settings such as interpolation and extension, and normal maps baked in object space.
+
+### 5c — models the code spawns
+
+The maintainer's choice reversed decision 6's rule that the code keeps the stand-ins: **“Models the code spawns”**, described as models that the game creates at runtime getting USDZ files of their own, with the stand-ins becoming the first, with the same look.
+
+1. **The stand-ins are models.** `miki`, `tom` and `laura` are the party's, and `hostile` is every hostile's. Each was made from the sizes and colours that `SceneStyle` drew its stand-in with: a body, a head, two legs and two feet, and a front mark that glows, as the code drew it unlit. As the models' contract asks, each stands on the ground at its origin with its front towards −y, so the game turns it half a turn to face its −z.
+2. **Each model the game creates gets a scene file of its own,** `apple/sources/content/models/<model>.usdz`. The extension's `SPAWNED` list names these models. Saving such a model exports its scene file in the background, with `blender/scripts/export-model.py`, once the intake check finds nothing to fix. Play exports any that no longer match. Models that only levels show, such as the vehicles, get none.
+3. **The export record covers them,** under `models/<model>`: the model's Blender file and its textures, and its scene file. `./scripts/check` fails when any no longer matches.
+4. **The game loads each model once,** with `Entity.load(named:in:)` as for the level's scene, and gives every figure a copy. The carbine, the markers, the aim lines and the tracers stay in code, as the gameplay signals.
+5. **The bridge's Preview shows the party's models,** linked at their start markers in place of the plain meshes that copied the stand-ins. Export leaves out Preview and the files only Preview uses, so the bridge's export is not made from the party's models, and saving one does not export the bridge again.
+
+### Checks of 5c
+
+- The intake check found nothing to fix in the four models, and each was exported.
+- Rendered offscreen with RealityKit on the Mac, under the bridge's two suns, the code's stand-in and the model for Miki and for the hostile looked the same, facing ahead and turned by 135°: 86 of 230,400 pixels differed by more than 8 levels.
+- In the iOS 27 Simulator, the opening frame differs from `main`'s in 40 of 3.2 million pixels, all within 38 pixels of Miki's head, where Blender's sphere has other facets than RealityKit's.
+- The bridge's scene file, exported again, holds the same 118 prims with the same content as before. Its layout file is unchanged.
+- In Blender 5.3, run in the background on a copy of the repository: saving a changed Miki through the extension exported her scene file and left the bridge's exports current. The bridge opened with the three models in Preview, passed its check and exported, made from its own file and the vehicles. Saving the car exported nothing of its own.
+- The extension's 46 tests cover the export record of these models, their freshness, and Play's and saving's background steps. A Swift test checks that each member of the party and a hostile shows its model, standing on the ground, 1.58 m tall and facing ahead.
+- Not checked: the phone.
