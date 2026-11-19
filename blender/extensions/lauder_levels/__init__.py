@@ -1828,12 +1828,11 @@ def export_model(repository, name, made_from=None):
             raise LayoutError(f"{each} is missing, and the model's file refers to it.")
         if each not in made_from:
             made_from[each] = file_fingerprint(root / each)
-    # Only the model's collection is exported, as the level export exports only Visual.
+    # Only the model's collection is exported, as the level export exports only Visual. Parts
+    # hidden from renders stay out, as the intake check says.
     model = next(each for each in bpy.data.collections
                  if each.library is None and each.name == name)
     members = set(model.all_objects)
-    for item in members:
-        item.hide_render = False
     scene = bpy.context.scene
     if model not in list(scene.collection.children):
         scene.collection.children.link(model)

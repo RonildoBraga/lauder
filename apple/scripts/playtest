@@ -42,7 +42,8 @@ def run(command, **options):
 
 
 def check_assets():
-    for name in ("BrooklynBridge", "character/Idle", "character/Walk"):
+    for name in ("BrooklynBridge", "character/Idle", "character/Walk", "models/hostile",
+                 "models/laura", "models/miki", "models/tom"):
         path = ROOT / "apple/sources/content" / f"{name}.usdz"
         with path.open("rb") as stream:
             if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
