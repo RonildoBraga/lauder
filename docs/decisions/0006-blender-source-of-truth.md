@@ -1,6 +1,6 @@
 # ADR 0006 — Blender as the source of levels and models
 
-**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. [Step 2](#step-2--the-path-into-the-game) is built; until step 3 lands, [ADR 0005](0005-blender-level-editor.md) describes how a level is edited.\
+**Status:** Accepted by the maintainer on 19 November 2026 (**“Yes, record it”**) and [merged](https://github.com/RonildoBraga/lauder/pull/51#issuecomment-6999540584) under the maintainer's standing permission (“you dont need for my reviews, you can always merge it”), without an independent review. Steps [2](#step-2--the-path-into-the-game) and [3](#step-3--the-blender-file-as-the-source) are built: each level's Blender file is its source, and [ADR 0005](0005-blender-level-editor.md)'s round trip has ended.\
 **Date:** 19 November 2026\
 **Supersedes:** ADR 0005's decision 3 and its Load and Save round trip, once step 3 lands. [ADR 0004](0004-brooklyn-bridge-opening.md)'s typed level data stays, generated from Blender.\
 **Deciders:** Maintainer\
@@ -160,3 +160,49 @@ Each step is a pull request of its own and needs its own go-ahead.
 - Codex's and Copilot's automatic reviews found the same two problems in the background exports: Play after a save started a second export beside the save's, and a save made during an export was dropped. Both were fixed before the merge.
 - On the baseline iPhone 13 Pro Max, a directly installed Release build of `110617b` held **59.92 fps** over 103 s after the first 15 s of a two-minute recording of the maintainer's play, with frames averaging 16.69 ms. Four frames ran long, one of 50 ms and three of 33 ms, about 80, 81, 88 and 118 s in; as with M4's, their cause is unknown. None was skipped, and the thermal state stayed Nominal. A first attempt stopped after a second, when the phone's connection dropped. The next commit changed only the Blender extension.
 - Not checked: how long the scene file takes to load at start-up, which happens before the first frame; and the Lauder tab's buttons in the maintainer's own Blender, whose functions the background runs called.
+
+## Step 3 — the Blender file as the source
+
+**Date:** 19 November 2026. The maintainer assigned it (**“Yes, start step 3”**) and, asked whether the level file could go into Git LFS, answered **“Yes, push it”**. It was [merged](https://github.com/RonildoBraga/lauder/pull/53#issuecomment-7000891999) under the standing permission, without an independent review.
+
+1. **The level file.** `blender/levels/brooklyn-bridge.blend`, stored with Git LFS, is the bridge's source. The step 2 extension's Load made it once from the Swift files it replaces, and it was then sorted into five collections:
+   - **Visual**, 172 parts: each box's look, as a block parented to its gameplay box; each vehicle's body and windows; each landmark's block and band; and the 111 decoration pieces.
+   - **Gameplay**, 56 objects, each with a `lauder_role`: the ground, 34 boxes, 3 landmarks, 10 areas and 8 markers, shown as outlines. A mesh without a role counts as a box, and an empty as a marker.
+   - **Lights**, the two suns, and **Camera**, the game camera's rig.
+   - **Preview**, the party's stand-ins at their start markers. It is never exported.
+2. **Export reads the saved file.** Saving the level file in Blender checks the game's rules there, then exports in a background Blender with `blender/scripts/export-level.py`; Play does the same before it builds.
+   - The layout file is generated now, and says so at its top.
+   - The scene file comes from the Visual collection, each part placed where it stands in the world.
+   - Both exports are written only once both are ready, so a refusal leaves the pair as it was.
+   - `blender/level-exports.json` records the fingerprints of the Blender file as it was read, of any file it uses, and of both exports. `./scripts/check` fails when any of them no longer matches.
+3. **Names the story uses stay.** Export refuses to drop a layout entry whose name the level's Swift file quotes, since the game would stop at the missing name. Without the layout file it cannot tell which names those are, so it refuses and says how to restore the file.
+4. **No local paths.** A Blender file keeps the folder each file browser last showed, such as the home folder, in its saved interface. Saving a level file points them at the level's own folder first, and drops the Repository folder that the Lauder tab stores, since an open level file finds its repository from where it is. A level file in the public repository holds no paths from the computer it was saved on, and the bridge's file holds none.
+5. **What retired:**
+   - Load and the Swift reader, the safe Save and Save Anyway, and the working file in `.local/blender`;
+   - the palette file, `Surfaces.swift`, and the boxes' surfaces;
+   - the decoration's entries in the layout file, and the game's code that drew it: `SceneDressing`, and the vehicles' and landmarks' looks in `SceneStyle`.
+
+   A level without a scene file, such as a test's, is drawn as plain blocks. The extension shrank from 2,276 lines to 1,143.
+6. **Not done: Git LFS locking.** Decision 1 has Git LFS lock a Blender file while someone edits it. Everyone editing levels so far, the maintainer and the agents, pushes as the maintainer's account, and a lock stops only other accounts. It would protect nothing yet, while making the files read-only until locked, so it waits for a second person to edit levels.
+
+### Checks of step 3
+
+- The layout file exported from the new Blender file holds the same 58 entries as the hand-kept one it replaces. Every box, landmark, area and marker keeps its position and size, the camera is the same, and so are the lights, apart from one direction that rounding moved by 0.02°.
+- `./scripts/check` passes: the extension's 27 tests, Swift formatting, the build, and the Swift tests on the iPhone 17 / iOS 27 Simulator. The tests cover:
+  - the layout file's rules and form, and the names the story uses, which Export cannot tell without the layout file;
+  - the export record going stale when the Blender file changes, or when an export is edited by hand or goes missing;
+  - in the game, each box's look filling its box while the bridge is a greybox, each vehicle inside its box, and the decoration in the scene file alone.
+- In Blender 5.3, run in the background on a copy:
+  - Open Level opened the level file;
+  - saving after moving `car-a1` exported the level, and the layout file showed the move;
+  - a box turned at an angle was refused at save, and nothing was exported;
+  - Play queued behind the save's export;
+  - a level file saved with its file browser in the home folder, and a Repository folder chosen in the Lauder tab, held no local path;
+  - an export refused because the Visual collection was gone left both exports as they were.
+- In the Simulator, the opening frame looks the same as `main`'s, whose scene file step 2 exported from the Swift files: of its 3.2 million pixels, 4,012 differ (0.13%), only 10 of them by more than 8 steps in 255. Two runs of `main` give the same frame, pixel for pixel.
+- Codex's and Copilot's automatic reviews found four problems, all fixed before the merge:
+  - a save landing between the export loading the level file and fingerprinting it;
+  - a story-name check that a missing layout file turned off;
+  - a Repository path stored in the level file;
+  - a layout file written before an export was refused.
+- Not checked: the Lauder tab's buttons in the maintainer's own Blender, whose functions the background runs called; and the phone, since nothing the game shows or plays changed.

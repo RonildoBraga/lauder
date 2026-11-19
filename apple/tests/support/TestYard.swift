@@ -10,8 +10,7 @@ import simd
 enum TestYard {
   static let cameraOffset: SIMD3<Float> = [5.25, 10, 8.4]
 
-  static let ground = Level.Box(
-    name: "ground", position: [0, -0.15, 0], size: [28, 0.3, 20], surface: .asphalt)
+  static let ground = Level.Box(name: "ground", position: [0, -0.15, 0], size: [28, 0.3, 20])
 
   /// The walls and blocks. Low walls keep the party in view from the elevated camera.
   static let boxes: [Level.Box] = [
@@ -61,6 +60,6 @@ enum TestYard {
   private static func box(_ name: String, _ position: SIMD3<Float>, _ size: SIMD3<Float>)
     -> Level.Box
   {
-    Level.Box(name: name, position: position, size: size, surface: .concrete)
+    Level.Box(name: name, position: position, size: size)
   }
 }

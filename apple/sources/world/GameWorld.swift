@@ -108,16 +108,13 @@ final class GameWorld {
       root.addChild(Self.loadScene(named: scene, for: level))
     } else {
       for box in [level.ground] + level.boxes {
-        let entity: Entity =
-          box.surface == .vehicle
-          ? style.vehicle(size: box.size, at: box.position)
-          : style.block(
-            size: box.size, at: box.position, material: style.material(for: box.surface))
+        let entity = style.block(size: box.size, at: box.position, material: style.scenery)
         entity.name = box.name
         root.addChild(entity)
       }
       for point in level.points {
-        let entity = style.landmark(for: point)
+        let centre = point.position + [0, point.size.y / 2, 0]
+        let entity = style.block(size: point.size, at: centre, material: style.scenery)
         entity.name = point.id
         root.addChild(entity)
       }
@@ -129,9 +126,6 @@ final class GameWorld {
         "\(level.id) defines \(interaction.id.rawValue) more than once.")
     }
     root.addChild(stage.container)
-    if level.scene == nil {
-      SceneDressing.add(to: root, style: style, level: level)
-    }
     style.addLights(level.lights, to: root)
     camera.camera.fieldOfViewInDegrees = level.fieldOfView
     camera.name = "camera"

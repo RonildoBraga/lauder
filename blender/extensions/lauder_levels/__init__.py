@@ -1,37 +1,30 @@
-"""Lauder's levels in Blender (ADR 0005), as a Blender extension.
+"""Lauder's levels in Blender (ADR 0006), as a Blender extension.
 
-Blender is the editor for a level's scene. Load builds it in the open Blender file from the
-level's Swift layout file and the shared surface palette, and Save writes both back after checking
-the game's rules. The Swift files stay the source of truth: a direct edit to them shows up at the
-next Load, and Save will not overwrite one made since the last Load or Save.
+Each level is a Blender file in the repository, blender/levels/<level>.blend, stored with Git LFS:
+the level's source. Its collections decide where each object goes:
 
-The layout holds what blocks movement and sight (the ground and boxes), what can be looked at,
-the trigger and fight areas, the markers where people start and stand, the decoration that blocks
-nothing (pieces such as the bridge's walkway and cables, turned as they need), the game camera and
-the lights. The palette holds how each surface looks, for every level: its colour, roughness and
-metalness. Load also draws what the game adds by its own rules, so that Blender shows what the
-game shows: the details on every vehicle and landmark, and the party at its start markers. They
-follow their box or marker and are not saved.
+- Visual: everything the player sees. Export writes it to the level's scene file, a USDZ that the
+  game loads.
+- Gameplay: the ground, the boxes that block movement and sight, the landmarks, the trigger and
+  fight areas, and the markers where people start and stand, each with its role. Export writes
+  them to the level's layout file, typed Swift that the game compiles. They show as outlines, and
+  the game never draws them. A visual part parented to a gameplay box moves with it.
+- Lights and Camera: the level's sun lights and the game camera's rig, written to the layout file
+  too.
+- Preview: the party's stand-ins at their start markers, which the game draws itself. It is never
+  exported.
 
 Install it once: in Blender's Preferences, add a local extension repository at this repository's
 blender/extensions folder, then enable Lauder levels. A Lauder tab appears in the 3D Viewport's
-sidebar (press N). Open Level keeps each level in a working Blender file in .local/blender, which
-Git ignores, and saving that file saves the level too. Play saves the level, then builds the game
-and opens it in the iOS Simulator through apple/scripts/play.
+sidebar (press N). Open Level opens the level's Blender file. Saving it checks the game's rules,
+then exports in a Blender of its own, in the background, with blender/scripts/export-level.py,
+which agents run too. Play saves, exports when needed, then builds the game and opens it in the iOS
+Simulator through apple/scripts/play. blender/level-exports.json records what each export was made
+from and what it wrote, and ./scripts/check fails when they no longer match.
 
-Save and Play also keep the level's scene file up to date (ADR 0006): everything the game shows of
-the level, built from the layout and the palette and exported as USD, which the game loads instead
-of drawing boxes. Each export records what it was made from in blender/scene-exports.json, and
-./scripts/check fails when a scene file no longer matches. blender/scripts/export-scene.py exports
-one in a Blender of its own, for example after a layout file is edited by hand.
-
-Reading, writing and checking layouts and the palette need no Blender: blender/test_lauder_levels.py
-runs them in ./scripts/check. Coordinates in the layout files are the game's, in metres: x across,
-y up and z along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
-
-Moving something else into Blender follows the same recipe: give it a typed entry in a Swift data
-file, read and write that entry here exactly, build it in Load and read it back in Save, check the
-game's rules before anything is written, and test the round trip.
+Writing and checking a layout needs no Blender: blender/test_lauder_levels.py runs those parts in
+./scripts/check. Coordinates in the layout file are the game's, in metres: x across, y up and z
+along the level. In Blender, z is up, so a game point (x, y, z) sits at (x, -z, y).
 """
 
 from dataclasses import dataclass, field
@@ -47,10 +40,9 @@ import tempfile
 import textwrap
 
 try:
-    import bmesh
     import bpy
     from bpy.app.handlers import persistent
-    from mathutils import Quaternion, Vector
+    from mathutils import Vector
 except ImportError:  # Outside Blender: the tests use the plain functions below.
     bpy = None
 
@@ -62,17 +54,15 @@ except ImportError:  # Outside Blender: the tests use the plain functions below.
 class LevelFile:
     key: str
     title: str
-    #: The layout file, relative to the repository.
-    path: str
-    #: The Swift type whose `layout` the file defines.
+    #: The level's Blender file, relative to the repository: the level's source.
+    blend: str
+    #: The layout file that Export writes, relative to the repository.
+    layout: str
+    #: The Swift type whose `layout` the layout file defines.
     owner: str
-    #: The opening comment of the file, written on every save.
-    header: tuple
-    #: Boxes the game looks up by name, which Save will not drop.
-    required_boxes: tuple
-    #: Where the game camera's preview target starts.
-    camera_target: str
-    #: The scene file, relative to the repository: everything the game shows of the level.
+    #: The level's own Swift file, with its words. The layout's names it uses must stay.
+    story: str
+    #: The scene file that Export writes, relative to the repository.
     scene: str
 
 
@@ -80,53 +70,28 @@ LEVELS = {
     "brooklyn-bridge": LevelFile(
         key="brooklyn-bridge",
         title="Brooklyn Bridge",
-        path="apple/sources/content/BrooklynBridgeLayout.swift",
+        blend="blender/levels/brooklyn-bridge.blend",
+        layout="apple/sources/content/BrooklynBridgeLayout.swift",
         owner="BrooklynBridge",
-        header=(
-            "// Where everything on the Brooklyn Bridge stands and how it is lit (ADR 0005), in metres: x",
-            "// across the deck, y up and z along it, with Brooklyn at +z and Manhattan at -z. Blender edits",
-            "// this file through its Lauder extension (blender/extensions/lauder_levels): Load builds the",
-            "// layout in Blender and Save writes it back. The numbers can also be edited here, and the next",
-            "// Load picks them up. Keep the entries in this form so that the script can read them.",
-            "// After an edit here, export the scene file again: blender/scripts/export-scene.py.",
-        ),
-        required_boxes=("brooklyn-tower-pier", "manhattan-tower-pier"),
-        camera_target="spawn.miki",
+        story="apple/sources/content/BrooklynBridge.swift",
         scene="apple/sources/content/BrooklynBridge.usdz",
     ),
 }
 
-#: How each surface looks, for every level: the game's shared material palette. Its entries are
-#: the surfaces a box or piece may have.
-PALETTE_PATH = "apple/sources/content/Surfaces.swift"
-PALETTE_HEADER = (
-    "// How each surface looks (ADR 0005): the game's small shared material palette, for every",
-    "// level. Colours are sRGB, each channel from 0 to 1. Blender edits this file through its Lauder",
-    "// extension (blender/extensions/lauder_levels): Load builds Blender's materials from it and Save",
-    "// writes them back. The numbers can also be edited here, and the next Load picks them up. Keep",
-    "// the entries in this form so that the script can read them.",
-    "// After an edit here, export the scene file again: blender/scripts/export-scene.py.",
-)
+#: The level file's collections (see above).
+VISUAL, GAMEPLAY, LIGHTS, CAMERA, PREVIEW = "Visual", "Gameplay", "Lights", "Camera", "Preview"
+#: What a gameplay object can be, in its `lauder_role` property. Without one, a mesh is a box and
+#: an empty is a marker.
+ROLES = ("ground", "box", "landmark", "area", "marker")
 
-#: Where each level's working Blender file lives, relative to the repository; Git ignores it.
-WORKING_FOLDER = ".local/blender"
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"
-#: The script that exports a level's scene file in a Blender of its own.
-EXPORT_SCRIPT = "blender/scripts/export-scene.py"
-#: Where each scene file records what it was made from, relative to the repository.
-SCENE_RECORD = "blender/scene-exports.json"
-#: Raised whenever the export changes what a scene file holds, so that every scene file is
-#: exported again.
-SCENE_FORMAT = 1
-
-
-def working_file(repository, level):
-    """The level's working Blender file. Saving it saves the level's files too."""
-    return Path(repository) / WORKING_FOLDER / f"{level.key}.blend"
-
-#: Surfaces that the game's own rules draw vehicles and landmarks with; the palette keeps them.
-GAME_LOOKS = ("vehicle", "glass", "metal", "paint")
+#: The script that exports a level in a Blender of its own.
+EXPORT_SCRIPT = "blender/scripts/export-level.py"
+#: Where each export records what it was made from and what it wrote, relative to the repository.
+EXPORT_RECORD = "blender/level-exports.json"
+#: Raised whenever Export changes what it writes, so that every level is exported again.
+EXPORT_FORMAT = 1
 
 #: The visual direction's budget (docs/visual-direction.md).
 MOST_LIGHTS = 2
@@ -136,9 +101,8 @@ DEFAULT_SHADOW_DISTANCE = 25
 #: Blender's sun strength, in W/m², for each lux of a game light. Blender and RealityKit render
 #: differently, so this only brings Blender's preview close; the game shows the real result.
 SUN_STRENGTH_PER_LUX = 1 / 700
-
-#: The height of the camera's target above the floor: a stand-in's centre, plus 0.1 m.
-CAMERA_TARGET_HEIGHT = 0.95
+#: How far from the origin the layout file puts a light's source. Only its direction matters.
+SOURCE_LENGTH = 10
 
 
 # MARK: - Layouts, in the game's coordinates
@@ -150,7 +114,6 @@ class Box:
     #: The centre, (x, y, z).
     position: tuple
     size: tuple
-    surface: str
 
 
 @dataclass
@@ -176,22 +139,6 @@ class Marker:
     position: tuple
 
 
-IDENTITY = (1.0, 0.0, 0.0, 0.0)
-
-
-@dataclass
-class Piece:
-    """Decoration that blocks nothing: a box at any angle."""
-    name: str
-    #: The centre, (x, y, z).
-    position: tuple
-    #: Along the piece's own axes.
-    size: tuple
-    surface: str
-    #: A unit quaternion (w, x, y, z) in the game's space.
-    rotation: tuple = IDENTITY
-
-
 @dataclass
 class Camera:
     #: From the camera's target to the camera, (x, y, z).
@@ -215,247 +162,64 @@ class Light:
 
 
 @dataclass
-class Finish:
-    """How a surface looks: a colour in sRGB and a roughness and metalness, each from 0 to 1."""
-    color: tuple
-    roughness: float
-    metallic: float = 0.0
-
-
-@dataclass
 class Layout:
     ground: Box
     boxes: list
     landmarks: list
     areas: list
     markers: list
-    pieces: list = field(default_factory=list)
     camera: Camera = None
     lights: list = field(default_factory=list)
 
 
 class LayoutError(Exception):
-    """A layout the game cannot use. The message says what to fix."""
+    """A level the game cannot use. The message says what to fix."""
 
 
-# MARK: - Rotations
+def to_blender(point):
+    """A game point (x, y, z) in Blender's z-up space."""
+    x, y, z = point
+    return (x, -z, y)
 
 
-def _multiply(a, b):
-    aw, ax, ay, az = a
-    bw, bx, by, bz = b
-    return (
-        aw * bw - ax * bx - ay * by - az * bz,
-        aw * bx + ax * bw + ay * bz - az * by,
-        aw * by - ax * bz + ay * bw + az * bx,
-        aw * bz + ax * by - ay * bx + az * bw,
-    )
+def from_blender(point):
+    x, y, z = point
+    return (x, z, -y)
 
 
-def _conjugate(q):
-    w, x, y, z = q
-    return (w, -x, -y, -z)
+def size_to_blender(size):
+    x, y, z = size
+    return (x, z, y)
 
 
-def _canonical(q):
-    """The same rotation, unit length and with w >= 0, so that it is written one way."""
-    length = math.sqrt(sum(value * value for value in q)) or 1.0
-    q = tuple(value / length for value in q)
-    return q if q[0] >= 0 else tuple(-value for value in q)
+def _linear(red, green, blue):
+    """sRGB as scene-linear RGB."""
+    def channel(value):
+        return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+    return (channel(red), channel(green), channel(blue))
 
 
-#: Blender's axes to the game's: a quarter turn about x.
-_AXES = (math.sqrt(0.5), -math.sqrt(0.5), 0.0, 0.0)
+def _srgb(linear):
+    """Scene-linear RGB as sRGB, each channel from 0 to 1."""
+    def channel(value):
+        value = min(max(value, 0.0), 1.0)
+        return value * 12.92 if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
+    return tuple(channel(value) for value in linear[:3])
 
 
-def rotation_to_blender(q):
-    return _canonical(_multiply(_multiply(_conjugate(_AXES), q), _AXES))
+def _unit(vector):
+    length = math.sqrt(sum(value * value for value in vector)) or 1.0
+    return tuple(value / length for value in vector)
 
 
-def rotation_from_blender(q):
-    return _canonical(_multiply(_multiply(_AXES, q), _conjugate(_AXES)))
+# MARK: - Checking a layout
 
 
-#: A turn is written to four places, which holds turns down to about a hundredth of a degree.
-_TURN_PLACES = 4
-
-
-def _turn_values(q):
-    """A rotation as a layout file writes it: (x, y, z, w), as Swift's simd_quatf takes it, with w
-    not negative."""
-    w, x, y, z = q
-    if w < 0:
-        w, x, y, z = -w, -x, -y, -z
-    return (x, y, z, w)
-
-
-def is_identity(q):
-    """Whether a rotation is written as no turn at all, because its x, y and z round to zero. Any
-    turn that the file can hold is written, however small: half a degree swings the ends of a
-    248 m lane line by a metre."""
-    x, y, z, _ = _turn_values(q)
-    return all(_number(value, _TURN_PLACES) == "0" for value in (x, y, z))
-
-
-def _same_rotation(a, b, tolerance=1e-9):
-    """Whether two quaternions give the same turn, to within a hundredth of a degree."""
-    a, b = _canonical(a), _canonical(b)
-    return abs(sum(x * y for x, y in zip(a, b))) > 1 - tolerance
-
-
-# MARK: - Reading a layout file
-
-_LIST = r"\[([^\]]*)\]"
-_NAME = r'"([^"\\]+)"'
-_NUMBER = r"(-?\d+(?:\.\d+)?)"
-_ENTRIES = {
-    "box": re.compile(
-        r"\.box\(\s*" + _NAME + r"\s*,\s*at:\s*" + _LIST + r"\s*,\s*size:\s*" + _LIST
-        + r"\s*,\s*surface:\s*\.(\w+)\s*\)"
-    ),
-    "landmark": re.compile(
-        r"\.landmark\(\s*" + _NAME + r"\s*,\s*at:\s*" + _LIST + r"\s*,\s*size:\s*" + _LIST
-        + r"\s*\)"
-    ),
-    "area": re.compile(
-        r"\.area\(\s*" + _NAME + r"\s*,\s*from:\s*" + _LIST + r"\s*,\s*to:\s*" + _LIST + r"\s*\)"
-    ),
-    "marker": re.compile(r"\.marker\(\s*" + _NAME + r"\s*,\s*at:\s*" + _LIST + r"\s*\)"),
-    "piece": re.compile(
-        r"\.piece\(\s*" + _NAME + r"\s*,\s*at:\s*" + _LIST + r"\s*,\s*size:\s*" + _LIST
-        + r"\s*(?:,\s*turn:\s*" + _LIST + r"\s*)?,\s*surface:\s*\.(\w+)\s*\)"
-    ),
-    "camera": re.compile(
-        r"\.camera\(\s*offset:\s*" + _LIST + r"\s*,\s*fieldOfView:\s*" + _NUMBER + r"\s*\)"
-    ),
-    "sun": re.compile(
-        r"\.sun\(\s*" + _NAME + r"\s*,\s*from:\s*" + _LIST + r"\s*,\s*color:\s*" + _LIST
-        + r"\s*,\s*intensity:\s*" + _NUMBER + r"\s*(?:,\s*shadowDistance:\s*" + _NUMBER
-        + r"\s*)?\)"
-    ),
-}
-_SECTIONS = ("ground", "boxes", "landmarks", "areas", "markers", "pieces", "camera", "lights")
-#: The kinds of entry each section holds. A section may hold several, as the lights will once the
-#: game has more kinds than the sun.
-_KINDS = {"ground": ("box",), "boxes": ("box",), "landmarks": ("landmark",), "areas": ("area",),
-          "markers": ("marker",), "pieces": ("piece",), "camera": ("camera",), "lights": ("sun",)}
-
-
-#: All that may come before the first section: the layout's opening.
-_LAYOUT_OPENING = re.compile(r"\s*extension\s+\w+\s*\{\s*static\s+let\s+layout\s*=\s*Level\.Layout\(\s*")
-
-
-def _unread(chunk, spans):
-    """What is left of the code once its entries are taken out, apart from the brackets, commas,
-    closing marks and spaces between them: anything else is something the script did not read,
-    which a save would drop."""
-    pieces, at = [], 0
-    for start, finish in sorted(spans):
-        pieces.append(chunk[at:start])
-        at = finish
-    pieces.append(chunk[at:])
-    leftover = "".join(pieces)
-    first = re.search(r"[^\s\[\](),}]", leftover)
-    return " ".join(leftover[first.start():].split())[:48] if first else ""
-
-
-def _numbers(text, count, name):
-    parts = [part.strip() for part in text.split(",") if part.strip()]
-    if len(parts) != count:
-        raise LayoutError(f"{name}: expected {count} numbers but found {len(parts)}.")
-    try:
-        return tuple(float(part) for part in parts)
-    except ValueError:
-        raise LayoutError(f"{name}: [{text}] is not a list of numbers.") from None
-
-
-def parse_layout(text, surfaces=None):
-    """Read a layout file. Anything that is not read exactly raises, so Save never drops it. Given
-    the palette's surfaces, every box and piece must have one of them."""
-    code = re.sub(r"//[^\n]*", "", text)
-    heads, starts = {}, {}
-    for section in _SECTIONS:
-        found = list(re.finditer(rf"\b{section}:", code))
-        if len(found) != 1:
-            raise LayoutError(f"The layout needs exactly one '{section}:' section.")
-        heads[section], starts[section] = found[0].start(), found[0].end()
-    if sorted(_SECTIONS, key=starts.get) != list(_SECTIONS):
-        raise LayoutError("The sections must come in order: " + ", ".join(_SECTIONS) + ".")
-    if not re.fullmatch(_LAYOUT_OPENING, code[:heads[_SECTIONS[0]]]):
-        raise LayoutError(
-            "Before 'ground:', the file should only open the layout: "
-            "extension … { static let layout = Level.Layout(")
-    entries = {}
-    for index, section in enumerate(_SECTIONS):
-        end = heads[_SECTIONS[index + 1]] if index + 1 < len(_SECTIONS) else len(code)
-        chunk = code[starts[section]:end]
-        kinds = _KINDS[section]
-        # In the order written, whatever their kinds.
-        found = sorted(
-            (match.start(), match.end(), kind, match.groups())
-            for kind in kinds for match in _ENTRIES[kind].finditer(chunk))
-        written = sum(chunk.count(f".{kind}(") for kind in kinds)
-        if len(found) != written:
-            raise LayoutError(
-                f"{written - len(found)} entry or entries in '{section}:' could not be read. "
-                f"Write each as the others are."
-            )
-        unread = _unread(chunk, [(start, finish) for start, finish, _, _ in found])
-        if unread:
-            raise LayoutError(
-                f"'{section}:' holds something the script cannot read: {unread}… "
-                f"Write each entry as the others are.")
-        entries[section] = [(kind, groups) for _, _, kind, groups in found]
-    if len(entries["ground"]) != 1:
-        raise LayoutError("The layout needs exactly one ground box.")
-    if len(entries["camera"]) != 1:
-        raise LayoutError("The layout needs exactly one camera.")
-
-    def box(entry):
-        _, (name, at, size, surface) = entry
-        return Box(name, _numbers(at, 3, name), _numbers(size, 3, name), surface)
-
-    def piece(entry):
-        _, (name, at, size, turn, surface) = entry
-        rotation = IDENTITY
-        if turn:
-            # Kept exactly as written, so that reading and writing the file changes nothing.
-            x, y, z, w = _numbers(turn, 4, name)
-            rotation = (w, x, y, z)
-        return Piece(name, _numbers(at, 3, name), _numbers(size, 3, name), surface, rotation)
-
-    def light(entry):
-        _, (name, source, colour, intensity, shadow) = entry
-        return Light(name, _numbers(source, 3, name), _numbers(colour, 3, name), float(intensity),
-                     None if shadow is None else float(shadow))
-
-    _, (offset, field_of_view) = entries["camera"][0]
-    layout = Layout(
-        ground=box(entries["ground"][0]),
-        boxes=[box(entry) for entry in entries["boxes"]],
-        landmarks=[
-            Landmark(name, _numbers(at, 3, name), _numbers(size, 3, name))
-            for _, (name, at, size) in entries["landmarks"]
-        ],
-        areas=[
-            Area(name, _numbers(low, 2, name), _numbers(high, 2, name))
-            for _, (name, low, high) in entries["areas"]
-        ],
-        markers=[Marker(name, _numbers(at, 2, name)) for _, (name, at) in entries["markers"]],
-        pieces=[piece(entry) for entry in entries["pieces"]],
-        camera=Camera(_numbers(offset, 3, "camera"), float(field_of_view)),
-        lights=[light(entry) for entry in entries["lights"]],
-    )
-    _check_names(layout, surfaces)
-    return layout
-
-
-def _check_names(layout, surfaces=None):
+def _check_names(layout):
     problems = []
     for kind, items in (
         ("box", [layout.ground] + layout.boxes), ("landmark", layout.landmarks),
-        ("area", layout.areas), ("marker", layout.markers), ("piece", layout.pieces),
-        ("light", layout.lights),
+        ("area", layout.areas), ("marker", layout.markers), ("light", layout.lights),
     ):
         seen = set()
         for item in items:
@@ -466,12 +230,8 @@ def _check_names(layout, surfaces=None):
             if re.search(r"\.\d{3}$", item.name):
                 problems.append(
                     f"{item.name} has Blender's duplicate suffix; give it a name of its own.")
-    if surfaces is not None:
-        for item in [layout.ground] + layout.boxes + layout.pieces:
-            if item.surface not in surfaces:
-                problems.append(f"{item.name} has an unknown surface, {item.surface}.")
     if layout.camera is None:
-        problems.append("The layout needs a camera.")
+        problems.append("The level needs its game camera.")
     elif not 10 <= layout.camera.field_of_view <= 120:
         problems.append("The camera's field of view should be between 10 and 120 degrees.")
     problems += _light_problems(layout.lights)
@@ -483,7 +243,7 @@ def _light_problems(lights):
     """The visual direction's budget for lights, and lights the game can use."""
     problems = []
     if not lights:
-        problems.append("The layout needs a light.")
+        problems.append("The level needs a light.")
     if len(lights) > MOST_LIGHTS:
         problems.append(
             f"The visual direction allows at most {MOST_LIGHTS} lights, not {len(lights)}.")
@@ -540,15 +300,7 @@ def _call(indent, head, arguments, tail):
 
 
 def _box_arguments(box):
-    return [f'"{box.name}"', f"at: {_list(box.position)}", f"size: {_list(box.size)}",
-            f"surface: .{box.surface}"]
-
-
-def _piece_arguments(piece):
-    arguments = [f'"{piece.name}"', f"at: {_list(piece.position)}", f"size: {_list(piece.size)}"]
-    if not is_identity(piece.rotation):
-        arguments.append(f"turn: {_list(_turn_values(piece.rotation), _TURN_PLACES)}")
-    return arguments + [f"surface: .{piece.surface}"]
+    return [f'"{box.name}"', f"at: {_list(box.position)}", f"size: {_list(box.size)}"]
 
 
 def _light_arguments(light):
@@ -559,10 +311,22 @@ def _light_arguments(light):
     return arguments
 
 
-def emit_layout(layout, level, surfaces=None):
+def layout_header(level):
+    """The layout file's opening comment: what it is, and that Blender writes it."""
+    text = (
+        f"Generated by the Lauder extension from {level.blend} (ADR 0006): where everything that "
+        "plays on the level stands, and how it is lit, in metres, with x across, y up and z along "
+        f"the level. Do not edit it here: change the level in Blender and save, or run "
+        f"{EXPORT_SCRIPT}. ./scripts/check fails while this file no longer matches the Blender "
+        "file."
+    )
+    return tuple("// " + line for line in textwrap.wrap(text, _WIDTH - 3))
+
+
+def emit_layout(layout, level):
     """The layout file's text, the same every time for the same layout."""
-    _check_names(layout, surfaces)
-    lines = list(level.header) + [
+    _check_names(layout)
+    lines = list(layout_header(level)) + [
         "",
         f"extension {level.owner} {{",
         "  static let layout = Level.Layout(",
@@ -584,7 +348,6 @@ def emit_layout(layout, level, surfaces=None):
             (".marker", [f'"{item.name}"', f"at: {_list(item.position)}"])
             for item in layout.markers
         ]),
-        ("pieces", [(".piece", _piece_arguments(piece)) for piece in layout.pieces]),
     )
     for section, calls in sections:
         if not calls:
@@ -605,180 +368,22 @@ def emit_layout(layout, level, surfaces=None):
     return "\n".join(lines) + "\n"
 
 
-# MARK: - The surface palette
-
-_FINISH = re.compile(
-    r"\.(\w+):\s*\.finish\(\s*color:\s*" + _LIST + r"\s*,\s*roughness:\s*" + _NUMBER
-    + r"\s*(?:,\s*metallic:\s*" + _NUMBER + r"\s*)?\)"
-)
-
-
-#: All that may come before the palette's first entry.
-_PALETTE_SCAFFOLD = re.compile(
-    r"\s*enum\s+Surfaces\s*\{\s*static\s+let\s+palette\s*:\s*\[\s*Level\.Surface\s*:\s*"
-    r"Level\.Finish\s*\]\s*=\s*\[\s*"
-)
-
-
-def parse_palette(text):
-    """Read the palette file: each surface's finish, in the file's order. Anything that is not
-    read exactly raises, so Save never drops it."""
-    code = re.sub(r"//[^\n]*", "", text)
-    matches = list(_FINISH.finditer(code))
-    written = code.count(".finish(")
-    if len(matches) != written:
-        raise LayoutError(
-            f"{written - len(matches)} surface or surfaces in the palette could not be read. "
-            f"Write each as the others are.")
-    scaffold = re.fullmatch(_PALETTE_SCAFFOLD, code[:matches[0].start()] if matches else code)
-    unread = _unread(code[matches[0].start():], [
-        (match.start() - matches[0].start(), match.end() - matches[0].start()) for match in matches
-    ]) if matches else ""
-    if scaffold is None or unread:
-        raise LayoutError(
-            "The palette file holds something the script cannot read. Keep it as `enum Surfaces` "
-            "with one `.surface: .finish(...)` entry for each surface.")
-    palette = {}
-    for name, colour, roughness, metallic in (match.groups() for match in matches):
-        if name in palette:
-            raise LayoutError(f"The palette has two finishes for {name}.")
-        palette[name] = Finish(_numbers(colour, 3, name), float(roughness), float(metallic or 0))
-    problems = _palette_problems(palette)
-    if problems:
-        raise LayoutError(" ".join(problems))
-    return palette
-
-
-def _palette_problems(palette):
-    problems = []
-    for name in GAME_LOOKS:
-        if name not in palette:
-            problems.append(f"The palette needs {name}: the game draws vehicles and landmarks with it.")
-    for name, finish in palette.items():
-        if any(not 0 <= value <= 1 for value in finish.color):
-            problems.append(f"{name}'s colour channels should be between 0 and 1.")
-        if not 0 <= finish.roughness <= 1:
-            problems.append(f"{name}'s roughness should be between 0 and 1.")
-        if not 0 <= finish.metallic <= 1:
-            problems.append(f"{name}'s metallic should be between 0 and 1.")
-    return problems
-
-
-def emit_palette(palette):
-    """The palette file's text, the same every time for the same palette."""
-    problems = _palette_problems(palette)
-    if problems:
-        raise LayoutError(" ".join(problems))
-    lines = list(PALETTE_HEADER) + [
-        "",
-        "enum Surfaces {",
-        "  static let palette: [Level.Surface: Level.Finish] = [",
-    ]
-    for name, finish in palette.items():
-        arguments = [f"color: {_list(finish.color)}", f"roughness: {_number(finish.roughness)}"]
-        if _number(finish.metallic) != "0":
-            arguments.append(f"metallic: {_number(finish.metallic)}")
-        lines += _call("    ", f".{name}: .finish", arguments, ",")
-    lines += ["  ]", "}"]
-    return "\n".join(lines) + "\n"
-
-
-# MARK: - Changes made outside Blender
-
-
-class FilesChanged(LayoutError):
-    """The level's files changed since Blender last loaded or saved them, so a save would undo
-    someone else's work: an agent's edit, a pull or a branch switch."""
-
-    def __init__(self, changes):
-        self.changes = changes
-        shown = ", ".join(changes[:8]) + (", and more" if len(changes) > 8 else "")
-        super().__init__(
-            f"The level's files changed since your last Load or Save: {shown}. Load to take those "
-            f"changes, or Save Anyway to replace them with what Blender holds.")
-
-
-def _layout_entries(layout):
-    """Each entry of a layout, in the file's order, by how a person would name it."""
-    entries = {"the ground": layout.ground}
-    for items in (layout.boxes, layout.landmarks, layout.areas, layout.markers, layout.pieces):
-        entries.update({item.name: item for item in items})
-    entries["the camera"] = layout.camera
-    entries.update({light.name: light for light in layout.lights})
-    return entries
-
-
-def _differences(before, after, name=lambda key: key):
-    """Which entries were changed, removed or added, in the order the files have them."""
-    changes = []
-    for key, value in before.items():
-        if key not in after:
-            changes.append(f"{name(key)} removed")
-        elif after[key] != value:
-            changes.append(f"{name(key)} changed")
-    return changes + [f"{name(key)} added" for key in after if key not in before]
-
-
-def changes_since(synced_layout, synced_palette, layout_text, palette_text):
-    """What changed in the level's files since Blender last loaded or saved them, for a person to
-    read; empty when nothing did."""
-    changes = []
-    if layout_text != synced_layout:
-        try:
-            found = _differences(_layout_entries(parse_layout(synced_layout)),
-                                 _layout_entries(parse_layout(layout_text)))
-        except LayoutError:
-            found = ["the layout file, in a form the script cannot read"]
-        changes += found or ["the layout file's comments or spacing"]
-    if palette_text != synced_palette:
-        try:
-            found = _differences(parse_palette(synced_palette), parse_palette(palette_text),
-                                 lambda name: f"the {name} surface")
-        except LayoutError:
-            found = ["the palette file, in a form the script cannot read"]
-        changes += found or ["the palette file's comments or spacing"]
-    return changes
-
-
-# MARK: - Between Blender and the game
-
-
-def to_blender(point):
-    """A game point (x, y, z) in Blender's z-up space."""
-    x, y, z = point
-    return (x, -z, y)
-
-
-def from_blender(point):
-    x, y, z = point
-    return (x, z, -y)
-
-
-def size_to_blender(size):
-    x, y, z = size
-    return (x, z, y)
+# MARK: - Reading what Blender holds
 
 
 @dataclass
 class Shape:
-    """What Save reads from one Blender object, in Blender's coordinates."""
+    """What Export reads from one gameplay object, in Blender's coordinates."""
     name: str
-    #: ground, box, landmark, area, marker or piece.
+    #: ground, box, landmark, area or marker.
     role: str
     #: The object's world bounding box; for a marker, its location twice.
     minimum: tuple
     maximum: tuple
-    surface: str = None
     #: Turned only in quarter turns about the vertical, and not mirrored.
     square: bool = True
     #: The mesh is still a box.
     cuboid: bool = True
-    #: For a piece, which may be turned at any angle: its centre, its size along its own axes and
-    #: its rotation (w, x, y, z), all in Blender's space.
-    centre: tuple = None
-    size: tuple = None
-    rotation: tuple = IDENTITY
-    mirrored: bool = False
 
 
 @dataclass
@@ -791,7 +396,7 @@ class CameraShape:
 
 @dataclass
 class LightShape:
-    """What Save reads from one Blender light."""
+    """What Export reads from one Blender light."""
     name: str
     #: Blender's kind of light: SUN, POINT, SPOT or AREA.
     kind: str
@@ -806,147 +411,54 @@ class LightShape:
     shadow_distance: float = None
 
 
-@dataclass
-class MaterialShape:
-    """What Save reads from one Lauder material, as (scene-linear colour, roughness, metallic):
-    its Principled BSDF, which renders and Material Preview show, and its viewport display
-    settings, which Solid shading shows."""
-    name: str
-    node: tuple = None
-    viewport: tuple = None
-
-
 _TOLERANCE = 0.005
-#: Half the last place that a colour, roughness or metallic is written to.
-_FINISH_TOLERANCE = 0.0005
+#: A layout file's entries, as Export writes them: (kind, name).
+_ENTRY_NAME = re.compile(r'\.(box|landmark|area|marker)\(\s*"([^"]+)"')
 
 
-def _srgb(linear):
-    """Scene-linear RGB as sRGB, each channel from 0 to 1."""
-    def channel(value):
-        value = min(max(value, 0.0), 1.0)
-        return value * 12.92 if value <= 0.0031308 else 1.055 * value ** (1 / 2.4) - 0.055
-    return tuple(channel(value) for value in linear[:3])
+def required_names(layout_text, story_text):
+    """The names in the layout file that the level's Swift file uses, as (kind, name): Export
+    refuses to drop them, since the game would stop at the missing name."""
+    literals = set(re.findall(r'"([^"\\\n]+)"', story_text))
+    return {(kind, name) for kind, name in _ENTRY_NAME.findall(layout_text) if name in literals}
 
 
-def _length(vector):
-    return math.sqrt(sum(value * value for value in vector))
+def names_the_story_uses(repository, level):
+    """The (kind, name) pairs in the level's layout file that its Swift file quotes
+    (required_names). Without the layout file Export cannot tell, so it refuses."""
+    root = Path(repository)
+    written, story = root / level.layout, root / level.story
+    if not story.exists():
+        return set()
+    if not written.exists():
+        raise LayoutError(
+            f"{level.layout} is missing, so Export cannot tell which of its names {story.name} "
+            f"uses. Restore it with git restore {level.layout}, then export again.")
+    return required_names(written.read_text(), story.read_text())
 
 
-def _unit(vector):
-    length = _length(vector) or 1.0
-    return tuple(value / length for value in vector)
-
-
-def _close(a, b, tolerance):
-    return all(abs(x - y) <= tolerance for x, y in zip(a, b))
-
-
-def _known(surface, surfaces):
-    """Whether a box or piece has a Lauder surface: one of the palette's, when it is given."""
-    return surface is not None and (surfaces is None or surface in surfaces)
-
-
-def lights_from_shapes(shapes, previous):
-    """The layout's lights from Blender's, and anything that stops a save. A value that Blender
-    hands back unchanged is kept as written, so a save without edits changes nothing."""
-    before = {light.name: light for light in previous}
+def lights_from_shapes(shapes):
+    """The layout's lights from Blender's, and anything that stops an export."""
     lights, problems = [], []
     for shape in shapes:
         if shape.kind != "SUN":
             problems.append(
                 f"{shape.name} is a {shape.kind.lower()} light; the game has only sun lights so far.")
             continue
-        old = before.get(shape.name)
-        direction = _unit(from_blender(shape.direction))
-        if old is not None and sum(a * b for a, b in zip(_unit(old.source), direction)) > 1 - 1e-6:
-            source = old.source
-        else:
-            # Written at the length the file had, so that the numbers stay easy to read.
-            length = _length(old.source) if old is not None else 10.0
-            source = tuple(round(value * length, 2) for value in direction)
+        source = tuple(round(value * SOURCE_LENGTH, 2) for value in _unit(from_blender(shape.direction)))
         colour = tuple(round(value, 3) for value in _srgb(shape.color))
-        if old is not None and _close(colour, old.color, _FINISH_TOLERANCE):
-            colour = old.color
-        intensity = shape.energy / SUN_STRENGTH_PER_LUX
-        if old is not None and abs(intensity - old.intensity) <= max(0.01, old.intensity * 1e-5):
-            intensity = old.intensity
-        else:
-            intensity = round(intensity, 1)
-        shadow = None
-        if shape.shadow:
-            shadow = (shape.shadow_distance or (old.shadow_distance if old is not None else None)
-                      or DEFAULT_SHADOW_DISTANCE)
+        intensity = round(shape.energy / SUN_STRENGTH_PER_LUX, 1)
+        shadow = (shape.shadow_distance or DEFAULT_SHADOW_DISTANCE) if shape.shadow else None
         lights.append(Light(shape.name, source, colour, intensity, shadow))
     return lights, problems
 
 
-def finish_reading(finish):
-    """A finish as each of a Lauder material's two settings holds it: (scene-linear colour,
-    roughness, metallic). Load sets both to it, and so does Save once it has written the palette,
-    so that the setting left stale by an edit cannot undo that edit at the next Save."""
-    return (_linear(*finish.color)[:3], finish.roughness, finish.metallic)
-
-
-def palette_from_shapes(shapes, previous):
-    """The palette from Blender's Lauder materials. Each surface takes whichever of its settings
-    was changed, the material's own or the viewport's; when Blender hands both back unchanged, or
-    the material is gone, the finish stays as written."""
-    readings = {shape.name: shape for shape in shapes}
-    palette = {}
-    for name, old in previous.items():
-        finish = old
-        shape = readings.get(name)
-        for reading in (shape.node, shape.viewport) if shape is not None else ():
-            if reading is None:
-                continue
-            colour, roughness, metallic = reading
-            candidate = Finish(tuple(round(value, 3) for value in _srgb(colour)),
-                               round(roughness, 3), round(metallic, 3))
-            if not (_close(candidate.color, old.color, _FINISH_TOLERANCE)
-                    and abs(candidate.roughness - old.roughness) <= _FINISH_TOLERANCE
-                    and abs(candidate.metallic - old.metallic) <= _FINISH_TOLERANCE):
-                finish = candidate
-                break
-        palette[name] = finish
-    return palette
-
-
-def layout_from_shapes(shapes, level, previous, camera=None, lights=None, surfaces=None):
+def layout_from_shapes(shapes, level, camera, lights, required=()):
     """Build a layout from what Blender holds, or raise with everything that must change first.
-
-    `previous` is the layout last saved. Its landmarks, areas and markers carry the level's words
-    in Swift, so none of them may disappear here. Without a camera or lights in Blender, the
-    previous ones are kept. Given the palette's surfaces, every box and piece needs one of them.
-    """
+    `required` holds the (kind, name) pairs that the level's Swift file uses (required_names)."""
     problems = []
-    ground, boxes, landmarks, areas, markers, pieces = [], [], [], [], [], []
-    previous_pieces = {piece.name: piece for piece in previous.pieces} if previous else {}
+    ground, boxes, landmarks, areas, markers = [], [], [], [], []
     for shape in shapes:
-        if shape.role == "piece":
-            if not shape.cuboid:
-                problems.append(f"{shape.name} is no longer a box; the game only has boxes.")
-                continue
-            if shape.mirrored:
-                problems.append(f"{shape.name} is mirrored; scale it without negative values.")
-                continue
-            if not _known(shape.surface, surfaces):
-                problems.append(
-                    f"{shape.name} has no Lauder surface. Give it one of the Lauder materials.")
-                continue
-            if min(shape.size) <= 0:
-                problems.append(f"{shape.name} is flat; give it some size.")
-                continue
-            rotation = rotation_from_blender(shape.rotation)
-            # Keep a rotation as written when Blender hands it back unchanged, so that a save
-            # without edits leaves the file alone.
-            before = previous_pieces.get(shape.name)
-            if before is not None and _same_rotation(before.rotation, rotation):
-                rotation = before.rotation
-            pieces.append(Piece(
-                shape.name, from_blender(shape.centre), size_to_blender(shape.size),
-                shape.surface, rotation))
-            continue
         low, high = shape.minimum, shape.maximum
         centre = tuple((a + b) / 2 for a, b in zip(low, high))
         extent = tuple(b - a for a, b in zip(low, high))
@@ -963,18 +475,13 @@ def layout_from_shapes(shapes, level, previous, camera=None, lights=None, surfac
                 problems.append(f"{shape.name} is flat; give it some size.")
                 continue
         if shape.role in ("ground", "box"):
-            if not _known(shape.surface, surfaces):
-                problems.append(
-                    f"{shape.name} has no Lauder surface. Give it one of the Lauder materials.")
-                continue
             if shape.role == "ground" and abs(high[2]) > _TOLERANCE:
                 problems.append(f"The deck's top should be at height 0, not {_number(high[2])}.")
             if shape.role == "box" and abs(low[2]) > _TOLERANCE:
                 problems.append(
                     f"{shape.name} should stand on the deck: its base is at {_number(low[2])} m.")
-            item = Box(
-                shape.name, (centre[0], centre[2], -centre[1]),
-                (extent[0], extent[2], extent[1]), shape.surface)
+            item = Box(shape.name, (centre[0], centre[2], -centre[1]),
+                       (extent[0], extent[2], extent[1]))
             (ground if shape.role == "ground" else boxes).append(item)
         elif shape.role == "landmark":
             if abs(low[2]) > _TOLERANCE:
@@ -987,155 +494,33 @@ def layout_from_shapes(shapes, level, previous, camera=None, lights=None, surfac
         elif shape.role == "marker":
             markers.append(Marker(shape.name, (low[0], -low[1])))
         else:
-            problems.append(f"{shape.name} is in an unknown part of the layout, {shape.role}.")
+            problems.append(f"{shape.name} has a role the game does not know, {shape.role}.")
     if len(ground) != 1:
-        problems.append(f"The layout needs exactly one ground box, not {len(ground)}.")
+        problems.append(f"The level needs exactly one ground, not {len(ground)}.")
     names = {
-        "box": {item.name for item in boxes},
+        "box": {item.name for item in ground + boxes},
         "landmark": {item.name for item in landmarks},
         "area": {item.name for item in areas},
         "marker": {item.name for item in markers},
     }
-    for name in level.required_boxes:
-        if name not in names["box"]:
-            problems.append(f"The box {name} is missing; the game needs it.")
-    if previous is not None:
-        for kind, items in (
-            ("landmark", previous.landmarks), ("area", previous.areas),
-            ("marker", previous.markers),
-        ):
-            for item in items:
-                if item.name not in names[kind]:
-                    problems.append(
-                        f"The {kind} {item.name} is missing. The level's words in Swift refer to "
-                        f"it, so remove it there first.")
+    for kind, name in sorted(required):
+        if name not in names[kind]:
+            problems.append(
+                f"The {kind} {name} is missing, and {Path(level.story).name} uses it. Keep it, or "
+                f"change the level's Swift file first.")
+    saved_camera = None
     if camera is not None:
         saved_camera = Camera(from_blender(camera.offset), camera.field_of_view)
-    else:
-        saved_camera = previous.camera if previous is not None else None
-    if lights is not None:
-        saved_lights, light_problems = lights_from_shapes(
-            lights, previous.lights if previous is not None else [])
-        problems += light_problems
-    else:
-        saved_lights = previous.lights if previous is not None else []
+    saved_lights, light_problems = lights_from_shapes(lights or [])
+    problems += light_problems
     if problems:
         raise LayoutError(" ".join(problems))
-    layout = Layout(
-        ground[0], boxes, landmarks, areas, markers, pieces, saved_camera, saved_lights)
-    _check_names(layout, surfaces)
+    layout = Layout(ground[0], boxes, landmarks, areas, markers, saved_camera, saved_lights)
+    _check_names(layout)
     return layout
 
 
-# MARK: - The game's details on vehicles and landmarks
-
-
-def details(box_or_landmark, kind):
-    """The parts the game draws for a vehicle box or a landmark (SceneStyle.vehicle and
-    SceneStyle.landmark), as (name, centre, size, look) relative to the box's centre in the
-    game's space. Blender shows them so that it looks like the game; they are not saved."""
-    size = box_or_landmark.size
-    sx, sy, sz = size
-    if kind == "landmark":
-        return [("band", (0, -sy * 0.27, 0), (sx * 0.85, sy * 0.15, sz * 1.03), "paint")]
-    along_z = sz >= sx
-    length = max(sx, sz)
-    if sy > 2:
-        band = (sx + 0.02, 0.5, length * 0.9) if along_z else (length * 0.9, 0.5, sz + 0.02)
-        return [("body", (0, 0, 0), size, "vehicle"), ("windows", (0, sy * 0.25, 0), band, "glass")]
-    lower = sy * 0.55
-    if along_z:
-        cabin = (sx * 0.9, sy - lower, length * 0.5)
-    else:
-        cabin = (length * 0.5, sy - lower, sz * 0.9)
-    return [
-        ("body", (0, (lower - sy) / 2, 0), (sx, lower, sz), "vehicle"),
-        ("cabin", (0, (sy - cabin[1]) / 2, 0), cabin, "glass"),
-    ]
-
-
-#: The party's stand-ins as SceneStyle.partyMember draws them: clothing colour (sRGB) and width.
-#: Blender shows them at their start markers, so keep the two in step.
-PARTY = {
-    "miki": ((0.25, 0.65, 0.59), 0.38),
-    "tom": ((0.38, 0.51, 0.81), 0.49),
-    "laura": ((0.9, 0.61, 0.29), 0.31),
-}
-#: The stand-ins' other colours in SceneStyle: the head, the legs and the front mark.
-FIGURE_COLOURS = {"head": (0.65, 0.68, 0.55), "gear": (0.16, 0.25, 0.25), "front": (0.62, 0.87, 0.77)}
-#: The height of a stand-in's centre above the floor.
-FIGURE_CENTRE = CAMERA_TARGET_HEIGHT - 0.1
-
-
-def figure(member):
-    """A stand-in's parts as SceneStyle.standIn draws it, facing Manhattan: (name, centre, size,
-    look) in the game's space, from the floor below the stand-in. Blender shows one at each spawn
-    marker; it follows the marker and is not saved."""
-    _, width = PARTY[member]
-    centre = FIGURE_CENTRE
-    parts = [
-        ("body", (0, centre + 0.04, 0), (width, 0.72, 0.3), member),
-        ("head", (0, centre + 0.57, 0), (0.32, 0.32, 0.32), "head"),
-        ("front", (0, centre + 0.12, -0.16), (0.15, 0.2, 0.025), "front"),
-    ]
-    for number, side in ((1, -1), (2, 1)):
-        parts += [
-            (f"leg {number}", (side * 0.105, centre - 0.55, 0), (0.13, 0.55, 0.18), "gear"),
-            (f"foot {number}", (side * 0.105, centre - 0.8, -0.04), (0.18, 0.1, 0.28), member),
-        ]
-    return parts
-
-
-# MARK: - The level's scene file (ADR 0006)
-
-
-def usd_name(name):
-    """The name an object takes in a USD file, where only letters, digits and underscores are
-    allowed: `car-a1` becomes `car_a1`. The game finds the scene's parts by these names."""
-    safe = re.sub(r"[^A-Za-z0-9_]", "_", name)
-    return "_" + safe if safe[:1].isdigit() else safe
-
-
-@dataclass(frozen=True)
-class ScenePart:
-    """One block that the game shows, with its centre and size in the game's space, in metres."""
-    name: str
-    centre: tuple
-    size: tuple
-    surface: str
-    rotation: tuple = IDENTITY
-
-
-def _plus(a, b):
-    return tuple(x + y for x, y in zip(a, b))
-
-
-def scene_parts(layout):
-    """Everything the game shows of a level, as its code drew it from the layout before the scene
-    file: the ground and each box; a vehicle as the body and windows inside its box, which only
-    blocks; each landmark in metal, with its painted band; and each piece, turned."""
-    ground = layout.ground
-    parts = [ScenePart(ground.name, ground.position, ground.size, ground.surface)]
-    for box in layout.boxes:
-        if box.surface != "vehicle":
-            parts.append(ScenePart(box.name, box.position, box.size, box.surface))
-            continue
-        for part, offset, size, look in details(box, "vehicle"):
-            parts.append(ScenePart(f"{box.name} {part}", _plus(box.position, offset), size, look))
-    for landmark in layout.landmarks:
-        x, y, z = landmark.position
-        centre = (x, y + landmark.size[1] / 2, z)
-        parts.append(ScenePart(landmark.name, centre, landmark.size, "metal"))
-        for part, offset, size, look in details(landmark, "landmark"):
-            parts.append(ScenePart(f"{landmark.name} {part}", _plus(centre, offset), size, look))
-    for piece in layout.pieces:
-        parts.append(ScenePart(piece.name, piece.position, piece.size, piece.surface,
-                               piece.rotation))
-    names = [usd_name(part.name) for part in parts]
-    clashes = sorted({name for name in names if names.count(name) > 1})
-    if clashes:
-        raise LayoutError(f"These names would be the same in the scene file: {', '.join(clashes)}.")
-    return parts
+# MARK: - What each export was made from (ADR 0006)
 
 
 _LFS_POINTER = b"version https://git-lfs.github.com/spec/v1"
@@ -1151,642 +536,75 @@ def file_fingerprint(path):
     return hashlib.sha256(data).hexdigest()
 
 
-def scene_inputs(repository, level):
-    """What the level's scene file is made from: its layout file and the palette, each with its
-    fingerprint."""
-    root = Path(repository)
-    return {name: file_fingerprint(root / name) for name in (level.path, PALETTE_PATH)}
+def is_lfs_pointer(path):
+    """Whether the file is a Git LFS pointer, not yet downloaded with git lfs pull."""
+    with Path(path).open("rb") as stream:
+        return stream.read(len(_LFS_POINTER)) == _LFS_POINTER
 
 
-def _scene_records(repository):
-    path = Path(repository) / SCENE_RECORD
+def _records(repository):
+    path = Path(repository) / EXPORT_RECORD
     try:
         return json.loads(path.read_text()) if path.exists() else {}
     except ValueError:
-        return {}  # Unreadable: every scene file counts as stale, and the next export rewrites it.
+        return {}  # Unreadable: every level counts as stale, and the next export rewrites it.
 
 
-def stale_scene(repository, key="brooklyn-bridge"):
-    """Why the level's scene file no longer matches what it is made from, or None when it does."""
+def stale_exports(repository, key="brooklyn-bridge"):
+    """Why the level's exports no longer match what they were made from, or None when they do."""
     level = LEVELS[key]
-    record = _scene_records(repository).get(level.scene)
-    if record is None or not (Path(repository) / level.scene).exists():
-        return f"{level.scene} has not been exported."
-    if record.get("format") != SCENE_FORMAT:
-        return f"{level.scene} was exported by an earlier version of the Lauder extension."
-    made_from = record.get("made from", {})
-    for name, fingerprint in scene_inputs(repository, level).items():
-        if made_from.get(name) != fingerprint:
-            return f"{name} changed since {level.scene} was exported."
-    if record.get("fingerprint") != file_fingerprint(Path(repository) / level.scene):
-        return f"{level.scene} changed since it was exported."
+    root = Path(repository)
+    record = _records(repository).get(key)
+    if record is None:
+        return f"{level.title} has not been exported."
+    if record.get("format") != EXPORT_FORMAT:
+        return f"{level.title} was exported by an earlier version of the Lauder extension."
+    made_from, wrote = record.get("made from", {}), record.get("wrote", {})
+    if level.blend not in made_from or {level.layout, level.scene} - set(wrote):
+        return f"{EXPORT_RECORD} does not say how {level.title} was exported."
+    for name, fingerprint in made_from.items():
+        if not (root / name).exists():
+            return f"{name} is missing."
+        if file_fingerprint(root / name) != fingerprint:
+            return f"{name} changed since {level.title} was exported."
+    for name, fingerprint in wrote.items():
+        if not (root / name).exists():
+            return f"{name} is missing."
+        if file_fingerprint(root / name) != fingerprint:
+            return (f"{name} changed since it was exported. Export writes it: change the level in "
+                    f"Blender instead.")
     return None
 
 
-def record_scene(repository, level, inputs):
-    """Record what the level's scene file, just exported, was made from."""
-    records = _scene_records(repository)
-    records[level.scene] = {
-        "format": SCENE_FORMAT,
-        "made from": inputs,
-        "fingerprint": file_fingerprint(Path(repository) / level.scene),
-    }
-    path = Path(repository) / SCENE_RECORD
+def record_exports(repository, level, made_from, wrote):
+    """Record what the level's export was made from and what it wrote, with fingerprints."""
+    records = _records(repository)
+    records[level.key] = {"format": EXPORT_FORMAT, "made from": made_from, "wrote": wrote}
+    path = Path(repository) / EXPORT_RECORD
     path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
 
 
-# MARK: - Blender
-
-
-def _linear(red, green, blue):
-    def channel(value):
-        return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
-    return (channel(red), channel(green), channel(blue), 1.0)
-
-
-#: The areas' colour. The game does not draw areas, so only Blender has it.
-AREA_COLOUR = (1.0, 0.75, 0.4)
-_EDITABLE = (
-    ("ground", "Ground"), ("box", "Boxes"), ("landmark", "Landmarks"), ("area", "Areas"),
-    ("marker", "Markers"), ("piece", "Pieces"),
-)
-#: A phone's screen in landscape, for the game camera's frame: the baseline iPhone 13 Pro Max.
-_SCREEN = (2778, 1284)
-#: How far from the camera's target Load puts each sun, so that it is easy to find and turn. A
-#: sun's place does not change its light.
-_SUN_DISTANCE = 8
-
-
-def _principled(material, create=False):
-    """The material's Principled BSDF, giving the material nodes first when asked. Only a material
-    without nodes, made by Blender before 5, needs `use_nodes`, which Blender 6 removes."""
-    tree = material.node_tree
-    if tree is None and create:
-        material.use_nodes = True
-        tree = material.node_tree
-    if tree is None:
-        return None
-    return next((node for node in tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
-
-
-def _material(name, palette):
-    """The Blender material for a surface, set to its finish in the palette: its Principled BSDF,
-    which Material Preview and renders show, and its viewport display, which Solid shading
-    shows."""
-    material = bpy.data.materials.get(f"Lauder {name}")
-    if material is None:
-        material = bpy.data.materials.new(f"Lauder {name}")
-    material["lauder_surface"] = name
-    _apply_finish(material, palette[name])
-    return material
-
-
-def _apply_finish(material, finish):
-    """Set both of a Lauder material's settings to the finish (finish_reading)."""
-    colour, roughness, metallic = finish_reading(finish)
-    material.diffuse_color = colour + (1.0,)
-    material.roughness = roughness
-    material.metallic = metallic
-    node = _principled(material, create=True)
-    if node is not None:
-        node.inputs["Base Color"].default_value = colour + (1.0,)
-        node.inputs["Roughness"].default_value = roughness
-        node.inputs["Metallic"].default_value = metallic
-
-
-def _display_material(name, colour):
-    """A material that only Blender shows, such as the areas' or the party's, in an sRGB colour."""
-    material = bpy.data.materials.get(name)
-    if material is None:
-        material = bpy.data.materials.new(name)
-    # Earlier versions of this script tagged the areas' material like a surface; it has none.
-    if "lauder_surface" in material:
-        del material["lauder_surface"]
-    linear = _linear(*colour)
-    material.diffuse_color = linear
-    node = _principled(material, create=True)
-    if node is not None:
-        node.inputs["Base Color"].default_value = linear
-        node.inputs["Roughness"].default_value = 1.0
-    return material
-
-
-def _area_material():
-    return _display_material("Lauder area", AREA_COLOUR)
-
-
-def _figure_material(look):
-    colour = PARTY[look][0] if look in PARTY else FIGURE_COLOURS[look]
-    return _display_material(f"Lauder figure {look}", colour)
-
-
-def _sphere(name):
-    """A sphere one unit across, as the game's stand-ins have for a head."""
-    mesh = bpy.data.meshes.new(name)
-    shape = bmesh.new()
-    bmesh.ops.create_uvsphere(shape, u_segments=16, v_segments=8, radius=0.5)
-    shape.to_mesh(mesh)
-    shape.free()
-    mesh["lauder"] = True
-    return mesh
-
-
-def _cube(name):
-    mesh = bpy.data.meshes.new(name)
-    corners = [(x, y, z) for x in (-0.5, 0.5) for y in (-0.5, 0.5) for z in (-0.5, 0.5)]
-    faces = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
-    mesh.from_pydata(corners, [], faces)
-    mesh.update()
-    mesh["lauder"] = True
-    return mesh
-
-
-def _level_collection(level):
-    for collection in bpy.data.collections:
-        if collection.get("lauder_level") == level.key:
-            return collection
-    return None
-
-
-def _part(level, role):
-    """One of the level's collections, by role."""
-    root = _level_collection(level)
-    for part in root.children if root is not None else []:
-        if part.get("lauder_role") == role:
-            return part
-    return None
-
-
-def _remove(collection):
-    for child in list(collection.children):
-        _remove(child)
-    for item in list(collection.objects):
-        data = item.data
-        bpy.data.objects.remove(item, do_unlink=True)
-        if data is not None and data.users == 0 and data.get("lauder"):
-            if isinstance(data, bpy.types.Mesh):
-                bpy.data.meshes.remove(data)
-            elif isinstance(data, bpy.types.Camera):
-                bpy.data.cameras.remove(data)
-            elif isinstance(data, bpy.types.Light):
-                bpy.data.lights.remove(data)
-    bpy.data.collections.remove(collection)
-
-
-def build_in_blender(layout, level, palette):
-    """Replace the level's collection in the open Blender file with this layout, its surfaces
-    made from the palette."""
-    old = _level_collection(level)
-    if old is not None:
-        _remove(old)
-    scene = bpy.context.scene
-    root = bpy.data.collections.new(f"Lauder {level.title}")
-    root["lauder_level"] = level.key
-    scene.collection.children.link(root)
-    parts = {}
-    for role, title in _EDITABLE + (
-        ("detail", "Details"), ("camera", "Game camera"), ("light", "Lights"),
-    ):
-        part = bpy.data.collections.new(f"{level.title} {title}")
-        part["lauder_role"] = role
-        root.children.link(part)
-        parts[role] = part
-    parts["detail"].hide_select = True
-
-    def block(name, role, centre, size, material, rotation=None):
-        item = bpy.data.objects.new(name, _cube(name))
-        item.location = centre
-        if rotation is not None:
-            # Shown as angles in degrees, as on every other object; Save reads the transform.
-            item.rotation_euler = Quaternion(rotation).to_euler("XYZ")
-        item.scale = size
-        item.data.materials.append(material)
-        parts[role].objects.link(item)
-        return item
-
-    def add_details(owner, box, kind):
-        for part_name, offset, part_size, look in details(box, kind):
-            name = f"{owner.name} {part_name}"
-            detail = bpy.data.objects.new(name, _cube(name))
-            detail.data.materials.append(_material(look, palette))
-            parts["detail"].objects.link(detail)
-            detail.parent = owner
-            # The owner's scale is its size, so the detail is placed in fractions of it.
-            ox, oy, oz = to_blender(tuple(o / s for o, s in zip(offset, box.size)))
-            detail.location = (ox, oy, oz)
-            detail.scale = size_to_blender(tuple(p / s for p, s in zip(part_size, box.size)))
-            detail.hide_select = True
-
-    def add_figure(marker, member):
-        # The party as the game draws it at the start, following its marker, and not saved.
-        for part_name, offset, part_size, look in figure(member):
-            name = f"{member} {part_name}"
-            part = bpy.data.objects.new(name, _sphere(name) if part_name == "head" else _cube(name))
-            part.data.materials.append(_figure_material(look))
-            parts["detail"].objects.link(part)
-            part.parent = marker
-            part.location = to_blender(offset)
-            part.scale = size_to_blender(part_size)
-            part.hide_select = True
-
-    block(layout.ground.name, "ground", to_blender(layout.ground.position),
-          size_to_blender(layout.ground.size), _material(layout.ground.surface, palette))
-    for box in layout.boxes:
-        item = block(box.name, "box", to_blender(box.position), size_to_blender(box.size),
-                     _material(box.surface, palette))
-        if box.surface == "vehicle":
-            # The game draws a vehicle as a body and windows inside its box: show those, and the
-            # box that blocks movement and sight as an outline around them.
-            item.display_type = "WIRE"
-            add_details(item, box, "vehicle")
-    for landmark in layout.landmarks:
-        x, y, z = landmark.position
-        # The game draws a landmark in metal, with a painted band.
-        item = block(landmark.name, "landmark", to_blender((x, y + landmark.size[1] / 2, z)),
-                     size_to_blender(landmark.size), _material("metal", palette))
-        item.show_name = True
-        add_details(item, landmark, "landmark")
-    for area in layout.areas:
-        (x0, z0), (x1, z1) = area.minimum, area.maximum
-        item = block(area.name, "area", ((x0 + x1) / 2, -(z0 + z1) / 2, 0.025),
-                     (x1 - x0, z1 - z0, 0.05), _area_material())
-        item.display_type = "WIRE"
-        item.show_name = True
-    for marker in layout.markers:
-        item = bpy.data.objects.new(marker.name, None)
-        item.empty_display_type = "PLAIN_AXES"
-        item.empty_display_size = 0.6
-        item.show_name = True
-        item.location = (marker.position[0], -marker.position[1], 0)
-        parts["marker"].objects.link(item)
-        member = marker.name.removeprefix("spawn.")
-        if marker.name.startswith("spawn.") and member in PARTY:
-            add_figure(item, member)
-    for piece in layout.pieces:
-        block(piece.name, "piece", to_blender(piece.position), size_to_blender(piece.size),
-              _material(piece.surface, palette), rotation_to_blender(piece.rotation))
-    _build_camera(layout, level, parts["camera"])
-    _build_lights(layout, level, parts["light"])
-    scene.view_settings.view_transform = "Standard"
-    return root
-
-
-def _camera_start(layout, level):
-    """Where the camera's target starts: just above the marker that the level names."""
-    start = next((m.position for m in layout.markers if m.name == level.camera_target), (0, 0))
-    return (start[0], -start[1], CAMERA_TARGET_HEIGHT)
-
-
-def _build_camera(layout, level, collection):
-    """The game camera: a target to drag anywhere on the level, and the camera at the game's
-    offset from it, looking at it with the game's field of view."""
-    target = bpy.data.objects.new("camera-target", None)
-    target.empty_display_type = "SPHERE"
-    target.empty_display_size = 0.3
-    target.show_name = True
-    target["lauder_rig"] = "target"
-    target.location = _camera_start(layout, level)
-    collection.objects.link(target)
-    data = bpy.data.cameras.new("game-camera")
-    data["lauder"] = True
-    data.sensor_fit = "VERTICAL"
-    data.lens_unit = "FOV"
-    data.angle_y = math.radians(layout.camera.field_of_view)
-    data.clip_end = 1000
-    camera = bpy.data.objects.new("game-camera", data)
-    camera["lauder_rig"] = "camera"
-    collection.objects.link(camera)
-    camera.parent = target
-    camera.location = to_blender(layout.camera.offset)
-    look = camera.constraints.new("TRACK_TO")
-    look.target = target
-    look.track_axis = "TRACK_NEGATIVE_Z"
-    look.up_axis = "UP_Y"
-    scene = bpy.context.scene
-    scene.camera = camera
-    scene.render.resolution_x, scene.render.resolution_y = _SCREEN
-
-
-def _build_lights(layout, level, collection):
-    """The lights, as Blender suns. A sun shines along its own -z, so each is turned to shine from
-    its source, and placed above the camera's target in that direction."""
-    start = Vector(_camera_start(layout, level))
-    for light in layout.lights:
-        data = bpy.data.lights.new(light.name, type="SUN")
-        data["lauder"] = True
-        data.color = _linear(*light.color)[:3]
-        data.energy = light.intensity * SUN_STRENGTH_PER_LUX
-        data.use_shadow = light.shadow_distance is not None
-        if light.shadow_distance is not None:
-            data["lauder_shadow_distance"] = light.shadow_distance
-        item = bpy.data.objects.new(light.name, data)
-        direction = Vector(to_blender(light.source)).normalized()
-        item.rotation_euler = Vector((0, 0, 1)).rotation_difference(direction).to_euler("XYZ")
-        item.location = start + direction * _SUN_DISTANCE
-        item.show_name = True
-        collection.objects.link(item)
-
-
-def _rig(level):
-    part = _part(level, "camera")
-    if part is not None:
-        items = {item.get("lauder_rig"): item for item in part.objects}
-        if "target" in items and "camera" in items:
-            return items["target"], items["camera"]
-    return None
-
-
-def shapes_from_blender(level):
-    """Read the level's collection in the open Blender file."""
-    root = _level_collection(level)
-    if root is None:
-        raise LayoutError(f"This Blender file has no {level.title}; Load it first.")
-    # Bring every object's place up to date, as the interface does between clicks, so that a
-    # Save run straight after a Load or a script's edits reads where things are.
-    bpy.context.view_layer.update()
-    editable = {role for role, _ in _EDITABLE}
-    shapes = []
-    for part in root.children:
-        role = part.get("lauder_role")
-        if role not in editable:
-            continue
-        for item in part.objects:
-            if role == "marker":
-                if item.type != "EMPTY":
-                    raise LayoutError(f"{item.name} is in Markers but is not an empty.")
-                location = tuple(item.matrix_world.translation)
-                shapes.append(Shape(item.name, role, location, location))
-                continue
-            if item.type != "MESH":
-                raise LayoutError(f"{item.name} is in {part.name} but is not a mesh box.")
-            local = [tuple(corner) for corner in item.bound_box]
-            vertices = [tuple(vertex.co) for vertex in item.data.vertices]
-            cuboid = len(vertices) == 8 and all(
-                any(all(abs(a - b) < 1e-4 for a, b in zip(vertex, corner)) for corner in local)
-                for vertex in vertices)
-            surface = None
-            if item.material_slots and item.material_slots[0].material is not None:
-                surface = item.material_slots[0].material.get("lauder_surface")
-            _, rotation, scale = item.matrix_world.decompose()
-            if role == "piece":
-                low = Vector(tuple(min(c[axis] for c in local) for axis in range(3)))
-                high = Vector(tuple(max(c[axis] for c in local) for axis in range(3)))
-                centre = item.matrix_world @ ((low + high) / 2)
-                size = tuple(abs((high[axis] - low[axis]) * scale[axis]) for axis in range(3))
-                mirrored = item.matrix_world.to_3x3().determinant() < 0
-                shapes.append(Shape(
-                    item.name, role, tuple(centre), tuple(centre), surface, True, cuboid,
-                    centre=tuple(centre), size=size, rotation=tuple(rotation), mirrored=mirrored))
-                continue
-            corners = [item.matrix_world @ Vector(corner) for corner in item.bound_box]
-            low = tuple(min(corner[axis] for corner in corners) for axis in range(3))
-            high = tuple(max(corner[axis] for corner in corners) for axis in range(3))
-            matrix = rotation.to_matrix()
-            square = all(value > 0 for value in scale) and abs(matrix[2][2] - 1) < 1e-4 and all(
-                min(abs(matrix[row][column]), abs(abs(matrix[row][column]) - 1)) < 1e-4
-                for row in range(3) for column in range(3))
-            shapes.append(Shape(item.name, role, low, high, surface, square, cuboid))
-    return shapes
-
-
-def camera_from_blender(level):
-    """The game camera's offset and field of view, or None when the rig is gone."""
-    rig = _rig(level)
-    if rig is None:
-        return None
-    target, camera = rig
-    if camera.data.sensor_fit != "VERTICAL":
-        raise LayoutError("Keep the game camera's Sensor Fit at Vertical; Load again to reset it.")
-    offset = camera.matrix_world.translation - target.matrix_world.translation
-    return CameraShape(tuple(offset), math.degrees(camera.data.angle_y))
-
-
-def lights_from_blender(level):
-    """What Save reads from the level's lights, or None when the Lights collection is gone."""
-    part = _part(level, "light")
-    if part is None:
-        return None
-    shapes = []
-    for item in part.objects:
-        if item.type != "LIGHT":
-            raise LayoutError(f"{item.name} is in Lights but is not a light.")
-        data = item.data
-        direction = item.matrix_world.to_quaternion() @ Vector((0, 0, 1))
-        distance = data.get("lauder_shadow_distance")
-        shapes.append(LightShape(
-            item.name, data.type, tuple(direction), tuple(data.color), data.energy,
-            data.use_shadow, None if distance is None else float(distance)))
-    return shapes
-
-
-def lights_outside_the_level(level, view_layer):
-    """The visible lights that are not in the level's Lights, such as the one in Blender's default
-    scene. Game Look would show them, but the game has no such light: Save neither writes them
-    nor counts them against the budget."""
-    part = _part(level, "light")
-    own = {item.name for item in part.objects} if part is not None else set()
-    return [item.name for item in view_layer.objects
-            if item.type == "LIGHT" and item.name not in own
-            and item.visible_get(view_layer=view_layer)]
-
-
-def palette_from_blender(previous):
-    """The palette as the Lauder materials hold it. A surface whose material is gone keeps its
-    finish."""
-    shapes = []
-    for name in previous:
-        material = bpy.data.materials.get(f"Lauder {name}")
-        if material is None:
-            continue
-        node = _principled(material)
-        reading = None
-        if node is not None:
-            reading = (tuple(node.inputs["Base Color"].default_value),
-                       node.inputs["Roughness"].default_value,
-                       node.inputs["Metallic"].default_value)
-        viewport = (tuple(material.diffuse_color), material.roughness, material.metallic)
-        shapes.append(MaterialShape(name, reading, viewport))
-    return palette_from_shapes(shapes, previous)
-
-
-def _files(repository, level):
-    """The text of the level's layout file and of the palette."""
-    root = Path(repository)
-    return (root / level.path).read_text(), (root / PALETTE_PATH).read_text()
-
-
-def _synced(level):
-    """The text of the level's files when Blender last loaded or saved them, or None for a level
-    loaded by an earlier version of this script."""
-    root = _level_collection(level)
-    if root is None or "_lauder_synced_layout" not in root:
-        return None
-    return root["_lauder_synced_layout"], root["_lauder_synced_palette"]
-
-
-def _remember(level, layout_text, palette_text):
-    """Record the text of the level's files as Blender now holds them, on the level's collection,
-    under names that Blender's interface does not show."""
-    root = _level_collection(level)
-    root["_lauder_synced_layout"] = layout_text
-    root["_lauder_synced_palette"] = palette_text
-
-
-def _scene_level(scene):
-    """The repository and the level that the scene's Lauder settings name, or None."""
-    repository = bpy.path.abspath(getattr(scene, "lauder_repository", "") or "")
-    level = LEVELS.get(getattr(scene, "lauder_level", ""))
-    return (repository, level) if repository and level is not None else None
-
-
-def is_working_file(scene):
-    """Whether the open Blender file is the working file of the level that the scene names."""
-    named = _scene_level(scene)
-    if named is None or not bpy.data.filepath:
-        return False
-    return Path(bpy.data.filepath).resolve() == working_file(*named).resolve()
-
-
-def _holds_unsaved_edits(level, synced):
-    """Whether Blender holds level edits that were never written to the files it last synced.
-    Both sides are compared as Save writes them, so the synced files' own comments and spacing
-    do not count as edits."""
-    try:
-        synced_palette = parse_palette(synced[1])
-        synced_layout = parse_layout(synced[0])
-        palette = palette_from_blender(synced_palette)
-        surfaces = set(palette)
-        layout = layout_from_shapes(
-            shapes_from_blender(level), level, synced_layout, camera_from_blender(level),
-            lights_from_blender(level), surfaces)
-        unsaved = emit_layout(layout, level, surfaces) != emit_layout(synced_layout, level)
-    except LayoutError:
-        return True
-    return unsaved or emit_palette(palette) != emit_palette(synced_palette)
-
-
-def refresh(scene):
-    """Bring a reopened working file up to date with the level's files. When they changed while
-    it was closed, Blender loads them again, unless the file holds level edits never saved to
-    them; then it raises FilesChanged and leaves the choice to the person. Returns what it did."""
-    repository, level = _scene_level(scene)
-    texts = _files(repository, level)
-    if _level_collection(level) is None:
-        load_level(repository, level.key)
-        return f"Loaded {level.title} from its files."
-    synced = _synced(level)
-    if synced is None or tuple(synced) == texts:
-        return None
-    changes = changes_since(*synced, *texts)
-    if _holds_unsaved_edits(level, synced):
-        raise FilesChanged(changes)
-    load_level(repository, level.key)
-    return ("The level's files changed while this file was closed, so Blender loaded them again: "
-            + ", ".join(changes[:8]) + ".")
-
-
-def make_working_file(repository, key):
-    """Start the level's working file: an empty Blender file holding just the level."""
-    bpy.ops.wm.read_homefile(use_empty=True)
-    scene = bpy.context.scene
-    scene.lauder_repository = repository
-    scene.lauder_level = key
-    load_level(repository, key)
-    path = working_file(repository, LEVELS[key])
-    path.parent.mkdir(parents=True, exist_ok=True)
-    bpy.ops.wm.save_as_mainfile(filepath=str(path))
-    return path
-
-
-#: Blender's USD export for a scene file: the game's axes (y up, metres), each object as one
-#: prim, the materials as preview surfaces, and nothing that the game makes itself.
-SCENE_EXPORT = {
-    "export_materials": True,
-    "generate_preview_surface": True,
-    "generate_materialx_network": False,
-    "export_lights": False,
-    "export_cameras": False,
-    "export_animation": False,
-    "export_custom_properties": False,
-    "author_blender_name": False,
-    "merge_parent_xform": True,
-    "convert_orientation": True,
-    "export_global_forward_selection": "NEGATIVE_Z",
-    "export_global_up_selection": "Y",
-}
-
-
-def build_scene(layout, palette):
-    """Build everything the game shows of the level (scene_parts) in the open Blender file."""
-    for part in scene_parts(layout):
-        name = usd_name(part.name)
-        item = bpy.data.objects.new(name, _cube(name))
-        item.location = to_blender(part.centre)
-        if not is_identity(part.rotation):
-            item.rotation_euler = Quaternion(rotation_to_blender(part.rotation)).to_euler("XYZ")
-        item.scale = size_to_blender(part.size)
-        material = _material(part.surface, palette)
-        # The blocks are closed, so their inside never shows: single-sided, as the game drew them.
-        material.use_backface_culling = True
-        item.data.materials.append(material)
-        bpy.context.scene.collection.objects.link(item)
-
-
-def export_scene(repository, key="brooklyn-bridge"):
-    """Write the level's scene file from its layout file and the palette, and record what it was
-    made from. It empties the open Blender file first, so it runs in a Blender of its own:
-    blender/scripts/export-scene.py."""
-    level = LEVELS[key]
-    root = Path(repository)
-    # Fingerprinted as read, so that a file changed during the export makes the scene stale.
-    texts = {name: (root / name).read_bytes() for name in (level.path, PALETTE_PATH)}
-    inputs = {name: hashlib.sha256(data).hexdigest() for name, data in texts.items()}
-    palette = parse_palette(texts[PALETTE_PATH].decode())
-    layout = parse_layout(texts[level.path].decode(), set(palette))
-    bpy.ops.wm.read_homefile(use_empty=True)
-    build_scene(layout, palette)
-    target = root / level.scene
-    with tempfile.TemporaryDirectory() as folder:
-        written = Path(folder) / target.name
-        bpy.ops.wm.usd_export(filepath=str(written), **SCENE_EXPORT)
-        shutil.copyfile(written, target)
-    record_scene(repository, level, inputs)
-    return target
-
-
-def _announce(message, error=False):
-    """Tell the person from a handler or a timer, which cannot report: in the Lauder tab, and in
-    Blender's status bar."""
-    bpy.context.window_manager.lauder_message = message
-    print(f"Lauder: {message}")
-
-    def report():
-        try:
-            bpy.ops.lauder.report(message=message, error=error)
-        except (AttributeError, RuntimeError):
-            pass
-
-    bpy.app.timers.register(report, first_interval=0.1)
+# MARK: - Work in the background
 
 
 #: Work running in the background, one step after another, so that Blender stays usable: the
 #: steps still to run; the running step's name, process, log and log's path; the repository and
-#: level the work is for; and how often it exported the scene file again because the level's
-#: files changed while it ran.
+#: level the work is for; and how often it exported again because the level's Blender file changed
+#: while it ran.
 _JOB = {"steps": [], "name": None, "process": None, "log": None, "path": None,
         "repository": None, "key": None, "refreshes": 0}
 #: What each background step says when it finishes well.
 _FINISHED = {
-    "export": "Exported the scene file. The game shows it from the next build.",
+    "export": "Exported the level. The game shows it from the next build.",
     "play": "The game is running in the Simulator.",
 }
-#: How often one run of background work exports the scene file again while the level's files keep
+#: How often one run of background work exports again while the level's Blender file keeps
 #: changing, so that it cannot go on for ever.
 MOST_REFRESHES = 3
 
 
 def _export_step(repository, key):
-    """The background step that exports the level's scene file in a Blender of its own."""
+    """The background step that exports the level in a Blender of its own."""
     blender = bpy.app.binary_path if bpy is not None else "blender"
     return ("export", [
         blender, "-b", "--factory-startup", "--python-exit-code", "1",
@@ -1795,10 +613,10 @@ def _export_step(repository, key):
 
 
 def background_steps(repository, key, play):
-    """The background steps that Save (play=False) or Play needs: exporting the level's scene file
-    when it no longer matches the level's files, then, for Play, building and opening the game.
-    Each is (name, command, log)."""
-    steps = [_export_step(repository, key)] if stale_scene(repository, key) is not None else []
+    """The background steps that saving (play=False) or Play needs: exporting the level when its
+    exports no longer match its Blender file, then, for Play, building and opening the game. Each
+    is (name, command, log)."""
+    steps = [_export_step(repository, key)] if stale_exports(repository, key) is not None else []
     if play:
         steps.append(("play", [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)],
                       "play.log"))
@@ -1808,7 +626,7 @@ def background_steps(repository, key, play):
 def queue_steps(running, waiting, steps):
     """The steps to add after the background work already running and waiting. An export already
     running or waiting stands in for a new one, which could only race it for the same files: when
-    it finishes, the scene file's freshness is checked again (refresh_needed)."""
+    it finishes, the exports' freshness is checked again (refresh_needed)."""
     names = ([running] if running else []) + [name for name, _, _ in waiting]
     if "export" in names:
         return [step for step in steps if step[0] != "export"]
@@ -1816,9 +634,8 @@ def queue_steps(running, waiting, steps):
 
 
 def refresh_needed(waiting, stale, refreshes):
-    """Whether to export the scene file again before going on, once a step has finished well:
-    when the level's files changed while it ran, such as by a second save, and no export is next
-    anyway."""
+    """Whether to export again before going on, once a step has finished well: when the level's
+    Blender file changed while it ran, such as by a second save, and no export is next anyway."""
     upcoming = waiting[0][0] if waiting else None
     return stale and upcoming != "export" and refreshes < MOST_REFRESHES
 
@@ -1827,7 +644,7 @@ def _start_job(repository, key, steps):
     """Run the steps in the background, in order, stopping at the first that fails."""
     _JOB.update(steps=list(steps), repository=repository, key=key, refreshes=0)
     _next_step()
-    # Persistent, so that opening another Blender file, such as the working file, keeps watching.
+    # Persistent, so that opening another Blender file keeps watching.
     bpy.app.timers.register(_watch_job, first_interval=1.0, persistent=True)
 
 
@@ -1843,7 +660,7 @@ def _next_step():
 
 def _job_running():
     """Whether background work is still running. Work that stopped while nothing watched it is
-    finished off here, so that Save and Play are never stuck."""
+    finished off here, so that saving and Play are never stuck."""
     if _JOB["process"] is None:
         return False
     if _JOB["process"].poll() is None:
@@ -1863,7 +680,7 @@ def _watch_job():
     name, path = _JOB["name"], _JOB["path"]
     if process.returncode == 0:
         try:
-            stale = stale_scene(_JOB["repository"], _JOB["key"]) is not None
+            stale = stale_exports(_JOB["repository"], _JOB["key"]) is not None
         except (OSError, ValueError):
             stale = False
         if refresh_needed(_JOB["steps"], stale, _JOB["refreshes"]):
@@ -1881,8 +698,10 @@ def _watch_job():
         return None
     _JOB["steps"] = []
     lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
-    detail = " ".join(lines[-3:])
-    what = "The scene's export" if name == "export" else "Play"
+    # The export says why it refused in one line; otherwise the log's last lines tell.
+    detail = next((line for line in reversed(lines) if line.startswith("The level was not")),
+                  " ".join(lines[-3:]))
+    what = "The export" if name == "export" else "Play"
     _announce(f"{what} failed{': ' + detail if detail else '.'} The log is "
               f".local/play/{path.name}.", error=True)
     return None
@@ -1904,60 +723,43 @@ def _queue(repository, key, steps):
 
 
 def _export_if_stale(repository, key):
-    """Export the level's scene file in the background when it no longer matches the level's
-    files, after the work already running. Returns whether an export is running or waiting."""
+    """Export the level in the background when its exports no longer match its Blender file, after
+    the work already running. Returns whether an export is running or waiting."""
     _queue(repository, key, background_steps(repository, key, play=False))
     return _queued("export")
 
 
-def load_level(repository, key="brooklyn-bridge"):
-    level = LEVELS[key]
-    layout_text, palette_text = _files(repository, level)
-    palette = parse_palette(palette_text)
-    layout = parse_layout(layout_text, set(palette))
-    build_in_blender(layout, level, palette)
-    _remember(level, layout_text, palette_text)
-    return layout
+def _announce(message, error=False):
+    """Tell the person from a handler or a timer, which cannot report: in the Lauder tab, and in
+    Blender's status bar."""
+    bpy.context.window_manager.lauder_message = message
+    print(f"Lauder: {message}")
+
+    def report():
+        try:
+            bpy.ops.lauder.report(message=message, error=error)
+        except (AttributeError, RuntimeError):
+            pass
+
+    bpy.app.timers.register(report, first_interval=0.1)
 
 
-def save_level(repository, key="brooklyn-bridge", force=False):
-    """Write what Blender holds to the level's layout file and the palette, after checking both:
-    if anything fails, neither is written. Unless forced, it also refuses when the files changed
-    since Blender last loaded or saved them. Returns the layout and the files that changed."""
-    level = LEVELS[key]
-    root = Path(repository)
-    paths = {level.path: root / level.path, PALETTE_PATH: root / PALETTE_PATH}
-    before = {name: path.read_text() for name, path in paths.items()}
-    synced = _synced(level)
-    if synced is not None and not force:
-        changes = changes_since(*synced, before[level.path], before[PALETTE_PATH])
-        if changes:
-            raise FilesChanged(changes)
-    # Blender's material edits are what changed since its last Load or Save, so they are found
-    # against the palette as it was then, even when Save Anyway replaces a newer palette.
-    palette = palette_from_blender(
-        parse_palette(synced[1] if synced is not None else before[PALETTE_PATH]))
-    surfaces = set(palette)
-    previous = parse_layout(before[level.path])
-    layout = layout_from_shapes(
-        shapes_from_blender(level), level, previous, camera_from_blender(level),
-        lights_from_blender(level), surfaces)
-    after = {level.path: emit_layout(layout, level, surfaces), PALETTE_PATH: emit_palette(palette)}
-    changed = [name for name in paths if after[name] != before[name]]
-    for name in changed:
-        paths[name].write_text(after[name])
-    # Both settings of each material now hold what was written, so the one an edit did not touch
-    # cannot undo that edit at the next Save.
-    for name, finish in palette.items():
-        material = bpy.data.materials.get(f"Lauder {name}")
-        if material is not None:
-            _apply_finish(material, finish)
-    _remember(level, after[level.path], after[PALETTE_PATH])
-    return layout, changed
+def level_of_file(path):
+    """The repository and level whose Blender file this is, or None."""
+    if not path:
+        return None
+    path = Path(path).resolve()
+    if len(path.parents) < 3:
+        return None
+    repository = path.parents[2]
+    for level in LEVELS.values():
+        if (repository / level.blend).resolve() == path:
+            return str(repository), level
+    return None
 
 
 def _guess_repository():
-    """The repository this script was installed from, found by its folders."""
+    """The repository this extension was installed from, found by its folders."""
     try:
         here = Path(__file__).resolve()
     except NameError:
@@ -1968,194 +770,311 @@ def _guess_repository():
     return ""
 
 
+# MARK: - Blender
+
+
+#: Blender's USD export for a scene file: the game's axes (y up, metres), each object as one
+#: prim, the materials as preview surfaces, and nothing that the game makes itself.
+SCENE_EXPORT = {
+    "export_materials": True,
+    "generate_preview_surface": True,
+    "generate_materialx_network": False,
+    "export_lights": False,
+    "export_cameras": False,
+    "export_animation": False,
+    "export_custom_properties": False,
+    "author_blender_name": False,
+    "merge_parent_xform": True,
+    "convert_orientation": True,
+    "export_global_forward_selection": "NEGATIVE_Z",
+    "export_global_up_selection": "Y",
+    "evaluation_mode": "RENDER",
+}
+
+
+def _collection(name):
+    return bpy.data.collections.get(name)
+
+
+def shapes_from_blender():
+    """What Export reads from the Gameplay collection of the open Blender file."""
+    part = _collection(GAMEPLAY)
+    if part is None:
+        raise LayoutError("This Blender file has no Gameplay collection; open the level's own file.")
+    # Bring every object's place up to date, as the interface does between clicks, so that an
+    # export straight after a script's edits reads where things are.
+    bpy.context.view_layer.update()
+    shapes = []
+    for item in part.all_objects:
+        role = item.get("lauder_role") or {"MESH": "box", "EMPTY": "marker"}.get(item.type)
+        if role not in ROLES:
+            raise LayoutError(
+                f"{item.name} is in Gameplay but is neither a mesh box nor an empty marker.")
+        if role == "marker":
+            if item.type != "EMPTY":
+                raise LayoutError(f"{item.name} is a marker but not an empty.")
+            location = tuple(item.matrix_world.translation)
+            shapes.append(Shape(item.name, role, location, location))
+            continue
+        if item.type != "MESH":
+            raise LayoutError(f"{item.name} is a {role} but not a mesh box.")
+        local = [tuple(corner) for corner in item.bound_box]
+        vertices = [tuple(vertex.co) for vertex in item.data.vertices]
+        cuboid = len(vertices) == 8 and all(
+            any(all(abs(a - b) < 1e-4 for a, b in zip(vertex, corner)) for corner in local)
+            for vertex in vertices)
+        _, rotation, scale = item.matrix_world.decompose()
+        corners = [item.matrix_world @ Vector(corner) for corner in item.bound_box]
+        low = tuple(min(corner[axis] for corner in corners) for axis in range(3))
+        high = tuple(max(corner[axis] for corner in corners) for axis in range(3))
+        matrix = rotation.to_matrix()
+        square = all(value > 0 for value in scale) and abs(matrix[2][2] - 1) < 1e-4 and all(
+            min(abs(matrix[row][column]), abs(abs(matrix[row][column]) - 1)) < 1e-4
+            for row in range(3) for column in range(3))
+        shapes.append(Shape(item.name, role, low, high, square, cuboid))
+    return shapes
+
+
+def camera_from_blender():
+    """The game camera's offset and field of view, or None when the rig is gone."""
+    part = _collection(CAMERA)
+    items = {item.get("lauder_rig"): item for item in part.objects} if part is not None else {}
+    target, camera = items.get("target"), items.get("camera")
+    if target is None or camera is None or camera.type != "CAMERA":
+        return None
+    if camera.data.sensor_fit != "VERTICAL":
+        raise LayoutError("Keep the game camera's Sensor Fit at Vertical.")
+    offset = camera.matrix_world.translation - target.matrix_world.translation
+    return CameraShape(tuple(offset), math.degrees(camera.data.angle_y))
+
+
+def lights_from_blender():
+    """What Export reads from the level's lights."""
+    part = _collection(LIGHTS)
+    if part is None:
+        return []
+    shapes = []
+    for item in part.all_objects:
+        if item.type != "LIGHT":
+            raise LayoutError(f"{item.name} is in Lights but is not a light.")
+        data = item.data
+        direction = item.matrix_world.to_quaternion() @ Vector((0, 0, 1))
+        distance = data.get("lauder_shadow_distance")
+        shapes.append(LightShape(
+            item.name, data.type, tuple(direction), tuple(data.color), data.energy,
+            data.use_shadow, None if distance is None else float(distance)))
+    return shapes
+
+
+def lights_outside_the_level(view_layer):
+    """The visible lights that are not in the level's Lights, such as the one in Blender's default
+    scene. Game Look would show them, but the game has no such light."""
+    part = _collection(LIGHTS)
+    own = set(part.all_objects) if part is not None else set()
+    return [item.name for item in view_layer.objects
+            if item.type == "LIGHT" and item not in own and item.visible_get(view_layer=view_layer)]
+
+
+def layout_from_blender(repository, level):
+    """The layout that the open level file holds, after the game's rules."""
+    return layout_from_shapes(shapes_from_blender(), level, camera_from_blender(),
+                              lights_from_blender(), names_the_story_uses(repository, level))
+
+
+def _files_used(repository):
+    """The files the open Blender file uses besides itself, such as linked models and textures,
+    relative to the repository."""
+    root = Path(repository).resolve()
+    used = set()
+    for path in bpy.utils.blend_paths(absolute=True, packed=False, local=False):
+        resolved = Path(path).resolve()
+        try:
+            used.add(str(resolved.relative_to(root)))
+        except ValueError:
+            raise LayoutError(f"{path} is outside the repository; keep the level's files in it.")
+    return sorted(used)
+
+
+def open_level_file(repository, key, attempts=3):
+    """Open the level's Blender file and return its fingerprint as it was read. A save that lands
+    while it is read shows as a different fingerprint after, and the file is read again."""
+    path = Path(repository) / LEVELS[key].blend
+    for _ in range(attempts):
+        before = file_fingerprint(path)
+        bpy.ops.wm.open_mainfile(filepath=str(path), load_ui=False)
+        if file_fingerprint(path) == before:
+            return before
+    raise LayoutError(f"{LEVELS[key].blend} kept changing while it was read; export it again.")
+
+
+def forget_local_paths():
+    """Keep a level file in the public repository free of paths from the computer it was saved
+    on: point Blender's file browsers, which start in the home folder, at the level's own folder,
+    and drop the Repository folder that the Lauder tab stores on a scene. An open level file finds
+    its repository from where it is."""
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            for space in area.spaces:
+                params = getattr(space, "params", None)
+                if params is not None and hasattr(params, "directory"):
+                    params.directory = b"//" if isinstance(params.directory, bytes) else "//"
+    for scene in bpy.data.scenes:
+        try:
+            scene.property_unset("lauder_repository")
+        except TypeError:
+            pass  # The extension's settings are not registered in this Blender.
+
+
+def export_level(repository, key="brooklyn-bridge", loaded=None):
+    """Write the level's layout file and scene file from its Blender file, open in this Blender,
+    and record what they were made from. `loaded` is the fingerprint of the Blender file as it was
+    read (open_level_file), so that a save made since counts as a change. It changes the open
+    file, so it runs in a Blender of its own: blender/scripts/export-level.py."""
+    level = LEVELS[key]
+    root = Path(repository)
+    made_from = {name: file_fingerprint(root / name) for name in _files_used(root)}
+    made_from[level.blend] = loaded or file_fingerprint(root / level.blend)
+    text = emit_layout(layout_from_blender(repository, level), level)
+    visual = _collection(VISUAL)
+    if visual is None:
+        raise LayoutError("This Blender file has no Visual collection; open the level's own file.")
+    # Only the Visual collection is exported, each part where it stands in the world.
+    shown = list(visual.all_objects)
+    places = {item: item.matrix_world.copy() for item in shown}
+    for item in shown:
+        item.parent = None
+        item.matrix_world = places[item]
+        item.hide_render = False
+    for item in list(bpy.data.objects):
+        if item not in places:
+            bpy.data.objects.remove(item, do_unlink=True)
+    written, target = root / level.layout, root / level.scene
+    with tempfile.TemporaryDirectory() as folder:
+        exported = Path(folder) / target.name
+        bpy.ops.wm.usd_export(filepath=str(exported), **SCENE_EXPORT)
+        # Both exports are ready: only now is either written, so a refusal or a failure before
+        # this leaves the pair as it was.
+        if not written.exists() or written.read_text() != text:
+            written.write_text(text)
+        shutil.copyfile(exported, target)
+    record_exports(repository, level, made_from,
+                   {name: file_fingerprint(root / name) for name in (level.layout, level.scene)})
+    return target
+
+
 if bpy is not None:
 
-    @persistent
-    def _save_level_with_file(_):
-        """Saving the level's working file saves the level's files too, after the usual checks.
-        The Blender file is saved whatever they find."""
-        scene = bpy.context.scene
-        if not is_working_file(scene):
-            return
-        repository, level = _scene_level(scene)
-        window_manager = bpy.context.window_manager
-        try:
-            _, changed = save_level(repository, level.key)
-        except FilesChanged as error:
-            window_manager.lauder_files_changed = True
-            _announce(f"{error} The Blender file is saved.", error=True)
-        except (LayoutError, OSError) as error:
-            _announce(f"The Blender file is saved, but the level is not: {error}", error=True)
-        else:
-            window_manager.lauder_files_changed = False
-            try:
-                exporting = _export_if_stale(repository, level.key)
-            except OSError as error:
-                _announce(f"The level is saved, but its scene file could not be exported: {error}",
-                          error=True)
-                return
-            said = [f"Saved {' and '.join(changed)} too."] if changed else []
-            if exporting:
-                said.append("Exporting the scene file…")
-            if said:
-                _announce(" ".join(said))
+    def _open_level():
+        """The repository and level whose Blender file is open, or None."""
+        return level_of_file(bpy.data.filepath)
 
     @persistent
-    def _refresh_opened_file(_):
-        """Opening a level's working file brings it up to date with the level's files."""
-        scene = bpy.context.scene
-        if not is_working_file(scene):
+    def _forget_local_paths_before_save(path=None, *_):
+        """A level file keeps no local paths in the repository (forget_local_paths)."""
+        if level_of_file(path if isinstance(path, str) and path else bpy.data.filepath):
+            forget_local_paths()
+
+    @persistent
+    def _export_after_save(_):
+        """Saving a level's Blender file exports it in the background, once the game's rules hold.
+        The Blender file is saved whatever they find."""
+        found = _open_level()
+        if found is None:
             return
-        window_manager = bpy.context.window_manager
+        repository, level = found
         try:
-            message = refresh(scene)
-        except FilesChanged as error:
-            window_manager.lauder_files_changed = True
-            _announce(f"{error} This file also holds level edits that were never saved to them.",
-                      error=True)
+            layout_from_blender(repository, level)
+            exporting = _export_if_stale(repository, level.key)
         except (LayoutError, OSError) as error:
-            _announce(f"The level's files could not be checked: {error}", error=True)
-        else:
-            window_manager.lauder_files_changed = False
-            window_manager.lauder_message = ""
-            if message:
-                _announce(message)
+            _announce(f"The Blender file is saved, but the level was not exported: {error}",
+                      error=True)
+            return
+        if exporting:
+            _announce("Exporting the level…")
 
     class LAUDER_OT_open_level(bpy.types.Operator):
-        """Open the level's working Blender file in .local/blender, making it from the level's
-        files the first time. Saving it saves the level too"""
+        """Open the level's Blender file from the repository"""
         bl_idname = "lauder.open_level"
         bl_label = "Open Level"
         bl_options = {"REGISTER"}
 
         def invoke(self, context, event):
-            if bpy.data.is_dirty and not is_working_file(context.scene):
+            if bpy.data.is_dirty:
                 return context.window_manager.invoke_confirm(
-                    self, event, title="Open the level's working file?",
+                    self, event, title="Open the level?",
                     message="The open Blender file has unsaved changes, which this discards.")
             return self.execute(context)
 
         def execute(self, context):
-            named = _scene_level(context.scene)
-            if named is None:
-                self.report({"ERROR"}, "Set the repository folder first.")
+            repository = bpy.path.abspath(context.scene.lauder_repository)
+            level = LEVELS[context.scene.lauder_level]
+            path = Path(repository) / level.blend
+            if not path.exists():
+                self.report({"ERROR"}, f"There is no {level.blend} in the repository folder.")
                 return {"CANCELLED"}
-            repository, level = named
-            if is_working_file(context.scene):
-                _refresh_opened_file(None)
-                return {"FINISHED"}
-            path = working_file(repository, level)
-            if path.exists():
-                # The load handler brings it up to date with the level's files.
-                bpy.ops.wm.open_mainfile(filepath=str(path))
-                return {"FINISHED"}
-            try:
-                made = make_working_file(repository, level.key)
-            except (LayoutError, OSError) as error:
-                _announce(f"The working file could not be made: {error}", error=True)
+            if is_lfs_pointer(path):
+                self.report({"ERROR"}, f"{level.blend} is not downloaded yet: run git lfs pull.")
                 return {"CANCELLED"}
-            _announce(f"{level.title} is open in its working file, "
-                      f"{made.relative_to(repository)}. Saving it saves the level too.")
+            bpy.ops.wm.open_mainfile(filepath=str(path))
             return {"FINISHED"}
 
-    class LAUDER_OT_load_level(bpy.types.Operator):
-        """Build the level in this Blender file from the game's layout file and surface palette"""
-        bl_idname = "lauder.load_level"
-        bl_label = "Load"
+    class LAUDER_OT_export(bpy.types.Operator):
+        """Save the level's Blender file and export it, when its exports are out of date"""
+        bl_idname = "lauder.export"
+        bl_label = "Export"
         bl_options = {"REGISTER"}
 
-        def invoke(self, context, event):
-            if _level_collection(LEVELS[context.scene.lauder_level]) is not None:
-                return context.window_manager.invoke_confirm(self, event)
-            return self.execute(context)
-
         def execute(self, context):
-            window_manager = context.window_manager
+            found = _open_level()
+            if found is None:
+                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                return {"CANCELLED"}
+            if bpy.data.is_dirty:
+                bpy.ops.wm.save_mainfile()  # Its handler checks the rules and exports.
+                return {"FINISHED"}
+            repository, level = found
             try:
-                load_level(bpy.path.abspath(context.scene.lauder_repository),
-                           context.scene.lauder_level)
+                layout_from_blender(repository, level)
+                exporting = _export_if_stale(repository, level.key)
             except (LayoutError, OSError) as error:
-                window_manager.lauder_message = str(error)
+                context.window_manager.lauder_message = str(error)
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
-            window_manager.lauder_files_changed = False
-            window_manager.lauder_message = ""
-            self.report({"INFO"}, f"Loaded {LEVELS[context.scene.lauder_level].title}.")
-            return {"FINISHED"}
-
-    class LAUDER_OT_save_level(bpy.types.Operator):
-        """Check the level against the game's rules and write its layout file and the palette"""
-        bl_idname = "lauder.save_level"
-        bl_label = "Save"
-        bl_options = {"REGISTER"}
-
-        force: bpy.props.BoolProperty(
-            name="Save Anyway", options={"SKIP_SAVE"},
-            description="Replace the changes made to the level's files since the last Load or Save")
-
-        def execute(self, context):
-            window_manager = context.window_manager
-            try:
-                _, changed = save_level(bpy.path.abspath(context.scene.lauder_repository),
-                                        context.scene.lauder_level, force=self.force)
-            except FilesChanged as error:
-                window_manager.lauder_files_changed = True
-                window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
-                return {"CANCELLED"}
-            except (LayoutError, OSError) as error:
-                window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
-                return {"CANCELLED"}
-            window_manager.lauder_files_changed = False
-            message = f"Saved {' and '.join(changed)}." if changed else "No changes to save."
-            try:
-                if _export_if_stale(bpy.path.abspath(context.scene.lauder_repository),
-                                    context.scene.lauder_level):
-                    message += " Exporting the scene file…"
-            except OSError as error:
-                message += f" The scene file could not be exported: {error}"
-            window_manager.lauder_message = message
+            message = "Exporting the level…" if exporting else "The level's exports are up to date."
+            context.window_manager.lauder_message = message
             self.report({"INFO"}, message)
             return {"FINISHED"}
 
     class LAUDER_OT_play(bpy.types.Operator):
-        """Save the level, then build the game and open it in the iOS Simulator"""
+        """Save and export the level, then build the game and open it in the iOS Simulator"""
         bl_idname = "lauder.play"
         bl_label = "Play"
         bl_options = {"REGISTER"}
 
         def execute(self, context):
             window_manager = context.window_manager
-            named = _scene_level(context.scene)
-            if named is None:
-                self.report({"ERROR"}, "Set the repository folder first.")
+            found = _open_level()
+            if found is None:
+                self.report({"ERROR"}, "Open the level first, with Open Level.")
                 return {"CANCELLED"}
             if _queued("play"):
                 self.report({"WARNING"}, "The game is still building; it opens when it is ready.")
                 return {"CANCELLED"}
-            repository, level = named
+            repository, level = found
             try:
-                save_level(repository, level.key)
-            except FilesChanged as error:
-                window_manager.lauder_files_changed = True
-                window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
-                return {"CANCELLED"}
+                layout_from_blender(repository, level)
             except (LayoutError, OSError) as error:
                 window_manager.lauder_message = str(error)
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
-            window_manager.lauder_files_changed = False
-            if is_working_file(context.scene) and bpy.data.is_dirty:
-                bpy.ops.wm.save_mainfile()
-            # Saving the working file may already have started an export: the build waits for it.
+            if bpy.data.is_dirty:
+                bpy.ops.wm.save_mainfile()  # Its handler starts the export; the build waits for it.
             try:
                 _queue(repository, level.key, background_steps(repository, level.key, play=True))
             except OSError as error:
                 self.report({"ERROR"}, f"Play could not start: {error}")
                 return {"CANCELLED"}
-            message = ("Exporting the scene file, then building the game for the Simulator…"
+            message = ("Exporting the level, then building the game for the Simulator…"
                        if _queued("export") else "Building the game for the Simulator…")
             window_manager.lauder_message = message
             self.report({"INFO"}, message)
@@ -2177,7 +1096,7 @@ if bpy is not None:
             if shading.type == "MATERIAL" and shading.use_scene_lights:
                 shading.type = "SOLID"
                 return {"FINISHED"}
-            others = lights_outside_the_level(LEVELS[context.scene.lauder_level], context.view_layer)
+            others = lights_outside_the_level(context.view_layer)
             if others:
                 self.report(
                     {"ERROR"},
@@ -2218,25 +1137,29 @@ if bpy is not None:
             layout.prop(scene, "lauder_level")
             layout.operator("lauder.open_level", icon="FILE_BLEND")
             row = layout.row()
-            row.operator("lauder.load_level")
-            row.operator("lauder.save_level")
-            if window_manager.lauder_files_changed:
-                layout.operator("lauder.save_level", text="Save Anyway", icon="ERROR").force = True
-            row = layout.row()
+            row.operator("lauder.export", icon="EXPORT")
             row.operator("lauder.play", icon="PLAY")
-            row.operator("lauder.game_look", icon="LIGHT_SUN")
+            layout.operator("lauder.game_look", icon="LIGHT_SUN")
+            item = context.active_object
+            if (item is not None and _open_level() is not None
+                    and any(owner.name == GAMEPLAY for owner in item.users_collection)):
+                if "lauder_role" in item:
+                    layout.prop(item, '["lauder_role"]', text="Role")
+                else:
+                    role = "marker" if item.type == "EMPTY" else "box"
+                    layout.label(text=f"{item.name} counts as a {role}")
             if window_manager.lauder_message:
                 box = layout.box()
                 for line in textwrap.wrap(window_manager.lauder_message, 42):
                     box.label(text=line)
 
     _CLASSES = (
-        LAUDER_OT_open_level, LAUDER_OT_load_level, LAUDER_OT_save_level, LAUDER_OT_play,
-        LAUDER_OT_game_look, LAUDER_OT_report, LAUDER_PT_levels,
+        LAUDER_OT_open_level, LAUDER_OT_export, LAUDER_OT_play, LAUDER_OT_game_look,
+        LAUDER_OT_report, LAUDER_PT_levels,
     )
     _HANDLERS = (
-        (bpy.app.handlers.save_pre, _save_level_with_file),
-        (bpy.app.handlers.load_post, _refresh_opened_file),
+        (bpy.app.handlers.save_pre, _forget_local_paths_before_save),
+        (bpy.app.handlers.save_post, _export_after_save),
     )
 
     def _remove_handlers():
@@ -2257,7 +1180,6 @@ if bpy is not None:
             name="Level",
             items=[(key, level.title, "") for key, level in LEVELS.items()])
         bpy.types.WindowManager.lauder_message = bpy.props.StringProperty()
-        bpy.types.WindowManager.lauder_files_changed = bpy.props.BoolProperty()
         _remove_handlers()
         for handlers, handler in _HANDLERS:
             handlers.append(handler)
@@ -2270,7 +1192,6 @@ if bpy is not None:
         del bpy.types.Scene.lauder_repository
         del bpy.types.Scene.lauder_level
         del bpy.types.WindowManager.lauder_message
-        del bpy.types.WindowManager.lauder_files_changed
 
     if __name__ == "__main__":
         register()

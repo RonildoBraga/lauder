@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Tests for the Lauder extension (extensions/lauder_levels) that need no Blender: reading, writing and checking layouts and the
-surface palette.
+"""Tests for the Lauder extension (extensions/lauder_levels) that need no Blender: writing and
+checking a level's layout file, the record of what each export was made from, and the order of the
+work it runs in the background.
 
-./scripts/check runs them. Blender's own part, building and reading objects, is checked by
-loading and saving a level in Blender (CONTRIBUTING).
+./scripts/check runs them. Blender's own part, reading the level's Blender file and exporting it,
+runs in blender/scripts/export-level.py, as CONTRIBUTING describes.
 """
 
-import copy
-import math
+from dataclasses import replace
 from pathlib import Path
-import re
 import shutil
-import struct
 import sys
 import tempfile
 import unittest
@@ -25,668 +23,272 @@ import lauder_levels as L  # noqa: E402
 ROOT = HERE.parent
 BRIDGE = L.LEVELS["brooklyn-bridge"]
 
-
-def single(value):
-    """A number as Blender stores it, in single precision."""
-    return struct.unpack("f", struct.pack("f", value))[0]
-
-
-def singles(values):
-    return tuple(single(value) for value in values)
+#: A small level, with a light of each kind the game has and names that the story uses.
+SAMPLE = L.Layout(
+    L.Box("deck", (0, -0.15, 0), (24, 0.3, 250)),
+    [
+        L.Box("railing-west", (-11.8, 0.55, 0), (0.4, 1.1, 250)),
+        L.Box("car-a1", (9.6, 0.75, 100), (2, 1.5, 4.6)),
+        L.Box("brooklyn-tower-pier", (0, 7, 20), (6, 14, 10)),
+    ],
+    [L.Landmark("bridge.booth", (4, 0, 110), (2, 2.4, 2))],
+    [L.Area("manhattan-end", (-12, -125), (12, -110))],
+    [L.Marker("spawn.miki", (6.8, 118))],
+    L.Camera((0, 10, 9.9), 42),
+    [
+        L.Light("sun-key", (-6, 8, 0), (1, 0.91, 0.74), 4500, 25),
+        L.Light("sky-fill", (0, 6, -8), (0.67, 0.81, 0.85), 600),
+    ],
+)
 
 
 def shapes_for(layout):
-    """What Save would read from Blender after a Load of this layout, with no edits."""
+    """What Export reads from a level file holding this layout, in Blender's coordinates."""
     shapes = []
 
-    def block(name, role, centre, size, surface=None):
+    def block(name, role, centre, size):
         cx, cy, cz = L.to_blender(centre)
         sx, sy, sz = L.size_to_blender(size)
-        low = singles((cx - sx / 2, cy - sy / 2, cz - sz / 2))
-        high = singles((cx + sx / 2, cy + sy / 2, cz + sz / 2))
-        shapes.append(L.Shape(name, role, low, high, surface))
+        shapes.append(L.Shape(name, role, (cx - sx / 2, cy - sy / 2, cz - sz / 2),
+                              (cx + sx / 2, cy + sy / 2, cz + sz / 2)))
 
-    block(layout.ground.name, "ground", layout.ground.position, layout.ground.size,
-          layout.ground.surface)
+    block(layout.ground.name, "ground", layout.ground.position, layout.ground.size)
     for box in layout.boxes:
-        block(box.name, "box", box.position, box.size, box.surface)
-    for item in layout.landmarks:
-        x, y, z = item.position
-        block(item.name, "landmark", (x, y + item.size[1] / 2, z), item.size)
+        block(box.name, "box", box.position, box.size)
+    for landmark in layout.landmarks:
+        x, y, z = landmark.position
+        block(landmark.name, "landmark", (x, y + landmark.size[1] / 2, z), landmark.size)
     for area in layout.areas:
         (x0, z0), (x1, z1) = area.minimum, area.maximum
-        shapes.append(L.Shape(area.name, "area", (single(x0), single(-z1), 0),
-                              (single(x1), single(-z0), 0.05)))
+        block(area.name, "area", ((x0 + x1) / 2, 0.025, (z0 + z1) / 2), (x1 - x0, 0.05, z1 - z0))
     for marker in layout.markers:
-        point = (single(marker.position[0]), single(-marker.position[1]), 0)
-        shapes.append(L.Shape(marker.name, "marker", point, point))
-    for piece in layout.pieces:
-        centre = singles(L.to_blender(piece.position))
-        shapes.append(L.Shape(
-            piece.name, "piece", centre, centre, piece.surface, centre=centre,
-            size=singles(L.size_to_blender(piece.size)),
-            rotation=singles(L.rotation_to_blender(piece.rotation))))
+        x, z = marker.position
+        shapes.append(L.Shape(marker.name, "marker", (x, -z, 0), (x, -z, 0)))
     return shapes
 
 
 def camera_for(layout):
-    """What Save would read from the game camera's rig after a Load, with no edits: the camera
-    hangs from its target, which starts at Miki's spawn."""
-    spawn = next(m.position for m in layout.markers if m.name == BRIDGE.camera_target)
-    target = singles((spawn[0], -spawn[1], L.CAMERA_TARGET_HEIGHT))
-    hanging = singles(L.to_blender(layout.camera.offset))
-    camera = singles(t + h for t, h in zip(target, hanging))
-    offset = singles(c - t for c, t in zip(camera, target))
-    return L.CameraShape(offset, math.degrees(single(math.radians(layout.camera.field_of_view))))
+    return L.CameraShape(L.to_blender(layout.camera.offset), layout.camera.field_of_view)
 
 
 def lights_for(layout):
-    """What Save would read from the level's suns after a Load, with no edits: each turned to
-    shine from its source, in Blender's units and single precision."""
     return [
-        L.LightShape(
-            light.name, "SUN", singles(L._unit(L.to_blender(light.source))),
-            singles(L._linear(*light.color)[:3]), single(light.intensity * L.SUN_STRENGTH_PER_LUX),
-            light.shadow_distance is not None, light.shadow_distance)
+        L.LightShape(light.name, "SUN", L._unit(L.to_blender(light.source)), L._linear(*light.color),
+                     light.intensity * L.SUN_STRENGTH_PER_LUX, light.shadow_distance is not None,
+                     light.shadow_distance)
         for light in layout.lights
     ]
 
 
-def turn(axis, degrees):
-    """A quaternion (w, x, y, z) turning by the angle about the axis."""
-    half = math.radians(degrees) / 2
-    length = math.sqrt(sum(value * value for value in axis))
-    return (math.cos(half),) + tuple(math.sin(half) * value / length for value in axis)
+def read(shapes=None, camera=None, lights=None, required=()):
+    """The layout Export would write from what Blender holds, starting from the sample."""
+    return L.layout_from_shapes(
+        shapes if shapes is not None else shapes_for(SAMPLE), BRIDGE,
+        camera if camera is not None else camera_for(SAMPLE),
+        lights if lights is not None else lights_for(SAMPLE), required)
 
 
-def rotate(q, vector):
-    _, x, y, z = L._multiply(L._multiply(q, (0,) + tuple(vector)), L._conjugate(q))
-    return (x, y, z)
+def without(shapes, name):
+    return [shape for shape in shapes if shape.name != name]
 
 
-def same_turn(a, b, tolerance=1e-7):
-    a, b = L._canonical(a), L._canonical(b)
-    return abs(sum(x * y for x, y in zip(a, b))) > 1 - tolerance
+class LayoutTests(unittest.TestCase):
+    """Writing the layout file from what the level's Blender file holds, after the game's rules."""
 
+    def refused(self, *words, **changes):
+        with self.assertRaises(L.LayoutError) as refusal:
+            read(**changes)
+        for word in words:
+            self.assertIn(word, str(refusal.exception))
 
-class BridgeLayoutTests(unittest.TestCase):
-    def setUp(self):
-        self.surfaces = set(L.parse_palette((ROOT / L.PALETTE_PATH).read_text()))
-        self.text = (ROOT / BRIDGE.path).read_text()
-        self.layout = L.parse_layout(self.text, self.surfaces)
+    def test_the_layout_file_says_it_is_written_from_the_level_file(self):
+        header = L.layout_header(BRIDGE)
+        text = " ".join(line.removeprefix("// ") for line in header)
+        for words in (BRIDGE.blend, "Do not edit it here", L.EXPORT_SCRIPT, "./scripts/check"):
+            self.assertIn(words, text)
+        self.assertTrue(all(line.startswith("// ") and len(line) <= 100 for line in header))
+        self.assertTrue((ROOT / BRIDGE.layout).read_text().startswith("\n".join(header)))
 
-    def save(self, shapes, camera=None, lights=None):
-        return L.layout_from_shapes(shapes, BRIDGE, self.layout, camera, lights, self.surfaces)
+    def test_what_blender_holds_is_written_as_it_stands(self):
+        self.assertEqual(L.emit_layout(read(), BRIDGE), L.emit_layout(SAMPLE, BRIDGE))
 
-    def test_the_bridge_file_reads_and_writes_back_unchanged(self):
-        self.assertEqual(L.emit_layout(self.layout, BRIDGE, self.surfaces), self.text)
-        self.assertEqual(self.layout.ground.name, "deck")
-        self.assertIn("car-b4", [box.name for box in self.layout.boxes])
-        self.assertTrue(any(not L.is_identity(piece.rotation) for piece in self.layout.pieces))
-        self.assertTrue(any(L.is_identity(piece.rotation) for piece in self.layout.pieces))
-        self.assertIsNotNone(self.layout.camera)
-        self.assertEqual([light.name for light in self.layout.lights], ["sun-key", "sky-fill"])
-
-    def test_a_load_and_save_with_no_edits_changes_nothing(self):
-        saved = self.save(shapes_for(self.layout), camera_for(self.layout), lights_for(self.layout))
-        self.assertEqual(L.emit_layout(saved, BRIDGE), self.text)
-
-    def test_a_quarter_turn_swaps_the_footprint(self):
-        shapes = shapes_for(self.layout)
-        car = next(shape for shape in shapes if shape.name == "car-a1")
-        (x0, y0, z0), (x1, y1, z1) = car.minimum, car.maximum
-        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-        hx, hy = (x1 - x0) / 2, (y1 - y0) / 2
-        car.minimum, car.maximum = (cx - hy, cy - hx, z0), (cx + hy, cy + hx, z1)
-        turned = next(box for box in self.save(shapes).boxes if box.name == "car-a1")
-        self.assertAlmostEqual(turned.size[0], 4.6, places=4)
-        self.assertAlmostEqual(turned.size[2], 2, places=4)
-
-    def test_a_moved_car_is_saved_where_it_was_put(self):
-        shapes = shapes_for(self.layout)
-        car = next(shape for shape in shapes if shape.name == "car-b3")
-        car.minimum = (car.minimum[0] + 1, car.minimum[1] - 2, car.minimum[2])
-        car.maximum = (car.maximum[0] + 1, car.maximum[1] - 2, car.maximum[2])
-        text = L.emit_layout(self.save(shapes), BRIDGE)
-        self.assertIn('.box("car-b3", at: [5.6, 0.75, 50], size: [2, 1.5, 4.6]', text)
-
-    def check_refused(self, shapes, words, camera=None, lights=None):
-        with self.assertRaises(L.LayoutError) as caught:
-            self.save(shapes, camera, lights)
-        self.assertIn(words, str(caught.exception))
-
-    def test_an_angled_or_mirrored_box_is_refused(self):
-        shapes = shapes_for(self.layout)
-        next(shape for shape in shapes if shape.name == "car-a1").square = False
-        self.check_refused(shapes, "quarter turns")
-
-    def test_a_box_that_is_no_longer_a_box_is_refused(self):
-        shapes = shapes_for(self.layout)
-        next(shape for shape in shapes if shape.name == "car-a1").cuboid = False
-        self.check_refused(shapes, "no longer a box")
-
-    def test_a_box_off_the_deck_is_refused(self):
-        shapes = shapes_for(self.layout)
-        car = next(shape for shape in shapes if shape.name == "car-a1")
-        car.minimum = car.minimum[:2] + (0.2,)
-        self.check_refused(shapes, "should stand on the deck")
-
-    def test_a_box_without_a_lauder_material_is_refused(self):
-        shapes = shapes_for(self.layout)
-        next(shape for shape in shapes if shape.name == "car-a1").surface = None
-        self.check_refused(shapes, "no Lauder surface")
-
-    def test_blender_duplicate_names_are_refused(self):
-        shapes = shapes_for(self.layout)
-        next(shape for shape in shapes if shape.name == "car-a1").name = "car-a1.001"
-        self.check_refused(shapes, "duplicate suffix")
-
-    def test_named_parts_cannot_disappear(self):
-        shapes = [shape for shape in shapes_for(self.layout) if shape.name != "stranger"]
-        self.check_refused(shapes, "The area stranger is missing")
-        shapes = [s for s in shapes_for(self.layout) if s.name != "brooklyn-tower-pier"]
-        self.check_refused(shapes, "brooklyn-tower-pier is missing")
-
-    def test_new_boxes_are_added_and_cars_can_be_removed(self):
-        shapes = [shape for shape in shapes_for(self.layout) if shape.name != "car-e2"]
-        shapes.append(L.Shape("car-z1", "box", (1, 2, 0), (3, 6.6, 1.5), "vehicle"))
-        saved = self.save(shapes)
-        names = [box.name for box in saved.boxes]
-        self.assertNotIn("car-e2", names)
-        self.assertEqual(names[-1], "car-z1")
-        self.assertEqual(saved.boxes[-1].position, (2, 0.75, -4.3))
-
-    def test_an_entry_the_script_cannot_read_stops_the_load(self):
-        for broken in (
-            self.text.replace('.box("car-a1", at:', '.box(name: "car-a1", at:'),
-            self.text.replace("at: [9.6, 0.75, 100]", "at: [9.6, 100]"),
-            self.text.replace("turn: [", "turn: [0, ", 1),
-            self.text.replace("camera: .camera(", "", 1),
-            self.text.replace('.sun("sky-fill", from:', '.sun("sky-fill", towards:'),
-            self.text.replace("    lights: [", "    lamps: ["),
-            # Entries in another form, which the count of known entries alone would miss.
-            re.sub(r'\.sun\("sky-fill"[^)]*\)',
-                   '.init(name: "sky-fill", source: [3, 5, -4], color: [0.67, 0.81, 0.85], '
-                   'intensity: 600, shadowDistance: nil)', self.text),
-            self.text.replace('.box("car-a1", at:', 'Level.Box(name: "car-a1", at:', 1),
-            self.text.replace("  static let layout", "  static let spare = 1\n  static let layout"),
-        ):
-            with self.subTest(broken=broken[:0]), self.assertRaises(L.LayoutError):
-                L.parse_layout(broken)
+    def test_entries_are_written_briefly_and_hold_no_looks(self):
+        text = L.emit_layout(SAMPLE, BRIDGE)
+        self.assertIn('      .box("car-a1", at: [9.6, 0.75, 100], size: [2, 1.5, 4.6]),\n', text)
+        self.assertIn('    ground: .box("deck", at: [0, -0.15, 0], size: [24, 0.3, 250]),\n', text)
+        for word in ("surface", "pieces", "turn:"):
+            self.assertNotIn(word, text)
 
     def test_long_entries_wrap_as_swift_format_does(self):
-        box = L.Box("a-very-long-name-for-a-box-on-the-bridge", (-123.456, 0.75, 101.234),
-                    (2.345, 1.5, 4.678), "vehicle")
-        piece = L.Piece("a-very-long-name-for-a-piece-of-the-bridge", (-123.456, 7.25, 101.234),
-                        (0.22, 0.22, 35.616), "metal", (0.9933, 0.1154, 0, 0))
-        camera = L.Camera((0, 10, 9.9), 42)
-        light = L.Light("a-very-long-name-for-a-sun-over-the-bridge", (-3.25, 8.5, 5.75),
-                        (0.987, 0.912, 0.745), 4567.5, 33.5)
-        layout = L.Layout(self.layout.ground, [box], [], [], [], [piece], camera, [light])
-        text = L.emit_layout(layout, BRIDGE)
+        text = L.emit_layout(SAMPLE, BRIDGE)
+        self.assertIn(
+            '      .sun(\n'
+            '        "sun-key", from: [-6, 8, 0], color: [1, 0.91, 0.74], intensity: 4500, '
+            'shadowDistance: 25),\n', text)
         self.assertTrue(all(len(line) <= 100 for line in text.splitlines()))
-        read = L.parse_layout(text)
-        self.assertEqual(read.boxes[0], box)
-        self.assertEqual(read.pieces[0], piece)
-        self.assertEqual(read.lights, [light])
-        self.assertIn("    landmarks: [],", text)
-        self.assertIn("    markers: [],", text)
-        self.assertIn("    camera: .camera(offset: [0, 10, 9.9], fieldOfView: 42),\n", text)
-        self.assertTrue(text.endswith(
-            "    lights: [\n      .sun(\n"
-            '        "a-very-long-name-for-a-sun-over-the-bridge", from: [-3.25, 8.5, 5.75],\n'
-            "        color: [0.987, 0.912, 0.745], intensity: 4567.5, shadowDistance: 33.5),\n"
-            "    ])\n}\n"))
 
-    def test_a_call_and_its_comma_stay_on_one_line_up_to_98_columns(self):
-        # As swift format does: a longer call followed by a comma is wrapped.
-        def piece(name):
-            return L.Piece(name, (12.4, 3.89, -10), (0.05, 5.58, 0.05), "metal")
+    def test_a_moved_box_is_written_where_it_was_put(self):
+        shapes = shapes_for(SAMPLE)
+        car = next(shape for shape in shapes if shape.name == "car-a1")
+        car.minimum = (car.minimum[0], car.minimum[1] + 2, car.minimum[2])
+        car.maximum = (car.maximum[0], car.maximum[1] + 2, car.maximum[2])
+        moved = next(box for box in read(shapes).boxes if box.name == "car-a1")
+        self.assertAlmostEqual(moved.position[2], 98)
 
-        layout = L.Layout(self.layout.ground, [], [], [], [],
-                          [piece("s" * 15), piece("s" * 16)], self.layout.camera,
-                          self.layout.lights)
-        lines = L.emit_layout(layout, BRIDGE).splitlines()
-        one = next(line for line in lines if '"' + "s" * 15 + '"' in line)
-        self.assertEqual((len(one), one.strip()[:7]), (98, '.piece('))
-        wrapped = lines.index(next(line for line in lines if '"' + "s" * 16 + '"' in line))
-        self.assertEqual(lines[wrapped - 1], "      .piece(")
+    def test_a_box_turned_at_an_angle_or_no_longer_a_box_is_refused(self):
+        shapes = shapes_for(SAMPLE)
+        shapes[1].square = False
+        self.refused("railing-west", "quarter turns", shapes=shapes)
+        shapes = shapes_for(SAMPLE)
+        shapes[2].cuboid = False
+        self.refused("car-a1", "no longer a box", shapes=shapes)
 
-    # MARK: - Pieces
+    def test_boxes_and_landmarks_stand_on_the_deck(self):
+        for name in ("car-a1", "bridge.booth"):
+            shapes = shapes_for(SAMPLE)
+            raised = next(shape for shape in shapes if shape.name == name)
+            raised.minimum = raised.minimum[:2] + (0.3,)
+            self.refused(name, "should stand on the deck", shapes=shapes)
+        shapes = shapes_for(SAMPLE)
+        shapes[0].maximum = shapes[0].maximum[:2] + (0.2,)
+        self.refused("The deck's top should be at height 0", shapes=shapes)
 
-    def test_rotations_convert_between_the_game_and_blender(self):
-        for q in (turn((0, 1, 0), 30), turn((1, 0, 0), -6.6), turn((0.3, -1, 2), 123)):
-            in_blender = L.rotation_to_blender(q)
-            self.assertTrue(same_turn(L.rotation_from_blender(in_blender), q))
-            for vector in ((1, 0, 0), (0, 1, 0), (0.2, -0.5, 3)):
-                expected = L.to_blender(rotate(q, vector))
-                for want, got in zip(expected, rotate(in_blender, L.to_blender(vector))):
-                    self.assertAlmostEqual(want, got, places=9)
-        # The game's vertical is Blender's: a turn about one is the same turn about the other.
-        self.assertTrue(same_turn(L.rotation_to_blender(turn((0, 1, 0), 30)), turn((0, 0, 1), 30)))
+    def test_one_ground_and_names_of_their_own(self):
+        shapes = shapes_for(SAMPLE)
+        self.refused("exactly one ground", shapes=shapes + [replace(shapes[0], name="deck-2")])
+        self.refused("Two boxes are named car-a1", shapes=shapes + [replace(shapes[2])])
+        self.refused("duplicate suffix", shapes=shapes + [replace(shapes[2], name="car-a1.001")])
 
-    def test_a_turned_piece_is_saved_at_its_new_angle(self):
-        piece = next(p for p in self.layout.pieces if not L.is_identity(p.rotation))
-        shapes = shapes_for(self.layout)
-        shape = next(s for s in shapes if s.name == piece.name)
-        # Turned 30 degrees about Blender's vertical, as R Z 30 does.
-        shape.rotation = L._multiply(turn((0, 0, 1), 30), shape.rotation)
-        text = L.emit_layout(self.save(shapes, camera_for(self.layout)), BRIDGE)
-        saved = next(p for p in L.parse_layout(text).pieces if p.name == piece.name)
-        expected = L._multiply(turn((0, 1, 0), 30), L._canonical(piece.rotation))
-        self.assertTrue(same_turn(saved.rotation, expected))
-        self.assertEqual((saved.position, saved.size), (piece.position, piece.size))
+    def test_a_name_the_story_uses_cannot_disappear(self):
+        shapes = without(shapes_for(SAMPLE), "spawn.miki")
+        self.refused("spawn.miki", "BrooklynBridge.swift", shapes=shapes,
+                     required={("marker", "spawn.miki")})
+        read(without(shapes_for(SAMPLE), "car-a1"), required={("marker", "spawn.miki")})
 
-        def without(text):
-            return re.sub(r'\s*\.piece\(\s*"' + re.escape(piece.name) + r'"[^)]*\),', "", text)
+    def test_names_the_story_uses_are_the_layouts_it_quotes(self):
+        story = 'let start = layout.marker(named: "spawn.miki")\npoint("bridge.booth", "Booth")\n'
+        self.assertEqual(L.required_names(L.emit_layout(SAMPLE, BRIDGE), story),
+                         {("marker", "spawn.miki"), ("landmark", "bridge.booth")})
+        bridge = L.required_names((ROOT / BRIDGE.layout).read_text(),
+                                  (ROOT / BRIDGE.story).read_text())
+        self.assertLessEqual({("marker", "spawn.miki"), ("area", "manhattan-end"),
+                              ("box", "brooklyn-tower-pier")}, bridge)
 
-        self.assertEqual(without(text), without(self.text))
+    def test_without_its_layout_file_export_cannot_tell_the_storys_names(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = Path(folder)
+            (repository / BRIDGE.story).parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / BRIDGE.story, repository / BRIDGE.story)
+            with self.assertRaises(L.LayoutError) as refusal:
+                L.names_the_story_uses(repository, BRIDGE)
+            self.assertIn(f"git restore {BRIDGE.layout}", str(refusal.exception))
+            shutil.copyfile(ROOT / BRIDGE.layout, repository / BRIDGE.layout)
+            self.assertIn(("marker", "spawn.miki"), L.names_the_story_uses(repository, BRIDGE))
 
-    def test_a_small_turn_is_saved_and_kept(self):
-        # Half a degree about the vertical swings the ends of a long piece by metres.
-        piece = next(p for p in self.layout.pieces if L.is_identity(p.rotation))
-        shapes = shapes_for(self.layout)
-        shape = next(s for s in shapes if s.name == piece.name)
-        shape.rotation = L._multiply(turn((0, 0, 1), 0.5), shape.rotation)
-        text = L.emit_layout(self.save(shapes, camera_for(self.layout)), BRIDGE)
-        saved = next(p for p in L.parse_layout(text).pieces if p.name == piece.name)
-        self.assertFalse(L.is_identity(saved.rotation))
-        self.assertTrue(same_turn(saved.rotation, turn((0, 1, 0), 0.5)))
-        # Read and written again, as after editing the file by hand, the small turn stays.
-        self.assertEqual(L.emit_layout(L.parse_layout(text), BRIDGE), text)
-        # Only a turn too small for the file's four places is written as none.
-        self.assertFalse(L.is_identity(turn((1, 0, 0), 0.02)))
-        self.assertTrue(L.is_identity(turn((1, 0, 0), 0.005)))
+    def test_the_level_needs_its_camera_within_reason(self):
+        with self.assertRaises(L.LayoutError) as refusal:
+            L.layout_from_shapes(shapes_for(SAMPLE), BRIDGE, None, lights_for(SAMPLE))
+        self.assertIn("game camera", str(refusal.exception))
+        self.refused("field of view", camera=L.CameraShape((0, -9.9, 10), 150))
 
-    def test_a_turn_is_written_only_for_a_turned_piece(self):
-        flat = L.Piece("slab", (1, 0.1, 2), (3, 0.2, 4), "concrete")
-        tilted = L.Piece("beam", (0, 3, -5), (0.2, 0.2, 6), "metal", (-0.5, 0.5, 0.5, 0.5))
-        layout = L.Layout(self.layout.ground, [], [], [], [], [flat, tilted], self.layout.camera,
-                          self.layout.lights)
-        text = L.emit_layout(layout, BRIDGE)
-        self.assertIn(
-            '.piece("slab", at: [1, 0.1, 2], size: [3, 0.2, 4], surface: .concrete),', text)
-        # Written as Swift's simd_quatf takes it, (x, y, z, w), and with w positive.
-        self.assertIn("turn: [-0.5, -0.5, -0.5, 0.5]", text)
-        read = L.parse_layout(text).pieces
-        self.assertEqual(read[0].rotation, L.IDENTITY)
-        self.assertEqual(read[1].rotation, (0.5, -0.5, -0.5, -0.5))
-
-    def test_a_turn_written_by_hand_survives_a_save_without_edits(self):
-        # Not unit length: the game normalises it, and Save leaves it as written.
-        beam = L.Piece("beam", (0, 3, -5), (0.2, 0.2, 6), "metal", (0.7, 0, 0.7, 0))
-        layout = L.Layout(self.layout.ground, self.layout.boxes, self.layout.landmarks,
-                          self.layout.areas, self.layout.markers, [beam], self.layout.camera,
-                          self.layout.lights)
-        text = L.emit_layout(layout, BRIDGE)
-        self.assertIn("turn: [0, 0.7, 0, 0.7]", text)
-        previous = L.parse_layout(text)
-        saved = L.layout_from_shapes(shapes_for(previous), BRIDGE, previous, camera_for(previous))
-        self.assertEqual(L.emit_layout(saved, BRIDGE), text)
-
-    def test_pieces_are_checked_like_boxes(self):
-        for change, words in (
-            (lambda shape: setattr(shape, "mirrored", True), "mirrored"),
-            (lambda shape: setattr(shape, "cuboid", False), "no longer a box"),
-            (lambda shape: setattr(shape, "surface", None), "no Lauder surface"),
-            (lambda shape: setattr(shape, "size", (0.2, 0, 6)), "flat"),
-            (lambda shape: setattr(shape, "name", shape.name + ".001"), "duplicate suffix"),
-        ):
-            with self.subTest(words=words):
-                shapes = shapes_for(self.layout)
-                change(next(shape for shape in shapes if shape.role == "piece"))
-                self.check_refused(shapes, words)
-
-    # MARK: - The game camera
-
-    def test_the_camera_is_saved_from_its_rig(self):
-        text = L.emit_layout(self.save(shapes_for(self.layout), L.CameraShape((0, -12, 8), 50)),
-                             BRIDGE)
-        self.assertIn("camera: .camera(offset: [0, 8, 12], fieldOfView: 50),", text)
-        # Without the rig, Save keeps the camera that the file has.
-        self.assertEqual(self.save(shapes_for(self.layout)).camera, self.layout.camera)
-        self.check_refused(shapes_for(self.layout), "field of view",
-                           L.CameraShape((0, -12, 8), 150))
-
-    # MARK: - The game's details
-
-    def check_parts(self, parts, expected):
-        self.assertEqual([part[0] for part in parts], [part[0] for part in expected])
-        for (_, centre, size, look), (_, want_centre, want_size, want_look) in zip(parts, expected):
-            self.assertEqual(look, want_look)
-            for got, want in zip(centre + size, want_centre + want_size):
-                self.assertAlmostEqual(got, want, places=6)
-
-    def test_vehicles_and_landmarks_get_the_games_details(self):
-        car = L.Box("car", (0, 0.75, 0), (2, 1.5, 4.6), "vehicle")
-        self.check_parts(L.details(car, "vehicle"), [
-            ("body", (0, -0.3375, 0), (2, 0.825, 4.6), "vehicle"),
-            ("cabin", (0, 0.4125, 0), (1.8, 0.675, 2.3), "glass"),
-        ])
-        truck = L.Box("truck", (0, 1.4, 0), (7, 2.8, 2.4), "vehicle")
-        self.check_parts(L.details(truck, "vehicle"), [
-            ("body", (0, 0, 0), (7, 2.8, 2.4), "vehicle"),
-            ("windows", (0, 0.7, 0), (6.3, 0.5, 2.42), "glass"),
-        ])
-        sign = L.Landmark("sign", (0, 0, 0), (1, 2, 0.5))
-        self.check_parts(L.details(sign, "landmark"), [
-            ("band", (0, -0.54, 0), (0.85, 0.3, 0.515), "paint"),
-        ])
-
-    # MARK: - Lights
-
-    def save_lights(self, lights):
-        return L.emit_layout(
-            self.save(shapes_for(self.layout), camera_for(self.layout), lights), BRIDGE)
-
-    def test_a_sun_turned_brightened_or_recoloured_in_blender_is_saved(self):
-        lights = lights_for(self.layout)
-        key = next(light for light in lights if light.name == "sun-key")
-        # Turned to shine from straight above, brighter and warmer.
-        key.direction = (0.0, 0.0, 1.0)
-        key.energy = single(6000 * L.SUN_STRENGTH_PER_LUX)
-        key.color = singles(L._linear(1, 0.8, 0.6)[:3])
-        text = self.save_lights(lights)
-        # Written at the length that the file had, 9.9 m, so that the numbers stay readable.
-        self.assertIn(
-            '"sun-key", from: [0, 9.9, 0], color: [1, 0.8, 0.6], intensity: 6000, '
-            "shadowDistance: 25),", text)
-        self.assertIn(
-            '.sun("sky-fill", from: [3, 5, -4], color: [0.67, 0.81, 0.85], intensity: 600),', text)
+    def test_a_sun_turned_brightened_or_recoloured_is_written(self):
+        lights = lights_for(SAMPLE)
+        lights[0].direction = (0, 0, 1)
+        lights[1].energy *= 2
+        lights[1].color = L._linear(0.5, 0.6, 0.7)
+        key, fill = read(lights=lights).lights
+        self.assertEqual(key.source, (0, 10, 0))
+        self.assertEqual(fill.intensity, 1200)
+        self.assertEqual(fill.color, (0.5, 0.6, 0.7))
 
     def test_shadows_follow_each_suns_shadow_setting(self):
-        lights = lights_for(self.layout)
-        for light in lights:
-            light.shadow = not light.shadow
-        saved = {light.name: light for light in self.save(
-            shapes_for(self.layout), camera_for(self.layout), lights).lights}
-        self.assertIsNone(saved["sun-key"].shadow_distance)
-        # A sun with no distance of its own gets the default.
-        self.assertEqual(saved["sky-fill"].shadow_distance, L.DEFAULT_SHADOW_DISTANCE)
+        lights = lights_for(SAMPLE)
+        lights[0].shadow, lights[0].shadow_distance = False, None
+        lights[1].shadow = True
+        key, fill = read(lights=lights).lights
+        self.assertIsNone(key.shadow_distance)
+        self.assertEqual(fill.shadow_distance, L.DEFAULT_SHADOW_DISTANCE)
 
     def test_lights_beyond_the_visual_direction_or_the_game_are_refused(self):
-        shapes, camera = shapes_for(self.layout), camera_for(self.layout)
-        both = lights_for(self.layout)
-        next(light for light in both if light.name == "sky-fill").shadow = True
-        self.check_refused(shapes, "1 light with shadows, but 2 cast them", camera, both)
-        moon = L.LightShape("moon", "SUN", (0, 0, 1), (1, 1, 1), 0.1, False)
-        self.check_refused(shapes, "at most 2 lights", camera, lights_for(self.layout) + [moon])
-        lamp = L.LightShape("lamp", "POINT", (0, 0, 1), (1, 1, 1), 100, False)
-        self.check_refused(shapes, "only sun lights", camera, lights_for(self.layout)[:1] + [lamp])
-        self.check_refused(shapes, "needs a light", camera, [])
-        dark = lights_for(self.layout)
-        dark[0].energy = 0
-        self.check_refused(shapes, "needs some intensity", camera, dark)
-        copy = lights_for(self.layout)
-        copy[1].name = "sun-key.001"
-        self.check_refused(shapes, "duplicate suffix", camera, copy)
-        # Without the Lights collection, Save keeps the lights that the file has.
-        self.assertEqual(self.save(shapes, camera).lights, self.layout.lights)
+        lights = lights_for(SAMPLE)
+        self.refused("at most 2 lights", lights=lights + [replace(lights[1], name="third")])
+        self.refused("1 light with shadows", lights=[lights[0], replace(lights[1], shadow=True)])
+        self.refused("point light", lights=[replace(lights[0], kind="POINT"), lights[1]])
+        self.refused("needs a light", lights=[])
+        self.refused("needs some intensity", lights=[replace(lights[0], energy=0), lights[1]])
 
 
-class PaletteTests(unittest.TestCase):
-    def setUp(self):
-        self.text = (ROOT / L.PALETTE_PATH).read_text()
-        self.palette = L.parse_palette(self.text)
-
-    def readings(self):
-        """What Save would read from the Lauder materials after a Load, with no edits: the same
-        finish in the material's own settings and in its viewport display."""
-        shapes = []
-        for name, finish in self.palette.items():
-            reading = (singles(L._linear(*finish.color)[:3]), single(finish.roughness),
-                       single(finish.metallic))
-            shapes.append(L.MaterialShape(name, reading, reading))
-        return shapes
-
-    def test_the_palette_reads_and_writes_back_unchanged(self):
-        self.assertEqual(L.emit_palette(self.palette), self.text)
-        layout = L.parse_layout((ROOT / BRIDGE.path).read_text())
-        used = {item.surface for item in [layout.ground] + layout.boxes + layout.pieces}
-        self.assertLessEqual(used | set(L.GAME_LOOKS), set(self.palette))
-
-    def test_materials_unchanged_in_blender_leave_the_palette_alone(self):
-        self.assertEqual(L.emit_palette(L.palette_from_shapes(self.readings(), self.palette)),
-                         self.text)
-        # A surface whose material is gone keeps its finish.
-        self.assertEqual(
-            L.emit_palette(L.palette_from_shapes(self.readings()[1:], self.palette)), self.text)
-
-    def test_a_material_changed_in_blender_is_saved(self):
-        shapes = self.readings()
-        steel = next(shape for shape in shapes if shape.name == "steel")
-        # In the material's own settings, which Material Preview shows...
-        steel.node = (singles(L._linear(0.5, 0.52, 0.55)[:3]), single(0.35), single(1.0))
-        text = L.emit_palette(L.palette_from_shapes(shapes, self.palette))
-        self.assertIn(
-            ".steel: .finish(color: [0.5, 0.52, 0.55], roughness: 0.35, metallic: 1),", text)
-        # ...or in its viewport display, which Solid shading shows.
-        shapes = self.readings()
-        river = next(shape for shape in shapes if shape.name == "river")
-        river.viewport = (singles(L._linear(0.1, 0.25, 0.3)[:3]),) + river.viewport[1:]
-        text = L.emit_palette(L.palette_from_shapes(shapes, self.palette))
-        self.assertIn(".river: .finish(color: [0.1, 0.25, 0.3], roughness: 0.8),", text)
-        others = [line for line in text.splitlines() if ".river:" not in line]
-        self.assertEqual(others, [line for line in self.text.splitlines() if ".river:" not in line])
-
-    def test_a_saved_material_change_survives_the_next_save(self):
-        shapes = self.readings()
-        steel = next(shape for shape in shapes if shape.name == "steel")
-        steel.node = steel.node[:1] + (single(0.4),) + steel.node[2:]
-        saved = L.palette_from_shapes(shapes, self.palette)
-        self.assertEqual(saved["steel"].roughness, 0.4)
-        # The viewport setting still says 0.9 until Save sets both settings to what it wrote, as
-        # Load does. Left stale, it would look like a new edit and undo the change.
-        steel.node = steel.viewport = L.finish_reading(saved["steel"])
-        self.assertEqual(L.palette_from_shapes(shapes, saved), saved)
-
-    def test_material_edits_are_found_against_the_palette_blender_last_synced(self):
-        # Steel's roughness went from 0.9 to 0.25 in the material's own setting, and an outside
-        # edit made the same change to the file. Against the outside file, the untouched viewport
-        # setting would look like the edit and win; against the palette Blender last loaded or
-        # saved, as Save Anyway uses, the material's own change is the edit.
-        shapes = self.readings()
-        steel = next(shape for shape in shapes if shape.name == "steel")
-        steel.node = steel.node[:1] + (single(0.25),) + steel.node[2:]
-        outside = L.parse_palette(self.text.replace("roughness: 0.9),", "roughness: 0.25),", 1))
-        self.assertEqual(L.palette_from_shapes(shapes, outside)["steel"].roughness, 0.9)
-        self.assertEqual(L.palette_from_shapes(shapes, self.palette)["steel"].roughness, 0.25)
-
-    def test_a_palette_the_game_cannot_use_is_refused(self):
-        for broken, words in (
-            (self.text.replace("roughness: 0.9),", "roughness: 1.5),", 1), "roughness should be"),
-            (self.text.replace("[0.56, 0.57, 0.45]", "[0.56, 0.57]"), "expected 3 numbers"),
-            (self.text.replace(".concrete: .finish(color:", ".concrete: .finish(colour:"),
-             "could not be read"),
-            (self.text.replace("    .glass:", "    // .glass:"), "needs glass"),
-            (self.text.replace("    .river:", "    .steel:"), "two finishes for steel"),
-            # An entry in another form, which the count of known entries alone would miss.
-            (self.text.replace(".glass: .finish(", ".glass: Level.Finish("), "cannot read"),
-            (self.text.replace("enum Surfaces {", "enum Surfaces {\n  static let spare = 1"),
-             "cannot read"),
-        ):
-            with self.subTest(words=words):
-                with self.assertRaises(L.LayoutError) as caught:
-                    L.parse_palette(broken)
-                self.assertIn(words, str(caught.exception))
-
-    def test_every_box_and_piece_needs_one_of_the_palettes_surfaces(self):
-        text = (ROOT / BRIDGE.path).read_text().replace("surface: .hazard", "surface: .marble", 1)
-        with self.assertRaises(L.LayoutError) as caught:
-            L.parse_layout(text, set(self.palette))
-        self.assertIn("unknown surface, marble", str(caught.exception))
-
-
-class ToolingTests(unittest.TestCase):
-    """Save's guard against overwriting other changes, the working file, the party's figures and
-    the extension's manifest."""
-
-    def setUp(self):
-        self.layout = (ROOT / BRIDGE.path).read_text()
-        self.palette = (ROOT / L.PALETTE_PATH).read_text()
-
-    def changes(self, layout=None, palette=None):
-        return L.changes_since(self.layout, self.palette, layout or self.layout,
-                               palette or self.palette)
-
-    def test_files_unchanged_since_the_last_load_or_save_let_save_go_ahead(self):
-        self.assertEqual(self.changes(), [])
-
-    def test_changes_made_since_are_named(self):
-        moved = self.layout.replace('.box("car-b4", at: [9.4, 0.75, 44]',
-                                    '.box("car-b4", at: [9.4, 0.75, 42]')
-        self.assertEqual(self.changes(moved), ["car-b4 changed"])
-        edited = moved.replace('      .marker("attacker.stand", at: [7.6, 26.6]),\n', "").replace(
-            "    pieces: [\n",
-            '    pieces: [\n      .piece("crate", at: [1, 0.5, 2], size: [1, 1, 1], surface: .hazard),\n')
-        edited = edited.replace("fieldOfView: 42)", "fieldOfView: 45)").replace(
-            "intensity: 600)", "intensity: 900)")
-        self.assertEqual(self.changes(edited), [
-            "car-b4 changed", "attacker.stand removed", "the camera changed", "sky-fill changed",
-            "crate added",
-        ])
-        recoloured = self.palette.replace("[0.42, 0.48, 0.5]", "[0.5, 0.5, 0.5]")
-        self.assertEqual(self.changes(palette=recoloured), ["the steel surface changed"])
-        self.assertEqual(self.changes(self.layout + "\n// A note.\n"),
-                         ["the layout file's comments or spacing"])
-        self.assertEqual(self.changes(self.layout.replace("lights: [", "lamps: [")),
-                         ["the layout file, in a form the script cannot read"])
-
-    def test_the_refusal_says_what_changed_and_how_to_go_on(self):
-        message = str(L.FilesChanged(["car-b4 changed", "the steel surface changed"]))
-        for words in ("car-b4 changed, the steel surface changed", "Load", "Save Anyway"):
-            self.assertIn(words, message)
-        self.assertIn("and more", str(L.FilesChanged([f"box-{n} changed" for n in range(9)])))
-
-    def test_the_working_file_lives_in_local_where_git_ignores_it(self):
-        self.assertEqual(L.working_file(Path("/repo"), BRIDGE),
-                         Path("/repo/.local/blender/brooklyn-bridge.blend"))
-        self.assertIn(".local/", (ROOT / ".gitignore").read_text().splitlines())
-
-    def test_the_script_finds_the_repository_it_was_installed_from(self):
-        self.assertEqual(Path(L._guess_repository()), ROOT)
-        self.assertTrue((ROOT / L.PLAY_SCRIPT).is_file())
-
-    def test_each_figure_stands_on_the_floor_as_the_game_draws_it(self):
-        for member, (_, width) in L.PARTY.items():
-            parts = {name: (centre, size) for name, centre, size, _ in L.figure(member)}
-            bottom = min(centre[1] - size[1] / 2 for centre, size in parts.values())
-            self.assertAlmostEqual(bottom, 0, places=6)
-            self.assertEqual(parts["body"][1][0], width)
-            # The head's top, and the front mark on the side facing Manhattan, at -z.
-            head, head_size = parts["head"]
-            self.assertAlmostEqual(head[1] + head_size[1] / 2, L.FIGURE_CENTRE + 0.73, places=6)
-            self.assertLess(parts["front"][0][2], 0)
-
-    def test_the_extension_manifest_has_what_blender_needs(self):
-        try:
-            import tomllib
-        except ImportError:
-            self.skipTest("tomllib needs Python 3.11")
-        manifest = tomllib.loads((HERE / "extensions/lauder_levels/blender_manifest.toml").read_text())
-        for key in ("schema_version", "id", "version", "name", "tagline", "maintainer", "type",
-                    "blender_version_min", "license"):
-            self.assertIn(key, manifest)
-        self.assertEqual((manifest["id"], manifest["type"]), ("lauder_levels", "add-on"))
-        self.assertLessEqual(len(manifest["tagline"]), 64)
-        self.assertNotIn(manifest["tagline"][-1], ".!?")
-        self.assertEqual(manifest["license"], ["SPDX:MIT"])
-        self.assertIn("files", manifest["permissions"])
-
-
-class SceneFileTests(unittest.TestCase):
-    """The level's scene file (ADR 0006): what it holds, and the record that shows when it no
-    longer matches the level's files."""
-
-    def setUp(self):
-        self.layout = L.parse_layout((ROOT / BRIDGE.path).read_text())
+class ExportRecordTests(unittest.TestCase):
+    """The record of what each export was made from, which ./scripts/check holds the exports to."""
 
     def scratch(self, folder):
-        """A copy of what the bridge's scene file depends on, in a scratch repository."""
+        """A copy of the bridge's level file, its exports and their record."""
         repository = Path(folder)
-        for name in (BRIDGE.path, L.PALETTE_PATH, BRIDGE.scene, L.SCENE_RECORD):
+        for name in (BRIDGE.blend, BRIDGE.layout, BRIDGE.scene, L.EXPORT_RECORD):
             (repository / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, repository / name)
         return repository
 
-    def test_the_scene_holds_what_the_game_drew_from_the_layout(self):
-        parts = {part.name: part for part in L.scene_parts(self.layout)}
-        vehicles = [box for box in self.layout.boxes if box.surface == "vehicle"]
-        others = len(self.layout.boxes) - len(vehicles)
-        self.assertEqual(len(parts), 1 + others + 2 * len(vehicles)
-                         + 2 * len(self.layout.landmarks) + len(self.layout.pieces))
-        # A vehicle is its body and windows inside its box, and the box itself only blocks.
-        self.assertNotIn("car-b4", parts)
-        box = next(box for box in vehicles if box.name == "car-b4")
-        for name in ("car-b4 body", "car-b4 cabin"):
-            part = parts[name]
-            for centre, size, middle, extent in zip(part.centre, part.size, box.position, box.size):
-                self.assertGreaterEqual(centre - size / 2, middle - extent / 2 - 1e-9)
-                self.assertLessEqual(centre + size / 2, middle + extent / 2 + 1e-9)
-        # A landmark stands on the deck, in metal, with its painted band.
-        landmark = self.layout.landmarks[0]
-        self.assertEqual(parts[landmark.name].surface, "metal")
-        self.assertAlmostEqual(parts[landmark.name].centre[1],
-                               landmark.position[1] + landmark.size[1] / 2)
-        self.assertEqual(parts[f"{landmark.name} band"].surface, "paint")
-        # A piece keeps its turn.
-        turned = next(piece for piece in self.layout.pieces if not L.is_identity(piece.rotation))
-        self.assertEqual(parts[turned.name].rotation, turned.rotation)
-        # Areas and markers stay out: the game draws its own signals and makes its own lights.
-        for name in [area.name for area in self.layout.areas] + [m.name for m in self.layout.markers]:
-            self.assertNotIn(name, parts)
+    def test_the_bridges_exports_match_its_level_file(self):
+        reason = L.stale_exports(ROOT)
+        self.assertIsNone(reason, f"{reason} Export it again with {L.EXPORT_SCRIPT}, as "
+                                  "CONTRIBUTING describes.")
 
-    def test_names_keep_only_letters_digits_and_underscores(self):
-        self.assertEqual(L.usd_name("car-a1 body"), "car_a1_body")
-        self.assertEqual(L.usd_name("spawn.miki"), "spawn_miki")
-        self.assertEqual(L.usd_name("3-way"), "_3_way")
-
-    def test_names_that_would_clash_in_the_scene_file_are_refused(self):
-        layout = copy.deepcopy(self.layout)
-        layout.pieces.append(L.Piece("railing_west", (0, 0.5, 0), (1, 1, 1), "steel"))
-        with self.assertRaises(L.LayoutError) as refusal:
-            L.scene_parts(layout)
-        self.assertIn("railing_west", str(refusal.exception))
-
-    def test_the_bridges_scene_file_matches_its_layout_file_and_the_palette(self):
-        reason = L.stale_scene(ROOT)
-        self.assertIsNone(reason, f"{reason} Export it again with blender/scripts/export-scene.py, "
-                                  "as CONTRIBUTING describes.")
-        self.assertTrue((ROOT / L.EXPORT_SCRIPT).is_file())
-
-    def test_a_scene_file_goes_stale_when_what_it_was_made_from_changes(self):
+    def test_exports_go_stale_when_the_level_file_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             repository = self.scratch(folder)
-            self.assertIsNone(L.stale_scene(repository))
-            layout = repository / BRIDGE.path
-            written = layout.read_text()
-            layout.write_text(written.replace("at: [9.4, 0.75, 44]", "at: [9.4, 0.75, 42]"))
-            self.assertEqual(L.stale_scene(repository),
-                             f"{BRIDGE.path} changed since {BRIDGE.scene} was exported.")
-            layout.write_text(written)
-            palette = repository / L.PALETTE_PATH
-            palette.write_text(palette.read_text().replace("[0.42, 0.48, 0.5]", "[0.5, 0.5, 0.5]"))
-            self.assertIn(L.PALETTE_PATH, L.stale_scene(repository))
-            shutil.copyfile(ROOT / L.PALETTE_PATH, palette)
-            (repository / BRIDGE.scene).write_bytes(b"not the exported scene")
-            self.assertEqual(L.stale_scene(repository), f"{BRIDGE.scene} changed since it was exported.")
-            (repository / L.SCENE_RECORD).unlink()
-            self.assertEqual(L.stale_scene(repository), f"{BRIDGE.scene} has not been exported.")
+            self.assertIsNone(L.stale_exports(repository))
+            with (repository / BRIDGE.blend).open("ab") as stream:
+                stream.write(b"saved again")
+            self.assertEqual(L.stale_exports(repository),
+                             f"{BRIDGE.blend} changed since {BRIDGE.title} was exported.")
+
+    def test_an_export_edited_by_hand_goes_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = self.scratch(folder)
+            layout = repository / BRIDGE.layout
+            layout.write_text(layout.read_text().replace("fieldOfView: 42", "fieldOfView: 45"))
+            reason = L.stale_exports(repository)
+            self.assertIn(BRIDGE.layout, reason)
+            self.assertIn("change the level in Blender", reason)
+
+    def test_a_missing_export_or_record_counts_as_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = self.scratch(folder)
+            (repository / BRIDGE.scene).unlink()
+            self.assertEqual(L.stale_exports(repository), f"{BRIDGE.scene} is missing.")
+            (repository / L.EXPORT_RECORD).unlink()
+            self.assertEqual(L.stale_exports(repository), f"{BRIDGE.title} has not been exported.")
+
+    def test_an_export_by_an_earlier_extension_counts_as_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = self.scratch(folder)
+            record = repository / L.EXPORT_RECORD
+            record.write_text(record.read_text().replace(
+                f'"format": {L.EXPORT_FORMAT}', f'"format": {L.EXPORT_FORMAT - 1}'))
+            self.assertIn("earlier version", L.stale_exports(repository))
 
     def test_a_git_lfs_pointer_stands_for_its_file(self):
         with tempfile.TemporaryDirectory() as folder:
-            pointer = Path(folder) / "scene.usdz"
+            pointer = Path(folder) / "level.blend"
             oid = "ab" * 32
-            pointer.write_text(f"version https://git-lfs.github.com/spec/v1\noid sha256:{oid}\nsize 9\n")
+            pointer.write_text(f"version https://git-lfs.github.com/spec/v1\noid sha256:{oid}\n"
+                               "size 9\n")
             self.assertEqual(L.file_fingerprint(pointer), oid)
+            self.assertTrue(L.is_lfs_pointer(pointer))
+            self.assertFalse(L.is_lfs_pointer(ROOT / BRIDGE.layout))
 
-    def test_save_and_play_export_the_scene_only_when_it_is_stale(self):
+
+class BackgroundTests(unittest.TestCase):
+    """The order of what saving and Play run in the background."""
+
+    def test_saving_and_play_export_only_a_stale_level(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = ExportRecordTests.scratch(None, folder)
             self.assertEqual(L.background_steps(repository, BRIDGE.key, play=False), [])
             self.assertEqual([name for name, _, _ in
                               L.background_steps(repository, BRIDGE.key, play=True)], ["play"])
-            (repository / L.SCENE_RECORD).unlink()
+            (repository / L.EXPORT_RECORD).unlink()
             steps = L.background_steps(repository, BRIDGE.key, play=True)
             self.assertEqual([(name, log) for name, _, log in steps],
                              [("export", "export.log"), ("play", "play.log")])
@@ -706,7 +308,7 @@ class SceneFileTests(unittest.TestCase):
         self.assertEqual(L.queue_steps("play", [export], [export]), [])
         self.assertEqual(L.queue_steps(None, [], [export, play]), [export, play])
 
-    def test_a_scene_left_stale_by_a_later_save_is_exported_again(self):
+    def test_a_level_saved_again_meanwhile_is_exported_again(self):
         export = ("export", ["blender"], "export.log")
         play = ("play", ["python"], "play.log")
         self.assertTrue(L.refresh_needed([], stale=True, refreshes=0))
@@ -714,6 +316,35 @@ class SceneFileTests(unittest.TestCase):
         self.assertFalse(L.refresh_needed([export], stale=True, refreshes=0))
         self.assertFalse(L.refresh_needed([], stale=False, refreshes=0))
         self.assertFalse(L.refresh_needed([], stale=True, refreshes=L.MOST_REFRESHES))
+
+
+class ToolingTests(unittest.TestCase):
+    """Finding the repository and the level, and the extension's manifest."""
+
+    def test_the_extension_finds_the_repository_it_was_installed_from(self):
+        self.assertEqual(Path(L._guess_repository()), ROOT)
+        for script in (L.PLAY_SCRIPT, L.EXPORT_SCRIPT):
+            self.assertTrue((ROOT / script).is_file(), script)
+
+    def test_a_level_file_is_known_by_its_place_in_the_repository(self):
+        self.assertEqual(L.level_of_file(str(ROOT / BRIDGE.blend)), (str(ROOT), BRIDGE))
+        self.assertIsNone(L.level_of_file(str(ROOT / ".local/blender/brooklyn-bridge.blend")))
+        self.assertIsNone(L.level_of_file(""))
+
+    def test_the_extension_manifest_has_what_blender_needs(self):
+        try:
+            import tomllib
+        except ImportError:
+            self.skipTest("tomllib needs Python 3.11")
+        manifest = tomllib.loads((HERE / "extensions/lauder_levels/blender_manifest.toml").read_text())
+        for key in ("schema_version", "id", "version", "name", "tagline", "maintainer", "type",
+                    "blender_version_min", "license"):
+            self.assertIn(key, manifest)
+        self.assertEqual((manifest["id"], manifest["type"]), ("lauder_levels", "add-on"))
+        self.assertLessEqual(len(manifest["tagline"]), 64)
+        self.assertNotIn(manifest["tagline"][-1], ".!?")
+        self.assertEqual(manifest["license"], ["SPDX:MIT"])
+        self.assertIn("files", manifest["permissions"])
 
 
 if __name__ == "__main__":

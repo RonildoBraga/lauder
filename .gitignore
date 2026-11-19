@@ -9,6 +9,9 @@ xcuserdata/
 # Python bytecode from the scripts' tests
 __pycache__/
 
+# Blender's automatic backups of a saved file
+*.blend[0-9]*
+
 # Local authoring experiments; runtime assets and editable sources live in apple/sources/content.
 .local/
 
