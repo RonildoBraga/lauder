@@ -98,7 +98,7 @@ Never edit those two by hand; change the level in Blender instead.
 
    A **Lauder** tab appears in the 3D Viewport's sidebar (press N). The extension runs from the repository, so after a pull or a branch switch it is up to date once Blender restarts.
 2. Check the **Repository** folder, which defaults to the repository the extension came from, and press **Open Level**. The level file's collections decide where each object goes:
-   - **Visual**: everything the player sees, exported to the scene file. Each box's look is a block parented to its gameplay box, each vehicle's is a [model](#models) parented to its box, and the decoration, such as the walkway and the cables, stands on its own. Reshape or replace any of it.
+   - **Visual**: everything the player sees, exported to the scene file. Each box's look is a block parented to its gameplay box, each vehicle's is a [model](#models) parented to its box, and the decoration, such as the lane lines and the towers' tops, stands on its own. Reshape or replace any of it.
    - **Gameplay**: the ground, the boxes that block movement and sight, the landmarks, the trigger and fight areas, and the named markers, drawn as outlines. Each has a role, which the Lauder tab shows for the selected object; a new mesh counts as a box and a new empty as a marker.
    - **Lights**: the suns. **Camera**: the game camera and its target.
    - **Preview**: the party's stand-ins at their start markers, which the game draws itself. It is never exported.

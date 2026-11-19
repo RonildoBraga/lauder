@@ -62,16 +62,16 @@ struct LevelTests {
     let level = BrooklynBridge.level
     let grid = NavigationGrid(level: level)
     let start = level.spawn(.miki)
-    let end: SIMD2<Float> = [-7, -108]
+    let end: SIMD2<Float> = [-7, -502.3]
     #expect(grid.region(at: start) != nil)
     #expect(grid.region(at: start) == grid.region(at: end))
     #expect(grid.route(from: start, to: end) != nil)
     // The bus closes the east roadway, so the east lanes beyond it are reached only round the
     // far end, and the gap in the divider is open.
-    let gap: SIMD2<Float> = [0, -30]
+    let gap: SIMD2<Float> = [0, -227.15]
     #expect(grid.isWalkable(gap))
     let motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
-    #expect(!motion.canTraverse(from: [7, -38], to: [7, -46]))
+    #expect(!motion.canTraverse(from: [7, -235.15], to: [7, -243.15]))
     // The arches are open on both roadways at both towers.
     for z in [BrooklynBridge.brooklynTower, BrooklynBridge.manhattanTower] {
       #expect(motion.canTraverse(from: [7, z + 7], to: [7, z - 7]))

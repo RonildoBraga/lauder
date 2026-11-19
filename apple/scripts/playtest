@@ -207,7 +207,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scenarios", nargs="*", default=SCENARIOS, help="scenario names")
     parser.add_argument("--output", type=Path, help="results folder (default .local/playtest/<time>)")
-    parser.add_argument("--timeout", type=int, default=300, help="seconds allowed per scenario")
+    parser.add_argument("--timeout", type=int, default=600, help="seconds allowed per scenario")
     parser.add_argument("--list", action="store_true", help="list scenarios and exit")
     options = parser.parse_args()
     if options.list:

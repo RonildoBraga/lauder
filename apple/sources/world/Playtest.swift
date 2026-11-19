@@ -9,8 +9,9 @@
   /// simulated frame and writes a trace and a summary into the app's Documents/playtest folder.
   struct PlaytestRunner {
     enum Step {
-      /// Steer the leader to a point; fails after 30 s. A conversation that starts on the way,
-      /// as at the end of the opening, ends the walk.
+      /// Steer the leader to a point; fails after two minutes, long enough to walk between the
+      /// bridge's towers. A conversation that starts on the way, as at the end of the opening,
+      /// ends the walk.
       case walk(SIMD2<Float>)
       case wait(seconds: Float)
       /// A named moment, for stills cut from the screen recording.
@@ -93,7 +94,7 @@
     static let scenarioNames = [
       "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening",
     ]
-    static let walkTimeout: Float = 30
+    static let walkTimeout: Float = 120
     /// How long each conversation line stays on screen before the next press.
     static let lineSeconds: Float = 0.6
 
@@ -159,7 +160,8 @@
             continue
           }
           if stepTime > Self.walkTimeout {
-            failures.append("did not reach \(Self.describe(target)) within 30 s")
+            failures.append(
+              "did not reach \(Self.describe(target)) within \(Int(Self.walkTimeout)) s")
             advance()
             continue
           }
@@ -415,10 +417,10 @@
         .mark("start"), .walk([6.5, 66]), .mark("cars ahead"), .walk([6.5, 51]),
         .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1),
         .mark("stranger down"), .walk([6.5, 20]),
-        .mark("first tower"), .walk([6.5, -9]), .mark("mid-span"), .walk([6.5, -28]),
-        .mark("blocked lanes"), .walk([-7, -31]), .mark("across the divider"),
-        .walk([-7, -70]), .mark("second tower"), .walk([-7, -108]), .mark("Manhattan end"),
-        .expectTriggers(6), .walk([-7, -100]), .walk([-7, -108]), .expectTriggers(6),
+        .mark("first tower"), .walk([6.5, -206.15]), .mark("mid-span"), .walk([6.5, -225.15]),
+        .mark("blocked lanes"), .walk([-7, -228.15]), .mark("across the divider"),
+        .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .mark("Manhattan end"),
+        .expectTriggers(6), .walk([-7, -494.3]), .walk([-7, -502.3]), .expectTriggers(6),
         .wait(seconds: 0.5),
       ] + restartRun + [.expectTriggers(0)]
 
@@ -461,7 +463,7 @@
     /// the first tower to mid-span, and a Restart leaves Miki alone again.
     private static let ambush: [Step] =
       toTom + [
-        .walk([6.5, 20]), .mark("through the tower"), .walk([6.5, -9]),
+        .walk([6.5, 20]), .mark("through the tower"), .walk([6.5, -206.15]),
         .mark("mid-span with Tom"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
@@ -470,9 +472,9 @@
     /// joining.
     private static let toLaura: [Step] =
       toTom + [
-        .walk([6.5, 20]), .walk([6.5, -9]), .walk([6.5, -28]), .walk([-6, -31]),
-        .walk([-6.5, -33]), .wait(seconds: 0.6), .expectBeat(.lauraFound), .mark("Laura found"),
-        .wait(seconds: 2), .walk([-7, -37]),
+        .walk([6.5, 20]), .walk([6.5, -206.15]), .walk([6.5, -225.15]), .walk([-6, -228.15]),
+        .walk([-6.5, -230.15]), .wait(seconds: 0.6), .expectBeat(.lauraFound), .mark("Laura found"),
+        .wait(seconds: 2), .walk([-7, -234.15]),
         .mark("at Laura"), .act, .wait(seconds: 1.8), .mark("on her feet"), .wait(seconds: 0.8),
         .talk, .expectBeat(.withLaura), .expectParty([.miki, .tom, .laura]),
         .mark("Laura joins"),
@@ -481,14 +483,14 @@
     /// Laura (M4): she joins, then both companions follow Miki up the west roadway, and a
     /// Restart leaves Miki alone again.
     private static let laura: [Step] =
-      toLaura + [.walk([-7, -60]), .mark("three together"), .wait(seconds: 0.5)] + restartRun
+      toLaura + [.walk([-7, -257.15]), .mark("three together"), .wait(seconds: 0.5)] + restartRun
       + [.expectParty([.miki])]
 
     /// The whole opening (M4): from the Brooklyn end to the Manhattan end, through the fight, the
     /// ambush and Laura, then the closing exchange with all three, then a Restart.
     private static let opening: [Step] =
       toLaura + [
-        .walk([-7, -70]), .mark("second tower"), .walk([-7, -108]), .talk,
+        .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .talk,
         .expectBeat(.arrived), .mark("Manhattan, together"), .expectTriggers(6),
         .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki]), .expectTriggers(0)]

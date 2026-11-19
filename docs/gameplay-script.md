@@ -19,7 +19,7 @@ The game begins with Miki alone on the Brooklyn Bridge, heading from Brooklyn to
 
 ### 1. Alone on the bridge (M1, built)
 
-Miki starts at the Brooklyn end. The deck is a flat, compressed greybox about 250 m long. Two roadways run either side of the raised walkway's base, and two granite towers stand over them, with tall arches the roadway passes through. Cables descend to the railings, and the river lies far below. Abandoned cars, a van, a truck and debris stand in the lanes. A bus jammed across the east roadway at mid-span sends her through a gap where the walkway's base has collapsed, onto the west roadway and on to a barricade at the Manhattan end.
+Miki starts at the Brooklyn end. The deck is a flat greybox 644 m long, with the two granite towers at their real spacing, 486 m apart, and at their real size, with tall arches the roadways pass through. Two roadways run either side of the walkway's base, and the river lies far below. Abandoned cars, a van, a truck and debris stand in the lanes. A bus jammed across the east roadway at mid-span sends her through a gap where the walkway's base has collapsed, onto the west roadway and on to a barricade at the Manhattan end.
 
 She is alone, so the player learns to move and look. **Next** does not appear until someone joins. A few places show a short line the first time she reaches them, such as "Cars stand where they stopped, doors still open." and "The first tower. Its arches still stand." The camera keeps its usual height and distance but looks straight along the deck, so pushing up walks towards Manhattan.
 

@@ -1,6 +1,6 @@
 # The Brooklyn Bridge opening — milestone record
 
-**Updated:** 18 November 2026
+**Updated:** 19 November 2026
 
 [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) builds the opening in five milestones, each assigned separately. This record keeps what each one built, how it was checked and what it leaves open; each new milestone adds a section. The [README](../README.md) and the [prototype plan](prototype-plan.md#opening--the-brooklyn-bridge) own stage and review status.
 
@@ -85,6 +85,14 @@ The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 st
 
 **Merge.** Before the merge, `main` was merged into M4 twice: for the folder layout (#48), and for the lights and surface materials in Blender (#49). `./scripts/check` passed on the result at `f4540df`. The maintainer then [authorised the merge](https://github.com/RonildoBraga/lauder/pull/47#issuecomment-6996988166): **“merge #47”**. No independent review was requested.
 
+## The bridge at its real tower spacing
+
+On 19 November 2026 the maintainer asked to simplify the bridge to the road and the towers at correct dimensions, and chose the real tower spacing, as [ADR 0004's amendment](decisions/0004-brooklyn-bridge-opening.md#amendment--the-bridge-at-its-real-tower-spacing) records.
+
+- **The bridge.** A flat deck 644 m long and 25.9 m wide: two roadways of 10.3 m, each with three lanes, either side of a 5.3 m median, the walkway's base, with its 12 m gap at mid-span. The two granite towers stand 486.3 m apart, 100 m and about 590 m from the start. Each is 43 m wide, 18 m deep and 47 m above the road, with arches 10.3 m wide and 35.7 m tall. The river lies 38.7 m below.
+- **What moved.** Each scene kept its place beside the nearest tower. The Brooklyn end, the stranger, the knife attack and Tom are unchanged; Laura, the bus and the gap moved to the new mid-span, and the Manhattan end moved with the second tower. The cables, suspenders, stays and raised walkway are gone.
+- **Walking.** The walks from the first tower to Laura and from Laura to the second tower each take about 90 s, and the navigation grid has about 420,000 cells.
+
 ## Open across the opening
 
 - **On the phone,** the maintainer's report does not say which inputs were used, so a new player's first unaided try with touch and with a controller is still worth confirming. The full run's four long frames are unexplained, and sustained play over 15 to 20 minutes, with thermals, is unmeasured.
@@ -92,4 +100,4 @@ The final rendered Simulator runs, in a Debug build, passed: `laura` 52 of 52 st
 - **The stranger stands still** once he has stepped out, and bodies do not block movement. Nothing holsters the carbine after a fight. If Miki walks on without fighting, the stranger's fight stays open, and the story cannot move on without it.
 - **The attacker's strike is not built:** Tom always drops him first. Tom appears in place rather than stepping into view, and nobody walks during the scenes. Laura lies still rather than crawling, and stands up in place. Companions do not fight on their own; Tom's shot is scripted.
 - There is no sound, muzzle flash, hit reaction or animation.
-- The towers' upper parts and the cables' high sections are above the camera, so the bridge reads mostly at deck level.
+- The towers' upper parts are above the camera, so the bridge reads mostly at deck level.

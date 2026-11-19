@@ -78,10 +78,10 @@ struct LauraTests {
     let visual = try #require(laura.children.first)
     joinTom(world)
     // Across the gap in the divider, a woman calls out. Until she joins, only Tom follows.
-    walk(world, to: [6.5, -28])
+    walk(world, to: [6.5, -225.15])
     #expect(Set(world.companionTargets.keys) == [.tom])
-    walk(world, to: [-6, -31])
-    walk(world, to: [-6.5, -33])
+    walk(world, to: [-6, -228.15])
+    walk(world, to: [-6.5, -230.15])
     #expect(world.session.beat == .lauraFound)
     #expect(world.objective == "Help the woman between the cars.")
     #expect(run(world, upTo: 1) { world.observation == "A woman: “Please. Over here.”" })
@@ -92,7 +92,7 @@ struct LauraTests {
     #expect(run(world, upTo: 2) { !world.session.inEncounter })
     #expect(world.observation == "Miki: “Hold on. We're coming.”")
     #expect(run(world, upTo: 3) { abs(lean()) < 0.05 })
-    walk(world, to: [-7, -37])
+    walk(world, to: [-7, -234.15])
     #expect(world.actionName == "Help")
     world.performAction()
     #expect(world.observation == BrooklynBridge.helpLaura.result)
@@ -110,14 +110,14 @@ struct LauraTests {
     #expect(world.session.party == [.miki, .tom, .laura] && world.session.beat == .withLaura)
     #expect(world.objective == "Cross to Manhattan together.")
     // Both companions follow up the west roadway.
-    walk(world, to: [-7, -60])
+    walk(world, to: [-7, -257.15])
     run(world, upTo: 3)
     for member in [PartyMember.tom, .laura] {
       #expect(simd_distance(position(world, member), position(world, .miki)) < 3, "\(member)")
     }
     #expect(world.diagnostic == nil)
     // At the Manhattan end the party stops for the closing exchange.
-    walk(world, to: [-7, -108])
+    walk(world, to: [-7, -502.3])
     #expect(world.session.mode == .dialogue)
     finishConversation(world)
     #expect(world.session.beat == .arrived && world.objective == "Manhattan, together.")
@@ -138,7 +138,7 @@ struct LauraTests {
     // Tom leads to her and helps; Miki follows as a companion.
     switchLeader(world)
     #expect(world.session.leader == .tom)
-    walk(world, to: [-7, -37])
+    walk(world, to: [-7, -234.15])
     #expect(world.actionName == "Help")
     world.performAction()
     #expect(world.session.beat == .helpingLaura)
@@ -159,7 +159,7 @@ struct LauraTests {
     let world = GameWorld(level: BrooklynBridge.level)
     joinTom(world)
     findLaura(world)
-    walk(world, to: [-7, -37])
+    walk(world, to: [-7, -234.15])
     world.performAction()
     #expect(world.session.beat == .helpingLaura)
     // Once the two have turned to each other, the lead passes to Tom before the exchange.
@@ -208,9 +208,9 @@ struct LauraTests {
 
   /// From Tom joining, across the gap in the divider until Laura has called out.
   private func findLaura(_ world: GameWorld) {
-    walk(world, to: [6.5, -28])
-    walk(world, to: [-6, -31])
-    walk(world, to: [-6.5, -33])
+    walk(world, to: [6.5, -225.15])
+    walk(world, to: [-6, -228.15])
+    walk(world, to: [-6.5, -230.15])
     #expect(world.session.beat == .lauraFound)
     #expect(run(world, upTo: 3) { !world.session.inEncounter })
   }
@@ -272,7 +272,7 @@ struct LauraTests {
     let offset = BrooklynBridge.cameraOffset
     let forward = -simd_normalize(SIMD2(offset.x, offset.z))
     let right = SIMD2(-forward.y, forward.x)
-    for _ in 0..<(60 * 40) where world.session.mode == .exploring {
+    for _ in 0..<(60 * 120) where world.session.mode == .exploring {
       let towards = point - position(world, world.session.leader)
       if simd_length(towards) < 0.15 { return }
       let unit = simd_normalize(towards)

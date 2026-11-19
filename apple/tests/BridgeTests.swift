@@ -37,7 +37,8 @@ struct BridgeTests {
     let world = GameWorld(level: level)
     var seen: [String] = []
     let route: [SIMD2<Float>] = [
-      [6.5, 66], [6.5, 20], [6.5, -9], [6.5, -28], [-7, -31], [-7, -70], [-7, -108],
+      [6.5, 66], [6.5, 20], [6.5, -206.15], [6.5, -225.15], [-7, -228.15], [-7, -456.3],
+      [-7, -502.3],
     ]
     for point in route {
       walk(world, to: point) { line in
@@ -49,9 +50,9 @@ struct BridgeTests {
     #expect(seen.filter(lines.contains) == lines)
     #expect(world.session.firedTriggers.count == BrooklynBridge.triggers.count)
     // Walking back out of the last area and in again shows nothing new.
-    walk(world, to: [-7, -100])
+    walk(world, to: [-7, -494.3])
     world.performAction()
-    walk(world, to: [-7, -108])
+    walk(world, to: [-7, -502.3])
     #expect(world.observation != BrooklynBridge.triggers.last?.line)
     #expect(world.session.firedTriggers.count == BrooklynBridge.triggers.count)
   }
@@ -201,14 +202,15 @@ struct BridgeTests {
       let centre = landmark.position + [0, landmark.size.y / 2, 0]
       #expect(simd_distance(bounds.center, centre) < 0.001, "\(landmark.name) stands on the deck")
     }
-    // The decoration, such as the cables and the walkway, is in the scene file alone.
-    var shown = 0
-    var parts = [scene]
-    while let next = parts.popLast() {
-      if next.components.has(ModelComponent.self) { shown += 1 }
-      parts.append(contentsOf: next.children)
+    // The decoration, the lane lines, the towers' tops over the arches and the river, is in the
+    // scene file alone.
+    let decoration = [
+      "lane-line-west-1", "lane-line-west-2", "lane-line-east-1", "lane-line-east-2",
+      "tower-top-brooklyn", "tower-top-manhattan", "river",
+    ]
+    for name in decoration {
+      #expect(part(name)?.components.has(ModelComponent.self) == true, "\(name) is shown")
     }
-    #expect(shown > layout.boxes.count + layout.landmarks.count + 100)
     let camera = try #require(world.root.findEntity(named: "camera") as? PerspectiveCamera)
     #expect(camera.camera.fieldOfViewInDegrees == layout.camera.fieldOfView)
   }
@@ -226,7 +228,7 @@ struct BridgeTests {
     _ world: GameWorld, to point: SIMD2<Float>, onLine: (String) -> Void = { _ in }
   ) {
     var line = world.observation
-    for _ in 0..<(60 * 40) {
+    for _ in 0..<(60 * 120) {
       let offset = point - position(world, world.session.leader)
       if simd_length(offset) < 0.15 { return }
       world.advanceParty(movement: stick(towards: offset), deltaTime: 1 / 60)
