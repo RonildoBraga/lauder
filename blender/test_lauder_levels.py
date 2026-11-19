@@ -477,6 +477,18 @@ class PaletteTests(unittest.TestCase):
         steel.node = steel.viewport = L.finish_reading(saved["steel"])
         self.assertEqual(L.palette_from_shapes(shapes, saved), saved)
 
+    def test_material_edits_are_found_against_the_palette_blender_last_synced(self):
+        # Steel's roughness went from 0.9 to 0.25 in the material's own setting, and an outside
+        # edit made the same change to the file. Against the outside file, the untouched viewport
+        # setting would look like the edit and win; against the palette Blender last loaded or
+        # saved, as Save Anyway uses, the material's own change is the edit.
+        shapes = self.readings()
+        steel = next(shape for shape in shapes if shape.name == "steel")
+        steel.node = steel.node[:1] + (single(0.25),) + steel.node[2:]
+        outside = L.parse_palette(self.text.replace("roughness: 0.9),", "roughness: 0.25),", 1))
+        self.assertEqual(L.palette_from_shapes(shapes, outside)["steel"].roughness, 0.9)
+        self.assertEqual(L.palette_from_shapes(shapes, self.palette)["steel"].roughness, 0.25)
+
     def test_a_palette_the_game_cannot_use_is_refused(self):
         for broken, words in (
             (self.text.replace("roughness: 0.9),", "roughness: 1.5),", 1), "roughness should be"),

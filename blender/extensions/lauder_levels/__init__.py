@@ -1517,16 +1517,21 @@ def is_working_file(scene):
 
 
 def _holds_unsaved_edits(level, synced):
-    """Whether Blender holds level edits that were never written to the files it last synced."""
+    """Whether Blender holds level edits that were never written to the files it last synced.
+    Both sides are compared as Save writes them, so the synced files' own comments and spacing
+    do not count as edits."""
     try:
-        palette = palette_from_blender(parse_palette(synced[1]))
+        synced_palette = parse_palette(synced[1])
+        synced_layout = parse_layout(synced[0])
+        palette = palette_from_blender(synced_palette)
         surfaces = set(palette)
         layout = layout_from_shapes(
-            shapes_from_blender(level), level, parse_layout(synced[0], surfaces),
-            camera_from_blender(level), lights_from_blender(level), surfaces)
+            shapes_from_blender(level), level, synced_layout, camera_from_blender(level),
+            lights_from_blender(level), surfaces)
+        unsaved = emit_layout(layout, level, surfaces) != emit_layout(synced_layout, level)
     except LayoutError:
         return True
-    return emit_layout(layout, level, surfaces) != synced[0] or emit_palette(palette) != synced[1]
+    return unsaved or emit_palette(palette) != emit_palette(synced_palette)
 
 
 def refresh(scene):
@@ -1647,9 +1652,12 @@ def save_level(repository, key="brooklyn-bridge", force=False):
         changes = changes_since(*synced, before[level.path], before[PALETTE_PATH])
         if changes:
             raise FilesChanged(changes)
-    palette = palette_from_blender(parse_palette(before[PALETTE_PATH]))
+    # Blender's material edits are what changed since its last Load or Save, so they are found
+    # against the palette as it was then, even when Save Anyway replaces a newer palette.
+    palette = palette_from_blender(
+        parse_palette(synced[1] if synced is not None else before[PALETTE_PATH]))
     surfaces = set(palette)
-    previous = parse_layout(before[level.path], surfaces)
+    previous = parse_layout(before[level.path])
     layout = layout_from_shapes(
         shapes_from_blender(level), level, previous, camera_from_blender(level),
         lights_from_blender(level), surfaces)
