@@ -112,6 +112,21 @@ enum BrooklynBridge {
     beat: .arrived, start: .area(layout.area(named: "manhattan-end")), retryAt: nil,
     hostiles: [], cues: [(0.5, .talk(.arrival))], holdsParty: true, gathersParty: true)
 
+  /// What the compass points to: the Manhattan end while crossing, the woman while she waits
+  /// for help, the Manhattan end again for the three, and nothing once they are there.
+  static let goals: [(beat: GameSession.Beat, goal: Level.Goal?)] = [
+    (.alone, manhattan),
+    (.lauraFound, Level.Goal(name: "The woman", point: layout.marker(named: "spawn.laura"))),
+    (.withLaura, manhattan),
+    (.arrived, nil),
+  ]
+
+  /// The Manhattan end's area, where the opening ends.
+  private static var manhattan: Level.Goal {
+    let end = layout.area(named: "manhattan-end")
+    return Level.Goal(name: "Manhattan", point: (end.minimum + end.maximum) / 2)
+  }
+
   static let level = Level(
     id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes,
     // What the player sees, exported by Blender with the layout file from the level's own file.
@@ -136,6 +151,7 @@ enum BrooklynBridge {
       (.withLaura, "Cross to Manhattan together."),
       (.arrived, "Manhattan, together."),
     ],
+    goals: goals,
     lookAround: "Manhattan is ahead, across the bridge.",
     restartNote: "Restart begins a new run at the Brooklyn end.")
 

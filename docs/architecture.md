@@ -79,7 +79,7 @@ Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and 
 
 GameControls samples hardware and TouchInput state; InputRules resolves all sources with the same mode, priority and fresh-edge history. Touch controls do not call GameSession or world actions directly. Independent zones support a stick finger alongside button fingers, and a finger on the ground for the order menu alongside both. As the menu opens, its point reaches InputRules as a share of the screen, and the world fixes what the camera's ray through it meets first, a block or the ground; the menu's choice follows once, when its finger lifts. A finger on the ground holds the release gate like any other. Source changes and inactivity cancel captures through a generation token so stale callbacks cannot affect the new source. Pause leaves capture mounted and preserves held contacts: all fingers must lift, including a centred-stick finger, before the neutral gate clears.
 
-Keep explicit previous-button/edge state in InputRules instead of adding another edge detector in GameWorld. Tests cover:
+The panel button, Circle / B or H, is one more fresh-press intent: it hides or shows the status panel while exploring or in a conversation, and the pause menu consumes it. Keep explicit previous-button/edge state in InputRules instead of adding another edge detector in GameWorld. Tests cover:
 
 1. Pause takes priority over other commands in the same sample. The session stores the resume mode and routes subsequent inputs accordingly.
 2. While exploring, a fresh switch edge cycles leadership and suppresses the same-sample action. Record that action's held state even when suppressed: it requires release and a fresh press before use.
@@ -116,6 +116,8 @@ The camera keeps the level's elevated offset and field of view and follows the s
 From the bridge's height, looking 50° down, a tower hides the party for some 40 m beyond it. Any part of the level's look rising above 6 m belongs to a tall landmark, with the tall parts it touches, so a tower's legs, pier and top are one landmark. A landmark fades to a fifth over 0.3 seconds while it stands between the camera and the leader, a companion or the camera's target, and shows again once it does not. Restart and a fight's retry settle it at once. The first see-through frame of a material is slow to prepare, so for the first half second of play a speck too small and faint to notice shows each landmark's material see-through just before the camera; the first fade then does not stall.
 
 World markers keep their size on screen. The leader's disc, the order rings, the refusal cross, the aim marker and the aim and shot lines were made for the bridge's earlier camera, 14 m from its target with a 42° lens. A level's camera that shows more of the ground across the screen draws them larger by the same ratio, about 2.1 times on the bridge, and never smaller than made.
+
+The HUD's compass points to the level's goal for the story's beat: each goal is a name and a point, from the layout file's markers and areas, and takes over from its beat on. GameWorld turns the direction from the leader into an angle on screen, clockwise from up the camera's ground direction, to the nearest degree, and the distance into whole metres, and updates them only when they change. A new line or objective stays in the status panel for 6 seconds of play, which Pause and conversations hold; Restart shows them afresh.
 
 ## The opening
 

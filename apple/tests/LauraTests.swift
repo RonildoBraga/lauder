@@ -176,7 +176,48 @@ struct LauraTests {
     #expect(faces(world, .miki, .laura))
   }
 
+  /// The compass shows the way on the white plain: to the Manhattan end while crossing, to the
+  /// woman while she waits for help, to the Manhattan end again for the three, and nowhere once
+  /// they are there.
+  @Test
+  func theCompassPointsToEachGoalInTurn() throws {
+    let world = GameWorld(level: BrooklynBridge.level)
+    let manhattan = try #require(BrooklynBridge.goals.first?.goal)
+    var compass = try #require(world.compass)
+    // Miki starts east of the road's centre line, so the Manhattan end lies nearly straight up
+    // the screen, a degree to the left.
+    #expect(compass.name == "Manhattan" && compass.angle < 0 && compass.angle > -0.04)
+    let start = BrooklynBridge.level.spawn(.miki)
+    #expect(compass.metres == Int(simd_distance(start, manhattan.point).rounded()))
+    // From the road's west edge it lies a little to the right.
+    walk(world, to: [-12, 100])
+    compass = try #require(world.compass)
+    #expect(compass.angle > 0 && compass.angle < 0.1)
+    joinTom(world.session)
+    #expect(world.session.beginEncounter(.lauraFound))
+    step(world)
+    compass = try #require(world.compass)
+    #expect(compass.name == "The woman")
+    let laura = BrooklynBridge.level.spawn(.laura)
+    #expect(compass.metres == Int(simd_distance(position(world, .miki), laura).rounded()))
+    world.session.endEncounter()
+    #expect(world.session.perform(.helpLaura) == .done)
+    world.session.endEncounter()
+    #expect(world.session.converse(.metLaura))
+    for _ in MissionScript.lines(.metLaura) { world.session.advanceDialogue() }
+    step(world)
+    #expect(world.compass?.name == "Manhattan")
+    #expect(world.session.beginEncounter(.arrived))
+    step(world)
+    #expect(world.compass == nil)
+  }
+
   // MARK: - Helpers
+
+  /// One frame of play, standing still.
+  private func step(_ world: GameWorld) {
+    world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+  }
 
   /// The session's way to Tom joining: the fight, the search and its loot, and the exchange.
   private func joinTom(_ session: GameSession) {

@@ -212,7 +212,9 @@ struct BridgeTests {
     }
     // The decoration, the towers' tops over the arches and the snow plain, is in the scene file
     // alone, and nothing else shows.
-    let decoration = ["tower-top-brooklyn", "tower-top-manhattan", "snow plain"]
+    let decoration = [
+      "tower-top-brooklyn", "tower-top-manhattan", "snow plain", "route poles", "route flags",
+    ]
     for name in decoration {
       #expect(part(name)?.components.has(ModelComponent.self) == true, "\(name) is shown")
     }
@@ -277,6 +279,78 @@ struct BridgeTests {
     // Restart returns Miki to the Brooklyn end, and the tower shows again at once.
     world.restart()
     #expect(opacity(manhattan) == [1])
+  }
+
+  /// Thin poles with small flags mark the buried road's edges along its whole length, just
+  /// outside the invisible edge, so the way and the party's movement read on the white. They
+  /// stand on the snow, and are decoration: nothing in the layout blocks there for them.
+  @Test
+  func routePolesMarkTheBuriedRoadsEdges() throws {
+    let world = GameWorld(level: BrooklynBridge.level)
+    let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
+    let poles = try #require(scene.findEntity(named: Self.sceneName("route poles")))
+      .visualBounds(relativeTo: nil)
+    let road = BrooklynBridge.level.bounds
+    #expect(poles.min.x < road.minimum.x && poles.max.x > road.maximum.x, "on both sides")
+    #expect(poles.max.x - road.maximum.x < 1.5, "close beside the road")
+    #expect(abs(poles.min.y) < 0.001 && abs(poles.max.y - 2) < 0.001, "2 m tall, on the snow")
+    #expect(poles.min.z < road.minimum.y + 25 && poles.max.z > road.maximum.y - 25)
+    #expect(scene.findEntity(named: Self.sceneName("route flags")) != nil)
+    #expect(!BrooklynBridge.layout.boxes.contains { $0.name.contains("pole") })
+  }
+
+  /// The panel button, Circle, B or H, hides the status panel and shows it again, while
+  /// exploring or talking; it stays as it was across Restart.
+  @Test
+  func thePanelButtonHidesAndShowsTheStatusPanel() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    var press = InputRules.Input.neutral
+    press.panelPressed = true
+    #expect(!world.panelHidden)
+    world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
+    #expect(world.panelHidden)
+    // Touch has no button to show it again, so with touch controls it shows anyway, and a
+    // controller brings back the player's choice.
+    #expect(world.controls.touchControlsEnabled && world.showsPanel)
+    world.restart()
+    #expect(world.panelHidden)
+    world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
+    #expect(!world.panelHidden)
+  }
+
+  /// The status panel keeps to the essentials: a new line or objective shows for a few seconds
+  /// of play, then leaves it; Restart shows the opening and the objective afresh.
+  @Test
+  func newLinesAndObjectivesShowForAFewSecondsThenGo() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    #expect(world.lineIsFresh && world.objectiveIsFresh)
+    for _ in 0..<(Int(GameWorld.lineTime * 60) + 5) {
+      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    }
+    #expect(!world.lineIsFresh && !world.objectiveIsFresh)
+    // The buried road's line, at its trigger area, shows afresh; the objective has not changed.
+    walk(world, to: [6.5, 66])
+    #expect(world.observation == BrooklynBridge.triggers[0].line)
+    #expect(world.lineIsFresh && !world.objectiveIsFresh)
+    world.restart()
+    #expect(world.lineIsFresh && world.objectiveIsFresh)
+  }
+
+  /// A response that repeats the last line, such as a second look in the same place, shows
+  /// again once the first has gone.
+  @Test
+  func aRepeatedResponseShowsAgain() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    walk(world, to: [6.5, 104])
+    world.performAction()
+    #expect(world.observation == BrooklynBridge.level.lookAround && world.lineIsFresh)
+    for _ in 0..<(Int(GameWorld.lineTime * 60) + 5) {
+      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    }
+    #expect(!world.lineIsFresh)
+    world.performAction()
+    world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    #expect(world.observation == BrooklynBridge.level.lookAround && world.lineIsFresh)
   }
 
   // MARK: - Helpers
