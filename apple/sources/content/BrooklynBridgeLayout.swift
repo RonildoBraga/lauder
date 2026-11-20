@@ -70,11 +70,11 @@ extension BrooklynBridge {
       .marker("attacker.hidden", at: [10, 26]),
       .marker("attacker.stand", at: [7.6, 26.6]),
     ],
-    camera: .camera(offset: [0, 10, 9.9], fieldOfView: 42),
+    camera: .camera(offset: [0, 50, 42], fieldOfView: 28),
     lights: [
       .sun(
-        "sun-key", from: [-3.03, 8.08, 5.05], color: [1, 0.91, 0.74], intensity: 4500,
-        shadowDistance: 25),
-      .sun("sky-fill", from: [4.24, 7.07, -5.66], color: [0.67, 0.81, 0.85], intensity: 600),
+        "sun-key", from: [-6.12, 5, 6.12], color: [1, 0.961, 0.902], intensity: 2400,
+        shadowDistance: 80),
+      .sun("sky-fill", from: [4.5, 7.71, -4.5], color: [0.549, 0.678, 0.922], intensity: 700),
     ])
 }

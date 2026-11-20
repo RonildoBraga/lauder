@@ -1,6 +1,6 @@
 # van
 
-A van as the greybox shows it: a box with a band of windows. The Brooklyn Bridge's `van-b` is a copy of it.
+A van as the greybox shows it: a box in mustard with a dark band of windows, in the [visual direction](../../../docs/visual-direction.md)'s palette. The Brooklyn Bridge's `van-b` is a copy of it.
 
 - **Source:** Made for Lauder with Claude's assistance on 19 November 2026, from the Brooklyn Bridge's greybox van parts, which the Lauder extension had made from the game's earlier drawing code. No third-party models or textures were used.
 - **Licence:** The repository's [MIT licence](../../../LICENSE).

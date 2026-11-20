@@ -1,6 +1,6 @@
 # Visual direction
 
-**Status:** A minimalist low-poly frozen world, chosen by the maintainer on 20 November 2026. It replaces Death's Door as the reference. The bridge moves to it in small steps from today's greybox, keeping what exists where it serves, and gameplay stays readable throughout. Colours, angles and sizes below are starting values, tuned in the Simulator and on the phone.
+**Status:** A minimalist low-poly frozen world, chosen by the maintainer on 20 November 2026. It replaces Death's Door as the reference. The bridge moves to it in small steps from today's greybox, keeping what exists where it serves, and gameplay stays readable throughout. Colours, angles and sizes below are starting values, tuned in the Simulator and on the phone. The bridge already uses the palette, the light and the camera's starting values. A shared palette library in Blender comes with the first kit models; until then each file's materials take the palette's values.
 
 ## The direction
 

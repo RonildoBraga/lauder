@@ -345,7 +345,11 @@ class ExportRecordTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             repository = self.scratch(folder)
             layout = repository / BRIDGE.layout
-            layout.write_text(layout.read_text().replace("fieldOfView: 42", "fieldOfView: 45"))
+            text = layout.read_text()
+            # Whatever the camera's lens, writing a digit before it is an edit by hand.
+            edited = text.replace("fieldOfView: ", "fieldOfView: 1", 1)
+            self.assertNotEqual(edited, text)
+            layout.write_text(edited)
             reason = L.stale_exports(repository)
             self.assertIn(BRIDGE.layout, reason)
             self.assertIn("change the level in Blender", reason)

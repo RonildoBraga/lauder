@@ -13,8 +13,8 @@ enum BrooklynBridge {
   /// Where each tower's centre stands along the deck.
   static var brooklynTower: Float { layout.box(named: "brooklyn-tower-pier").position.z }
   static var manhattanTower: Float { layout.box(named: "manhattan-tower-pier").position.z }
-  /// The camera keeps the accepted height and distance but looks straight along the deck, so
-  /// pushing up walks towards Manhattan. Blender edits it with the rest of the layout.
+  /// The camera stands high and far, as the visual direction sets out, and looks straight along
+  /// the deck, so pushing up walks towards Manhattan. Blender edits it with the rest of the layout.
   static var cameraOffset: SIMD3<Float> { layout.camera.offset }
 
   static let points: [Level.PointOfInterest] = [
