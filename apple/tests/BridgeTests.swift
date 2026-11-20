@@ -164,8 +164,9 @@ struct BridgeTests {
   }
 
   /// The bridge's look comes from its scene file, which Blender exports with the layout file from
-  /// the level's Blender file (ADR 0002). While the bridge is a greybox, each box's look is a block
-  /// that fills it, each vehicle is a model from `blender/assets` that fills its box, and each
+  /// the level's Blender file (ADR 0002). The road lies buried under a plain of snow level with the
+  /// old deck, so the ground has no look of its own. Each box's look is a block of snow that fills
+  /// it, each vehicle is a snow-covered model from `blender/assets` that fills its box, and each
   /// landmark stands on the deck; the decoration is in the scene file alone, and the camera takes
   /// the layout file's offset and field of view.
   @Test
@@ -177,7 +178,17 @@ struct BridgeTests {
     let world = GameWorld(level: level)
     let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
     func part(_ name: String) -> Entity? { scene.findEntity(named: Self.sceneName(name)) }
-    for box in [layout.ground] + layout.boxes {
+    // The snow plain covers the deck the party walks on, its top level with the deck's.
+    let deck = layout.ground
+    let deckLow = deck.position - deck.size / 2
+    let deckHigh = deck.position + deck.size / 2
+    #expect(part("\(deck.name) block") == nil, "the road lies buried")
+    let snow = try #require(part("snow plain"), "the snow plain is shown")
+      .visualBounds(relativeTo: nil)
+    #expect(abs(snow.max.y - deckHigh.y) < 0.001, "the snow lies level with the deck")
+    #expect(snow.min.x <= deckLow.x && snow.max.x >= deckHigh.x, "the snow covers the deck's width")
+    #expect(snow.min.z <= deckLow.z && snow.max.z >= deckHigh.z, "the snow covers its length")
+    for box in layout.boxes {
       if let block = part("\(box.name) block") {
         let bounds = block.visualBounds(relativeTo: nil)
         #expect(simd_distance(bounds.center, box.position) < 0.001, "\(box.name) stands as written")
@@ -202,13 +213,9 @@ struct BridgeTests {
       let centre = landmark.position + [0, landmark.size.y / 2, 0]
       #expect(simd_distance(bounds.center, centre) < 0.001, "\(landmark.name) stands on the deck")
     }
-    // The decoration, the lane lines, the towers' tops over the arches and the river, is in the
-    // scene file alone.
-    let decoration = [
-      "lane-line-west-1", "lane-line-west-2", "lane-line-east-1", "lane-line-east-2",
-      "tower-top-brooklyn", "tower-top-manhattan", "river",
-    ]
-    for name in decoration {
+    // The decoration, the towers' tops over the arches and the snow plain, is in the scene file
+    // alone.
+    for name in ["tower-top-brooklyn", "tower-top-manhattan", "snow plain"] {
       #expect(part(name)?.components.has(ModelComponent.self) == true, "\(name) is shown")
     }
     let camera = try #require(world.root.findEntity(named: "camera") as? PerspectiveCamera)

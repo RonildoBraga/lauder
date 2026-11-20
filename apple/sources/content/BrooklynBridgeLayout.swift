@@ -70,7 +70,7 @@ extension BrooklynBridge {
       .marker("attacker.hidden", at: [10, 26]),
       .marker("attacker.stand", at: [7.6, 26.6]),
     ],
-    camera: .camera(offset: [0, 50, 42], fieldOfView: 28),
+    camera: .camera(offset: [0, 50, 42], fieldOfView: 20),
     lights: [
       .sun(
         "sun-key", from: [-6.12, 5, 6.12], color: [1, 0.961, 0.902], intensity: 2400,

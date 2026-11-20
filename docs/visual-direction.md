@@ -73,8 +73,8 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 ## Camera and scale
 
-- A high three-quarter view along the route, rather than a strict isometric one, with a long lens of 24° to 28° and a view about 50° down.
-- The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 28° lens.
+- A high three-quarter view along the route, rather than a strict isometric one, with a long lens of about 20° and a view about 50° down.
+- The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower.
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
 - Tall landmarks, such as tower tops and buildings, fade while they come between the camera and the party.
 - World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen.
@@ -86,7 +86,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 ## The bridge in the frozen world
 
-The deck stands high above the frozen East River, as it does now. Its towers and cable fans are the landmarks, and their long shadows fall across the ice far below. Vehicles lie under snow, showing a little of their paint. The ice has cracks and pressure ridges, with rare channels of open water. Brooklyn and Manhattan show as half-buried blocks at the edges.
+Snow has buried the bridge's road, its vehicles and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look. Snowbanks follow the old railings and the walkway's base, so the old roadways still read as the way across. Drifts cover the cars, the bus, the barricades and the debris, which still block the way and give cover. The towers' long shadows fall across the plain. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
 
 A visual pass keeps the route, the collision layout, interaction anchors and the controls.
 

@@ -19,9 +19,9 @@ The game begins with Miki alone on the Brooklyn Bridge, heading from Brooklyn to
 
 ### 1. Alone on the bridge (M1, built)
 
-Miki starts at the Brooklyn end. The deck is a flat greybox 644 m long, with the two granite towers at their real spacing, 486 m apart, and at their real size, with tall arches the roadways pass through. Two roadways run either side of the walkway's base, and the river lies far below. Abandoned cars, a van, a truck and debris stand in the lanes. A bus jammed across the east roadway at mid-span sends her through a gap where the walkway's base has collapsed, onto the west roadway and on to a barricade at the Manhattan end.
+Miki starts at the Brooklyn end. Snow has buried the bridge's road and the river under it: a flat white plain, with the bridge 644 m from end to end and only its two granite towers standing above the snow, at their real spacing, 486 m apart, and at their real size, with tall arches the old roadways pass through. Snowbanks follow the old railings and the walkway's base, so the two roadways still read as the way across. Drifts bury abandoned cars, a van, a truck and debris in the lanes. A bus jammed across the east roadway at mid-span sends her through a gap where the walkway's base has collapsed, onto the west roadway and on to a barricade at the Manhattan end.
 
-She is alone, so the player learns to move and look. **Next** does not appear until someone joins. A few places show a short line the first time she reaches them, such as "Cars stand where they stopped, doors still open." and "The first tower. Its arches still stand." The camera stands high and far back, showing the whole deck and the ice on both sides, and looks straight along the deck, so pushing up walks towards Manhattan.
+She is alone, so the player learns to move and look. **Next** does not appear until someone joins. A few places show a short line the first time she reaches them, such as "Cars stand where they stopped, doors still open." and "The first tower. Its arches still stand." The camera stands high and far back, showing the old roadways and the snow on both sides, and looks straight along the bridge, so pushing up walks towards Manhattan.
 
 ### 2. Friendly? (M2, built)
 

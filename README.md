@@ -6,7 +6,7 @@ The player switches between three characters while the other two follow. Their d
 
 ## Project status
 
-The game opens on a greybox **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md)): Miki crosses alone towards Manhattan and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue, and the three reach the Manhattan end together.
+The game opens on the snowbound **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md)): Miki crosses alone towards Manhattan and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue, and the three reach the Manhattan end together.
 
 - **Blender holds the levels and models** ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). The bridge's source is its Blender file, `blender/levels/brooklyn-bridge.blend`. Saving it exports the scene file the game shows and the layout file it plays from, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes. Levels link [models](CONTRIBUTING.md#models) from `blender/assets`, such as the bridge's vehicles, and the party and the hostiles are models too.
 - **Companions move as a squad** ([ADR 0003](docs/decisions/0003-squad-movement.md), phases S1 to S3). Once Laura joins, the formation button cycles **Close**, **Spread** and **Column**, and tight places squeeze the group into single file until it can spread out again: the opening's M5. Squad orders send both companions, or one of them, to a marked point or hold them where they stand, and the formation button then calls them back. Combat positioning and further combat wait for the [combat design review gate](docs/prototype-plan.md#combat-design-review-gate), and each needs its own assignment.
