@@ -13,7 +13,7 @@ The game begins with Miki alone on the Brooklyn Bridge, trying to cross into Man
 4. Further on, the two help an injured woman, Laura, who joins them.
 5. The three continue towards Manhattan, which introduces squad movement and formations.
 
-Everything is greybox: the layout, the story's triggers, combat, scavenging, recruitment and squad movement come before art. The three meet as strangers, and their backgrounds unfold gradually. The architecture should stay simple, reusable and consistent with good engineering practice.
+Gameplay comes first: the layout, the story's triggers, combat, scavenging, recruitment and squad movement were built on a greybox before art. The look then moves to the [visual direction](../visual-direction.md)'s frozen low-poly world. The three meet as strangers, and their backgrounds unfold gradually. The architecture should stay simple, reusable and consistent with good engineering practice.
 
 ## Decision
 
