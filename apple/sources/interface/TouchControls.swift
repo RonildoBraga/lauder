@@ -237,6 +237,10 @@ struct TouchControls: UIViewRepresentable {
         y: min(max(press.start.y - 20, 0), bounds.height - size.height))
       menu.highlight(.both)
       menu.isHidden = false
+      // The ground under the finger now is the point, even if the leader moves meanwhile.
+      if let point = screenPoint(press.start) {
+        controls.setTouchMark(point, generation: pressGeneration)
+      }
     }
 
     /// The finger lifted, or the press stopped: send the menu's choice when asked, at the point

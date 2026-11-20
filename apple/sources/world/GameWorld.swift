@@ -41,6 +41,9 @@ final class GameWorld {
   @ObservationIgnored private(set) var refusedOrders = 0
   /// Whether the leader has been told, on this visit to a gathering area, who is missing.
   @ObservationIgnored private var toldWhoIsMissing = false
+  /// What the touch order menu marked as it opened: its point on the screen, and what the ray
+  /// through it met then. The order that follows uses it, though the camera has moved since.
+  @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
   @ObservationIgnored private let camera = PerspectiveCamera()
   @ObservationIgnored private let motion: PartyMotion
   @ObservationIgnored private let grid: NavigationGrid
@@ -318,6 +321,7 @@ final class GameWorld {
         session.pressFormation()
         showOrders()
       }
+      if let mark = input.markPoint { touchMark = (mark, firstHit(at: mark)) }
       if let command = input.command { give(command, at: input.commandPoint) }
     }
   }
@@ -380,6 +384,7 @@ final class GameWorld {
     companionTargets = [:]
     diagnostic = nil
     refusedOrders = 0
+    touchMark = nil
     crossRemaining = 0
     refusalCross.isEnabled = false
     toldWhoIsMissing = false
@@ -545,11 +550,12 @@ final class GameWorld {
       showOrders()
       return
     }
-    // A touch marks what the finger's ray meets first, a block or the ground; a touch above
-    // the ground marks nothing.
+    // A touch marks what the finger's ray met first, a block or the ground, as the menu opened;
+    // a touch above the ground marks nothing.
     let pressed: SIMD3<Float>?
     if let screen {
-      pressed = firstHit(at: screen)
+      pressed = touchMark?.screen == screen ? touchMark?.hit : firstHit(at: screen)
+      touchMark = nil
     } else {
       let ahead = pointAhead(of: leader)
       pressed = SIMD3(ahead.x, 0, ahead.y)

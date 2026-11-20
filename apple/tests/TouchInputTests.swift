@@ -76,6 +76,18 @@ struct TouchInputTests {
     #expect(touch.sample().touchOrder == nil, "an old capture's order is rejected")
   }
 
+  @Test
+  func theMenuMarkIsSampledOnceAndDroppedByCancellation() {
+    var touch = TouchInput()
+    let point = InputRules.ScreenPoint(x: 0.3, y: 0.4, aspect: 2)
+    touch.setMark(point, generation: 0)
+    #expect(touch.sample().touchMark == point)
+    #expect(touch.sample().touchMark == nil)
+    touch.setMark(point, generation: 0)
+    touch.cancel()
+    #expect(touch.sample().touchMark == nil)
+  }
+
   // MARK: - The order press (ADR 0003, phase S3)
 
   @Test

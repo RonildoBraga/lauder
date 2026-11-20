@@ -54,6 +54,9 @@ enum InputRules {
     var touchFormation = false
     /// A finger pressing the ground, which may open the order menu.
     var touchGround = false
+    /// Where the touch menu opened since the last sample: the press's point, which the world
+    /// fixes on the ground then, so moving the leader during the press does not move it.
+    var touchMark: ScreenPoint?
     /// An order the touch menu sent since the last sample.
     var touchOrder: TouchOrder?
 
@@ -105,6 +108,8 @@ enum InputRules {
     /// Where on the screen a touch order marked its point; nil for the D-pad and arrow keys,
     /// whose point lies ahead of the leader.
     var commandPoint: ScreenPoint?
+    /// Where the touch order menu has just opened, while exploring.
+    var markPoint: ScreenPoint?
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -205,7 +210,8 @@ enum InputRules {
           firePressed: fire && !state.fireWasPressed,
           formationPressed: formationEdge,
           command: command,
-          commandPoint: commandPoint
+          commandPoint: commandPoint,
+          markPoint: raw.touchMark
         ), next
       )
     }

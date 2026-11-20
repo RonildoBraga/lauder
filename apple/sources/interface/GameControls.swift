@@ -92,6 +92,12 @@ final class GameControls {
     touchInput.setButton(button, isPressed: isPressed, generation: generation)
   }
 
+  /// Where the touch order menu has opened, so the world can fix the point on the ground.
+  func setTouchMark(_ point: InputRules.ScreenPoint, generation: Int) {
+    guard isActive, touchControlsEnabled else { return }
+    touchInput.setMark(point, generation: generation)
+  }
+
   /// The touch order menu's choice, at the point where its finger pressed the ground.
   func setTouchOrder(_ order: InputRules.TouchOrder, generation: Int) {
     guard isActive, touchControlsEnabled else { return }
@@ -136,7 +142,7 @@ final class GameControls {
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
       touchRestart: touch.touchRestart, touchFire: touch.touchFire,
       touchFormation: touch.touchFormation, touchGround: touch.touchGround,
-      touchOrder: touch.touchOrder
+      touchMark: touch.touchMark, touchOrder: touch.touchOrder
     )
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }

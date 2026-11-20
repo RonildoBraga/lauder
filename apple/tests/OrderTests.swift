@@ -234,6 +234,30 @@ struct OrderTests {
   }
 
   @Test
+  func aTouchOrderKeepsThePointMarkedWhenItsMenuOpened() throws {
+    let world = GameWorld(level: TestYard.level)
+    try faceEast(world)
+    let wanted: SIMD2<Float> = [-2.5, 7]
+    let aspect: Float = 2.16
+    let screen = try #require(world.projection(aspect: aspect).screen(ofGround: wanted))
+    let press = InputRules.ScreenPoint(x: screen.x, y: screen.y, aspect: aspect)
+    var opened = InputRules.Input.neutral
+    opened.markPoint = press
+    world.update(with: opened, sampledIn: .exploring, deltaTime: 0)
+    // The leader walks on while the finger holds the menu open, and the camera follows.
+    try walk(world, through: [[-3.5, 6]])
+    var released = InputRules.Input.neutral
+    released.command = .rightGoes
+    released.commandPoint = press
+    world.update(with: released, sampledIn: .exploring, deltaTime: 0)
+    guard case .going(let point) = world.session.order(of: .laura) else {
+      Issue.record("Laura is \(world.session.order(of: .laura))")
+      return
+    }
+    #expect(simd_distance(point, wanted) < 0.05, "\(point)")
+  }
+
+  @Test
   func aPointNobodyCanReachIsRefusedWithABriefCross() throws {
     let world = GameWorld(level: TestYard.level)
     try walk(world, through: [Self.laneStart, [-6, 8]])

@@ -419,6 +419,14 @@ struct InputRulesTests {
     #expect(sample(.init(), state: &state).command == nil)
   }
 
+  @Test(arguments: [GameSession.Mode.exploring, .paused, .dialogue])
+  func theMenuMarkPassesOnlyWhileExploring(mode: GameSession.Mode) {
+    var state = InputRules.State(needsNeutralInput: false)
+    let marked = sample(.init(touchMark: Self.touchPoint), mode: mode, state: &state)
+    #expect(marked.markPoint == (mode == .exploring ? Self.touchPoint : nil))
+    #expect(sample(.init(), mode: mode, state: &state).markPoint == nil)
+  }
+
   @Test
   func holdComesFirstWhenTwoDirectionsArriveTogether() {
     var state = InputRules.State(needsNeutralInput: false)
