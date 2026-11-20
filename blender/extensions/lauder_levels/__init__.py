@@ -25,7 +25,9 @@ use it. blender/scripts/add-model.py brings a model in from a Blender, glTF, FBX
 The models that the game creates itself, such as the party and the hostiles (SPAWNED), get scene
 files of their own in apple/sources/content/models: saving such a model exports it in the
 background, with blender/scripts/export-model.py. Bake Occlusion bakes ambient occlusion into the
-colour of the selected parts of a level's Visual, as images in blender/levels/baked.
+colour of the selected parts of a level's Visual, as images in blender/levels/baked. Bake Shadows
+lays again the shadows of the landmarks that the game fades, each a part of Visual that names the
+parts whose shadow it is, where the sun that casts the level's shadow throws them.
 
 Install it once: in Blender's Preferences, add a local extension repository at this repository's
 blender/extensions folder, then enable Lauder levels. A Lauder tab appears in the 3D Viewport's
@@ -38,8 +40,8 @@ from and what it wrote, and ./scripts/check fails when they no longer match.
 
 The extension is split by job, each module importing only those before it here: common, what
 every part shares; lights; layouts, what plays; looks, what a scene file shows; models; exports;
-occlusion, baked occlusion; background, work in a process of its own; and interface, the Lauder
-tab.
+occlusion, baked occlusion; shadows, baked shadows; background, work in a process of its own; and
+interface, the Lauder tab.
 
 Writing and checking a layout, and the intake check's rules, need no Blender:
 blender/test_lauder_levels.py runs those parts in ./scripts/check. Coordinates in the layout file
@@ -47,11 +49,14 @@ are the game's, in metres: x across, y up and z along the level. In Blender, z i
 point (x, y, z) sits at (x, -z, y).
 """
 
-from . import common, lights, layouts, looks, models, exports, occlusion, background, interface
+from . import (
+    common, lights, layouts, looks, models, exports, occlusion, shadows, background, interface,
+)
 
 # The package keeps every name that its modules define, so that the scripts and the tests
 # can use lauder_levels.<name> wherever it lives.
-for _module in (common, lights, layouts, looks, models, exports, occlusion, background, interface):
+for _module in (common, lights, layouts, looks, models, exports, occlusion, shadows, background,
+                interface):
     globals().update({name: value for name, value in vars(_module).items()
                       if not (name.startswith("__") and name.endswith("__"))})
 del _module

@@ -496,6 +496,26 @@ class BakeTests(unittest.TestCase):
         self.assertEqual(L.material_problems([baked]), [])
 
 
+class ShadowTests(unittest.TestCase):
+    """Shadows baked into the ground, for the landmarks that the game fades (Bake Shadows)."""
+
+    def test_a_parts_shadow_falls_away_from_the_sun(self):
+        # A 2 m cube on the ground, under a sun 45° high in the south-west: its top's corners fall
+        # 2 m away along the ground, to the north-east, and the outline joins both squares.
+        cube = [(x, y, z) for x in (0, 2) for y in (0, 2) for z in (0, 2)]
+        towards = (-0.5, -0.5, math.sqrt(0.5))
+        self.assertEqual(L.shadow_outline(cube, towards), [
+            (0, 0), (2, 0), (3.4142, 1.4142), (3.4142, 3.4142), (1.4142, 3.4142), (0, 2)])
+        # A part raised off the ground, such as a tower's top across its arches, throws only its
+        # own shadow, further away.
+        top = [(x, y, z) for x in (0, 2) for y in (0, 2) for z in (4, 6)]
+        self.assertEqual(L.shadow_outline(top, towards)[0], (2.8284, 2.8284))
+
+    def test_a_sun_below_the_horizon_casts_no_shadow_to_bake(self):
+        with self.assertRaises(L.LayoutError):
+            L.shadow_outline([(0, 0, 1)], (0.5, 0.5, 0))
+
+
 class SceneRuleTests(unittest.TestCase):
     """What a scene file can show as Blender does (ADR 0002)."""
 

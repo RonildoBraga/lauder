@@ -210,10 +210,11 @@ struct BridgeTests {
       #expect(simd_distance(bounds.center, box.position) < 0.001, "\(box.name) stands as written")
       #expect(simd_distance(bounds.extents, box.size) < 0.001, "\(box.name)'s look fills it")
     }
-    // The decoration, the towers' tops over the arches and the snow plain, is in the scene file
-    // alone, and nothing else shows.
+    // The decoration, the towers' tops over the arches, their shadows baked into the snow, the
+    // snow plain and the route poles, is in the scene file alone, and nothing else shows.
     let decoration = [
-      "tower-top-brooklyn", "tower-top-manhattan", "snow plain", "route poles", "route flags",
+      "tower-top-brooklyn", "tower-top-manhattan", "tower-shadow-brooklyn",
+      "tower-shadow-manhattan", "snow plain", "route poles", "route flags",
     ]
     for name in decoration {
       #expect(part(name)?.components.has(ModelComponent.self) == true, "\(name) is shown")
@@ -229,8 +230,9 @@ struct BridgeTests {
   }
 
   /// From the bridge's high camera a tower hides the party for some 40 m beyond it, so the whole
-  /// tower, its legs, its pier and its top, fades while it does (the visual direction's camera
-  /// and scale). Under its arches, and away from it, it shows.
+  /// tower, its legs, its pier and its top, fades to a see-through ghost of itself while it does
+  /// (the visual direction's camera and scale), and the player still sees what stands in the
+  /// way. Under its arches, and away from it, it shows. Its shadow, baked into the snow, stays.
   @Test
   func aTowerFadesWhileItHidesTheParty() throws {
     var level = BrooklynBridge.level
@@ -244,19 +246,31 @@ struct BridgeTests {
     }
     let brooklyn = try tower("brooklyn")
     let manhattan = try tower("manhattan")
+    let shadows = try ["brooklyn", "manhattan"].map { end in
+      try #require(scene.findEntity(named: Self.sceneName("tower-shadow-\(end)")), "\(end)")
+    }
     // Every part of a tower shows as much as the others.
     func opacity(_ tower: [Entity]) -> Set<Float> {
       Set(tower.map { $0.components[OpacityComponent.self]?.opacity ?? 1 })
+    }
+    // A fading tower wears unlit ghosts of its materials, and a shown one its own.
+    func ghostly(_ tower: [Entity]) -> Set<Bool> {
+      Set(
+        tower.flatMap { part in
+          (part.components[ModelComponent.self]?.materials ?? []).map { $0 is UnlitMaterial }
+        })
     }
     func standStill() {
       for _ in 0..<30 { world.advanceParty(movement: .zero, deltaTime: 1 / 60) }
     }
     #expect(opacity(brooklyn) == [1] && opacity(manhattan) == [1])
-    // For the first half second a speck before the camera shows each tower's material
-    // see-through, so the first fade does not stall; then it is disabled, and stays.
+    #expect(ghostly(brooklyn) == [false] && ghostly(manhattan) == [false])
+    // For the first half second a speck before the camera shows each tower's ghost, so the
+    // first fade does not stall; then it is disabled, and stays.
     let camera = try #require(world.root.findEntity(named: "camera"))
     let specks = camera.children.filter { $0.name == "landmark.speck" }
     #expect(specks.count == 2 && specks.allSatisfy(\.isEnabled))
+    #expect(ghostly(specks) == [true])
     standStill()
     #expect(specks.allSatisfy { !$0.isEnabled })
     walk(world, to: [6.5, 66])
@@ -266,19 +280,66 @@ struct BridgeTests {
     walk(world, to: [6.5, -20])
     standStill()
     #expect(opacity(brooklyn) == [LandmarkFade.faded], "the first tower's top hides her")
+    #expect(ghostly(brooklyn) == [true], "she sees the tower's ghost")
+    #expect(opacity(shadows) == [1] && shadows.allSatisfy(\.isEnabled), "its shadow stays")
     #expect(opacity(manhattan) == [1])
     walk(world, to: [6.5, -206.15])
     standStill()
     #expect(opacity(brooklyn) == [1] && opacity(manhattan) == [1], "nothing hides her mid-span")
+    #expect(ghostly(brooklyn) == [false], "the tower wears its own materials again")
     for point: SIMD2<Float> in [[6.5, -225.15], [-7, -228.15], [-7, -456.3], [-7, -502.3]] {
       walk(world, to: point)
     }
     standStill()
     #expect(opacity(manhattan) == [LandmarkFade.faded], "the camera hangs above the second tower")
+    #expect(ghostly(manhattan) == [true] && opacity(shadows) == [1])
     #expect(opacity(brooklyn) == [1])
     // Restart returns Miki to the Brooklyn end, and the tower shows again at once.
     world.restart()
-    #expect(opacity(manhattan) == [1])
+    #expect(opacity(manhattan) == [1] && ghostly(manhattan) == [false])
+  }
+
+  /// A tower casts no live shadow, because it fades while it hides the party and its shadow must
+  /// stay. Blender bakes each tower's shadow into the snow instead: it lies just above the snow,
+  /// where the level's sun throws the tower's parts, so moving the sun or a tower without baking
+  /// the shadow again fails here.
+  @Test
+  func eachTowersShadowLiesBakedWhereTheSunThrowsIt() throws {
+    let suns = BrooklynBridge.layout.lights.compactMap { light -> SIMD3<Float>? in
+      guard light.castsShadows, case .sun(let source, _) = light.kind else { return nil }
+      return simd_normalize(source)
+    }
+    let source = try #require(suns.first, "a sun casts the level's shadow")
+    #expect(source.y > 0, "the sun stands above the horizon")
+    let world = GameWorld(level: BrooklynBridge.level)
+    let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
+    for end in ["brooklyn", "manhattan"] {
+      let names =
+        ["tower-top-\(end)"] + ["west", "pier", "east"].map { "\(end)-tower-\($0) block" }
+      var low = SIMD2<Float>(repeating: .infinity)
+      var high = SIMD2<Float>(repeating: -.infinity)
+      for name in names {
+        let part = try #require(scene.findEntity(named: Self.sceneName(name)), "\(name)")
+        let live = part.components[DynamicLightShadowComponent.self]?.castsShadow
+        #expect(live == false, "\(name) casts no live shadow")
+        // Each corner's shadow falls where the line from it away from the sun meets the snow.
+        let bounds = part.visualBounds(relativeTo: nil)
+        for corner in 0..<8 {
+          let point = SIMD3<Float>(
+            corner & 1 == 0 ? bounds.min.x : bounds.max.x,
+            corner & 2 == 0 ? bounds.min.y : bounds.max.y,
+            corner & 4 == 0 ? bounds.min.z : bounds.max.z)
+          let ground = point - source * (point.y / source.y)
+          low = simd_min(low, [ground.x, ground.z])
+          high = simd_max(high, [ground.x, ground.z])
+        }
+      }
+      let shadow = try #require(scene.findEntity(named: Self.sceneName("tower-shadow-\(end)")))
+        .visualBounds(relativeTo: nil)
+      #expect(shadow.min.y > 0 && shadow.max.y < 0.05, "\(end)'s shadow lies on the snow")
+      #expect(simd_distance([shadow.min.x, shadow.min.z], low) < 0.1, "where the sun throws it")
+      #expect(simd_distance([shadow.max.x, shadow.max.z], high) < 0.1, "where the sun throws it")
+    }
   }
 
   /// Thin poles with small flags mark the buried road's edges along its whole length, just

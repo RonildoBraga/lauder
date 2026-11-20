@@ -45,6 +45,7 @@ One shared set of colours serves every level and model. At least 80% of the scre
 | Colour | Value | Use |
 |---|---|---|
 | Snow | `#ECE9E2` | Deck, ground, roofs and snow caps; slightly warm, so it separates from ice |
+| Shadow | `#CBC9CA` | Shadows baked into the snow, such as the towers'; lit like the snow, it lands where the live shadows do |
 | Ice | `#D3DFE6` | Frozen river and sea; cooler than snow, so it reads as not the route |
 | Ice ridge | `#8FA5B3` | Cracks, pressure ridges and floe edges |
 | Open water | `#23343F` | Rare channels of dark water, the strongest dark in the world |
@@ -56,7 +57,7 @@ One shared set of colours serves every level and model. At least 80% of the scre
 | Mustard | `#B69A5A` | Accent: taxis and warning paint |
 | Amber | `#E2A64B` | Things to use and the leader's ring; kept clearly apart from Laura's orange |
 
-The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. Hostiles are dark red, `#7A2E2A`, the only red figures on the ice. Shadows on snow should land near `#A9B7C6`; that is a target for the lighting, not a material.
+The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. Hostiles are dark red, `#7A2E2A`, the only red figures on the ice. Shadows on snow should land near `#A9B7C6`; that is a target for the lighting. Today the bridge's live shadows land lighter and neutral, near `#D6D4D5`, and a shadow baked into the snow wears the shadow colour, which the sun brings to the same tone. When the light changes, the shadow colour is matched again.
 
 ## Materials
 
@@ -69,6 +70,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 - One sun for the whole game: warm white, 25° to 35° high, from the south-west, so that shadows fall towards the top right of the screen. The sun's direction never changes within a level, so shadows are a consistent part of the composition.
 - A cool fill from the opposite side, so that shadows read blue-grey, not black or neutral grey.
 - The shadow covers the camera's view, about 70 to 90 m, and must stay crisp enough on the phone.
+- A landmark that fades while it hides the party casts no live shadow. Its shadow is baked into the ground in Blender, where the sun throws it, so it never fades; it does not darken the people who walk through it.
 - Baked ambient occlusion grounds vehicles, drifts and tower bases.
 
 ## Camera and scale
@@ -76,7 +78,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 - A high three-quarter view along the route, rather than a strict isometric one, with a long lens of about 20° and a view about 50° down.
 - The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower.
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
-- Tall landmarks, such as tower tops and buildings, fade while they come between the camera and the party.
+- Tall landmarks, such as tower tops and buildings, fade to a see-through ghost while they come between the camera and the party, so the player still sees what is in the way. The ghost is unlit, in each part's own colour, since a lit see-through landmark that fills the screen costs the phone's GPU too much.
 - World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: drawn larger by as much more of the ground as the camera shows than the 14 m, 42° camera they were made for, about twice as large on the bridge.
 
 ## Characters and interface
@@ -86,7 +88,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 ## The bridge in the frozen world
 
-Snow has buried the bridge's road, everything left on it and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look, and then chose to take every other obstacle out of the game as well, so the towers are the only cover and an invisible edge keeps the party on the line of the buried road. The towers' long shadows fall across the plain, and a tower fades while it hides the party. Thin ink poles with small rust flags stand every 25 m along both edges of the buried road, as on a polar route, so the way and the party's movement read on the white; they block nothing. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
+Snow has buried the bridge's road, everything left on it and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look, and then chose to take every other obstacle out of the game as well, so the towers are the only cover and an invisible edge keeps the party on the line of the buried road. The towers' long shadows, baked into the snow, fall across the plain, and a tower fades to a ghost while it hides the party; its shadow stays. The maintainer chose the ghost and the baked shadows on 20 November 2026, after a full fade hid what stood in the way and took the towers' shadows with it. Thin ink poles with small rust flags stand every 25 m along both edges of the buried road, as on a polar route, so the way and the party's movement read on the white; they block nothing. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
 
 A visual pass keeps the route, the collision layout, interaction anchors and the controls.
 

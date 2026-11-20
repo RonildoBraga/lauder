@@ -11,6 +11,7 @@ from .lights import lights_outside_the_level
 from .models import available_models, check_model, _model_file_of, place_model, report_text
 from .exports import check_level
 from .occlusion import bake_level, BAKED, clear_occlusion
+from .shadows import bake_shadows, SHADOW_OF
 from .background import (
     _announce, background_steps, _export_if_stale, _export_levels_using, _queue, _queued,
 )
@@ -343,6 +344,33 @@ if bpy is not None:
             self.report({"INFO"}, message)
             return {"FINISHED"}
 
+    class LAUDER_OT_bake_shadows(bpy.types.Operator):
+        """Bake again the shadows in Visual that landmarks cast, from the sun that casts the
+        level's shadow. The game fades a landmark while it hides the party, so its shadow is baked
+        and stays"""
+        bl_idname = "lauder.bake_shadows"
+        bl_label = "Bake Shadows"
+        bl_options = {"REGISTER", "UNDO"}
+
+        def execute(self, context):
+            if _open_level() is None:
+                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                return {"CANCELLED"}
+            try:
+                names = bake_shadows()
+            except LayoutError as error:
+                context.window_manager.lauder_message = str(error)
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+            if not names:
+                self.report({"ERROR"}, f"No part of Visual has a {SHADOW_OF} property naming "
+                                       f"the parts whose shadow it is.")
+                return {"CANCELLED"}
+            message = f"Baked {_and(names)} from the sun. Save the level to export it."
+            context.window_manager.lauder_message = message
+            self.report({"INFO"}, message)
+            return {"FINISHED"}
+
     class LAUDER_OT_report(bpy.types.Operator):
         """Show a message from Lauder in the status bar"""
         bl_idname = "lauder.report"
@@ -386,6 +414,7 @@ if bpy is not None:
                 row = layout.row()
                 row.operator("lauder.bake_occlusion", icon="RENDER_STILL")
                 row.operator("lauder.clear_occlusion", icon="X")
+                layout.operator("lauder.bake_shadows", icon="SHADING_SOLID")
                 shown = _model_file_of(item)
                 if shown is not None:
                     layout.operator("lauder.open_model", text=f"Open {shown.stem}",
@@ -406,7 +435,7 @@ if bpy is not None:
     _CLASSES = (
         LAUDER_OT_open_level, LAUDER_OT_export, LAUDER_OT_play, LAUDER_OT_add_model,
         LAUDER_OT_open_model, LAUDER_OT_check_model, LAUDER_OT_game_look, LAUDER_OT_bake_occlusion,
-        LAUDER_OT_clear_occlusion, LAUDER_OT_report, LAUDER_PT_levels,
+        LAUDER_OT_clear_occlusion, LAUDER_OT_bake_shadows, LAUDER_OT_report, LAUDER_PT_levels,
     )
     _HANDLERS = (
         (bpy.app.handlers.save_pre, _forget_local_paths_before_save),

@@ -1,4 +1,5 @@
 import RealityKit
+import UIKit
 import simd
 
 /// Tall landmarks, such as the bridge's towers, fade while they stand between the camera and the
@@ -9,12 +10,18 @@ import simd
 /// A part of the level's look whose top stands higher than `height` belongs to a landmark, with
 /// the tall parts it touches, so a tower's legs, its pier and the top across its arches fade
 /// together. The parts do not move, so their bounds are measured once.
+///
+/// A fading landmark becomes a see-through ghost of itself, so the player still sees what is in
+/// the way. The ghost is unlit, in each part's own colour: close to the camera a landmark fills
+/// much of the screen, and see-through lit stone held the iPhone 13 Pro Max to 42 fps at the
+/// Manhattan end, its GPU at 97%. A landmark casts no live shadow: its shadow is baked into the
+/// level's look in Blender, so it stays while the landmark fades.
 @MainActor
 struct LandmarkFade {
   /// A part whose top stands higher than this, in metres, belongs to a landmark.
   static let height: Float = 6
-  /// How much of a landmark shows while it fades.
-  static let faded: Float = 0.2
+  /// How much of a landmark's ghost shows once it has faded.
+  static let faded: Float = 0.3
   /// How long a landmark takes to fade out, or back in, in seconds.
   static let time: Float = 0.3
   /// How far clear of a part, in metres, a line of sight must pass.
@@ -24,8 +31,13 @@ struct LandmarkFade {
   /// camera, so that the renderer prepares it before the first fade instead of stalling then.
   static let preparing: Float = 0.5
 
+  /// A landmark's part: its entity, its bounds, its own materials and its ghost's.
+  private typealias Part = (
+    entity: Entity, bounds: BoundingBox, materials: [any Material], ghost: [any Material]
+  )
+
   private struct Landmark {
-    var parts: [(entity: Entity, bounds: BoundingBox)]
+    var parts: [Part]
     var opacity: Float = 1
   }
 
@@ -38,11 +50,14 @@ struct LandmarkFade {
 
   /// The landmarks among the parts under `look`, which holds the level's look alone.
   init(look: Entity) {
-    var tall: [(entity: Entity, bounds: BoundingBox)] = []
+    var tall: [Part] = []
     func collect(_ entity: Entity) {
-      if entity.components.has(ModelComponent.self) {
+      if let model = entity.components[ModelComponent.self] {
         let bounds = entity.visualBounds(recursive: false, relativeTo: nil)
-        if bounds.max.y > Self.height { tall.append((entity, bounds)) }
+        if bounds.max.y > Self.height {
+          tall.append((entity, bounds, model.materials, Self.ghost(of: model.materials)))
+          entity.components.set(DynamicLightShadowComponent(castsShadow: false))
+        }
       }
       for child in entity.children { collect(child) }
     }
@@ -57,15 +72,14 @@ struct LandmarkFade {
     }
   }
 
-  /// Shows each landmark's material see-through in a speck a metre before `camera`, too small
-  /// and faint to notice, for the first `preparing` seconds of play. A landmark is usually out
-  /// of view when play starts, and the first see-through frame of a material is slow to prepare:
-  /// on the Simulator, the first fade stalled for 0.7 seconds. The specks stay, disabled.
+  /// Shows each landmark's ghost in a speck a metre before `camera`, too small and faint to
+  /// notice, for the first `preparing` seconds of play. A landmark is usually out of view when
+  /// play starts, and the first see-through frame of a material is slow to prepare: on the
+  /// Simulator, the first fade stalled for 0.7 seconds. The specks stay, disabled.
   mutating func prepare(before camera: Entity) {
     for landmark in landmarks {
-      guard let materials = landmark.parts.first?.entity.components[ModelComponent.self]?.materials
-      else { continue }
-      let speck = ModelEntity(mesh: .generateBox(size: 0.002), materials: materials)
+      guard let ghost = landmark.parts.first?.ghost else { continue }
+      let speck = ModelEntity(mesh: .generateBox(size: 0.002), materials: ghost)
       speck.name = "landmark.speck"
       speck.position = [0, 0, -1]
       speck.components.set(OpacityComponent(opacity: 0.01))
@@ -96,6 +110,12 @@ struct LandmarkFade {
       guard opacity != before else { continue }
       landmarks[index].opacity = opacity
       for part in landmarks[index].parts {
+        // The ghost takes the part's place as the fade begins, and gives it back at the end.
+        if opacity < 1, before == 1 {
+          Self.wear(part.ghost, on: part.entity)
+        } else if opacity == 1 {
+          Self.wear(part.materials, on: part.entity)
+        }
         if opacity < 1 {
           part.entity.components.set(OpacityComponent(opacity: opacity))
         } else {
@@ -126,6 +146,23 @@ struct LandmarkFade {
       if near > far { return false }
     }
     return true
+  }
+
+  /// An unlit stand-in for each material, in its base colour.
+  private static func ghost(of materials: [any Material]) -> [any Material] {
+    materials.map { material in
+      let colour =
+        (material as? PhysicallyBasedMaterial)?.baseColor.tint
+        ?? (material as? SimpleMaterial)?.color.tint ?? UIColor(white: 0.7, alpha: 1)
+      return UnlitMaterial(color: colour)
+    }
+  }
+
+  /// Puts these materials on the entity's model.
+  private static func wear(_ materials: [any Material], on entity: Entity) {
+    guard var model = entity.components[ModelComponent.self] else { return }
+    model.materials = materials
+    entity.components.set(model)
   }
 
   /// Whether two boxes touch or overlap.

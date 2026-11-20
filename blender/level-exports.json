@@ -2,10 +2,10 @@
   "brooklyn-bridge": {
     "format": 1,
     "made from": {
-      "blender/levels/brooklyn-bridge.blend": "4e241d922e692ceefd7d25bd5f9cd3a2ef82b80c61ccd23eff33191ccb880903"
+      "blender/levels/brooklyn-bridge.blend": "58c6154ae1aa517c3d44009333b0a2fcee2938e34ef23430a8fa0b0d9bdfa661"
     },
     "wrote": {
-      "apple/sources/content/BrooklynBridge.usdz": "37c4e51438246838482df63a75222308f38404e5a584b5be5ef60474b7be8c8b",
+      "apple/sources/content/BrooklynBridge.usdz": "2c9b28fa4ba957db629e53abd11af50bad1cae42b3dd93282a25e0ed5fe9db7b",
       "apple/sources/content/BrooklynBridgeLayout.swift": "95c71ea0166a23238b79bb15279dfd7e76e106c0a0d373218f356928fa7ffbd3"
     }
   },
