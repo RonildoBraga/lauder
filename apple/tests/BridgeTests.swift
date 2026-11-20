@@ -222,6 +222,52 @@ struct BridgeTests {
     #expect(camera.camera.fieldOfViewInDegrees == layout.camera.fieldOfView)
   }
 
+  /// From the bridge's high camera a tower hides the party for some 40 m beyond it, so the whole
+  /// tower, its legs, its pier and its top, fades while it does (the visual direction's camera
+  /// and scale). Under its arches, and away from it, it shows.
+  @Test
+  func aTowerFadesWhileItHidesTheParty() throws {
+    var level = BrooklynBridge.level
+    level.encounters = []
+    let world = GameWorld(level: level)
+    let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
+    func tower(_ end: String) throws -> [Entity] {
+      let names =
+        ["tower-top-\(end)"] + ["west", "pier", "east"].map { "\(end)-tower-\($0) block" }
+      return try names.map { try #require(scene.findEntity(named: Self.sceneName($0)), "\($0)") }
+    }
+    let brooklyn = try tower("brooklyn")
+    let manhattan = try tower("manhattan")
+    // Every part of a tower shows as much as the others.
+    func opacity(_ tower: [Entity]) -> Set<Float> {
+      Set(tower.map { $0.components[OpacityComponent.self]?.opacity ?? 1 })
+    }
+    func standStill() {
+      for _ in 0..<30 { world.advanceParty(movement: .zero, deltaTime: 1 / 60) }
+    }
+    #expect(opacity(brooklyn) == [1] && opacity(manhattan) == [1])
+    walk(world, to: [6.5, 66])
+    walk(world, to: [6.5, 20])
+    standStill()
+    #expect(opacity(brooklyn) == [1], "Miki shows under the first tower's arches")
+    walk(world, to: [6.5, -20])
+    standStill()
+    #expect(opacity(brooklyn) == [LandmarkFade.faded], "the first tower's top hides her")
+    #expect(opacity(manhattan) == [1])
+    walk(world, to: [6.5, -206.15])
+    standStill()
+    #expect(opacity(brooklyn) == [1] && opacity(manhattan) == [1], "nothing hides her mid-span")
+    for point: SIMD2<Float> in [[6.5, -225.15], [-7, -228.15], [-7, -456.3], [-7, -502.3]] {
+      walk(world, to: point)
+    }
+    standStill()
+    #expect(opacity(manhattan) == [LandmarkFade.faded], "the camera hangs above the second tower")
+    #expect(opacity(brooklyn) == [1])
+    // Restart returns Miki to the Brooklyn end, and the tower shows again at once.
+    world.restart()
+    #expect(opacity(manhattan) == [1])
+  }
+
   // MARK: - Helpers
 
   /// A layout name as the scene file has it: USD allows only letters, digits and underscores, so
