@@ -175,6 +175,8 @@ struct OrderTests {
       return
     }
     #expect(simd_distance(beside, point) >= GameWorld.spotSpacing - 0.01)
+    // Facing east, Tom on the left goes to the north of Laura's point, not through her.
+    #expect(beside.y < point.y - 0.9 && abs(beside.x - point.x) < 0.2, "\(beside)")
     try wait(world, seconds: 4)
     #expect(simd_distance(position(world, .tom), position(world, .laura)) > 0.9)
   }

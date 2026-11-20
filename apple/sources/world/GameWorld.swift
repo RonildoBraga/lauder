@@ -582,13 +582,13 @@ final class GameWorld {
         let member = command == .leftGoes ? session.leftCompanion : session.rightCompanion
       else { return }
       var target = point
-      // Not onto the other companion's own point, where neither could settle.
+      // Not onto the other companion's own point, where neither could settle: beside it, on
+      // the side the order names, so neither walks through the other.
       if let other = session.companions.first(where: { $0 != member }),
         let taken = Self.point(of: session.order(of: other)),
         simd_distance(taken, point) < Self.spotSpacing,
-        let beside = grid.nearestWalkable(
-          to: point, within: Self.orderSnap + Self.spotSpacing, region: region,
-          where: { simd_distance($0, taken) >= Self.spotSpacing })
+        let beside = spot(
+          beside: taken, from: leader, onRight: command == .rightGoes, in: region)
       {
         target = beside
       }
@@ -637,24 +637,49 @@ final class GameWorld {
   private func spots(around point: SIMD2<Float>, from leader: SIMD2<Float>, in region: Int32)
     -> [SIMD2<Float>]?
   {
+    let (along, across) = axes(of: point, from: leader)
+    let half = Self.spotSpacing / 2
+    for axis in [across, along] {
+      let pair = [point + axis * half, point - axis * half]
+      if pair.allSatisfy({ fits($0, near: point, in: region) }) { return pair }
+    }
+    let second = grid.nearestWalkable(
+      to: point, within: Self.orderSnap + Self.spotSpacing, region: region,
+      where: { simd_distance($0, point) >= Self.spotSpacing && fits($0, near: point, in: region) })
+    return second.map { [point, $0] }
+  }
+
+  /// A spot `spotSpacing` beside another companion's point: on the named side of the line from
+  /// the leader where it fits, else the other side, else the nearest place far enough away.
+  private func spot(
+    beside taken: SIMD2<Float>, from leader: SIMD2<Float>, onRight: Bool, in region: Int32
+  ) -> SIMD2<Float>? {
+    let across = axes(of: taken, from: leader).across * (onRight ? 1 : -1)
+    for candidate in [taken + across * Self.spotSpacing, taken - across * Self.spotSpacing]
+    where fits(candidate, near: taken, in: region) {
+      return candidate
+    }
+    return grid.nearestWalkable(
+      to: taken, within: Self.orderSnap + Self.spotSpacing, region: region,
+      where: { simd_distance($0, taken) >= Self.spotSpacing && fits($0, near: taken, in: region) })
+  }
+
+  /// The line from the leader to a point, and the direction to its right, which is screen right
+  /// under a camera behind the leader. A point at the leader's feet takes the leader's facing.
+  private func axes(of point: SIMD2<Float>, from leader: SIMD2<Float>)
+    -> (along: SIMD2<Float>, across: SIMD2<Float>)
+  {
     let offset = point - leader
     let angle = yaw[session.leader] ?? 0
     let along =
       simd_length(offset) > 0.01 ? simd_normalize(offset) : SIMD2(-sin(angle), -cos(angle))
-    let across = SIMD2(-along.y, along.x)
-    let half = Self.spotSpacing / 2
-    func fits(_ spot: SIMD2<Float>) -> Bool {
-      grid.isWalkable(spot) && grid.region(at: spot) == region
-        && motion.canTraverse(from: point, to: spot)
-    }
-    for axis in [across, along] {
-      let pair = [point + axis * half, point - axis * half]
-      if pair.allSatisfy(fits) { return pair }
-    }
-    let second = grid.nearestWalkable(
-      to: point, within: Self.orderSnap + Self.spotSpacing, region: region,
-      where: { simd_distance($0, point) >= Self.spotSpacing && fits($0) })
-    return second.map { [point, $0] }
+    return (along, SIMD2(-along.y, along.x))
+  }
+
+  /// Somewhere a companion can stand, in the leader's area, reached straight from `origin`.
+  private func fits(_ spot: SIMD2<Float>, near origin: SIMD2<Float>, in region: Int32) -> Bool {
+    grid.isWalkable(spot) && grid.region(at: spot) == region
+      && motion.canTraverse(from: origin, to: spot)
   }
 
   /// Show the cross where an order could not go, briefly: standing where the finger pressed,
