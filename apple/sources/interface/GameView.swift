@@ -49,6 +49,11 @@ struct GameView: View {
                 Text(hitPips).font(.caption2).foregroundStyle(threatColour)
               }
             }
+            if world.session.formationsAvailable {
+              // The squad's formation (ADR 0003, phase S2), on the party's own line so the
+              // panel grows no taller over the scene.
+              Text("· \(world.session.formation.name)").font(.caption2)
+            }
           }
           if world.showsWeapon {
             HStack(spacing: 8) {
@@ -68,8 +73,13 @@ struct GameView: View {
           if !world.controls.touchControlsEnabled && !talking,
             let next = world.session.nextLeader
           {
-            Text("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
-              .font(.caption)
+            HStack(spacing: 8) {
+              Text("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
+              if world.session.formationsAvailable {
+                Text("\(world.controls.formationButtonName) · Formation")
+              }
+            }
+            .font(.caption)
           }
           if !talking {
             Text(world.observation).font(.caption)
@@ -222,6 +232,7 @@ struct GameView: View {
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
+          showsFormation: world.session.formationsAvailable,
           mode: world.session.mode)
       }
     }

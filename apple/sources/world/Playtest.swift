@@ -37,6 +37,9 @@
       case expectHits(Int)
       /// Who travels together, in switching order.
       case expectParty([PartyMember])
+      /// Press the formation button for one frame.
+      case formation
+      case expectFormation(GameSession.Formation)
     }
 
     /// What the runner can see of the game each frame.
@@ -51,6 +54,7 @@
       let defeated: Int
       let ammo: Int
       let retrying: Bool
+      let formation: GameSession.Formation
     }
 
     struct Frame {
@@ -92,7 +96,7 @@
     }
 
     static let scenarioNames = [
-      "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening",
+      "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
     ]
     static let walkTimeout: Float = 120
     /// How long each conversation line stays on screen before the next press.
@@ -182,6 +186,18 @@
           switchFrame = 0
           advance()
           return InputRules.Raw()
+        case .formation:
+          switchFrame += 1
+          if switchFrame == 1 { return InputRules.Raw(controllerFormation: true) }
+          advance()
+          return InputRules.Raw()
+        case .expectFormation(let formation):
+          if snapshot.formation != formation {
+            failures.append(
+              "the formation was \(snapshot.formation.name) instead of \(formation.name) "
+                + "at \(Self.seconds(elapsed))")
+          }
+          advance()
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -231,12 +247,12 @@
           if snapshot.leader != start.party[0] || snapshot.party != start.party
             || snapshot.firedTriggers != 0 || snapshot.beat != .alone || snapshot.defeated != 0
             || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
-            || snapshot.mode != .exploring
+            || snapshot.mode != .exploring || snapshot.formation != .close
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
-                + "\(snapshot.party.count), the story was at \(snapshot.beat) and "
-                + "\(snapshot.firedTriggers) trigger(s) had fired")
+                + "\(snapshot.party.count) in \(snapshot.formation.name), the story was at "
+                + "\(snapshot.beat) and \(snapshot.firedTriggers) trigger(s) had fired")
           }
           for (member, position) in positions
           where simd_distance(position, start.spawn(member)) > 0.3 {
@@ -495,6 +511,24 @@
         .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki]), .expectTriggers(0)]
 
+    /// Formations (M5): once Laura joins, the formation button cycles Close, Spread and Column
+    /// on the west roadway's open deck. Spread squeezes past the car and the debris beyond
+    /// Laura, and between the two cars before the Manhattan end, then spreads out again; the
+    /// closing exchange keeps the formation, and Restart returns to Close with Miki alone.
+    private static let formations: [Step] =
+      toLaura + [
+        .expectFormation(.close), .formation, .expectFormation(.spread), .walk([-7, -248]),
+        .mark("spread"), .walk([-7, -254]), .mark("past the car"), .walk([-7, -270]),
+        .mark("spread again"), .walk([-7, -275]), .formation, .expectFormation(.column),
+        .walk([-7, -295]), .mark("column"), .walk([-7, -300]), .formation,
+        .expectFormation(.close), .walk([-7, -315]), .mark("close"), .walk([-7, -320]),
+        .formation, .expectFormation(.spread), .walk([-7, -456.3]),
+        .mark("second tower in spread"), .walk([-7, -490]), .mark("past the first car"),
+        .walk([-7, -496.5]), .mark("past the second car"), .walk([-7, -502.3]), .talk,
+        .expectBeat(.arrived), .expectFormation(.spread), .mark("Manhattan, together"),
+        .wait(seconds: 0.5),
+      ] + restartRun + [.expectParty([.miki])]
+
     static func steps(for scenario: String) -> [Step]? {
       switch scenario {
       case "bridge-walk": bridgeWalk
@@ -503,6 +537,7 @@
       case "ambush": ambush
       case "laura": laura
       case "opening": opening
+      case "formations": formations
       default: nil
       }
     }

@@ -32,6 +32,25 @@ final class GameSession {
     case resume, restart
   }
 
+  /// How the companions arrange themselves around the leader, in the order the formation
+  /// button cycles them (ADR 0003, phase S2).
+  enum Formation: CaseIterable, Sendable {
+    /// Beside and just behind the leader: ordinary travel.
+    case close
+    /// Wider to each side: open ground.
+    case spread
+    /// Single file on the leader's own route: tight places.
+    case column
+
+    var name: String {
+      switch self {
+      case .close: "Close"
+      case .spread: "Spread"
+      case .column: "Column"
+      }
+    }
+  }
+
   /// Hits the leader can take in an encounter; the last one starts it again (the placeholder
   /// hit rule of The Quiet Yard).
   static let hitsAllowed = 3
@@ -88,6 +107,8 @@ final class GameSession {
   private(set) var conversation: MissionScript.Conversation?
   private(set) var lineIndex = 0
   private(set) var pauseChoice = PauseChoice.resume
+  /// The squad's formation. It stays Close until there are two companions.
+  private(set) var formation = Formation.close
   /// Where Resume returns: exploring, or the conversation at its current line.
   private var resumeMode = Mode.exploring
 
@@ -138,6 +159,19 @@ final class GameSession {
   func cycleLeader() {
     guard mode == .exploring, let next = nextLeader else { return }
     leader = next
+  }
+
+  /// Whether the formation button is offered: once the leader has two companions (ADR 0004,
+  /// M5). Until then the one companion follows in the Close formation.
+  var formationsAvailable: Bool { party.count >= 3 }
+
+  /// The formation button: Close, then Spread, then Column, then Close again. Only while
+  /// exploring, so Pause and conversations block it as they block switching.
+  func cycleFormation() {
+    guard mode == .exploring, formationsAvailable else { return }
+    let all = Formation.allCases
+    let index = all.firstIndex(of: formation) ?? 0
+    formation = all[(index + 1) % all.count]
   }
 
   /// A member joins the party and can lead from now on. Joining twice changes nothing.
@@ -303,6 +337,7 @@ final class GameSession {
     pauseChoice = .resume
     party = startingParty
     leader = startingParty[0]
+    formation = .close
     firedTriggers = []
     beat = .alone
     hitsTaken = 0

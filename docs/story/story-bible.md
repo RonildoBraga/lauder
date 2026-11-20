@@ -56,7 +56,7 @@ These distinctions are not complete identities. All three can observe, talk, hel
 - Avoid repeating three obstacles each labelled for a different character. Switching should follow the player's reading of a place.
 - A specialist opening should ultimately admit the party. Laura might reach a latch to release access for the others; following her does not make them equally agile.
 - Companions should not repeatedly become stuck or need rescue to justify their presence. A narrow passage needs a credible group route before the scene is written around it.
-- Keep commands few and readable. The current leadership-switch controls are recorded in the [gameplay input contract](../gameplay-script.md#readable-controls-and-party-feedback); formation cycling, placement and regroup controls remain design proposals rather than implemented mappings. Skill trees and separate equipment systems are not prerequisites.
+- Keep commands few and readable. The current leadership-switch and formation controls are recorded in the [gameplay input contract](../gameplay-script.md#readable-controls-and-party-feedback); placement and regroup controls remain design proposals rather than implemented mappings. Skill trees and separate equipment systems are not prerequisites.
 
 ### Combat identities
 
@@ -73,7 +73,7 @@ Defending the group does not mean starting fights with neutral people, breaking 
 
 Personality can influence a companion's preferred nearby position and brief reactions: Miki looks for a clear view, Laura reads another safe angle, and Tom considers the exposed approach. It must not create concealed disobedience, suicidal advances or repeated rescue chores. A command to regroup and leave takes priority over those preferences.
 
-Natural movement should seek reachable nearby destinations and respond to obstacles, with enough space for all three. **Close** for compact mutual support and **Spread** for more separation on open ground are the two proposed initial formations. Narrow passages temporarily compress the group, which expands again where space permits. Formation shape must yield to safe, credible group access; Laura's agility cannot justify taking a route her companions cannot use. Placement and regroup orders, directional-pad use and touch equivalents remain proposals. Their exact bindings, targeting method and navigation rules are not settled here.
+Natural movement should seek reachable nearby destinations and respond to obstacles, with enough space for all three. **Close** for compact mutual support, **Spread** for more separation on open ground and **Column** for single file in tight places are the formations built for the opening. Narrow passages temporarily compress the group, which expands again where space permits. Formation shape must yield to safe, credible group access; Laura's agility cannot justify taking a route her companions cannot use. Placement and regroup orders, directional-pad use and touch equivalents remain proposals. Their exact bindings, targeting method and navigation rules are not settled here.
 
 ## Miki — understanding what still works
 

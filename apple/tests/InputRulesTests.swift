@@ -304,6 +304,9 @@ struct InputRulesTests {
     InputRules.Raw(touchPause: true),
     InputRules.Raw(touchSwitch: true),
     InputRules.Raw(touchRestart: true),
+    InputRules.Raw(controllerFormation: true),
+    InputRules.Raw(keyboardFormation: true),
+    InputRules.Raw(touchFormation: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()
@@ -311,6 +314,62 @@ struct InputRulesTests {
     #expect(state.needsNeutralInput)
     #expect(sample(.init(), state: &state) == .neutral)
     #expect(!state.needsNeutralInput)
+  }
+
+  // MARK: - The formation button (ADR 0003, phase S2)
+
+  @Test(arguments: [
+    InputRules.Raw(controllerFormation: true),
+    InputRules.Raw(keyboardFormation: true),
+    InputRules.Raw(touchFormation: true),
+  ])
+  func eachFormationPressCountsOnce(raw: InputRules.Raw) {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(raw, state: &state).formationPressed)
+    #expect(!sample(raw, state: &state).formationPressed, "a held button does not repeat")
+    #expect(!sample(.init(), state: &state).formationPressed)
+    #expect(sample(raw, state: &state).formationPressed)
+  }
+
+  @Test
+  func theFormationKeyIsKeyboardInput() {
+    #expect(InputRules.Raw(keyboardFormation: true).hasKeyboardInput)
+  }
+
+  @Test
+  func aFormationPressDiscardsAnActionInTheSameSample() {
+    var state = InputRules.State(needsNeutralInput: false)
+    var raw = InputRules.Raw(stick: [0.5, 0], controllerAction: true, controllerFormation: true)
+    let pressed = sample(raw, state: &state)
+    #expect(pressed.formationPressed)
+    #expect(!pressed.actionPressed)
+    #expect(pressed.movement == [0.5, 0])
+    // The held action does not act once the formation button lifts; it needs a fresh press.
+    raw.controllerFormation = false
+    #expect(!sample(raw, state: &state).actionPressed)
+    raw.controllerAction = false
+    #expect(!sample(raw, state: &state).actionPressed)
+    raw.controllerAction = true
+    #expect(sample(raw, state: &state).actionPressed)
+  }
+
+  @Test
+  func switchAndFormationPressedTogetherBothCount() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let both = sample(.init(keyboardSwitch: true, keyboardFormation: true), state: &state)
+    #expect(both.switchPressed)
+    #expect(both.formationPressed)
+  }
+
+  @Test(arguments: [GameSession.Mode.paused, .dialogue])
+  func pausedAndTalkingConsumeFormationPresses(mode: GameSession.Mode) {
+    var state = InputRules.State(needsNeutralInput: false)
+    let held = InputRules.Raw(controllerFormation: true)
+    #expect(!sample(held, mode: mode, state: &state).formationPressed)
+    // Still held when play resumes: it was consumed, not queued.
+    #expect(!sample(held, state: &state).formationPressed)
+    #expect(!sample(.init(), state: &state).formationPressed)
+    #expect(sample(held, state: &state).formationPressed)
   }
 
   private func sample(

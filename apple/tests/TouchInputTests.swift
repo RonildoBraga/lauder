@@ -34,7 +34,7 @@ struct TouchInputTests {
     #expect(heldAction.touchAction)
   }
 
-  @Test(arguments: [TouchInput.Button.action, .cycle, .pause])
+  @Test(arguments: [TouchInput.Button.action, .cycle, .pause, .formation])
   func rapidTapIsSampledOnceRatherThanLostBetweenUpdates(button: TouchInput.Button) {
     var touch = TouchInput()
     touch.setButton(button, isPressed: true, generation: 0)
@@ -46,6 +46,7 @@ struct TouchInputTests {
     #expect(first.input.actionPressed == (button == .action))
     #expect(first.input.switchPressed == (button == .cycle))
     #expect(first.input.pausePressed == (button == .pause))
+    #expect(first.input.formationPressed == (button == .formation))
     #expect(InputRules.resolve(touch.sample(), mode: .exploring, state: state).input == .neutral)
   }
 
