@@ -50,9 +50,10 @@ struct GameView: View {
               }
             }
             if world.session.formationsAvailable {
-              // The squad's formation (ADR 0003, phase S2), on the party's own line so the
-              // panel grows no taller over the scene.
-              Text("· \(world.session.formation.name)").font(.caption2)
+              // The squad's formation and what it is doing (ADR 0003, phases S2 and S3), on the
+              // party's own line so the panel grows no taller over the scene.
+              Text("· \(world.session.formation.name) · \(world.session.squadState)")
+                .font(.caption2)
             }
           }
           if world.showsWeapon {
@@ -76,10 +77,15 @@ struct GameView: View {
             HStack(spacing: 8) {
               Text("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
               if world.session.formationsAvailable {
-                Text("\(world.controls.formationButtonName) · Formation")
+                Text("\(world.controls.formationButtonName) · \(formationAction)")
               }
             }
             .font(.caption)
+            if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
+              // The D-pad's or arrow keys' orders, with the companions in their fixed order.
+              Text("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Both · ▼ Hold")
+                .font(.caption)
+            }
           }
           if !talking {
             Text(world.observation).font(.caption)
@@ -233,6 +239,8 @@ struct GameView: View {
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
           showsFormation: world.session.formationsAvailable,
+          formationTitle: formationAction,
+          orderNames: orderNames,
           mode: world.session.mode)
       }
     }
@@ -258,6 +266,19 @@ struct GameView: View {
   }
 
   private var threatColour: Color { Color(red: 1, green: 0.45, blue: 0.38) }
+
+  /// The formation button's job: after an order it calls everyone back (ADR 0003).
+  private var formationAction: String {
+    world.session.orders.isEmpty ? "Formation" : "Follow"
+  }
+
+  /// The companions the touch order menu offers on its left and right, once orders are offered.
+  private var orderNames: (left: String, right: String)? {
+    guard world.session.ordersAvailable, let left = world.session.leftCompanion,
+      let right = world.session.rightCompanion
+    else { return nil }
+    return (left.displayName, right.displayName)
+  }
 
   /// The leader's hits left in this encounter, then those taken.
   private var hitPips: String {

@@ -22,6 +22,7 @@ struct PartySoakTests {
     var coverage = [0, 0, 0]
     var switches = 0
     var formations: Set<GameSession.Formation> = []
+    var orders = 0
 
     for frame in 0..<5_000 {
       if frame > 0 && frame % 211 == 0 {
@@ -31,6 +32,20 @@ struct PartySoakTests {
       }
       // Every formation takes its turn against the walls, out of step with the switches.
       if frame > 0 && frame % 157 == 0 { world.session.cycleFormation() }
+      // Squad orders too (ADR 0003, phase S3): sending, holding and calling back, through the
+      // world as a press gives them, so companions hold against walls and get in the way.
+      if frame > 0 && frame % 97 == 0 {
+        var press = InputRules.Input.neutral
+        switch random.next(upperBound: 5) {
+        case 0: press.command = .bothGo
+        case 1: press.command = .leftGoes
+        case 2: press.command = .rightGoes
+        case 3: press.command = .hold
+        default: press.formationPressed = true
+        }
+        world.update(with: press, sampledIn: .exploring, deltaTime: 0)
+        if !world.session.orders.isEmpty { orders += 1 }
+      }
       formations.insert(world.session.formation)
       let previous = bodies.map { SIMD2($0.position.x, $0.position.z) }
       let leader = previous[members.firstIndex(of: world.session.leader)!]
@@ -100,6 +115,7 @@ struct PartySoakTests {
     #expect(coverage.allSatisfy { $0 > 0 }, "seed \(seed): every heading family was exercised")
     #expect(switches > 0)
     #expect(formations.count == GameSession.Formation.allCases.count)
+    #expect(orders > 0, "seed \(seed): orders were given")
     #expect(world.diagnostic == nil)
   }
 

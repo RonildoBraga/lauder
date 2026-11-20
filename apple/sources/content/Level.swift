@@ -133,6 +133,9 @@ struct Level {
     /// Where the camera leans while the cues play, so that what the scene is about comes into
     /// view, as it leans towards a hostile in a fight.
     var focus: SIMD2<Float>?
+    /// The encounter waits until every companion is close to the leader, so a scene for the
+    /// whole party never begins with someone holding elsewhere (ADR 0003, phase S3).
+    var gathersParty = false
   }
 
   /// How close a point of interest must be for a look to describe it.

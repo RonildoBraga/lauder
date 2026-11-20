@@ -92,6 +92,18 @@ final class GameControls {
     touchInput.setButton(button, isPressed: isPressed, generation: generation)
   }
 
+  /// Where the touch order menu has opened, so the world can fix the point on the ground.
+  func setTouchMark(_ point: InputRules.ScreenPoint, generation: Int) {
+    guard isActive, touchControlsEnabled else { return }
+    touchInput.setMark(point, generation: generation)
+  }
+
+  /// The touch order menu's choice, at the point where its finger pressed the ground.
+  func setTouchOrder(_ order: InputRules.TouchOrder, generation: Int) {
+    guard isActive, touchControlsEnabled else { return }
+    touchInput.setOrder(order, generation: generation)
+  }
+
   private func cancelTouches() {
     touchInput.cancel()
     touchGeneration = touchInput.generation
@@ -115,15 +127,22 @@ final class GameControls {
       controllerSwitch: !touchControlsEnabled && (gamepad?.rightShoulder.isPressed ?? false),
       controllerFire: !touchControlsEnabled && (gamepad?.rightTrigger.isPressed ?? false),
       controllerFormation: !touchControlsEnabled && (gamepad?.buttonY.isPressed ?? false),
+      dpadUp: !touchControlsEnabled && (gamepad?.dpad.up.isPressed ?? false),
+      dpadDown: !touchControlsEnabled && (gamepad?.dpad.down.isPressed ?? false),
+      dpadLeft: !touchControlsEnabled && (gamepad?.dpad.left.isPressed ?? false),
+      dpadRight: !touchControlsEnabled && (gamepad?.dpad.right.isPressed ?? false),
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
       keyboardSwitch: pressed(.keyQ), keyboardFire: pressed(.keyF),
       keyboardFormation: pressed(.keyR),
+      arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
+      arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
       touchRestart: touch.touchRestart, touchFire: touch.touchFire,
-      touchFormation: touch.touchFormation
+      touchFormation: touch.touchFormation, touchGround: touch.touchGround,
+      touchMark: touch.touchMark, touchOrder: touch.touchOrder
     )
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
@@ -136,7 +155,7 @@ final class GameControls {
     } else if let gamepad,
       simd_length_squared(raw.stick) > deadZone * deadZone
         || raw.controllerAction || raw.controllerPause || raw.controllerSwitch
-        || raw.controllerFire || raw.controllerFormation
+        || raw.controllerFire || raw.controllerFormation || raw.hasDpad
     {
       showController(gamepad)
     }
