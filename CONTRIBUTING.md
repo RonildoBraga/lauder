@@ -120,14 +120,14 @@ To change a level without Blender's interface, for example with a script in a ba
 
 ## Models
 
-A model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, stored with Git LFS ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Beside it are a `README.md`, which says where the model comes from and under which licence, and any textures it uses. One collection, named after the model, holds it, at its real size in metres and standing on the ground at its origin. Levels link the model, so a change to it reaches every level that uses it. The first models were the bridge's vehicles, `car`, `van` and `truck`, which no level uses since the snow buried them. The [models' README](blender/assets/README.md) sets out the rest of what a model's file needs.
+A model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, stored with Git LFS ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Beside it are a `README.md`, which says where the model comes from and under which licence, and any textures it uses. One collection, named after the model, holds it, at its real size in metres and standing on the ground at its origin. Levels link the model, so a change to it reaches every level that uses it. The models so far are the stand-ins that the game creates itself, for the party and the hostiles. The [models' README](blender/assets/README.md) sets out the rest of what a model's file needs.
 
 - **Place a model in a level:** with the level open, select the gameplay box the model belongs to, press **Add Model** in the Lauder tab, and choose the model. It stands on the box's base, turned along the box's longer side, in Visual and parented to the box, so that it moves with the box. Without a box selected, it stands at the 3D cursor. The game blocks movement and sight with the box, not the model, so give the box the model's size.
-- **Change a model:** select it in the level and press **Open Model**, or open its file. Change it and save: each level whose export used it exports again. **Open Level** goes back. A level cannot change a linked model; a variant, such as a red car, is a model of its own.
+- **Change a model:** select it in the level and press **Open Model**, or open its file. Change it and save: each level whose export used it exports again. **Open Level** goes back. A level cannot change a linked model; a variant, such as one in another colour, is a model of its own.
 - **Check a model:** press **Check Model** with the model open, or run the intake check, giving the path of your Blender:
 
   ```bash
-  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/check-model.py -- car
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/check-model.py -- miki
   ```
 
   It lists what must change before a level can use the model, such as a material the game cannot show, a texture outside the model's folder, or a README without the model's source and licence. Then it notes what is worth a look, such as the model's size.

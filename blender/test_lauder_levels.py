@@ -540,7 +540,7 @@ class ShadowTests(unittest.TestCase):
 class SceneRuleTests(unittest.TestCase):
     """What a scene file can show as Blender does (ADR 0002)."""
 
-    PAINT = L.MaterialShape("car paint", "blender/assets/car/car.blend", "BSDF_PRINCIPLED", (
+    PAINT = L.MaterialShape("kite paint", "blender/assets/kite/kite.blend", "BSDF_PRINCIPLED", (
         ("Base Color", (("TEX_IMAGE", "Image Texture"), ("UVMAP", "UV Map"))),
         ("Normal", (("NORMAL_MAP", "Normal Map"), ("TEX_IMAGE", "Image Texture"))),
         ("Alpha", (("MATH", "Math"), ("TEX_IMAGE", "Image Texture"))),
@@ -567,7 +567,7 @@ class SceneRuleTests(unittest.TestCase):
         problems = L.material_problems([noisy, L.MaterialShape("glow", None, "EMISSION"),
                                         L.MaterialShape("bare")])
         self.assertEqual(len(problems), 4)
-        self.assertIn("rust (from blender/assets/car/car.blend) makes its Base Color with Mix and "
+        self.assertIn("rust (from blender/assets/kite/kite.blend) makes its Base Color with Mix and "
                       "Noise Texture", problems[0])
         self.assertIn("its Roughness with Math", problems[1])
         self.assertIn("glow needs a Principled BSDF", problems[2])
@@ -587,16 +587,16 @@ class SceneRuleTests(unittest.TestCase):
         driven = replace(self.PAINT, name="driven", normal_strengths=(None,))
         problems = L.material_problems([packed, sign, unlit, gentle, coated, driven])
         self.assertEqual(len(problems), 6)
-        self.assertIn("packed (from blender/assets/car/car.blend) reads its Roughness from one "
+        self.assertIn("packed (from blender/assets/kite/kite.blend) reads its Roughness from one "
                       "channel of an image with Separate Color", problems[0])
-        self.assertIn("sign (from blender/assets/car/car.blend) has an Emission Strength of 4",
+        self.assertIn("sign (from blender/assets/kite/kite.blend) has an Emission Strength of 4",
                       problems[1])
         self.assertIn("an Emission Strength of 0", problems[2])
         self.assertIn("a Normal Map Strength of 0.25", problems[3])
-        self.assertIn("coated (from blender/assets/car/car.blend) feeds its Coat Weight with nodes, "
+        self.assertIn("coated (from blender/assets/kite/kite.blend) feeds its Coat Weight with nodes, "
                       "and the game takes images only on Base Color, Roughness, Metallic, Normal, "
                       "Emission Color and Alpha", problems[4])
-        self.assertIn("driven (from blender/assets/car/car.blend) feeds a Normal Map's Strength with "
+        self.assertIn("driven (from blender/assets/kite/kite.blend) feeds a Normal Map's Strength with "
                       "nodes", problems[5])
         # At strength 1, with roughness from an image's alpha, the game shows them as Blender does.
         lit = replace(sign, name="lit sign", emission_strength=1, normal_strengths=(1.0,), feeds=(
@@ -606,34 +606,34 @@ class SceneRuleTests(unittest.TestCase):
     def test_materials_that_usd_would_merge_are_refused(self):
         # Blender's USD export writes one material for two of the same name, so one model would
         # show the other's look.
-        van = replace(self.PAINT, source="blender/assets/van/van.blend")
-        problems = L.material_problems([self.PAINT, van])
+        sled = replace(self.PAINT, source="blender/assets/sled/sled.blend")
+        problems = L.material_problems([self.PAINT, sled])
         self.assertEqual(len(problems), 1)
-        self.assertIn("would all be car_paint", problems[0])
+        self.assertIn("would all be kite_paint", problems[0])
 
     def test_textures_are_image_files_of_their_own_in_the_repository(self):
-        good = L.TextureShape("paint", "blender/assets/car/textures/paint.png", bytes=900)
-        self.assertEqual(L.texture_problems([good], "blender/assets/car"), [])
+        good = L.TextureShape("paint", "blender/assets/kite/textures/paint.png", bytes=900)
+        self.assertEqual(L.texture_problems([good], "blender/assets/kite"), [])
         cases = {
             "packed": L.TextureShape("a", packed=True),
             "missing": L.TextureShape("b", "//textures/b.png", exists=False),
             "outside the repository": L.TextureShape("c", "/elsewhere/c.png"),
-            "copy it into blender/assets/car": L.TextureShape("d", "blender/levels/d.png"),
-            "PNG and JPEG": L.TextureShape("e", "blender/assets/car/textures/e.exr"),
+            "copy it into blender/assets/kite": L.TextureShape("d", "blender/levels/d.png"),
+            "PNG and JPEG": L.TextureShape("e", "blender/assets/kite/textures/e.exr"),
             "generated": L.TextureShape("f", source="GENERATED"),
-            "add a rule": L.TextureShape("g", "blender/assets/car/textures/g.png",
+            "add a rule": L.TextureShape("g", "blender/assets/kite/textures/g.png",
                                          bytes=L.LFS_IMAGE_BYTES + 1, lfs=False),
-            "makes it relative": L.TextureShape("h", "blender/assets/car/textures/h.png",
+            "makes it relative": L.TextureShape("h", "blender/assets/kite/textures/h.png",
                                                 full_path=True),
-            "not downloaded yet": L.TextureShape("i", "blender/assets/car/textures/i.png",
+            "not downloaded yet": L.TextureShape("i", "blender/assets/kite/textures/i.png",
                                                  pointer=True),
         }
         for words, texture in cases.items():
-            problems = L.texture_problems([texture], "blender/assets/car")
+            problems = L.texture_problems([texture], "blender/assets/kite")
             self.assertEqual(len(problems), 1, words)
             self.assertIn(words, problems[0])
         stored = replace(cases["add a rule"], lfs=True)
-        self.assertEqual(L.texture_problems([stored], "blender/assets/car"), [])
+        self.assertEqual(L.texture_problems([stored], "blender/assets/kite"), [])
 
 
 class ModelTests(unittest.TestCase):
@@ -650,12 +650,12 @@ class ModelTests(unittest.TestCase):
         return replace(shape, **changes)
 
     def test_a_model_is_known_by_its_place_in_the_repository(self):
-        self.assertEqual(L.model_of_path(ROOT, ROOT / "blender/assets/car/car.blend"), "car")
-        for other in ("blender/assets/car/van.blend", "blender/assets/Car/Car.blend",
-                      "blender/levels/brooklyn-bridge.blend", "blender/assets/car.blend"):
+        self.assertEqual(L.model_of_path(ROOT, ROOT / "blender/assets/kite/kite.blend"), "kite")
+        for other in ("blender/assets/kite/sled.blend", "blender/assets/Kite/Kite.blend",
+                      "blender/levels/brooklyn-bridge.blend", "blender/assets/kite.blend"):
             self.assertIsNone(L.model_of_path(ROOT, ROOT / other), other)
-        self.assertEqual(L.model_of_file(str(ROOT / "blender/assets/car/car.blend")),
-                         (str(ROOT), "car"))
+        self.assertEqual(L.model_of_file(str(ROOT / "blender/assets/kite/kite.blend")),
+                         (str(ROOT), "kite"))
 
     def test_a_model_ready_for_levels_has_nothing_to_fix(self):
         problems, notes = L.model_report(self.kite())
