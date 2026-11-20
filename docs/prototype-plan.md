@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Updated:** 21 November 2026\
-**Status:** The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. What follows needs its own assignment.\
+**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. What follows, the [later hardening](#later-hardening-after-the-loop-is-worth-keeping) and the [combat design review gate](#combat-design-review-gate), needs its own assignment.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
