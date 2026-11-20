@@ -2,7 +2,7 @@
 
 Run it with Blender in the background, from any folder, naming a model in blender/assets:
 
-    blender -b --factory-startup --python-exit-code 1 --python blender/scripts/check-model.py -- car
+    blender -b --factory-startup --python-exit-code 1 --python blender/scripts/check-model.py -- miki
 
 It lists what must change before a level can use the model, such as materials that the game cannot
 show, textures that are not image files in the model's folder, or a README.md without the model's
@@ -24,7 +24,7 @@ import lauder_levels  # noqa: E402
 
 arguments = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if len(arguments) != 1:
-    sys.exit("Name the model to check, such as: -- car")
+    sys.exit("Name the model to check, such as: -- miki")
 name = arguments[0]
 place = lauder_levels.model_file(name)
 path = REPOSITORY / place
