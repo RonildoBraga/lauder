@@ -309,6 +309,9 @@ struct BridgeTests {
     #expect(!world.panelHidden)
     world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
     #expect(world.panelHidden)
+    // Touch has no button to show it again, so with touch controls it shows anyway, and a
+    // controller brings back the player's choice.
+    #expect(world.controls.touchControlsEnabled && world.showsPanel)
     world.restart()
     #expect(world.panelHidden)
     world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
@@ -331,6 +334,23 @@ struct BridgeTests {
     #expect(world.lineIsFresh && !world.objectiveIsFresh)
     world.restart()
     #expect(world.lineIsFresh && world.objectiveIsFresh)
+  }
+
+  /// A response that repeats the last line, such as a second look in the same place, shows
+  /// again once the first has gone.
+  @Test
+  func aRepeatedResponseShowsAgain() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    walk(world, to: [6.5, 104])
+    world.performAction()
+    #expect(world.observation == BrooklynBridge.level.lookAround && world.lineIsFresh)
+    for _ in 0..<(Int(GameWorld.lineTime * 60) + 5) {
+      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    }
+    #expect(!world.lineIsFresh)
+    world.performAction()
+    world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    #expect(world.observation == BrooklynBridge.level.lookAround && world.lineIsFresh)
   }
 
   // MARK: - Helpers

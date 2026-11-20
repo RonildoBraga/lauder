@@ -30,7 +30,7 @@ struct GameView: View {
       }
 
       HStack(alignment: .top) {
-        if !world.panelHidden {
+        if world.showsPanel {
           status(talking: talking)
         }
         Spacer()

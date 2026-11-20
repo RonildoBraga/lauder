@@ -18,7 +18,17 @@ final class GameWorld {
   let controls = GameControls()
   let session: GameSession
   private(set) var nearbyName: String?
-  private(set) var observation: String
+  /// The latest line the HUD shows: a place's words, an action's result, a beat's line. Every
+  /// line counts as new, even one that repeats the last, so it shows again in the status panel.
+  private(set) var observation: String {
+    get { shownLine }
+    set {
+      shownLine = newValue
+      lineCount &+= 1
+    }
+  }
+  private var shownLine: String
+  @ObservationIgnored private var lineCount = 0
   private(set) var diagnostic: String?
   /// The leader's contextual action here, such as "Search"; nil when there is none.
   private(set) var actionName: String?
@@ -32,6 +42,9 @@ final class GameWorld {
   private(set) var compass: Compass?
   /// Whether the player has hidden the status panel. It stays hidden or shown across Restart.
   private(set) var panelHidden = false
+  /// Whether the status panel shows: unless the player has hidden it, and always with touch
+  /// controls, which have no button to show it again.
+  var showsPanel: Bool { !panelHidden || controls.touchControlsEnabled }
   /// Whether the latest line and the objective are new enough to show in the status panel.
   private(set) var lineIsFresh = true
   private(set) var objectiveIsFresh = true
@@ -86,7 +99,7 @@ final class GameWorld {
   @ObservationIgnored private var nearby: Level.PointOfInterest?
   @ObservationIgnored private var cameraTarget: SIMD3<Float>
   /// The line and objective the status panel last saw change, and for how long they have shown.
-  @ObservationIgnored private var agedLine = ""
+  @ObservationIgnored private var agedLineCount = 0
   @ObservationIgnored private var agedObjective = ""
   @ObservationIgnored private var lineAge: Float = 0
   @ObservationIgnored private var objectiveAge: Float = 0
@@ -140,7 +153,7 @@ final class GameWorld {
   init(level: Level = BrooklynBridge.level) {
     self.level = level
     session = GameSession(level: level)
-    observation = level.opening
+    shownLine = level.opening
     motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
     // Build the route grid while loading, not on the first frame of play.
     grid = NavigationGrid(level: level)
@@ -1024,8 +1037,8 @@ final class GameWorld {
   /// A new line or objective shows in the status panel for `lineTime` seconds of play, then
   /// leaves it to the essentials; Pause and conversations hold the time.
   private func ageLines(by dt: Float) {
-    if observation != agedLine {
-      agedLine = observation
+    if lineCount != agedLineCount {
+      agedLineCount = lineCount
       lineAge = 0
     } else {
       lineAge += dt
