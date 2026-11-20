@@ -48,7 +48,7 @@ A `Level` value holds a place's floor, blocker boxes, points of interest, intera
 
 ### 3. The party grows during play
 
-`GameSession` holds the recruited members, starting with Miki alone, and a `recruit` command. Switching cycles only through recruited members, and the HUD hides **Next** until there are two. All three bodies are created at load, so Restart adds no entities: Tom waits out of sight until his beat, and Laura lies at her spot. `SquadPlanner` and `GameWorld` take the recruited companions, so Tom follows alone in the Close formation until Laura joins ([ADR 0003](0003-squad-movement.md)). From then on the formation button cycles Close, Spread and Column (M5).
+`GameSession` holds the recruited members, starting with Miki alone, and a `recruit` command. Switching cycles only through recruited members, and the HUD hides **Next** until there are two. All three bodies are created at load, so Restart adds no entities: Tom waits out of sight until his beat, and Laura lies at her spot. `SquadPlanner` and `GameWorld` take the recruited companions, so Tom follows alone in the Close formation until Laura joins ([ADR 0003](0003-squad-movement.md)). From then on the formation button cycles Close, Spread and Column (M5), and squad orders send companions to a point or hold them there ([ADR 0003](0003-squad-movement.md)'s phase S3).
 
 ### 4. A story director runs the beats
 
@@ -65,6 +65,7 @@ A `Level` value holds a place's floor, blocker boxes, points of interest, intera
 | Stranger | Miki nears the first tower's approach | The stranger steps out. Miki calls "Friendly!" He aims and fires a scripted near miss, and the HUD shows how to fire |
 | Ambushed | Miki starts searching the body | An attacker runs at her from behind a van. Tom, close by, drops him before he reaches her. Miki turns; a short exchange; Tom joins |
 | Laura found | The party nears mid-span | Laura lies beside a car, and Miki can **Help**. The exchange gives only her name. With the medical kit from the first body she can stand, and she joins |
+| Onwards | The three reach the Manhattan end | The party stops for a short closing exchange. It waits until both companions are within 5 m of the leader, so companions left holding must be called back first |
 
 ### 5. Combat, small and plain
 
@@ -88,7 +89,7 @@ A downed enemy adds a **Search** interaction around the body: an entry in the le
 
 ### 8. Restart, tests and playtests
 
-Restart returns to the Brooklyn end with Miki alone, the Close formation and every beat, enemy and piece of loot reset, without adding entities. Unit tests cover beat order, triggers firing once, targeting, line of sight, hits, loot, recruitment, formations and Restart. Scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening` for the whole sequence, and `formations`.
+Restart returns to the Brooklyn end with Miki alone, the Close formation with no orders and every beat, enemy and piece of loot reset, without adding entities. Unit tests cover beat order, triggers firing once, targeting, line of sight, hits, loot, recruitment, formations, orders and Restart. Scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening` for the whole sequence, `formations` and `orders`.
 
 ### 9. `GameWorld` stays manageable
 

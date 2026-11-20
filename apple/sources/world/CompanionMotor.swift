@@ -55,6 +55,9 @@ struct CompanionMotor {
     let others: [SIMD2<Float>]
     let speed: Float
     let dt: Float
+    /// How the target moves: with the leader for a formation place, not at all for a point an
+    /// order marked (ADR 0003, phase S3).
+    var targetMoves = true
   }
 
   /// The movement this companion asks for in this step.
@@ -65,7 +68,9 @@ struct CompanionMotor {
     let dt = context.dt
     let toTarget = context.target - position
     let distance = simd_length(toTarget)
-    let leaderSpeed = simd_length(context.leaderVelocity)
+    // A formation place moves with the leader; a marked point stays where it is.
+    let targetVelocity = context.targetMoves ? context.leaderVelocity : .zero
+    let targetSpeed = simd_length(targetVelocity)
     let crowded = context.others.contains { simd_distance($0, position) < 0.5 }
     sincePlan += dt
     intended = .zero
@@ -91,7 +96,7 @@ struct CompanionMotor {
       return .zero
     }
     wait = 0
-    if leaderSpeed < 0.1 && distance < Self.settleDistance
+    if targetSpeed < 0.1 && distance < Self.settleDistance
       && simd_length(velocity) < 0.3 && !crowded
     {
       isSettled = true
@@ -107,9 +112,9 @@ struct CompanionMotor {
     if isClear(position, context.target) {
       route = []
       routeGoal = nil
-      // Match the leader's movement and close the gap, so a companion keeps pace with a moving
+      // Match the target's movement and close the gap, so a companion keeps pace with a moving
       // slot instead of trailing it by a slowing-down distance.
-      desired = context.leaderVelocity + toTarget * Self.gain
+      desired = targetVelocity + toTarget * Self.gain
     } else {
       let drifted = routeGoal.map { simd_distance($0, context.target) > Self.replanDrift } ?? true
       if (route.isEmpty || drifted) && sincePlan >= Self.replanInterval {

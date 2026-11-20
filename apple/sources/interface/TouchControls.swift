@@ -15,20 +15,24 @@ struct TouchControls: UIViewRepresentable {
   let showsFire: Bool
   /// Whether Formation is shown: once the leader has two companions.
   let showsFormation: Bool
+  /// "Formation", or "Follow" while anyone is going or holding, when it calls them back.
+  let formationTitle: String
+  /// The companions the order menu offers on its left and right, as the HUD orders them; nil
+  /// until orders are offered, and pressing the ground does nothing (ADR 0003, phase S3).
+  let orderNames: (left: String, right: String)?
   let mode: GameSession.Mode
 
   func makeUIView(context: Context) -> Surface {
     let view = Surface(controls: controls)
-    view.update(
-      actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
-      showsFormation: showsFormation, mode: mode, generation: generation)
+    updateUIView(view, context: context)
     return view
   }
 
   func updateUIView(_ uiView: Surface, context: Context) {
     uiView.update(
       actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
-      showsFormation: showsFormation, mode: mode, generation: generation)
+      showsFormation: showsFormation, formationTitle: formationTitle, orderNames: orderNames,
+      mode: mode, generation: generation)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -43,8 +47,15 @@ struct TouchControls: UIViewRepresentable {
     private let pause = TouchZone(title: "Pause")
     private let fire = TouchZone(title: "Fire")
     private let formation = TouchZone(title: "Formation")
+    private let menu = OrderMenu()
     private var generation: Int?
     private var mode = GameSession.Mode.exploring
+    private var orderNames: (left: String, right: String)?
+    /// The finger pressing the ground for the order menu, from its touch to its release.
+    private var press: OrderPress?
+    private var pressTouch: ObjectIdentifier?
+    private var pressGeneration = 0
+    private var pressTimer: Task<Void, Never>?
     /// What the action zone sent when its finger came down. Its release sends the same, even
     /// if Pause changed the zone into Restart in between.
     private var actionBinding = TouchInput.Button.action
@@ -57,9 +68,12 @@ struct TouchControls: UIViewRepresentable {
       for zone in [stick, action, cycle, pause, fire, formation] {
         addSubview(zone)
       }
+      menu.isHidden = true
+      addSubview(menu)
       fire.accessibilityLabel = "Fire"
       fire.accessibilityHint = "Draws the weapon, then fires at the marked target while held."
-      formation.accessibilityHint = "Changes the formation: Close, Spread, then Column."
+      formation.accessibilityHint =
+        "Changes the formation: Close, Spread, then Column. After an order, calls everyone back."
       stick.accessibilityLabel = "Move"
       stick.accessibilityHint = "Drag to move the active character. Lift your finger to stop."
       stick.accessibilityTraits = .allowsDirectInteraction
@@ -96,11 +110,23 @@ struct TouchControls: UIViewRepresentable {
 
     func update(
       actionTitle: String, nextLeaderName: String?, showsFire: Bool, showsFormation: Bool,
+      formationTitle: String, orderNames: (left: String, right: String)?,
       mode: GameSession.Mode, generation: Int
     ) {
       self.mode = mode
+      self.orderNames = orderNames
       if self.generation != generation {
         reset()
+      }
+      formation.setTitle(formationTitle)
+      if let orderNames {
+        menu.setNames(left: orderNames.left, right: orderNames.right)
+      }
+      // Pause, a conversation or Restart closes the menu, and a source change resets it; either
+      // way its finger must still lift.
+      if mode != .exploring || orderNames == nil, press?.isCancelled == false {
+        press?.cancel()
+        closeMenu()
       }
       action.setTitle(actionTitle)
       if let nextLeaderName {
@@ -128,6 +154,7 @@ struct TouchControls: UIViewRepresentable {
       for zone in [stick, action, cycle, pause, fire, formation] {
         zone.reset(generation: generation)
       }
+      endPress(sending: false)
     }
 
     override func layoutSubviews() {
@@ -149,8 +176,157 @@ struct TouchControls: UIViewRepresentable {
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let hit = super.hitTest(point, with: event)
-      return hit === self ? nil : hit
+      guard hit === self || hit === menu else { return hit }
+      // Open ground takes the order press while orders are offered, apart from the corner where
+      // Pause and the SwiftUI "Use controller" button sit. Otherwise touches pass through.
+      let corner = CGRect(
+        x: bounds.width - 200, y: 0, width: 200, height: pause.frame.maxY + 76)
+      let takesPress =
+        orderNames != nil && mode == .exploring && press == nil && !corner.contains(point)
+      return takesPress ? self : nil
     }
+
+    // MARK: - The order press (ADR 0003, phase S3)
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+      guard press == nil, let touch = touches.first, let generation else { return }
+      press = OrderPress(at: touch.location(in: self), time: touch.timestamp)
+      pressTouch = ObjectIdentifier(touch)
+      pressGeneration = generation
+      controls.setTouchButton(.ground, isPressed: true, generation: generation)
+      let began = touch.timestamp
+      pressTimer = Task { [weak self] in
+        try? await Task.sleep(for: .seconds(OrderPress.holdTime))
+        guard !Task.isCancelled else { return }
+        self?.openMenu(since: began)
+      }
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+      guard let touch = pressing(touches) else { return }
+      press?.move(to: touch.location(in: self))
+      if press?.isOpen == true {
+        menu.highlight(press?.choice)
+      } else if press?.isCancelled == true {
+        pressTimer?.cancel()
+      }
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+      guard pressing(touches) != nil else { return }
+      endPress(sending: true)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+      guard pressing(touches) != nil else { return }
+      endPress(sending: false)
+    }
+
+    private func pressing(_ touches: Set<UITouch>) -> UITouch? {
+      touches.first { ObjectIdentifier($0) == pressTouch }
+    }
+
+    private func openMenu(since began: TimeInterval) {
+      guard var press, press.began == began else { return }
+      guard press.open(at: began + OrderPress.holdTime) else { return }
+      self.press = press
+      let size = menu.bounds.size
+      // The menu opens with Both under the finger, kept on the screen.
+      menu.frame.origin = CGPoint(
+        x: min(max(press.start.x - size.width / 2, 0), bounds.width - size.width),
+        y: min(max(press.start.y - 20, 0), bounds.height - size.height))
+      menu.highlight(.both)
+      menu.isHidden = false
+    }
+
+    /// The finger lifted, or the press stopped: send the menu's choice when asked, at the point
+    /// where the finger came down, and release the ground.
+    private func endPress(sending: Bool) {
+      pressTimer?.cancel()
+      pressTimer = nil
+      if sending, let press, let choice = press.release, let point = screenPoint(press.start) {
+        controls.setTouchOrder(
+          InputRules.TouchOrder(command: choice.command, point: point),
+          generation: pressGeneration)
+      }
+      if press != nil {
+        controls.setTouchButton(.ground, isPressed: false, generation: pressGeneration)
+      }
+      press = nil
+      pressTouch = nil
+      closeMenu()
+    }
+
+    private func closeMenu() {
+      menu.isHidden = true
+      menu.highlight(nil)
+    }
+
+    /// A point in this view as a share of the whole window, which the game's view fills.
+    private func screenPoint(_ point: CGPoint) -> InputRules.ScreenPoint? {
+      guard let window, window.bounds.width > 0, window.bounds.height > 0 else { return nil }
+      let onScreen = convert(point, to: window)
+      return InputRules.ScreenPoint(
+        x: Float(onScreen.x / window.bounds.width), y: Float(onScreen.y / window.bounds.height),
+        aspect: Float(window.bounds.width / window.bounds.height))
+    }
+  }
+}
+
+/// The order menu around the finger: Both in the middle, the companions to the left and
+/// right as the HUD orders them, and Hold below.
+@MainActor
+private final class OrderMenu: UIView {
+  private let both = OrderMenu.item("Both")
+  private let left = OrderMenu.item("")
+  private let right = OrderMenu.item("")
+  private let hold = OrderMenu.item("Hold")
+
+  init() {
+    super.init(frame: CGRect(x: 0, y: 0, width: 280, height: 112))
+    isUserInteractionEnabled = false
+    accessibilityElementsHidden = true
+    for label in [both, left, right, hold] { addSubview(label) }
+    let width: CGFloat = 84
+    let height: CGFloat = 40
+    both.frame = CGRect(x: 140 - width / 2, y: 0, width: width, height: height)
+    left.frame = CGRect(x: 0, y: 0, width: width, height: height)
+    right.frame = CGRect(x: 280 - width, y: 0, width: width, height: height)
+    hold.frame = CGRect(x: 140 - width / 2, y: 112 - height, width: width, height: height)
+  }
+
+  required init?(coder: NSCoder) { nil }
+
+  func setNames(left leftName: String, right rightName: String) {
+    left.text = "◀ \(leftName)"
+    right.text = "\(rightName) ▶"
+  }
+
+  func highlight(_ choice: OrderPress.Choice?) {
+    let items: [(UILabel, OrderPress.Choice)] = [
+      (both, .both), (left, .left), (right, .right), (hold, .hold),
+    ]
+    for (label, item) in items {
+      let chosen = item == choice
+      label.backgroundColor = UIColor(
+        red: chosen ? 0.2 : 0.075, green: chosen ? 0.33 : 0.13, blue: chosen ? 0.33 : 0.14,
+        alpha: 0.92)
+      label.layer.borderColor = UIColor(white: 0.95, alpha: chosen ? 0.85 : 0.3).cgColor
+    }
+  }
+
+  private static func item(_ title: String) -> UILabel {
+    let label = UILabel()
+    label.text = title
+    label.font = .systemFont(ofSize: 15, weight: .semibold)
+    label.textColor = UIColor(white: 0.95, alpha: 1)
+    label.textAlignment = .center
+    label.adjustsFontSizeToFitWidth = true
+    label.minimumScaleFactor = 0.8
+    label.layer.cornerRadius = 12
+    label.layer.borderWidth = 1
+    label.clipsToBounds = true
+    return label
   }
 }
 

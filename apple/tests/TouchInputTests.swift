@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 import simd
 
@@ -48,6 +49,88 @@ struct TouchInputTests {
     #expect(first.input.pausePressed == (button == .pause))
     #expect(first.input.formationPressed == (button == .formation))
     #expect(InputRules.resolve(touch.sample(), mode: .exploring, state: state).input == .neutral)
+  }
+
+  @Test
+  func aGroundPressHoldsTheReleaseGateUntilItLifts() {
+    var touch = TouchInput()
+    touch.setButton(.ground, isPressed: true, generation: 0)
+    #expect(touch.sample().touchGround)
+    #expect(touch.sample().touchGround, "held, not only pressed")
+    touch.setButton(.ground, isPressed: false, generation: 0)
+    #expect(!touch.sample().touchGround)
+  }
+
+  @Test
+  func aMenuOrderIsSampledOnceAndDroppedByCancellation() {
+    var touch = TouchInput()
+    let order = InputRules.TouchOrder(
+      command: .rightGoes, point: InputRules.ScreenPoint(x: 0.5, y: 0.5, aspect: 2))
+    touch.setOrder(order, generation: 0)
+    #expect(touch.sample().touchOrder == order)
+    #expect(touch.sample().touchOrder == nil)
+    touch.setOrder(order, generation: 0)
+    touch.cancel()
+    #expect(touch.sample().touchOrder == nil)
+    touch.setOrder(order, generation: 0)
+    #expect(touch.sample().touchOrder == nil, "an old capture's order is rejected")
+  }
+
+  // MARK: - The order press (ADR 0003, phase S3)
+
+  @Test
+  func aQuickTapOnTheGroundGivesNoOrder() {
+    var press = OrderPress(at: CGPoint(x: 100, y: 100), time: 10)
+    let opened = press.open(at: 10.2)
+    #expect(!opened)
+    #expect(press.release == nil)
+  }
+
+  @Test
+  func holdingStillOpensTheMenuOnBoth() {
+    var press = OrderPress(at: CGPoint(x: 100, y: 100), time: 10)
+    press.move(to: CGPoint(x: 106, y: 104))
+    let opened = press.open(at: 10 + OrderPress.holdTime)
+    #expect(opened)
+    let openedAgain = press.open(at: 11)
+    #expect(!openedAgain, "it opens once")
+    #expect(press.release == .both)
+  }
+
+  @Test
+  func movingBeforeTheMenuOpensCancelsIt() {
+    var press = OrderPress(at: CGPoint(x: 100, y: 100), time: 10)
+    press.move(to: CGPoint(x: 100, y: 100 + OrderPress.slop + 1))
+    let opened = press.open(at: 11)
+    #expect(!opened)
+    press.move(to: CGPoint(x: 100, y: 100))
+    #expect(press.release == nil)
+  }
+
+  @Test(arguments: [
+    (CGVector(dx: 10, dy: -12), OrderPress.Choice?.some(.both)),
+    (CGVector(dx: -80, dy: 10), .left),
+    (CGVector(dx: 70, dy: -20), .right),
+    (CGVector(dx: 15, dy: 60), .hold),
+    (CGVector(dx: -10, dy: -60), nil),
+  ])
+  func slidingChoosesTheItemInThatDirection(offset: CGVector, choice: OrderPress.Choice?) {
+    var press = OrderPress(at: CGPoint(x: 200, y: 150), time: 0)
+    let opened = press.open(at: 1)
+    #expect(opened)
+    press.move(to: CGPoint(x: 200 + offset.dx, y: 150 + offset.dy))
+    #expect(press.release == choice)
+  }
+
+  @Test
+  func aStoppedPressGivesNoOrder() {
+    var press = OrderPress(at: CGPoint(x: 100, y: 100), time: 0)
+    let opened = press.open(at: 1)
+    #expect(opened)
+    press.move(to: CGPoint(x: 160, y: 100))
+    press.cancel()
+    #expect(press.release == nil)
+    #expect(OrderPress.Choice.right.command == .rightGoes)
   }
 
   @Test

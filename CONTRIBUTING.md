@@ -55,7 +55,7 @@ The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDE
 
 Keep tests focused on meaningful behaviour. Simulator imports do not prove animation or controls on a physical phone; report the device, toolchain and actual observations separately.
 
-Use Simulator for everyday scene, gameplay and interface iteration. Keyboard controls remain WASD movement, E action, Q leader switching and Escape Pause/Resume, with F to fire and R to change formation on the bridge. E also continues a conversation, and in the pause menu W/S choose and E confirms. The on-screen touch controls can also be exercised with a pointer, which does not establish physical multi-touch behaviour. Live PS5 stick input has not worked in the tested Simulator setup, even with Device Hub visible. Generic MFi enumeration does not prove controller forwarding, so use the keyboard for Simulator playtests.
+Use Simulator for everyday scene, gameplay and interface iteration. Keyboard controls remain WASD movement, E action, Q leader switching and Escape Pause/Resume, with F to fire, R to change formation and the arrow keys for squad orders on the bridge. E also continues a conversation, and in the pause menu W/S choose and E confirms. The on-screen touch controls can also be exercised with a pointer, which does not establish physical multi-touch behaviour. Live PS5 stick input has not worked in the tested Simulator setup, even with Device Hub visible. Generic MFi enumeration does not prove controller forwarding, so use the keyboard for Simulator playtests.
 
 Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/Resume; holding Escape releases keyboard capture so you can use the Mac normally.
 

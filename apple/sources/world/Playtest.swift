@@ -40,6 +40,22 @@
       /// Press the formation button for one frame.
       case formation
       case expectFormation(GameSession.Formation)
+      /// Press a D-pad direction for one frame: a squad order (ADR 0003, phase S3).
+      case order(GameSession.Command)
+      /// Give an order from the touch menu, pressing where this point of the ground shows.
+      case touchOrder(GameSession.Command, at: SIMD2<Float>)
+      /// Press R1 for one frame, to lead as the next member.
+      case switchLeader
+      /// A member's order: "following", "going" or "holding".
+      case expectOrder(PartyMember, String)
+      /// A member stands within this distance of a point.
+      case expectNear(PartyMember, SIMD2<Float>, within: Float)
+      /// A member stands at least this far from the leader.
+      case expectApart(PartyMember, atLeast: Float)
+      /// How many orders were refused in this run, each with a brief cross.
+      case expectRefused(Int)
+      /// Wait until a conversation begins; fails after this many seconds.
+      case awaitConversation(seconds: Float)
     }
 
     /// What the runner can see of the game each frame.
@@ -55,6 +71,10 @@
       let ammo: Int
       let retrying: Bool
       let formation: GameSession.Formation
+      let orders: [PartyMember: GameSession.Order]
+      let refusedOrders: Int
+      /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
+      let camera: CameraProjection
     }
 
     struct Frame {
@@ -97,7 +117,11 @@
 
     static let scenarioNames = [
       "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
+      "orders",
     ]
+    /// The screen's width over its height for touch orders: the baseline iPhone's, in landscape.
+    /// The world finds the ground with the same shape, so any shape aims the same point.
+    static let screenAspect: Float = 2.16
     static let walkTimeout: Float = 120
     /// How long each conversation line stays on screen before the next press.
     static let lineSeconds: Float = 0.6
@@ -198,6 +222,80 @@
                 + "at \(Self.seconds(elapsed))")
           }
           advance()
+        case .order(let command):
+          switchFrame += 1
+          if switchFrame == 1 {
+            switch command {
+            case .bothGo: return InputRules.Raw(dpadUp: true)
+            case .hold: return InputRules.Raw(dpadDown: true)
+            case .leftGoes: return InputRules.Raw(dpadLeft: true)
+            case .rightGoes: return InputRules.Raw(dpadRight: true)
+            }
+          }
+          advance()
+          return InputRules.Raw()
+        case .touchOrder(let command, let point):
+          switchFrame += 1
+          if switchFrame == 1 {
+            if let screen = snapshot.camera.screen(ofGround: point),
+              (0...1).contains(screen.x), (0...1).contains(screen.y)
+            {
+              let pressed = InputRules.ScreenPoint(
+                x: screen.x, y: screen.y, aspect: snapshot.camera.aspect)
+              return InputRules.Raw(
+                touchOrder: InputRules.TouchOrder(command: command, point: pressed))
+            }
+            failures.append(
+              "\(Self.describe(point)) was off the screen at \(Self.seconds(elapsed))")
+          }
+          advance()
+          return InputRules.Raw()
+        case .switchLeader:
+          switchFrame += 1
+          if switchFrame == 1 { return InputRules.Raw(controllerSwitch: true) }
+          advance()
+          return InputRules.Raw()
+        case .expectOrder(let member, let word):
+          let actual = snapshot.orders[member]?.word ?? "following"
+          if actual != word {
+            failures.append(
+              "\(member.displayName) was \(actual) instead of \(word) at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .expectNear(let member, let point, let distance):
+          let position = positions[member] ?? [.nan, .nan]
+          if !(simd_distance(position, point) <= distance) {
+            failures.append(
+              "\(member.displayName) was at \(Self.describe(position)), not within "
+                + "\(distance) m of \(Self.describe(point)), at \(Self.seconds(elapsed))")
+          }
+          advance()
+        case .expectApart(let member, let distance):
+          let position = positions[member] ?? [.nan, .nan]
+          if !(simd_distance(position, leaderPosition) >= distance) {
+            failures.append(
+              "\(member.displayName) was within \(distance) m of the leader at "
+                + Self.seconds(elapsed))
+          }
+          advance()
+        case .expectRefused(let count):
+          if snapshot.refusedOrders != count {
+            failures.append(
+              "\(snapshot.refusedOrders) order(s) were refused instead of \(count) at "
+                + Self.seconds(elapsed))
+          }
+          advance()
+        case .awaitConversation(let seconds):
+          if snapshot.mode == .dialogue {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("no conversation began within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -248,6 +346,7 @@
             || snapshot.firedTriggers != 0 || snapshot.beat != .alone || snapshot.defeated != 0
             || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
             || snapshot.mode != .exploring || snapshot.formation != .close
+            || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
@@ -529,6 +628,42 @@
         .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
+    /// Squad orders (ADR 0003, phase S3), once Laura joins. The D-pad sends both companions
+    /// ahead, and they hold there while Miki walks off until Formation calls them back. Then one
+    /// companion goes while the other follows, the other goes beside the first, and Hold keeps
+    /// both where they stand. A switch leaves the previous leader holding with them. Touch
+    /// orders send both to a marked spot and refuse one aimed at the divider, and the end of the
+    /// opening waits for companions left holding until they are called back.
+    private static let orders: [Step] =
+      toLaura + [
+        .walk([-7, -270]), .wait(seconds: 1), .mark("ready"), .order(.bothGo),
+        .expectOrder(.tom, "going"), .expectOrder(.laura, "going"), .wait(seconds: 0.5),
+        .mark("both going"), .wait(seconds: 3.5), .expectOrder(.tom, "holding"),
+        .expectOrder(.laura, "holding"), .expectNear(.tom, [-7, -276], within: 1),
+        .expectNear(.laura, [-7, -276], within: 1), .mark("both holding ahead"),
+        .walk([-7, -263]), .expectNear(.tom, [-7, -276], within: 1),
+        .mark("they hold as Miki walks off"), .formation, .expectOrder(.tom, "following"),
+        .expectOrder(.laura, "following"), .expectFormation(.close), .wait(seconds: 4),
+        .mark("called back"), .walk([-7, -270]), .wait(seconds: 1), .order(.rightGoes),
+        .expectOrder(.tom, "going"), .expectOrder(.laura, "following"), .wait(seconds: 3.5),
+        .expectOrder(.tom, "holding"), .mark("Tom holds, Laura follows"), .order(.leftGoes),
+        .wait(seconds: 3.5), .expectOrder(.laura, "holding"),
+        .expectNear(.laura, [-7, -276], within: 2.2), .mark("Laura beside Tom"), .formation,
+        .wait(seconds: 3), .order(.hold), .expectOrder(.tom, "holding"),
+        .expectOrder(.laura, "holding"), .walk([-7, -285]), .expectApart(.tom, atLeast: 8),
+        .expectApart(.laura, atLeast: 8), .mark("both hold where they stood"), .switchLeader,
+        .expectOrder(.miki, "holding"), .expectOrder(.laura, "holding"), .wait(seconds: 0.5),
+        .mark("Tom leads, Miki holds"), .formation, .walk([-7, -290]), .wait(seconds: 3),
+        .touchOrder(.bothGo, at: [-9.5, -297]), .wait(seconds: 0.5), .mark("touch: both go"),
+        .wait(seconds: 4), .expectNear(.miki, [-9.5, -297], within: 1.2),
+        .expectNear(.laura, [-9.5, -297], within: 1.2), .touchOrder(.leftGoes, at: [0, -296]),
+        .expectRefused(1), .mark("refused at the divider"), .formation, .walk([-7, -440]),
+        .wait(seconds: 2), .order(.hold), .walk([-7, -502.3]), .wait(seconds: 2),
+        .expectBeat(.withLaura), .mark("waiting for the others"), .formation,
+        .awaitConversation(seconds: 45), .talk, .expectBeat(.arrived),
+        .mark("Manhattan, together"), .wait(seconds: 0.5),
+      ] + restartRun + [.expectParty([.miki])]
+
     static func steps(for scenario: String) -> [Step]? {
       switch scenario {
       case "bridge-walk": bridgeWalk
@@ -538,6 +673,7 @@
       case "laura": laura
       case "opening": opening
       case "formations": formations
+      case "orders": orders
       default: nil
       }
     }

@@ -116,10 +116,11 @@ enum BrooklynBridge {
     holdsParty: true)
 
   /// The end of the opening (M4): the three reach the Manhattan end together, the party stops,
-  /// and a short exchange closes the slice.
+  /// and a short exchange closes the slice. It waits until all three are there, so companions
+  /// holding elsewhere must be called back first.
   static let arrival = Level.Encounter(
     beat: .arrived, start: .area(layout.area(named: "manhattan-end")), retryAt: nil,
-    hostiles: [], cues: [(0.5, .talk(.arrival))], holdsParty: true)
+    hostiles: [], cues: [(0.5, .talk(.arrival))], holdsParty: true, gathersParty: true)
 
   static let level = Level(
     id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes,

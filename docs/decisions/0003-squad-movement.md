@@ -54,9 +54,13 @@ Each companion is **following**, **going** to a point, or **holding** a point. O
 | Hold | D-pad down | Press and hold, slide to **Hold**, release | Both stop where they are and hold |
 | Follow; cycle formation | Triangle / Y | Formation button | If anyone is going or holding, everyone follows again in the current formation; otherwise the formation cycles |
 
-- **The marked point.** On a controller it is up to 6 m ahead along the leader's heading, shortened by the first wall and moved to the nearest reachable spot within 1 m. On touch it is the ground under the finger; holding for about 0.35 s opens a small menu there with **Both** (release without sliding), each companion's name and **Hold**. A point that cannot be reached shows a brief cross, and nothing happens.
-- **Left and right.** The companions keep a fixed order, shown on the HUD as "◀ Laura · Tom ▶" for whoever leads, which is easier to learn than working out who stands on which side of the screen.
-- **Feedback.** Each going companion gets a ground marker in their colour until they arrive. The HUD shows the formation and the squad's state, such as "Close · following".
+The Simulator keyboard's arrow keys act as the D-pad. Orders are offered with the formation button, once the leader has two companions, since that button calls everyone back; on the bridge, once Laura joins.
+
+- **The marked point.** On a controller it is up to 6 m ahead along the leader's heading, shortened by the first wall and moved to the nearest reachable spot within 1 m. On touch it is the ground under the finger, or the block the finger presses on, since it is what the camera's ray through the finger meets first; holding for about 0.35 s opens a small menu there with **Both** (release without sliding) in the middle, each companion's name to its left and right, and **Hold** below. Sliding up, or moving before the menu opens, gives no order. A point that cannot be reached shows a brief cross, and nothing happens.
+- **Spots.** Two companions sent together take spots 1 m apart around the point, side by side across the line from the leader where they fit, by least walking in total. One sent onto the other's point stands 1 m from it. A going companion holds once within 0.35 m of their point.
+- **Left and right.** The companions keep a fixed order, shown on the HUD as "◀ Laura · Tom ▶" for whoever leads, which is easier to learn than working out who stands on which side of the screen: the member before the leader in the switching order is on the left, and the one after, whom **Next** would lead as, on the right.
+- **Feedback.** Each going companion gets a ground marker, a ring in their colour, until they arrive. The HUD shows the formation and the squad's state, such as "Close · following" or "Laura holding", and the formation button reads **Follow** while anyone is going or holding.
+- **Scenes.** A scene for the whole party, such as the end of the opening, waits until both companions are within 5 m of the leader, so companions left holding must be called back first.
 - **Switching.** The new leader's order is cleared. The previous leader takes the squad's state: if the others are holding, they hold where they stand; otherwise they follow.
 
 ### Navigation
@@ -107,7 +111,7 @@ Each phase is its own assignment and pull request.
 |---|---|---|
 | **S1** Natural following, built | Grid, routes, the Close formation, motion, switching, and keep-clear for tight cells | No companion gets stuck; while the leader runs in open ground, each companion is within 0.6 m of their slot 90% of the time; a settled companion stays still while the leader stands; soak tests show no stuck member, no overlap with blockers and nothing non-finite |
 | **S2** Formations, built | Spread and Column, the cycle button, compression and the HUD label | Each shape holds in open ground, compresses through narrow passages and re-forms; changing formation mid-run crosses no paths |
-| **S3** Orders | D-pad and touch commands, markers | Orders reach their spots; unreachable spots are refused visibly; switching while holding follows the rule; the touch long-press never fights the stick or buttons; a phone check of the controls |
+| **S3** Orders, built | D-pad and touch commands, markers | Orders reach their spots; unreachable spots are refused visibly; switching while holding follows the rule; the touch long-press never fights the stick or buttons; a phone check of the controls |
 | **S4** Combat positioning | Cover choice, personality weights, sight-aware routes | Designed and checked with the combat systems |
 
 Tuning values are starting points and will change in playtests. If a phase is not reliable after three focused work sessions, stop and reassess with the maintainer.

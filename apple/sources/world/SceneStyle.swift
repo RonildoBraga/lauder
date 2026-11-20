@@ -50,6 +50,46 @@ struct SceneStyle {
     block(size: [0.07, 0.08, 0.55], at: [0.21, 0.08, -0.22], material: gear)
   }
 
+  /// Each member's colour, as their model's clothing shows it.
+  static func colour(of member: PartyMember) -> UIColor {
+    switch member {
+    case .miki: UIColor(red: 0.25, green: 0.65, blue: 0.59, alpha: 1)
+    case .laura: UIColor(red: 0.9, green: 0.61, blue: 0.29, alpha: 1)
+    case .tom: UIColor(red: 0.38, green: 0.51, blue: 0.81, alpha: 1)
+    }
+  }
+
+  /// Where a companion is going: a flat ring on the ground in their colour (ADR 0003, phase
+  /// S3), unlike the leader's solid disc.
+  func orderMarker(for member: PartyMember) -> Entity {
+    let ring = Entity()
+    let material = UnlitMaterial(color: Self.colour(of: member))
+    let segments = 10
+    let radius: Float = 0.36
+    let length = 2 * radius * sin(.pi / Float(segments)) + 0.02
+    for index in 0..<segments {
+      let angle = 2 * .pi * Float(index) / Float(segments)
+      let segment = block(
+        size: [length, 0.02, 0.07], at: [radius * sin(angle), 0, radius * cos(angle)],
+        material: material)
+      segment.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
+      ring.addChild(segment)
+    }
+    return ring
+  }
+
+  /// A brief cross where an order's point cannot be reached, upright in its own x-y plane so
+  /// that turned towards the camera it reads as an X.
+  func refusalCross() -> Entity {
+    let cross = Entity()
+    for angle in [Float.pi / 4, -Float.pi / 4] {
+      let bar = block(size: [0.8, 0.12, 0.02], at: .zero, material: threat)
+      bar.orientation = simd_quatf(angle: angle, axis: [0, 0, 1])
+      cross.addChild(bar)
+    }
+    return cross
+  }
+
   /// The models that the game creates, each loaded once from its scene file (ADR 0002)
   /// and copied for every figure that shows it.
   private static var models: [String: Entity] = [:]
