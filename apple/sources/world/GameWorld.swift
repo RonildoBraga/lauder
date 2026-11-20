@@ -32,6 +32,18 @@ final class GameWorld {
   @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
   @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
+  /// Rings where going companions are heading, in their colours (ADR 0003, phase S3).
+  @ObservationIgnored private var orderMarkers: [PartyMember: Entity] = [:]
+  /// The brief cross where an order's point could not be reached.
+  @ObservationIgnored private var refusalCross = Entity()
+  @ObservationIgnored private var crossRemaining: Float = 0
+  /// Orders refused in this run because nobody could reach their point. Tests read it.
+  @ObservationIgnored private(set) var refusedOrders = 0
+  /// Whether the leader has been told, on this visit to a gathering area, who is missing.
+  @ObservationIgnored private var toldWhoIsMissing = false
+  /// What the touch order menu marked as it opened: its point on the screen, and what the ray
+  /// through it met then. The order that follows uses it, though the camera has moved since.
+  @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
   @ObservationIgnored private let camera = PerspectiveCamera()
   @ObservationIgnored private let motion: PartyMotion
   @ObservationIgnored private let grid: NavigationGrid
@@ -77,6 +89,18 @@ final class GameWorld {
   static let cameraLeanRate: Float = 3
   /// How far a lying stand-in sits below a standing one, so it rests on the deck.
   static let lyingDrop: Float = -0.67
+  /// How far ahead of the leader the D-pad marks its point, before a wall shortens it (ADR 0003).
+  static let orderReach: Float = 6
+  /// How far a marked point may move to reach somewhere a companion can stand.
+  static let orderSnap: Float = 1
+  /// How far apart two companions sent together stand.
+  static let spotSpacing: Float = 1
+  /// How close a going companion comes to their point before they hold there.
+  static let arrivalDistance: Float = 0.35
+  /// How long the cross shows where an order could not go.
+  static let crossTime: Float = 1
+  /// How close every companion must be before a scene that gathers the party begins.
+  static let gatherRadius: Float = 5
 
   var isPaused: Bool { session.isPaused }
   /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
@@ -143,7 +167,16 @@ final class GameWorld {
       visuals[member] = visual
       markers[member] = marker
       root.addChild(body)
+      let ring = style.orderMarker(for: member)
+      ring.name = "order.\(member.rawValue)"
+      ring.isEnabled = false
+      orderMarkers[member] = ring
+      root.addChild(ring)
     }
+    refusalCross = style.refusalCross()
+    refusalCross.name = "order.refused"
+    refusalCross.isEnabled = false
+    root.addChild(refusalCross)
     // Miki carries the carbine; it shows while drawn.
     visuals[.miki]?.addChild(stage.weaponProp)
     placeParty()
@@ -275,13 +308,21 @@ final class GameWorld {
         togglePause()
       } else if input.switchPressed, session.nextLeader != nil {
         session.cycleLeader()
+        // A previous leader who joins a holding squad holds where they stand.
+        pinHolds()
         cameraStart = cameraTarget
         cameraElapsed = 0
         showLeaderMarker()
         updateNearby()
       }
-      // The squad's planner takes the new formation in the next step (ADR 0003, phase S2).
-      if input.formationPressed { session.cycleFormation() }
+      // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
+      // an order the button calls everyone back instead.
+      if input.formationPressed {
+        session.pressFormation()
+        showOrders()
+      }
+      if let mark = input.markPoint { touchMark = (mark, firstHit(at: mark)) }
+      if let command = input.command { give(command, at: input.commandPoint) }
     }
   }
 
@@ -342,6 +383,12 @@ final class GameWorld {
     motors = Self.freshMotors()
     companionTargets = [:]
     diagnostic = nil
+    refusedOrders = 0
+    touchMark = nil
+    crossRemaining = 0
+    refusalCross.isEnabled = false
+    toldWhoIsMissing = false
+    showOrders()
     cameraStart = nil
     cameraElapsed = 0
     cameraLean = .zero
@@ -391,10 +438,15 @@ final class GameWorld {
     updateCamera(deltaTime: elapsed)
     updateNearby()
     checkTriggers()
+    if crossRemaining > 0 {
+      crossRemaining -= elapsed
+      if crossRemaining <= 0 { refusalCross.isEnabled = false }
+    }
   }
 
   private func simulateStep(movement: SIMD2<Float>, dt: Float) {
     if squadLeader != session.leader { changeLeader() }
+    pinHolds()
     let leader = session.leader
     guard let leaderBody = bodies[leader] else { return }
     let motion = self.motion
@@ -424,35 +476,280 @@ final class GameWorld {
     }
 
     // Companions choose their own routes to formation slots (ADR 0003); every movement is
-    // still resolved against the authored footprints.
+    // still resolved against the authored footprints. A companion with an order keeps to its
+    // point, and the others share the formation's places (phase S3).
     let current = positions
     let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { from, to in
       motion.canTraverse(from: from, to: to)
     }
-    let targets = planner.targets(
+    let session = self.session
+    let following = current.filter { member, _ in
+      member == leader || session.order(of: member) == .following
+    }
+    var targets = planner.targets(
       for: SquadPlanner.Input(
         leader: leader, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
-        positions: current, route: route, formation: session.formation, dt: dt),
+        positions: following, route: route, formation: session.formation, dt: dt),
       grid: grid, isClear: isClear)
+    for member in session.party where member != leader {
+      if let point = Self.point(of: session.order(of: member)) { targets[member] = point }
+    }
     companionTargets = targets
     for member in session.party where member != leader {
       guard let start = current[member], let target = targets[member],
         var motor = motors[member]
       else { continue }
-      let context = CompanionMotor.Context(
+      let order = session.order(of: member)
+      var context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
         speed: PartyBody.speed, dt: dt)
+      context.targetMoves = order == .following
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
       motors[member] = motor
       place(member, at: end)
       turn(member, moved: end - start, dt: dt)
+      if case .going(let point) = order, simd_distance(end, point) <= Self.arrivalDistance {
+        session.arrived(member)
+      }
     }
+    showOrders()
     let stuck = session.party.first { $0 != leader && motors[$0]?.cannotReach == true }
-    let message = stuck.map { "\($0.displayName) can't reach you" }
+    let message = stuck.map {
+      session.order(of: $0) == .following
+        ? "\($0.displayName) can't reach you" : "\($0.displayName) can't get there"
+    }
     if diagnostic != message { diagnostic = message }
+  }
+
+  // MARK: - Squad orders
+
+  /// The point an order keeps a companion to; nil while following, or while a hold waits
+  /// for its place to be recorded.
+  private static func point(of order: GameSession.Order) -> SIMD2<Float>? {
+    switch order {
+    case .following: nil
+    case .going(let point): point
+    case .holding(let point): point
+    }
+  }
+
+  /// A squad order (ADR 0003, phase S3). The D-pad's point lies up to 6 m ahead of the leader,
+  /// shortened by the first wall; a touch order's is the ground under the finger. Either moves
+  /// up to a metre to somewhere the companions can reach, or shows a brief cross and does
+  /// nothing.
+  private func give(_ command: GameSession.Command, at screen: InputRules.ScreenPoint?) {
+    guard session.mode == .exploring, session.ordersAvailable, !stage.holdsParty,
+      let leader = position(of: session.leader)
+    else { return }
+    if command == .hold {
+      session.holdAll()
+      pinHolds()
+      showOrders()
+      return
+    }
+    // A touch marks what the finger's ray met first, a block or the ground, as the menu opened;
+    // a touch above the ground marks nothing.
+    let pressed: SIMD3<Float>?
+    if let screen {
+      pressed = touchMark?.screen == screen ? touchMark?.hit : firstHit(at: screen)
+      touchMark = nil
+    } else {
+      let ahead = pointAhead(of: leader)
+      pressed = SIMD3(ahead.x, 0, ahead.y)
+    }
+    guard let pressed else { return }
+    let marked = SIMD2(pressed.x, pressed.z)
+    guard let region = region(near: leader), let point = reachable(near: marked, in: region)
+    else {
+      refuse(at: pressed)
+      return
+    }
+    switch command {
+    case .bothGo:
+      guard let spots = spots(around: point, from: leader, in: region) else {
+        refuse(at: pressed)
+        return
+      }
+      // Each takes the spot that makes the least walking in total, so their ways do not cross.
+      let members = session.companions
+      guard members.count == 2, let first = position(of: members[0]),
+        let second = position(of: members[1])
+      else { return }
+      let kept =
+        simd_distance(first, spots[0]) + simd_distance(second, spots[1])
+        <= simd_distance(first, spots[1]) + simd_distance(second, spots[0])
+      session.send(members[0], to: kept ? spots[0] : spots[1])
+      session.send(members[1], to: kept ? spots[1] : spots[0])
+      for member in members { motors[member]?.wake() }
+    case .leftGoes, .rightGoes:
+      guard
+        let member = command == .leftGoes ? session.leftCompanion : session.rightCompanion
+      else { return }
+      var target = point
+      // Not onto the other companion's own point, where neither could settle: beside it, on
+      // the side the order names, so neither walks through the other.
+      if let other = session.companions.first(where: { $0 != member }),
+        let taken = Self.point(of: session.order(of: other)),
+        simd_distance(taken, point) < Self.spotSpacing,
+        let beside = spot(
+          beside: taken, from: leader, onRight: command == .rightGoes, in: region)
+      {
+        target = beside
+      }
+      session.send(member, to: target)
+      motors[member]?.wake()
+    case .hold:
+      break
+    }
+    showOrders()
+  }
+
+  /// Up to `orderReach` ahead along the leader's facing, shortened by the first wall.
+  private func pointAhead(of leader: SIMD2<Float>) -> SIMD2<Float> {
+    let angle = yaw[session.leader] ?? 0
+    let heading = SIMD2(-sin(angle), -cos(angle))
+    let far = leader + heading * Self.orderReach
+    if motion.canTraverse(from: leader, to: far) { return far }
+    var clear: Float = 0
+    var blocked = Self.orderReach
+    for _ in 0..<12 {
+      let middle = (clear + blocked) / 2
+      if motion.canTraverse(from: leader, to: leader + heading * middle) {
+        clear = middle
+      } else {
+        blocked = middle
+      }
+    }
+    return leader + heading * clear
+  }
+
+  /// The connected area the leader stands in, from the nearest walkable cell.
+  private func region(near point: SIMD2<Float>) -> Int32? {
+    grid.nearestWalkable(to: point, within: 0.6).flatMap { grid.region(at: $0) }
+  }
+
+  /// The marked point, or the nearest place within `orderSnap` of it in the leader's area,
+  /// out of doorways where there is a choice.
+  private func reachable(near point: SIMD2<Float>, in region: Int32) -> SIMD2<Float>? {
+    if grid.isRoomy(point), grid.region(at: point) == region { return point }
+    return grid.nearestWalkable(
+      to: point, within: Self.orderSnap, region: region, where: { grid.isRoomy($0) })
+      ?? grid.nearestWalkable(to: point, within: Self.orderSnap, region: region)
+  }
+
+  /// Two spots `spotSpacing` apart around a point: side by side across the line from the
+  /// leader, else one behind the other, else the point and the nearest place far enough away.
+  private func spots(around point: SIMD2<Float>, from leader: SIMD2<Float>, in region: Int32)
+    -> [SIMD2<Float>]?
+  {
+    let (along, across) = axes(of: point, from: leader)
+    let half = Self.spotSpacing / 2
+    for axis in [across, along] {
+      let pair = [point + axis * half, point - axis * half]
+      if pair.allSatisfy({ fits($0, near: point, in: region) }) { return pair }
+    }
+    let second = grid.nearestWalkable(
+      to: point, within: Self.orderSnap + Self.spotSpacing, region: region,
+      where: { simd_distance($0, point) >= Self.spotSpacing && fits($0, near: point, in: region) })
+    return second.map { [point, $0] }
+  }
+
+  /// A spot `spotSpacing` beside another companion's point: on the named side of the line from
+  /// the leader where it fits, else the other side, else the nearest place far enough away.
+  private func spot(
+    beside taken: SIMD2<Float>, from leader: SIMD2<Float>, onRight: Bool, in region: Int32
+  ) -> SIMD2<Float>? {
+    let across = axes(of: taken, from: leader).across * (onRight ? 1 : -1)
+    for candidate in [taken + across * Self.spotSpacing, taken - across * Self.spotSpacing]
+    where fits(candidate, near: taken, in: region) {
+      return candidate
+    }
+    return grid.nearestWalkable(
+      to: taken, within: Self.orderSnap + Self.spotSpacing, region: region,
+      where: { simd_distance($0, taken) >= Self.spotSpacing && fits($0, near: taken, in: region) })
+  }
+
+  /// The line from the leader to a point, and the direction to its right, which is screen right
+  /// under a camera behind the leader. A point at the leader's feet takes the leader's facing.
+  private func axes(of point: SIMD2<Float>, from leader: SIMD2<Float>)
+    -> (along: SIMD2<Float>, across: SIMD2<Float>)
+  {
+    let offset = point - leader
+    let angle = yaw[session.leader] ?? 0
+    let along =
+      simd_length(offset) > 0.01 ? simd_normalize(offset) : SIMD2(-sin(angle), -cos(angle))
+    return (along, SIMD2(-along.y, along.x))
+  }
+
+  /// Somewhere a companion can stand, in the leader's area, reached straight from `origin`.
+  private func fits(_ spot: SIMD2<Float>, near origin: SIMD2<Float>, in region: Int32) -> Bool {
+    grid.isWalkable(spot) && grid.region(at: spot) == region
+      && motion.canTraverse(from: origin, to: spot)
+  }
+
+  /// Show the cross where an order could not go, briefly: standing where the finger pressed,
+  /// or where the D-pad marked, and facing the camera so it reads on a block's side too.
+  private func refuse(at point: SIMD3<Float>) {
+    refusedOrders += 1
+    crossRemaining = Self.crossTime
+    let eye = cameraTarget + level.cameraOffset
+    let toCamera = simd_normalize(eye - point)
+    let standing = point + toCamera * 0.3 + [0, point.y < 0.01 ? 0.4 : 0, 0]
+    refusalCross.look(at: eye, from: standing, relativeTo: nil)
+    refusalCross.isEnabled = true
+  }
+
+  /// What the ray through a touch order's point meets first: one of the level's blocks, or the
+  /// ground; nil when it meets neither.
+  private func firstHit(at screen: InputRules.ScreenPoint) -> SIMD3<Float>? {
+    let camera = projection(aspect: screen.aspect)
+    guard let direction = camera.direction(atScreen: [screen.x, screen.y]) else { return nil }
+    var nearest = direction.y < -0.0001 ? -camera.eye.y / direction.y : Float.infinity
+    let blocks =
+      level.boxes.map { ($0.position, $0.size) }
+      + level.points.map { ($0.position + [0, $0.size.y / 2, 0], $0.size) }
+    for (centre, size) in blocks {
+      if let distance = camera.entry(
+        along: direction, minimum: centre - size / 2, maximum: centre + size / 2),
+        distance < nearest
+      {
+        nearest = distance
+      }
+    }
+    return nearest.isFinite ? camera.eye + direction * nearest : nil
+  }
+
+  /// Companions told to hold where they are hold where they stand now.
+  private func pinHolds() {
+    for member in session.party where session.order(of: member) == .holding(nil) {
+      if let point = position(of: member) { session.pin(member, at: point) }
+    }
+  }
+
+  /// A ring at each going companion's point, until they arrive.
+  private func showOrders() {
+    for (member, ring) in orderMarkers {
+      if member != session.leader, case .going(let point) = session.order(of: member) {
+        ring.position = [point.x, 0.02, point.y]
+        ring.isEnabled = true
+      } else {
+        ring.isEnabled = false
+      }
+    }
+  }
+
+  /// The camera's mapping between the screen and the ground, for a screen of this shape.
+  func projection(aspect: Float) -> CameraProjection {
+    CameraProjection(
+      eye: cameraTarget + level.cameraOffset, target: cameraTarget,
+      fieldOfView: level.fieldOfView, aspect: aspect)
+  }
+
+  private func position(of member: PartyMember) -> SIMD2<Float>? {
+    bodies[member].map { SIMD2($0.position.x, $0.position.z) }
   }
 
   /// A trigger area shows its line the first time the leader walks into it in a run, and an
@@ -463,13 +760,32 @@ final class GameWorld {
     for trigger in level.triggers where trigger.area.contains(position) {
       if session.fire(trigger.id) { observation = trigger.line }
     }
+    var inGatheringArea = false
     for encounter in level.encounters {
       guard case .area(let area) = encounter.start, area.contains(position) else { continue }
+      // A scene for the whole party, such as the end of the opening, waits until everyone is
+      // close; companions holding elsewhere must be called back first.
+      if encounter.gathersParty, encounter.beat.rawValue == session.beat.rawValue + 1 {
+        inGatheringArea = true
+        let missing = session.companions.filter { member in
+          guard let point = self.position(of: member) else { return true }
+          return simd_distance(point, position) > Self.gatherRadius
+        }
+        if !missing.isEmpty {
+          if !toldWhoIsMissing, missing.contains(where: { session.order(of: $0) != .following }) {
+            toldWhoIsMissing = true
+            let names = missing.map(\.displayName).joined(separator: " and ")
+            observation = "\(names) \(missing.count == 1 ? "is" : "are") not with you yet."
+          }
+          continue
+        }
+      }
       if session.beginEncounter(encounter.beat) {
         stage.begin(encounter)
         retrySpot = encounter.retryAt
       }
     }
+    if !inGatheringArea { toldWhoIsMissing = false }
   }
 
   // MARK: - Fights
@@ -687,7 +1003,8 @@ final class GameWorld {
         leader: session.leader, party: session.party, positions: positions, mode: session.mode,
         firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
-        retrying: isRetrying, formation: session.formation)
+        retrying: isRetrying, formation: session.formation, orders: session.orders,
+        refusedOrders: refusedOrders, camera: projection(aspect: PlaytestRunner.screenAspect))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

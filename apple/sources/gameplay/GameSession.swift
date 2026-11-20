@@ -51,6 +51,36 @@ final class GameSession {
     }
   }
 
+  /// What a companion is doing (ADR 0003, phase S3). Orders persist until replaced.
+  enum Order: Equatable, Sendable {
+    /// Keeping their place in the formation.
+    case following
+    /// Walking to a point the leader marked, to hold there.
+    case going(SIMD2<Float>)
+    /// Staying at a point until called back. Nil until the world records where they stand,
+    /// for an order to hold where they are.
+    case holding(SIMD2<Float>?)
+
+    /// The word the HUD shows for it.
+    var word: String {
+      switch self {
+      case .following: "following"
+      case .going: "going"
+      case .holding: "holding"
+      }
+    }
+  }
+
+  /// A squad command from the D-pad, the arrow keys or the touch menu (ADR 0003, phase S3).
+  enum Command: Equatable, Sendable {
+    /// Both companions go to spots around the marked point.
+    case bothGo
+    /// The companion on that side goes to the marked point.
+    case leftGoes, rightGoes
+    /// Both companions hold where they stand.
+    case hold
+  }
+
   /// Hits the leader can take in an encounter; the last one starts it again (the placeholder
   /// hit rule of The Quiet Yard).
   static let hitsAllowed = 3
@@ -109,6 +139,8 @@ final class GameSession {
   private(set) var pauseChoice = PauseChoice.resume
   /// The squad's formation. It stays Close until there are two companions.
   private(set) var formation = Formation.close
+  /// Companions going to or holding a point; everyone else follows (ADR 0003, phase S3).
+  private(set) var orders: [PartyMember: Order] = [:]
   /// Where Resume returns: exploring, or the conversation at its current line.
   private var resumeMode = Mode.exploring
 
@@ -156,9 +188,86 @@ final class GameSession {
     pauseChoice = step < 0 ? .resume : .restart
   }
 
+  /// Who the right D-pad direction sends: whoever Next would lead as, since R1 is on the right.
+  var rightCompanion: PartyMember? { party.count > 2 ? nextLeader : nil }
+
+  /// Who the left D-pad direction sends: the member before the leader in the switching order.
+  /// The two sides keep this order for whoever leads, as the HUD's "◀ Laura · Tom ▶" shows.
+  var leftCompanion: PartyMember? {
+    guard party.count > 2, let index = party.firstIndex(of: leader) else { return nil }
+    return party[(index + party.count - 1) % party.count]
+  }
+
+  /// The leader's companions, in switching order from the leader.
+  var companions: [PartyMember] {
+    guard let index = party.firstIndex(of: leader) else { return [] }
+    return (1..<party.count).map { party[(index + $0) % party.count] }
+  }
+
+  /// A switch clears the new leader's order. The previous leader takes the squad's state: if
+  /// the others are going or holding, they hold where they stand; otherwise they follow.
   func cycleLeader() {
     guard mode == .exploring, let next = nextLeader else { return }
+    let previous = leader
     leader = next
+    orders[next] = nil
+    if !orders.isEmpty { orders[previous] = .holding(nil) }
+  }
+
+  /// Whether squad orders are offered: with the formation button, once the leader has two
+  /// companions, since that button also calls everyone back (ADR 0003, phase S3).
+  var ordersAvailable: Bool { formationsAvailable }
+
+  func order(of member: PartyMember) -> Order {
+    orders[member] ?? .following
+  }
+
+  /// A companion goes to a point the world has checked they can reach, and holds there. False
+  /// while orders are not offered, outside exploring, or for the leader.
+  @discardableResult
+  func send(_ member: PartyMember, to point: SIMD2<Float>) -> Bool {
+    guard mode == .exploring, ordersAvailable, member != leader, party.contains(member) else {
+      return false
+    }
+    orders[member] = .going(point)
+    return true
+  }
+
+  /// Both companions hold where they stand; the world records where that is.
+  @discardableResult
+  func holdAll() -> Bool {
+    guard mode == .exploring, ordersAvailable else { return false }
+    for member in companions { orders[member] = .holding(nil) }
+    return true
+  }
+
+  /// The world records where a companion told to hold where they are stands.
+  func pin(_ member: PartyMember, at point: SIMD2<Float>) {
+    guard orders[member] == .holding(nil) else { return }
+    orders[member] = .holding(point)
+  }
+
+  /// A going companion has reached their point and holds there.
+  func arrived(_ member: PartyMember) {
+    guard case .going(let point) = orders[member] else { return }
+    orders[member] = .holding(point)
+  }
+
+  /// The formation button (ADR 0003): with anyone going or holding it calls everyone back to
+  /// follow in the current formation; otherwise it cycles the formation.
+  func pressFormation() {
+    guard mode == .exploring, formationsAvailable else { return }
+    if orders.isEmpty { cycleFormation() } else { orders = [:] }
+  }
+
+  /// What the squad is doing, for the HUD: "following", "going" or "holding" when the
+  /// companions agree, otherwise who is not following, such as "Laura holding".
+  var squadState: String {
+    let words = companions.map { order(of: $0).word }
+    if let first = words.first, words.allSatisfy({ $0 == first }) { return first }
+    return companions.filter { orders[$0] != nil }
+      .map { "\($0.displayName) \(order(of: $0).word)" }
+      .joined(separator: ", ")
   }
 
   /// Whether the formation button is offered: once the leader has two companions (ADR 0004,
@@ -338,6 +447,7 @@ final class GameSession {
     party = startingParty
     leader = startingParty[0]
     formation = .close
+    orders = [:]
     firedTriggers = []
     beat = .alone
     hitsTaken = 0
