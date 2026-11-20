@@ -74,12 +74,12 @@ struct BridgeTests {
     }
   }
 
-  /// Nothing stands on the buried road to look at, so a look points towards Manhattan.
+  /// Away from the actions, the hint is to look around, and a look points towards Manhattan.
   @Test
-  func aLookWithNothingNearPointsTowardsManhattan() {
+  func aLookAwayFromTheActionsPointsTowardsManhattan() {
     let world = GameWorld(level: BrooklynBridge.level)
     walk(world, to: [6.5, 104])
-    #expect(world.nearbyName == nil)
+    #expect(world.actionName == nil)
     world.performAction()
     #expect(world.observation == BrooklynBridge.level.lookAround)
   }
@@ -153,23 +153,18 @@ struct BridgeTests {
   }
 
   /// The layout file that Blender exports (ADR 0002) holds only what the bridge uses, and its
-  /// boxes and landmarks stand on the deck. Snow has buried the road and everything on it, so
-  /// its only boxes are the towers', and it has no landmarks.
+  /// boxes stand on the deck. Snow has buried the road and everything on it, so its only boxes
+  /// are the towers'.
   @Test
   func theLayoutFileHoldsWhatTheBridgeUses() {
     let layout = BrooklynBridge.layout
     #expect(layout.boxes.allSatisfy { $0.name.contains("-tower-") }, "only the towers stand")
-    #expect(layout.landmarks.isEmpty)
     #expect(abs(layout.ground.position.y + layout.ground.size.y / 2) < 0.005)
     for box in layout.boxes {
       #expect(abs(box.position.y - box.size.y / 2) < 0.005, "\(box.name) stands on the deck")
     }
-    for landmark in layout.landmarks {
-      #expect(abs(landmark.position.y) < 0.005, "\(landmark.name) stands on the deck")
-    }
-    // Each landmark, area and marker has its words or its part in BrooklynBridge.swift.
+    // Each area and marker has its words or its part in BrooklynBridge.swift.
     let level = BrooklynBridge.level
-    #expect(layout.landmarks.map(\.name) == level.points.map(\.id))
     #expect(
       layout.areas.map(\.name)
         == level.triggers.map(\.id) + ["stranger", "search.stranger", "laura.found", "help.laura"])

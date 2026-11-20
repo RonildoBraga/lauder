@@ -36,17 +36,9 @@ struct PartySceneTests {
         })
     }
     #expect(world.root.components[PhysicsSimulationComponent.self] == nil)
-    // Besides the boxes and points, only the ground's four invisible edges block movement.
+    // Besides the boxes, only the ground's four invisible edges block movement.
     #expect(level.edges.count == 4)
-    #expect(level.obstacles.count == level.boxes.count + level.points.count + level.edges.count)
-    for point in level.points {
-      let centre = SIMD2(point.position.x, point.position.z)
-      let half = SIMD2(point.size.x, point.size.z) / 2
-      #expect(
-        level.obstacles.contains {
-          $0.minimum == centre - half && $0.maximum == centre + half
-        })
-    }
+    #expect(level.obstacles.count == level.boxes.count + level.edges.count)
 
     // Changing the leader moves no one.
     let initialPositions = bodies.map(\.position)

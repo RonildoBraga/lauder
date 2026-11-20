@@ -48,7 +48,7 @@ LEVELS = {
 VISUAL, GAMEPLAY, LIGHTS, CAMERA, PREVIEW = "Visual", "Gameplay", "Lights", "Camera", "Preview"
 #: What a gameplay object can be, in its `lauder_role` property. Without one, a mesh is a box and
 #: an empty is a marker.
-ROLES = ("ground", "box", "landmark", "area", "marker")
+ROLES = ("ground", "box", "area", "marker")
 
 #: Where the models are, relative to the repository: blender/assets/<model>/<model>.blend.
 ASSETS = "blender/assets"

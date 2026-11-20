@@ -53,7 +53,6 @@ SAMPLE = L.Layout(
         L.Box("car-a1", (9.6, 0.75, 100), (2, 1.5, 4.6)),
         L.Box("brooklyn-tower-pier", (0, 7, 20), (6, 14, 10)),
     ],
-    [L.Landmark("bridge.booth", (4, 0, 110), (2, 2.4, 2))],
     [L.Area("manhattan-end", (-12, -125), (12, -110))],
     [L.Marker("spawn.miki", (6.8, 118))],
     L.Camera((0, 10, 9.9), 42),
@@ -81,9 +80,6 @@ def shapes_for(layout):
     block(layout.ground.name, "ground", layout.ground.position, layout.ground.size)
     for box in layout.boxes:
         block(box.name, "box", box.position, box.size)
-    for landmark in layout.landmarks:
-        x, y, z = landmark.position
-        block(landmark.name, "landmark", (x, y + landmark.size[1] / 2, z), landmark.size)
     for area in layout.areas:
         (x0, z0), (x1, z1) = area.minimum, area.maximum
         block(area.name, "area", ((x0 + x1) / 2, 0.025, (z0 + z1) / 2), (x1 - x0, 0.05, z1 - z0))
@@ -186,12 +182,11 @@ class LayoutTests(unittest.TestCase):
         shapes[2].cuboid = False
         self.refused("car-a1", "no longer a box", shapes=shapes)
 
-    def test_boxes_and_landmarks_stand_on_the_deck(self):
-        for name in ("car-a1", "bridge.booth"):
-            shapes = shapes_for(SAMPLE)
-            raised = next(shape for shape in shapes if shape.name == name)
-            raised.minimum = raised.minimum[:2] + (0.3,)
-            self.refused(name, "should stand on the deck", shapes=shapes)
+    def test_boxes_stand_on_the_deck(self):
+        shapes = shapes_for(SAMPLE)
+        raised = next(shape for shape in shapes if shape.name == "car-a1")
+        raised.minimum = raised.minimum[:2] + (0.3,)
+        self.refused("car-a1", "should stand on the deck", shapes=shapes)
         shapes = shapes_for(SAMPLE)
         shapes[0].maximum = shapes[0].maximum[:2] + (0.2,)
         self.refused("The deck's top should be at height 0", shapes=shapes)
@@ -209,9 +204,9 @@ class LayoutTests(unittest.TestCase):
         read(without(shapes_for(SAMPLE), "car-a1"), required={("marker", "spawn.miki")})
 
     def test_names_the_story_uses_are_the_layouts_it_quotes(self):
-        story = 'let start = layout.marker(named: "spawn.miki")\npoint("bridge.booth", "Booth")\n'
+        story = 'let start = layout.marker(named: "spawn.miki")\ntrigger("manhattan-end", "End")\n'
         self.assertEqual(L.required_names(L.emit_layout(SAMPLE, BRIDGE), story),
-                         {("marker", "spawn.miki"), ("landmark", "bridge.booth")})
+                         {("marker", "spawn.miki"), ("area", "manhattan-end")})
         bridge = L.required_names((ROOT / BRIDGE.layout).read_text(),
                                   (ROOT / BRIDGE.story).read_text())
         self.assertLessEqual({("marker", "spawn.miki"), ("area", "manhattan-end"),

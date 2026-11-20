@@ -5,8 +5,8 @@
       "blender/levels/brooklyn-bridge.blend": "58c6154ae1aa517c3d44009333b0a2fcee2938e34ef23430a8fa0b0d9bdfa661"
     },
     "wrote": {
-      "apple/sources/content/BrooklynBridge.usdz": "2c9b28fa4ba957db629e53abd11af50bad1cae42b3dd93282a25e0ed5fe9db7b",
-      "apple/sources/content/BrooklynBridgeLayout.swift": "95c71ea0166a23238b79bb15279dfd7e76e106c0a0d373218f356928fa7ffbd3"
+      "apple/sources/content/BrooklynBridge.usdz": "dc75a4b1e34d20d67c9fec36e8597e350260c0ef0027f01d0a002b37e43ec437",
+      "apple/sources/content/BrooklynBridgeLayout.swift": "970188ce44e9afa01def5d2058e06ef282c3e88daa45bfc4cf21d3807c3936b0"
     }
   },
   "models/hostile": {

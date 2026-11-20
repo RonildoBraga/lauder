@@ -30,21 +30,13 @@ enum TestYard {
     box("room-front-west", [5, 0.55, -1], [2, 1.1, 0.35]),
     box("room-front-east", [9, 0.55, -1], [2, 1.1, 0.35]),
     box("blocked-entrance", [7, 0.45, -0.7], [2.2, 0.9, 1]),
-  ]
-
-  /// Two blocks that can be looked at, which block movement too: one in the shelter and one in
-  /// the room.
-  static let points: [Level.PointOfInterest] = [
-    Level.PointOfInterest(
-      id: "yard.radio", name: "Radio", position: [-10, 0, 1.5], size: [0.8, 1, 0.6],
-      observation: "A radio that can receive but cannot answer."),
-    Level.PointOfInterest(
-      id: "yard.housing", name: "Housing", position: [7, 0, -4.5], size: [0.5, 0.5, 0.5],
-      observation: "An empty housing."),
+    // Two small blocks, one in the shelter and one in the room.
+    box("yard.radio", [-10, 0.5, 1.5], [0.8, 1, 0.6]),
+    box("yard.housing", [7, 0.25, -4.5], [0.5, 0.5, 0.5]),
   ]
 
   static let level = Level(
-    id: "test-yard", ground: ground, boxes: boxes, points: points, interactions: [],
+    id: "test-yard", ground: ground, boxes: boxes, interactions: [],
     triggers: [], party: [.miki, .laura, .tom],
     spawns: [.miki: [-8, 3], .laura: [-8, 3.8], .tom: [-8, 4.6]], heading: [0, -1],
     cameraOffset: cameraOffset, fieldOfView: 42, opening: "A walled yard.",

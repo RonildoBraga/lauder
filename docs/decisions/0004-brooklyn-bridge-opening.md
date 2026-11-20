@@ -2,7 +2,7 @@
 
 **Status:** Accepted\
 **Date:** 18 November 2026\
-**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world))
+**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world)); and on 21 November 2026, when the unused points of interest were removed
 
 ## Context
 

@@ -6,10 +6,10 @@ the level's source. Its collections decide where each object goes:
 - Visual: everything the player sees. Export writes it to the level's scene file, a USDZ that the
   game loads. A model appears in it as an instance of the model's collection, linked from the
   model's own file.
-- Gameplay: the ground, the boxes that block movement and sight, the landmarks, the trigger and
-  fight areas, and the markers where people start and stand, each with its role. Export writes
-  them to the level's layout file, typed Swift that the game compiles. They show as outlines, and
-  the game never draws them. A visual part or model parented to a gameplay box moves with it.
+- Gameplay: the ground, the boxes that block movement and sight, the trigger and fight areas, and
+  the markers where people start and stand, each with its role. Export writes them to the level's
+  layout file, typed Swift that the game compiles. They show as outlines, and the game never draws
+  them. A visual part or model parented to a gameplay box moves with it.
 - Lights and Camera: the level's lights, suns, point lights and spot lights, and the game
   camera's rig, written to the layout file too.
 - Preview: the party's models at their start markers, which the game places itself. It is never
