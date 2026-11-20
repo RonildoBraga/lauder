@@ -127,7 +127,9 @@ final class GameWorld {
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
     cameraTarget = Self.startingCameraTarget(level)
-    let style = SceneStyle()
+    let style = SceneStyle(
+      markerScale: SceneStyle.markerScale(
+        cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
     stage = EncounterStage(level: level, style: style)
     root.name = level.id
     if let scene = level.scene {
@@ -165,7 +167,9 @@ final class GameWorld {
       body.addChild(visual)
       let marker = ModelEntity(
         mesh: .generateCylinder(height: 0.015, radius: 0.34), materials: [style.warm])
+      marker.name = "\(member.rawValue).marker"
       marker.position.y = -PartyBody.height / 2 + 0.025
+      marker.scale = [style.markerScale, 1, style.markerScale]
       body.addChild(marker)
       bodies[member] = body
       visuals[member] = visual

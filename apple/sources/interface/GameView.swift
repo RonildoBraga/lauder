@@ -9,8 +9,9 @@ struct GameView: View {
   let world: GameWorld
 
   var body: some View {
+    let talking = world.session.mode == .dialogue
     ZStack(alignment: .top) {
-      Color(red: 0.055, green: 0.09, blue: 0.09).ignoresSafeArea()
+      HUDStyle.snow.ignoresSafeArea()
       RealityView { [world] content in
         content.camera = .virtual
         content.add(world.root)
@@ -25,128 +26,43 @@ struct GameView: View {
       .ignoresSafeArea()
 
       HStack(alignment: .top) {
-        VStack(alignment: .leading, spacing: 5) {
-          Text("\(world.session.leader.displayName) · \(world.session.leader.role)").font(.headline)
-          Text(world.objective)
-            .font(.subheadline)
-          if world.session.medicalKits > 0 {
-            // The party's small shared inventory (ADR 0004, M3).
-            Label(
-              world.session.medicalKits == 1
-                ? "Medical kit" : "Medical kits · \(world.session.medicalKits)",
-              systemImage: "cross.case.fill"
-            )
-            .font(.caption).foregroundStyle(Color(red: 0.62, green: 0.87, blue: 0.77))
-          }
-          HStack(spacing: 8) {
-            ForEach(world.session.party, id: \.self) { member in
-              Text(member.displayName)
-                .font(.caption2)
-                .fontWeight(member == world.session.leader ? .bold : .regular)
-                .underline(member == world.session.leader)
-              if world.session.inEncounter, member == world.session.leader {
-                // The placeholder hit rule: three hits, shown beside the name.
-                Text(hitPips).font(.caption2).foregroundStyle(threatColour)
-              }
-            }
-            if world.session.formationsAvailable {
-              // The squad's formation and what it is doing (ADR 0003, phases S2 and S3), on the
-              // party's own line so the panel grows no taller over the scene.
-              Text("· \(world.session.formation.name) · \(world.session.squadState)")
-                .font(.caption2)
-            }
-          }
-          if world.showsWeapon {
-            HStack(spacing: 8) {
-              Text("Carbine · \(world.session.ammo)").font(.caption)
-              if !world.controls.touchControlsEnabled {
-                Text("\(world.controls.fireButtonName) · Fire").font(.caption)
-                  .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
-              }
-            }
-          }
-          if let threat = world.threat {
-            Text(threat).font(.caption.bold()).foregroundStyle(threatColour)
-          }
-          // During a conversation its panel carries the text and the Continue hint; the result
-          // of the step appears here once the conversation ends.
-          let talking = world.session.mode == .dialogue
-          if !world.controls.touchControlsEnabled && !talking,
-            let next = world.session.nextLeader
-          {
-            HStack(spacing: 8) {
-              Text("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
-              if world.session.formationsAvailable {
-                Text("\(world.controls.formationButtonName) · \(formationAction)")
-              }
-            }
-            .font(.caption)
-            if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
-              // The D-pad's or arrow keys' orders, with the companions in their fixed order.
-              Text("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Both · ▼ Hold")
-                .font(.caption)
-            }
-          }
-          if !talking {
-            Text(world.observation).font(.caption)
-          }
-          if let diagnostic = world.diagnostic {
-            Text(diagnostic).font(.caption).foregroundStyle(.orange)
-          }
-          if !world.controls.touchControlsEnabled {
-            if !talking {
-              Label(
-                world.actionName ?? world.nearbyName.map { "Look at \($0)" } ?? "Look around",
-                systemImage: world.controls.actionSymbol ?? "a.circle"
-              )
-              .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
-            }
-            Text(world.controls.sourceName).font(.caption2)
-              .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
-          }
-          if world.controls.status == .ready
-            && world.controls.needsNeutralInput && !world.isPaused
-          {
-            Text(releaseGuidance)
-              .font(.caption)
-          }
-        }
-        .frame(maxWidth: 290, alignment: .leading)
-        .padding(12)
-        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
-        .background(
-          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 12)
-        )
-        .allowsHitTesting(false)
+        status(talking: talking)
         Spacer()
-        VStack(alignment: .trailing, spacing: 12) {
+        VStack(alignment: .trailing, spacing: 10) {
           if world.controls.touchControlsEnabled {
             // The touch surface owns Pause/Resume in this top-right space.
             Color.clear.frame(width: 100, height: 44).allowsHitTesting(false)
           } else {
-            Text("\(world.controls.pauseButtonName) · Pause").font(.caption)
-              .padding(12)
-              .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
-              .background(
-                Color(red: 0.075, green: 0.13, blue: 0.14),
-                in: RoundedRectangle(cornerRadius: 12))
+            Text("\(world.controls.pauseButtonName) · Pause").font(.caption2)
+              .padding(.horizontal, 10)
+              .padding(.vertical, 6)
+              .frostedPanel(cornerRadius: 8)
           }
           if world.controls.hasController {
-            Button(world.controls.touchControlsEnabled ? "Use controller" : "Use touch controls") {
+            Button {
               if world.controls.touchControlsEnabled {
                 world.controls.useController()
               } else {
                 world.controls.useTouchControls()
               }
+            } label: {
+              Text(world.controls.touchControlsEnabled ? "Use controller" : "Use touch controls")
+                .font(.caption)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .frostedPanel(cornerRadius: 22)
             }
-            .font(.caption)
-            .buttonStyle(.borderedProminent)
-            .tint(Color(red: 0.075, green: 0.13, blue: 0.14))
-            .frame(minHeight: 44)
+            .buttonStyle(.plain)
           }
         }
       }
       .padding()
+
+      if !world.controls.touchControlsEnabled && !talking && !world.isPaused
+        && world.controls.status == .ready
+      {
+        hints
+      }
 
       if let line = world.session.currentLine {
         // Pause keeps the conversation at this line; Resume returns to it.
@@ -155,15 +71,12 @@ struct GameView: View {
           Text(line.text).fixedSize(horizontal: false, vertical: true)
           if !world.controls.touchControlsEnabled {
             Label("Continue", systemImage: world.controls.actionSymbol ?? "a.circle")
-              .font(.caption).foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+              .font(.caption).foregroundStyle(HUDStyle.muted)
           }
         }
         .frame(maxWidth: 400, alignment: .leading)
-        .padding(16)
-        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
-        .background(
-          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 14)
-        )
+        .padding(14)
+        .frostedPanel(cornerRadius: 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .padding(.bottom, 20)
         .allowsHitTesting(false)
@@ -175,19 +88,16 @@ struct GameView: View {
       }
 
       if world.controls.status != .ready {
-        Color.black.opacity(0.45).ignoresSafeArea().allowsHitTesting(false)
+        Color.black.opacity(0.35).ignoresSafeArea().allowsHitTesting(false)
         VStack(spacing: 12) {
           Text(world.controls.sourceName).font(.title2.bold())
         }
         .padding(28)
-        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
-        .background(
-          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 18)
-        )
+        .frostedPanel(cornerRadius: 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
       } else if world.isPaused {
-        Color.black.opacity(0.45).ignoresSafeArea().allowsHitTesting(false)
+        Color.black.opacity(0.35).ignoresSafeArea().allowsHitTesting(false)
         VStack(spacing: 14) {
           Text("Paused").font(.title2.bold())
           if world.controls.touchControlsEnabled {
@@ -201,12 +111,12 @@ struct GameView: View {
                   .font(.headline)
                   .frame(width: 180, height: 36)
                   .background(
-                    chosen ? Color(red: 0.2, green: 0.33, blue: 0.33) : .clear,
+                    chosen ? HUDStyle.ink.opacity(0.1) : .clear,
                     in: RoundedRectangle(cornerRadius: 8)
                   )
                   .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                      .stroke(chosen ? Color(red: 0.62, green: 0.87, blue: 0.77) : .clear)
+                      .stroke(chosen ? HUDStyle.ink.opacity(0.6) : .clear)
                   )
               }
             }
@@ -217,17 +127,14 @@ struct GameView: View {
                 .font(.caption)
               Text("\(world.controls.pauseButtonName) · Resume").font(.caption)
             }
-            .foregroundStyle(Color(red: 0.66, green: 0.77, blue: 0.72))
+            .foregroundStyle(HUDStyle.muted)
           }
           if world.controls.needsNeutralInput {
             Text(releaseGuidance).font(.caption)
           }
         }
         .padding(28)
-        .foregroundStyle(Color(red: 0.91, green: 0.93, blue: 0.85))
-        .background(
-          Color(red: 0.075, green: 0.13, blue: 0.14), in: RoundedRectangle(cornerRadius: 18)
-        )
+        .frostedPanel(cornerRadius: 18)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
       }
@@ -255,6 +162,102 @@ struct GameView: View {
     }
   }
 
+  /// The status panel, small and light (the visual direction): who leads, marked, and who
+  /// follows, with the leader's hits during a fight and the squad's formation; the objective;
+  /// the latest line; and a threat, the carbine's rounds or supplies only while there are any.
+  private func status(talking: Bool) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+      HStack(spacing: 6) {
+        ForEach(world.session.party, id: \.self) { member in
+          let leading = member == world.session.leader
+          Text(member.displayName)
+            .fontWeight(leading ? .semibold : .regular)
+            .underline(leading)
+          if world.session.inEncounter, leading {
+            // The placeholder hit rule: three hits, shown beside the name.
+            Text(hitPips).foregroundStyle(HUDStyle.threat)
+          }
+        }
+        if world.session.formationsAvailable {
+          // The squad's formation and what it is doing (ADR 0003, phases S2 and S3).
+          Text("· \(world.session.formation.name) · \(world.session.squadState)")
+            .foregroundStyle(HUDStyle.muted)
+        }
+      }
+      .font(.caption)
+      Text(world.objective).font(.subheadline.weight(.semibold))
+      // During a conversation its panel carries the words; the result of the step appears here
+      // once the conversation ends.
+      if !talking {
+        Text(world.observation).font(.caption)
+      }
+      if let threat = world.threat {
+        Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
+      }
+      if world.showsWeapon || world.session.medicalKits > 0 {
+        HStack(spacing: 10) {
+          if world.showsWeapon {
+            Text("Carbine · \(world.session.ammo)")
+          }
+          if world.session.medicalKits > 0 {
+            // The party's small shared inventory (ADR 0004, M3).
+            Label(
+              world.session.medicalKits == 1
+                ? "Medical kit" : "Medical kits · \(world.session.medicalKits)",
+              systemImage: "cross.case.fill"
+            )
+            .foregroundStyle(HUDStyle.supply)
+          }
+        }
+        .font(.caption)
+      }
+      if let diagnostic = world.diagnostic {
+        Text(diagnostic).font(.caption).foregroundStyle(HUDStyle.warning)
+      }
+      if world.controls.status == .ready && world.controls.needsNeutralInput
+        && !world.isPaused
+      {
+        Text(releaseGuidance).font(.caption)
+      }
+    }
+    .frame(maxWidth: 240, alignment: .leading)
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .frostedPanel()
+    .allowsHitTesting(false)
+  }
+
+  /// A controller's or keyboard's controls that apply now, in one small strip at the bottom
+  /// left, out of the way of the scene. Touch shows its own buttons instead.
+  private var hints: some View {
+    let look = world.actionName ?? world.nearbyName.map { "Look at \($0)" } ?? "Look around"
+    var others: [String] = []
+    if world.showsWeapon {
+      others.append("\(world.controls.fireButtonName) · Fire")
+    }
+    if let next = world.session.nextLeader {
+      others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
+    }
+    if world.session.formationsAvailable {
+      others.append("\(world.controls.formationButtonName) · \(formationAction)")
+    }
+    if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
+      // The D-pad's or arrow keys' orders, with the companions in their fixed order.
+      others.append("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Both · ▼ Hold")
+    }
+    let symbol = Image(systemName: world.controls.actionSymbol ?? "a.circle")
+    let rest = others.map { "     \($0)" }.joined()
+    return Text("\(symbol) \(look)\(rest)")
+      .font(.caption2)
+      .foregroundStyle(HUDStyle.muted)
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .frostedPanel(cornerRadius: 8)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+      .padding()
+      .allowsHitTesting(false)
+  }
+
   /// The touch action button: Restart in the pause menu, Continue in a conversation, otherwise
   /// the leader's action here or Look.
   private var touchActionTitle: String {
@@ -264,8 +267,6 @@ struct GameView: View {
     case .exploring: world.actionName ?? "Look"
     }
   }
-
-  private var threatColour: Color { Color(red: 1, green: 0.45, blue: 0.38) }
 
   /// The formation button's job: after an order it calls everyone back (ADR 0003).
   private var formationAction: String {

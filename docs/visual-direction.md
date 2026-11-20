@@ -1,6 +1,6 @@
 # Visual direction
 
-**Status:** A minimalist low-poly frozen world, chosen by the maintainer on 20 November 2026. It replaces Death's Door as the reference. The bridge moves to it in small steps from today's greybox, keeping what exists where it serves, and gameplay stays readable throughout. Colours, angles and sizes below are starting values, tuned in the Simulator and on the phone. The bridge already uses the palette, the light and the camera's starting values, and its towers fade while they hide the party. A shared palette library in Blender comes with the first kit models; until then each file's materials take the palette's values.
+**Status:** A minimalist low-poly frozen world, chosen by the maintainer on 20 November 2026. It replaces Death's Door as the reference. The bridge moves to it in small steps from today's greybox, keeping what exists where it serves, and gameplay stays readable throughout. Colours, angles and sizes below are starting values, tuned in the Simulator and on the phone. The bridge already uses the palette, the light and the camera's starting values, its towers fade while they hide the party, its world markers keep their size on screen, and the HUD is light and frosted. A shared palette library in Blender comes with the first kit models; until then each file's materials take the palette's values.
 
 ## The direction
 
@@ -77,12 +77,12 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 - The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower.
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
 - Tall landmarks, such as tower tops and buildings, fade while they come between the camera and the party.
-- World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen.
+- World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: drawn larger by as much more of the ground as the camera shows than the 14 m, 42° camera they were made for, about twice as large on the bridge.
 
 ## Characters and interface
 
 - Characters are about 400 triangles each, with one distinct silhouette and one strong colour per person, and a soft contact shadow. Facing shows through the body's shape. No rigging is needed at this size.
-- The interface is lighter and smaller than today's dark panels: frosted, light panels with fewer lines, so the world stays the subject. Controls and their rules do not change.
+- The interface is light and small, so the world stays the subject: frosted panels with ink words. The status panel shows the party, the objective and the latest line, with a threat, the carbine's rounds or supplies only while there are any. A controller's or keyboard's controls that apply show in one strip at the bottom, and the touch buttons are frosted too. Controls and their rules do not change.
 
 ## The bridge in the frozen world
 

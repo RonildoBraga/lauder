@@ -115,6 +115,8 @@ The camera keeps the level's elevated offset and field of view and follows the s
 
 From the bridge's height, looking 50° down, a tower hides the party for some 40 m beyond it. Any part of the level's look rising above 6 m belongs to a tall landmark, with the tall parts it touches, so a tower's legs, pier and top are one landmark. A landmark fades to a fifth over 0.3 seconds while it stands between the camera and the leader, a companion or the camera's target, and shows again once it does not. Restart and a fight's retry settle it at once. The first see-through frame of a material is slow to prepare, so for the first half second of play a speck too small and faint to notice shows each landmark's material see-through just before the camera; the first fade then does not stall.
 
+World markers keep their size on screen. The leader's disc, the order rings, the refusal cross, the aim marker and the aim and shot lines were made for the bridge's earlier camera, 14 m from its target with a 42° lens. A level's camera that shows more of the ground across the screen draws them larger by the same ratio, about 2.1 times on the bridge, and never smaller than made.
+
 ## The opening
 
 The app opens on the **Brooklyn Bridge**: Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom's body waits, hidden, where his scene will use it. Laura lies hurt in view at hers, face down beside a car, until her scene stands her up; she stays out of movement and the squad until she joins. The objective line changes as the story moves on.

@@ -67,6 +67,8 @@ final class EncounterStage {
   private var tracerRemaining: [String: Float] = [:]
   private let leaderTracerID = "leader"
   private let targetMarker: Entity
+  /// How much larger than authored the aim marker and the aim and shot lines show.
+  private let markerScale: Float
   private var drawRemaining: Float = 0
   private var cooldown: Float = 0
   private var reportedEmpty = false
@@ -76,8 +78,10 @@ final class EncounterStage {
     let all = level.encounters.flatMap(\.hostiles)
     specs = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
     weaponProp = style.carbine()
+    markerScale = style.markerScale
     targetMarker = ModelEntity(
       mesh: .generateCylinder(height: 0.012, radius: 0.48), materials: [style.threat])
+    targetMarker.scale = [style.markerScale, 1, style.markerScale]
     container.name = "combat"
     targetMarker.name = "combat.target"
     container.addChild(targetMarker)
@@ -312,7 +316,7 @@ final class EncounterStage {
       line.isEnabled = false
       return
     }
-    place(line, from: state.position, to: leader, thickness: 0.025)
+    place(line, from: state.position, to: leader, thickness: 0.025 * markerScale)
     line.isEnabled = true
   }
 
@@ -339,7 +343,7 @@ final class EncounterStage {
 
   private func showTracer(_ id: String, from start: SIMD2<Float>, to end: SIMD2<Float>) {
     guard let tracer = tracers[id] else { return }
-    place(tracer, from: start, to: end, thickness: 0.04)
+    place(tracer, from: start, to: end, thickness: 0.04 * markerScale)
     tracer.isEnabled = true
     tracerRemaining[id] = Self.tracerTime
   }
