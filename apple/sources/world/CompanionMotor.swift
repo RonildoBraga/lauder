@@ -154,6 +154,15 @@ struct CompanionMotor {
     return intended
   }
 
+  /// A new order: a settled companion moves off to its point however near it is, after their
+  /// usual reaction, rather than waiting until it is `reengageDistance` away as a formation
+  /// place must be (ADR 0003, phase S3).
+  mutating func wake() {
+    guard isSettled else { return }
+    isSettled = false
+    wait = reactionDelay
+  }
+
   /// Record what PartyMotion allowed, so speed into a wall is not kept, and watch for stalls.
   mutating func absorb(_ actual: SIMD2<Float>, dt: Float) {
     guard dt > 0 else { return }

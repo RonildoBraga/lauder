@@ -583,6 +583,7 @@ final class GameWorld {
         <= simd_distance(first, spots[1]) + simd_distance(second, spots[0])
       session.send(members[0], to: kept ? spots[0] : spots[1])
       session.send(members[1], to: kept ? spots[1] : spots[0])
+      for member in members { motors[member]?.wake() }
     case .leftGoes, .rightGoes:
       guard
         let member = command == .leftGoes ? session.leftCompanion : session.rightCompanion
@@ -599,6 +600,7 @@ final class GameWorld {
         target = beside
       }
       session.send(member, to: target)
+      motors[member]?.wake()
     case .hold:
       break
     }

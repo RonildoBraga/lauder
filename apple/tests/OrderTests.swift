@@ -258,6 +258,25 @@ struct OrderTests {
   }
 
   @Test
+  func aSettledCompanionGoesToANearbyPoint() throws {
+    // Half a metre is inside the settling distance that keeps a resting companion still in
+    // formation, but a new order still moves them all the way there.
+    let world = GameWorld(level: TestYard.level)
+    try faceEast(world)
+    let wanted = position(world, .laura) + [0, 0.5]
+    give(.rightGoes, to: world, touching: wanted)
+    guard case .going(let point) = world.session.order(of: .laura) else {
+      Issue.record("Laura is \(world.session.order(of: .laura))")
+      return
+    }
+    #expect(simd_distance(point, wanted) < 0.001)
+    try wait(world, seconds: 2)
+    #expect(world.session.order(of: .laura) == .holding(point))
+    #expect(simd_distance(position(world, .laura), point) <= GameWorld.arrivalDistance)
+    #expect(!ring(world, .laura).isEnabled)
+  }
+
+  @Test
   func aPointNobodyCanReachIsRefusedWithABriefCross() throws {
     let world = GameWorld(level: TestYard.level)
     try walk(world, through: [Self.laneStart, [-6, 8]])
