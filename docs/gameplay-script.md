@@ -15,7 +15,7 @@ They meet as strangers in a ruined future, in which safe water, maintained equip
 
 ## The Brooklyn Bridge opening
 
-The game begins with Miki alone on the Brooklyn Bridge, heading from Brooklyn towards Manhattan through a post-apocalyptic New York. Everything is greybox: simple shapes and colours for the layout, the encounters and the story's progress, before any detailed art. [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) sets out how it is built.
+The game begins with Miki alone on the Brooklyn Bridge, heading from Brooklyn towards Manhattan through a post-apocalyptic New York. It is built as a greybox, with simple shapes and colours for the layout, the encounters and the story's progress. Its look is moving to the frozen low-poly [visual direction](visual-direction.md), with the river under ice and the bridge under snow. [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) sets out how it is built.
 
 ### 1. Alone on the bridge (M1, built)
 

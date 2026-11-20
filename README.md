@@ -63,7 +63,7 @@ For new art, group an asset's editable inputs, deliberate delivery exports and p
 
 The first playable is the Brooklyn Bridge opening, made with simple shapes and colours, as the [prototype plan](docs/prototype-plan.md) sets out. Changes are checked with tests, scripted Simulator playtests and a maintainer playtest, and milestones on the baseline iPhone 13 Pro Max, where the target is 60 fps. A playthrough's duration will come from testing.
 
-The maintainer has approved gameplay-first development with simple shapes and colours. Reuse the current scene and stand-ins when testing. Further visual polish and original asset production follow a worthwhile playable loop; [Death's Door remains a later visual reference](docs/visual-direction.md). Narrative proposals do not imply implemented interactions or approval of every detail.
+The maintainer has approved gameplay-first development, and on 20 November 2026 chose a minimalist low-poly look for a frozen world as the [visual direction](docs/visual-direction.md). The bridge moves to it in small steps from today's greybox, reusing the current scene and stand-ins where they serve. Narrative proposals do not imply implemented interactions or approval of every detail.
 
 ## Contribute
 

@@ -11,7 +11,7 @@ The [story bible](story/story-bible.md) supplies the ensemble direction; the [ga
 
 The first playable is the Brooklyn Bridge opening. Miki crosses alone and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue; then the three travel on together. It should show that the party's movement and switching, a light fight and short scripted scenes work together on the phone, and whether the opening is worth building on.
 
-Use the greybox bridge and simple coloured stand-ins. No art or animation production is required. Identify characters and interactions with text as well as colour. Duration should come from playtesting.
+The bridge starts as a greybox with simple coloured stand-ins. It moves in small steps to the frozen low-poly [visual direction](visual-direction.md), which the maintainer chose on 20 November 2026, reusing what exists where it serves. No animation production is required. Identify characters and interactions with text as well as colour. Duration should come from playtesting.
 
 | Element | First playable |
 |---|---|

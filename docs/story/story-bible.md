@@ -1,7 +1,7 @@
-# Lauder — story bible, draft 0.6
+# Lauder — story bible, draft 0.7
 
-**Date:** 18 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
+**Date:** 20 November 2026\
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
 
 ## Agreed direction
 
@@ -11,6 +11,7 @@
 - Each character has distinct capabilities that make different approaches useful, including agility and strength.
 - Chapter One begins with Miki crossing the Brooklyn Bridge towards Manhattan, where circumstances bring her together with Tom and Laura. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The opening is set in a post-apocalyptic New York. The cause and wider extent of the collapse remain uncertain.
+- The whole world is frozen. Rivers and the sea lie under ice, and most of the land is buried under snow: flat, white and largely empty, broken by a few structures and landmarks. Why it froze, and how the freeze relates to the collapse, remains uncertain.
 - Exploration, purposeful salvage and survival lead the experience. The opening teaches combat through two short encounters on the bridge; afterwards combat stays occasional and light. All three characters carry weapons and can defend themselves and support one another. Ordinary cooperation, humour and care remain possible.
 - Human enhancement exists through discreet internal synthetic replacements and biological or genetic changes. Characters retain a human exterior; exposed machinery is not the visual direction.
 
@@ -21,6 +22,8 @@ The control description is understood as **one human player directing a party of
 Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
 
 No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
+
+With the East River frozen, the opening needs a reason to cross by the bridge rather than over the ice. A proposal: near Manhattan the ice is broken into floes and channels of open water, and the deck stands far above the river. The places beyond the bridge that assume open water, such as Old Lock's crossing, the canal route and the coastal water crew, need revisiting for the frozen world.
 
 The [Chapter One outline](#chapter-one--across-the-bridge) below records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses it into what the player sees and does.
 
@@ -189,7 +192,7 @@ Years of weather, salvage and habitation matter as much as the original destruct
 
 People disagree about the sequence of fighting and infrastructure failure. Local records, broadcasts and survivor accounts contain evidence, errors and gaps. None of the party has a complete global explanation. Enhancement history may intersect particular events, but it is not automatically the cause of the collapse.
 
-Water, food, warmth, shelter, load and reliable information shape choices. A dry detour can be impossible with the water they carry. These pressures give salvage purpose without requiring a meter for every bodily need.
+Water, food, warmth, shelter, load and reliable information shape choices. In the frozen world, water comes from snow and ice and takes fuel to melt, and cold presses as hard as hunger. A long detour can be impossible with the fuel and water they carry. These pressures give salvage purpose without requiring a meter for every bodily need.
 
 People can cooperate, disagree or compete over resources without belonging to a hidden faction. Light combat and observation-based avoidance belong to the wider direction; the first repair need not require a fight.
 
@@ -225,7 +228,7 @@ Keep the opening's lines short. They should reveal nothing about anyone's past b
 
 ### 1. Alone on the bridge
 
-Miki starts at the Brooklyn end among abandoned and damaged vehicles, debris and obstacles. She is alone, so the player learns to move and look around.
+Miki starts at the Brooklyn end among snow-covered, abandoned and damaged vehicles, debris and obstacles, high above the frozen East River. She is alone, so the player learns to move and look around.
 
 ### 2. Friendly?
 
