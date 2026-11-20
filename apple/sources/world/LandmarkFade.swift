@@ -13,8 +13,11 @@ import simd
 struct LandmarkFade {
   /// A part whose top stands higher than this, in metres, belongs to a landmark.
   static let height: Float = 6
-  /// How much of a landmark shows while it fades.
-  static let faded: Float = 0.2
+  /// How much of a landmark shows once it has faded: none. A see-through landmark is close to the
+  /// camera whenever it hides the party, so it fills much of the screen, and blending it costs the
+  /// phone's GPU dearly. At the Manhattan end, a tower at a fifth held the iPhone 13 Pro Max to
+  /// 42 fps with its GPU at 97%; faded out of sight, or opaque, it held 60 fps at about half.
+  static let faded: Float = 0
   /// How long a landmark takes to fade out, or back in, in seconds.
   static let time: Float = 0.3
   /// How far clear of a part, in metres, a line of sight must pass.

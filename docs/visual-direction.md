@@ -76,7 +76,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 - A high three-quarter view along the route, rather than a strict isometric one, with a long lens of about 20° and a view about 50° down.
 - The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower.
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
-- Tall landmarks, such as tower tops and buildings, fade while they come between the camera and the party.
+- Tall landmarks, such as tower tops and buildings, fade out of sight while they come between the camera and the party. They fade fully, since a see-through landmark that fills the screen costs the phone's GPU too much.
 - World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: drawn larger by as much more of the ground as the camera shows than the 14 m, 42° camera they were made for, about twice as large on the bridge.
 
 ## Characters and interface
