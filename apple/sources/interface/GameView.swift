@@ -243,7 +243,7 @@ struct GameView: View {
   /// A controller's or keyboard's controls that apply now, in one small strip at the bottom
   /// left, out of the way of the scene. Touch shows its own buttons instead.
   private var hints: some View {
-    let look = world.actionName ?? world.nearbyName.map { "Look at \($0)" } ?? "Look around"
+    let look = world.actionName ?? "Look around"
     var others: [String] = []
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")

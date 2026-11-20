@@ -17,7 +17,6 @@ final class GameWorld {
   let root = Entity()
   let controls = GameControls()
   let session: GameSession
-  private(set) var nearbyName: String?
   /// The latest line the HUD shows: a place's words, an action's result, a beat's line. Every
   /// line counts as new, even one that repeats the last, so it shows again in the status panel.
   private(set) var observation: String {
@@ -96,7 +95,6 @@ final class GameWorld {
   @ObservationIgnored private var isApplicationActive = false
   @ObservationIgnored private var skipNextStep = true
   @ObservationIgnored private var wasRunning = false
-  @ObservationIgnored private var nearby: Level.PointOfInterest?
   @ObservationIgnored private var cameraTarget: SIMD3<Float>
   /// The line and objective the status panel last saw change, and for how long they have shown.
   @ObservationIgnored private var agedLineCount = 0
@@ -176,12 +174,6 @@ final class GameWorld {
         entity.name = box.name
         root.addChild(entity)
       }
-      for point in level.points {
-        let centre = point.position + [0, point.size.y / 2, 0]
-        let entity = style.block(size: point.size, at: centre, material: style.scenery)
-        entity.name = point.id
-        root.addChild(entity)
-      }
     }
     landmarkFade = LandmarkFade(look: root)
     // The session refers to each action by its name, so no action is defined twice.
@@ -219,7 +211,7 @@ final class GameWorld {
     visuals[.miki]?.addChild(stage.weaponProp)
     placeParty()
     updateCamera(deltaTime: 0)
-    updateNearby()
+    updatePromptAndCompass()
     #if DEBUG
       if let scenario = UserDefaults.standard.string(forKey: "LauderPlaytest") {
         startPlaytest(scenario, style: style)
@@ -342,7 +334,7 @@ final class GameWorld {
       } else if input.actionPressed {
         session.advanceDialogue()
         // What a finished conversation settles has just taken effect.
-        if session.mode != .dialogue { updateNearby() }
+        if session.mode != .dialogue { updatePromptAndCompass() }
       }
     case .exploring:
       if input.panelPressed { panelHidden.toggle() }
@@ -355,7 +347,7 @@ final class GameWorld {
         cameraStart = cameraTarget
         cameraElapsed = 0
         showLeaderMarker()
-        updateNearby()
+        updatePromptAndCompass()
       }
       // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
       // an order the button calls everyone back instead.
@@ -399,10 +391,10 @@ final class GameWorld {
       case .unavailable:
         break
       }
-      updateNearby()
+      updatePromptAndCompass()
       return
     }
-    observation = nearby?.observation ?? level.lookAround
+    observation = level.lookAround
   }
 
   /// The in-place Restart: the same scene, bodies and update subscription, returned to the
@@ -422,8 +414,6 @@ final class GameWorld {
     showOrders()
     skipNextStep = true
     observation = level.opening
-    nearby = nil
-    nearbyName = nil
     lineAge = 0
     objectiveAge = 0
     lineIsFresh = true
@@ -453,7 +443,7 @@ final class GameWorld {
     cameraLean = .zero
     cameraTarget = Self.cameraTarget(over: spot)
     updateCamera(deltaTime: 0)
-    updateNearby()
+    updatePromptAndCompass()
   }
 
   /// Every body at its spawn point, facing the level's starting direction. Members who have
@@ -490,7 +480,7 @@ final class GameWorld {
     }
     updateCamera(deltaTime: elapsed)
     ageLines(by: elapsed)
-    updateNearby()
+    updatePromptAndCompass()
     checkTriggers()
     if crossRemaining > 0 {
       crossRemaining -= elapsed
@@ -756,9 +746,7 @@ final class GameWorld {
   /// What the ray through a touch order's point meets first: one of the level's blocks, or the
   /// ground; nil when it meets neither.
   private func firstHit(at screen: InputRules.ScreenPoint) -> SIMD3<Float>? {
-    let blocks =
-      level.boxes.map { (centre: $0.position, size: $0.size) }
-      + level.points.map { (centre: $0.position + [0, $0.size.y / 2, 0], size: $0.size) }
+    let blocks = level.boxes.map { (centre: $0.position, size: $0.size) }
     return projection(aspect: screen.aspect).firstHit(
       atScreen: [screen.x, screen.y], blocks: blocks)
   }
@@ -1038,21 +1026,11 @@ final class GameWorld {
     if next != compass { compass = next }
   }
 
-  private func updateNearby() {
+  /// The compass, and the leader's action prompt where they stand.
+  private func updatePromptAndCompass() {
     updateCompass()
     guard let player = bodies[session.leader] else { return }
     updatePrompt(at: SIMD2(player.position.x, player.position.z))
-    let position = player.position * [1, 0, 1]
-    let closest = level.points.min {
-      simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
-    }
-    let point = closest.flatMap {
-      simd_distance($0.position, position) < Level.interactionRadius ? $0 : nil
-    }
-    if nearby?.id != point?.id {
-      nearby = point
-      nearbyName = point?.name
-    }
   }
 
   #if DEBUG

@@ -131,7 +131,7 @@ enum BrooklynBridge {
   static let level = Level(
     id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes,
     // What the player sees, exported by Blender with the layout file from the level's own file.
-    scene: "BrooklynBridge", points: [],
+    scene: "BrooklynBridge",
     interactions: [searchStranger, helpLaura], triggers: triggers,
     encounters: [strangerEncounter, ambush, lauraFound, helping, arrival],
     startingAmmo: 12,

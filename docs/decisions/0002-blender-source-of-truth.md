@@ -1,7 +1,8 @@
 # ADR 0002 — Blender as the source of levels and models
 
 **Status:** Accepted\
-**Date:** 19 November 2026
+**Date:** 19 November 2026\
+**Amended:** 21 November 2026, when the maintainer chose to remove the landmark role and the points of interest it fed, which no level used
 
 ## Context
 

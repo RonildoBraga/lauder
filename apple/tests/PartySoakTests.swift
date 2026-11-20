@@ -171,11 +171,7 @@ struct PartySoakTests {
   }
 
   private func authoredBounds() -> [Bounds] {
-    let scenery = TestYard.boxes.map { Bounds(position: $0.position, size: $0.size) }
-    let landmarks = TestYard.points.map { point in
-      Bounds(position: point.position, size: point.size)
-    }
-    return scenery + landmarks
+    TestYard.boxes.map { Bounds(position: $0.position, size: $0.size) }
   }
 
   private func nextSegment(

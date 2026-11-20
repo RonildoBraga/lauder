@@ -27,7 +27,6 @@ struct LevelTests {
       #expect(box.size.x > 0 && box.size.y > 0 && box.size.z > 0, "\(box.name)")
     }
     #expect(Set(level.boxes.map(\.name)).count == level.boxes.count)
-    #expect(Set(level.points.map(\.id)).count == level.points.count)
     #expect(Set(level.triggers.map(\.id)).count == level.triggers.count)
     for trigger in level.triggers {
       #expect(bounds.contains(trigger.area.minimum), "\(trigger.id)")

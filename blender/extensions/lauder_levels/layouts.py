@@ -1,5 +1,5 @@
-"""What plays: the layout file's boxes, landmarks, areas, markers and camera, read from the level's
-Gameplay and Camera collections, checked, and written as typed Swift."""
+"""What plays: the layout file's boxes, areas, markers and camera, read from the level's Gameplay
+and Camera collections, checked, and written as typed Swift."""
 
 import math
 import re
@@ -18,14 +18,6 @@ from .lights import _light_problems, lights_from_blender, lights_from_shapes
 class Box:
     name: str
     #: The centre, (x, y, z).
-    position: tuple
-    size: tuple
-
-
-@dataclass
-class Landmark:
-    name: str
-    #: The centre of the base, on the floor.
     position: tuple
     size: tuple
 
@@ -57,7 +49,6 @@ class Camera:
 class Layout:
     ground: Box
     boxes: list
-    landmarks: list
     areas: list
     markers: list
     camera: Camera = None
@@ -67,8 +58,8 @@ class Layout:
 def _check_names(layout):
     problems = []
     for kind, items in (
-        ("box", [layout.ground] + layout.boxes), ("landmark", layout.landmarks),
-        ("area", layout.areas), ("marker", layout.markers), ("light", layout.lights),
+        ("box", [layout.ground] + layout.boxes), ("area", layout.areas),
+        ("marker", layout.markers), ("light", layout.lights),
     ):
         seen = set()
         for item in items:
@@ -167,11 +158,6 @@ def emit_layout(layout, level):
     lines += _call("    ", "ground: .box", _box_arguments(layout.ground), ",")
     sections = (
         ("boxes", [(".box", _box_arguments(box)) for box in layout.boxes]),
-        ("landmarks", [
-            (".landmark", [f'"{item.name}"', f"at: {_list(item.position)}",
-                           f"size: {_list(item.size)}"])
-            for item in layout.landmarks
-        ]),
         ("areas", [
             (".area", [f'"{item.name}"', f"from: {_list(item.minimum)}",
                        f"to: {_list(item.maximum)}"])
@@ -206,7 +192,7 @@ def emit_layout(layout, level):
 class Shape:
     """What Export reads from one gameplay object, in Blender's coordinates."""
     name: str
-    #: ground, box, landmark, area or marker.
+    #: ground, box, area or marker.
     role: str
     #: The object's world bounding box; for a marker, its location twice.
     minimum: tuple
@@ -227,7 +213,7 @@ class CameraShape:
 
 _TOLERANCE = 0.005
 #: A layout file's entries, as Export writes them: (kind, name).
-_ENTRY_NAME = re.compile(r'\.(box|landmark|area|marker)\(\s*"([^"]+)"')
+_ENTRY_NAME = re.compile(r'\.(box|area|marker)\(\s*"([^"]+)"')
 
 
 def required_names(layout_text, story_text):
@@ -255,7 +241,7 @@ def layout_from_shapes(shapes, level, camera, lights, required=()):
     """Build a layout from what Blender holds, or raise with everything that must change first.
     `required` holds the (kind, name) pairs that the level's Swift file uses (required_names)."""
     problems = []
-    ground, boxes, landmarks, areas, markers = [], [], [], [], []
+    ground, boxes, areas, markers = [], [], [], []
     for shape in shapes:
         low, high = shape.minimum, shape.maximum
         centre = tuple((a + b) / 2 for a, b in zip(low, high))
@@ -281,12 +267,6 @@ def layout_from_shapes(shapes, level, camera, lights, required=()):
             item = Box(shape.name, (centre[0], centre[2], -centre[1]),
                        (extent[0], extent[2], extent[1]))
             (ground if shape.role == "ground" else boxes).append(item)
-        elif shape.role == "landmark":
-            if abs(low[2]) > _TOLERANCE:
-                problems.append(
-                    f"{shape.name} should stand on the deck: its base is at {_number(low[2])} m.")
-            landmarks.append(Landmark(
-                shape.name, (centre[0], low[2], -centre[1]), (extent[0], extent[2], extent[1])))
         elif shape.role == "area":
             areas.append(Area(shape.name, (low[0], -high[1]), (high[0], -low[1])))
         elif shape.role == "marker":
@@ -297,7 +277,6 @@ def layout_from_shapes(shapes, level, camera, lights, required=()):
         problems.append(f"The level needs exactly one ground, not {len(ground)}.")
     names = {
         "box": {item.name for item in ground + boxes},
-        "landmark": {item.name for item in landmarks},
         "area": {item.name for item in areas},
         "marker": {item.name for item in markers},
     }
@@ -313,7 +292,7 @@ def layout_from_shapes(shapes, level, camera, lights, required=()):
     problems += light_problems
     if problems:
         raise LayoutError(" ".join(problems))
-    layout = Layout(ground[0], boxes, landmarks, areas, markers, saved_camera, saved_lights)
+    layout = Layout(ground[0], boxes, areas, markers, saved_camera, saved_lights)
     _check_names(layout)
     return layout
 

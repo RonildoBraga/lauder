@@ -177,11 +177,11 @@ if bpy is not None:
         return _MODEL_ITEMS
 
     def _gameplay_box(item):
-        """The object, when it is a gameplay box or landmark that a model can stand on."""
+        """The object, when it is a gameplay box that a model can stand on."""
         part = _collection(GAMEPLAY)
         if item is None or item.type != "MESH" or part is None or item not in set(part.all_objects):
             return None
-        return item if item.get("lauder_role", "box") in ("box", "landmark") else None
+        return item if item.get("lauder_role", "box") == "box" else None
 
     class LAUDER_OT_add_model(bpy.types.Operator):
         """Place a model from blender/assets in the level: on the selected gameplay box, parented

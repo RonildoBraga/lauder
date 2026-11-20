@@ -6,17 +6,6 @@ extension Level {
   /// level's Blender file (ADR 0002); the level's content refers to its entries by name and adds
   /// the words: what each place is called and what it says.
   struct Layout: Sendable {
-    /// A block that can be looked at. Its position is the centre of its base, on the floor.
-    struct Landmark: Sendable {
-      let name: String
-      let position: SIMD3<Float>
-      let size: SIMD3<Float>
-
-      static func landmark(_ name: String, at position: SIMD3<Float>, size: SIMD3<Float>) -> Self {
-        Self(name: name, position: position, size: size)
-      }
-    }
-
     /// A flat area of the floor, such as a trigger or where a fight begins.
     struct Area: Sendable {
       let name: String
@@ -56,7 +45,6 @@ extension Level {
     let ground: Box
     /// The scenery; every box blocks movement and sight with its footprint.
     let boxes: [Box]
-    let landmarks: [Landmark]
     let areas: [Area]
     let markers: [Marker]
     let camera: Camera

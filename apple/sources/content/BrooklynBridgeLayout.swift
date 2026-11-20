@@ -15,7 +15,6 @@ extension BrooklynBridge {
       .box("manhattan-tower-west", at: [-17.225, 23.5, -470.3], size: [8.55, 47, 18]),
       .box("manhattan-tower-east", at: [17.225, 23.5, -470.3], size: [8.55, 47, 18]),
     ],
-    landmarks: [],
     areas: [
       .area("buried-road", from: [-12.95, 66], to: [12.95, 72]),
       .area("first-tower", from: [-12.95, 26], to: [12.95, 32]),

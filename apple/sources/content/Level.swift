@@ -1,8 +1,8 @@
 import simd
 
-/// A playable place: its scenery and blockers, who starts in the party and where, what can be
-/// looked at, the contextual actions and the areas that show a line once. Content only: the
-/// session owns progress and the world owns the bodies (ADR 0004).
+/// A playable place: its scenery and blockers, who starts in the party and where, the contextual
+/// actions and the areas that show a line once. Content only: the session owns progress and the
+/// world owns the bodies (ADR 0004).
 struct Level {
   /// A box that blocks movement and sight with its footprint; the ground is separate. How it
   /// looks is up to the level's scene file (ADR 0002).
@@ -10,18 +10,6 @@ struct Level {
     let name: String
     let position: SIMD3<Float>
     let size: SIMD3<Float>
-
-    var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
-  }
-
-  struct PointOfInterest {
-    let id: String
-    let name: String
-    /// The centre of the block's base, on the floor.
-    let position: SIMD3<Float>
-    /// The visible block, which is also its collision footprint.
-    let size: SIMD3<Float>
-    let observation: String
 
     var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
   }
@@ -138,19 +126,15 @@ struct Level {
     var gathersParty = false
   }
 
-  /// How close a point of interest must be for a look to describe it.
-  static let interactionRadius: Float = 2.3
-
   /// A short name, such as "brooklyn-bridge", for the scene and messages.
   let id: String
   /// The floor. It bounds the navigation grid and blocks nothing.
   let ground: Box
   let boxes: [Box]
   /// The scene file that shows the level, exported by Blender (ADR 0002): the name of a USDZ in
-  /// the app's bundle. Without one, such as in a test, the game draws the ground, boxes and
-  /// landmarks as plain blocks.
+  /// the app's bundle. Without one, such as in a test, the game draws the ground and boxes as
+  /// plain blocks.
   var scene: String?
-  let points: [PointOfInterest]
   let interactions: [Interaction]
   let triggers: [Trigger]
   var encounters: [Encounter] = []
@@ -179,7 +163,7 @@ struct Level {
   var objectiveChanges: [(beat: GameSession.Beat, text: String)] = []
   /// Where the compass points from each of these beats on, in story order; nil hides it.
   var goals: [(beat: GameSession.Beat, goal: Goal?)] = []
-  /// What a look shows with nothing nearby.
+  /// What a look shows outside every action's approach.
   let lookAround: String
   /// What the pause menu says Restart does.
   let restartNote: String
@@ -200,9 +184,9 @@ struct Level {
     return point
   }
 
-  /// Movement blockers: the scenery, points of interest and the ground's edges. The flat-floor
-  /// footprints come from the same dimensions as the visible blocks.
-  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + points.map(\.footprint) + edges }
+  /// Movement blockers: the scenery and the ground's edges. The flat-floor footprints come from
+  /// the same dimensions as the visible blocks.
+  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + edges }
 
   /// The ground's edges: a metre-thick wall just outside each side of its footprint, which
   /// nobody sees, so the party keeps to the ground, as on the buried bridge's road.
