@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 
 from .common import _and, bpy, _collection, LayoutError, usd_name, VISUAL
-from .looks import _material_shape
+from .looks import _material_shape, _surface_shader
 
 
 #: Where each level's baked occlusion is kept, relative to the repository: a PNG for each baked
@@ -28,7 +28,7 @@ BAKE_PIXELS = (64, 1024)
 #: How much of a box's faces Blender's Smart UV Project fills, on the whole.
 BAKE_PACKING = 0.6
 #: How far, in metres, ambient occlusion looks for what shades a surface: near enough for the
-#: shade where a part meets another, such as a barrier on the road.
+#: shade where a part meets another, such as a tower's leg on the snow.
 BAKE_OCCLUSION_DISTANCE = 1.5
 BAKE_SAMPLES = 64
 
@@ -143,13 +143,9 @@ def _made_by_bake(collection, item):
 
 def _surface(material):
     """The material's Principled BSDF and its output, or (None, None)."""
-    tree = material.node_tree if material is not None else None
-    output = tree.get_output_node("ALL") if tree is not None else None
-    socket = output.inputs.get("Surface") if output is not None else None
-    if socket is None or not socket.is_linked:
-        return None, None
-    shader = socket.links[0].from_node
-    return (shader, output) if shader.type == "BSDF_PRINCIPLED" else (None, None)
+    shader, output = _surface_shader(material)
+    principled = shader is not None and shader.type == "BSDF_PRINCIPLED"
+    return (shader, output) if principled else (None, None)
 
 
 def _bake_into(item, canvas, kind, materials):

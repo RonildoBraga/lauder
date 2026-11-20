@@ -8,8 +8,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .common import (
-    ADD_MODEL_SCRIPT, _and, ASSETS, bpy, _collection, forget_local_paths, _is, is_lfs_pointer,
-    LayoutError, _library_path, Matrix, MODEL_NAME, model_of_path, name_clashes, Vector, VISUAL,
+    ADD_MODEL_SCRIPT, _and, ASSETS, bpy, _collection, DUPLICATE_SUFFIX, forget_local_paths, _is,
+    is_lfs_pointer, LayoutError, _library_path, Matrix, MODEL_NAME, model_file, model_of_path,
+    name_clashes, Vector, VISUAL,
 )
 from .layouts import _number
 from .looks import _looks, material_problems, texture_problems
@@ -123,7 +124,7 @@ def model_report(model):
     if model.hidden:
         notes.append(f"{_and(model.hidden)} {_is(model.hidden)} hidden from renders, so the game "
                      f"will not show {'it' if len(model.hidden) == 1 else 'them'}.")
-    suffixed = [name for name in model.names if re.search(r"\.\d{3}$", name)]
+    suffixed = [name for name in model.names if DUPLICATE_SUFFIX.search(name)]
     if suffixed:
         notes.append(f"{_and(suffixed)} {'has' if len(suffixed) == 1 else 'have'} Blender's "
                      f"duplicate suffix; give each a name of its own.")
@@ -206,18 +207,18 @@ def place_model(repository, name, box=None, cursor=(0, 0, 0)):
     """Link the model into the open level's Visual collection and return its new instance. With a
     box, the model stands on the box's base, turned along its longer side, and is parented to it,
     so that it moves with the box; otherwise it stands at the cursor."""
-    path = Path(repository) / ASSETS / name / f"{name}.blend"
+    path = Path(repository) / model_file(name)
     visual = _collection(VISUAL)
     if visual is None:
         raise LayoutError("This Blender file has no Visual collection; open the level's own file.")
     if not path.is_file() or is_lfs_pointer(path):
-        raise LayoutError(f"{ASSETS}/{name}/{name}.blend is missing or not downloaded yet: run "
-                          f"git lfs pull.")
+        raise LayoutError(f"{model_file(name)} is missing or not downloaded yet: run git lfs "
+                          f"pull.")
     with bpy.data.libraries.load(bpy.path.relpath(str(path)), link=True,
                                  relative=True) as (available, wanted):
         if name not in available.collections:
-            raise LayoutError(f"{ASSETS}/{name}/{name}.blend has no collection named {name}: "
-                              f"check the model.")
+            raise LayoutError(f"{model_file(name)} has no collection named {name}: check the "
+                              f"model.")
         wanted.collections = [name]
     model = wanted.collections[0]
     holder = bpy.data.objects.new(f"{box.name} model" if box is not None else name, None)
@@ -304,7 +305,7 @@ def _realize_instances(collection):
             holder, place = made.parent, made.matrix_world.copy()
             made.parent = None
             made.matrix_world = place
-            part = re.sub(r"[.]\d{3}$", "", made.name)
+            part = DUPLICATE_SUFFIX.sub("", made.name)
             made.name = f"{holder.name} {part}" if holder is not None else part
         for holder in holders:
             bpy.data.objects.remove(holder, do_unlink=True)

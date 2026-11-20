@@ -154,7 +154,11 @@ def _open_for_export(path):
         bpy.data.libraries.remove(library)
 
 
-def _open_with_fingerprints(repository, blend, attempts=3):
+#: How often an export opens a file again while the files it uses keep changing.
+_OPEN_ATTEMPTS = 3
+
+
+def _open_with_fingerprints(repository, blend):
     """Open a level's or model's Blender file to export it (_open_for_export), and return the
     fingerprints of it and of every file it uses, such as models and textures, relative to the
     repository. Each fingerprint is taken before its file is read, so a save that lands meanwhile
@@ -164,7 +168,7 @@ def _open_with_fingerprints(repository, blend, attempts=3):
     root = Path(repository)
     made_from = {blend: file_fingerprint(root / blend)}
     _open_for_export(root / blend)
-    for _ in range(attempts):
+    for _ in range(_OPEN_ATTEMPTS):
         for name in _files_used(root):
             if name not in made_from and (root / name).is_file():
                 made_from[name] = file_fingerprint(root / name)
@@ -177,19 +181,48 @@ def _open_with_fingerprints(repository, blend, attempts=3):
     raise LayoutError(f"The files {blend} uses kept changing while it was read; export it again.")
 
 
-def open_level_file(repository, key, attempts=3):
+def open_level_file(repository, key):
     """Open the level's Blender file to export it, with the fingerprints of its files
     (_open_with_fingerprints)."""
-    return _open_with_fingerprints(repository, LEVELS[key].blend, attempts)
+    return _open_with_fingerprints(repository, LEVELS[key].blend)
 
 
-def open_model_file(repository, name, attempts=3):
+def open_model_file(repository, name):
     """Open the Blender file of a model that the game creates to export it, with the fingerprints
     of its files (_open_with_fingerprints)."""
-    return _open_with_fingerprints(repository, model_file(name), attempts)
+    return _open_with_fingerprints(repository, model_file(name))
 
 
-def export_level(repository, key="brooklyn-bridge", made_from=None):
+def _fingerprints(root, blend, made_from, whose):
+    """The fingerprints of `blend` and of every file it uses, keeping those taken before the files
+    were read (`made_from`). A missing file refuses the export: `whose` file refers to it."""
+    made_from = dict(made_from or {})
+    for name in [blend] + _files_used(root):
+        if not (root / name).is_file():
+            raise LayoutError(f"{name} is missing, and {whose} refers to it.")
+        if name not in made_from:
+            made_from[name] = file_fingerprint(root / name)
+    return made_from
+
+
+def _keep_only(collection, kept):
+    """Leave only `collection` in the scene, which the USD export writes whole, and remove every
+    local object not in `kept`: not even a model linked straight into another collection stays,
+    since its objects belong to its own file."""
+    scene = bpy.context.scene
+    if collection not in list(scene.collection.children):
+        scene.collection.children.link(collection)
+    for child in list(scene.collection.children):
+        if child != collection:
+            scene.collection.children.unlink(child)
+    for item in list(scene.collection.objects):
+        scene.collection.objects.unlink(item)
+    for item in list(bpy.data.objects):
+        if item.library is None and item not in kept:
+            bpy.data.objects.remove(item, do_unlink=True)
+
+
+def export_level(repository, key, made_from=None):
     """Write the level's layout file and scene file from its Blender file, open in this Blender,
     and record what they were made from. `made_from` holds the fingerprints of the level's files
     from before they were read (open_level_file), so that a save made since counts as a change. It
@@ -197,12 +230,7 @@ def export_level(repository, key="brooklyn-bridge", made_from=None):
     level = LEVELS[key]
     root = Path(repository)
     text = emit_layout(check_level(repository, level), level)
-    made_from = dict(made_from or {})
-    for name in [level.blend] + _files_used(root):
-        if not (root / name).is_file():
-            raise LayoutError(f"{name} is missing, and the level file refers to it.")
-        if name not in made_from:
-            made_from[name] = file_fingerprint(root / name)
+    made_from = _fingerprints(root, level.blend, made_from, "the level file")
     # Only the Visual collection is exported, each of its own parts where it stands in the world;
     # the models it shows come with their instances, from their own files.
     visual = _collection(VISUAL)
@@ -213,19 +241,7 @@ def export_level(repository, key="brooklyn-bridge", made_from=None):
         item.parent = None
         item.matrix_world = places[item]
         item.hide_render = False
-    # Nothing else stays in the scene, which the USD export writes whole: not even a model linked
-    # straight into another collection, whose objects belong to its own file.
-    scene = bpy.context.scene
-    if visual not in list(scene.collection.children):
-        scene.collection.children.link(visual)
-    for child in list(scene.collection.children):
-        if child != visual:
-            scene.collection.children.unlink(child)
-    for item in list(scene.collection.objects):
-        scene.collection.objects.unlink(item)
-    for item in list(bpy.data.objects):
-        if item.library is None and item not in shown:
-            bpy.data.objects.remove(item, do_unlink=True)
+    _keep_only(visual, shown)
     written, target = root / level.layout, root / level.scene
     with tempfile.TemporaryDirectory() as folder:
         exported = Path(folder) / target.name
@@ -252,28 +268,12 @@ def export_model(repository, name, made_from=None):
     problems, _ = check_model(repository)
     if problems:
         raise LayoutError(" ".join(problems))
-    made_from = dict(made_from or {})
-    for each in [model_file(name)] + _files_used(root):
-        if not (root / each).is_file():
-            raise LayoutError(f"{each} is missing, and the model's file refers to it.")
-        if each not in made_from:
-            made_from[each] = file_fingerprint(root / each)
+    made_from = _fingerprints(root, model_file(name), made_from, "the model's file")
     # Only the model's collection is exported, as the level export exports only Visual. Parts
     # hidden from renders stay out, as the intake check says.
     model = next(each for each in bpy.data.collections
                  if each.library is None and each.name == name)
-    members = set(model.all_objects)
-    scene = bpy.context.scene
-    if model not in list(scene.collection.children):
-        scene.collection.children.link(model)
-    for child in list(scene.collection.children):
-        if child != model:
-            scene.collection.children.unlink(child)
-    for item in list(scene.collection.objects):
-        scene.collection.objects.unlink(item)
-    for item in list(bpy.data.objects):
-        if item.library is None and item not in members:
-            bpy.data.objects.remove(item, do_unlink=True)
+    _keep_only(model, set(model.all_objects))
     target = root / spawned_scene(name)
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as folder:

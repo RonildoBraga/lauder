@@ -19,17 +19,20 @@ from .background import (
 
 def _guess_repository():
     """The repository this extension was installed from, found by its folders."""
-    try:
-        here = Path(__file__).resolve()
-    except NameError:
-        return ""
-    for folder in here.parents:
+    for folder in Path(__file__).resolve().parents:
         if (folder / "apple" / "sources" / "content").is_dir():
             return str(folder)
     return ""
 
 
 if bpy is not None:
+
+    _OPEN_LEVEL_FIRST = "Open the level first, with Open Level."
+
+    def _tell(operator, context, message, level="INFO"):
+        """Show the message in the Lauder tab and in the status bar."""
+        context.window_manager.lauder_message = message
+        operator.report({level}, message)
 
     def _open_level():
         """The repository and level whose Blender file is open, or None."""
@@ -105,7 +108,7 @@ if bpy is not None:
         def execute(self, context):
             found, model = _open_level(), model_of_file(bpy.data.filepath)
             if found is None and model is None:
-                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             if bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()  # Its handler checks the rules and exports.
@@ -116,21 +119,18 @@ if bpy is not None:
                 except OSError as error:
                     self.report({"ERROR"}, str(error))
                     return {"CANCELLED"}
-                context.window_manager.lauder_message = message
-                self.report({"INFO"}, message)
+                _tell(self, context, message)
                 return {"FINISHED"}
             repository, level = found
             try:
                 check_level(repository, level)
                 exporting = _export_if_stale(repository, level.key)
             except (LayoutError, OSError) as error:
-                context.window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
+                _tell(self, context, str(error), "ERROR")
                 return {"CANCELLED"}
             message = ("Exporting the level…" if exporting
                        else "The level's exports are up to date.")
-            context.window_manager.lauder_message = message
-            self.report({"INFO"}, message)
+            _tell(self, context, message)
             return {"FINISHED"}
 
     class LAUDER_OT_play(bpy.types.Operator):
@@ -140,10 +140,9 @@ if bpy is not None:
         bl_options = {"REGISTER"}
 
         def execute(self, context):
-            window_manager = context.window_manager
             found = _open_level()
             if found is None:
-                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             if _queued("play"):
                 self.report({"WARNING"}, "The game is still building; it opens when it is ready.")
@@ -152,8 +151,7 @@ if bpy is not None:
             try:
                 check_level(repository, level)
             except (LayoutError, OSError) as error:
-                window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
+                _tell(self, context, str(error), "ERROR")
                 return {"CANCELLED"}
             if bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()  # Its handler starts the export; the build waits for it.
@@ -164,8 +162,7 @@ if bpy is not None:
                 return {"CANCELLED"}
             message = ("Exporting the level, then building the game for the Simulator…"
                        if _queued("export") else "Building the game for the Simulator…")
-            window_manager.lauder_message = message
-            self.report({"INFO"}, message)
+            _tell(self, context, message)
             return {"FINISHED"}
 
     #: The models Add Model offers, kept here because Blender needs its list to stay alive. NONE
@@ -198,7 +195,7 @@ if bpy is not None:
 
         def invoke(self, context, event):
             if _open_level() is None:
-                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             context.window_manager.invoke_search_popup(self)
             return {"RUNNING_MODAL"}
@@ -220,8 +217,7 @@ if bpy is not None:
             context.view_layer.objects.active = holder
             where = f"on {box.name}" if box is not None else "at the 3D cursor"
             message = f"Placed {self.model} {where}, in Visual."
-            context.window_manager.lauder_message = message
-            self.report({"INFO"}, message)
+            _tell(self, context, message)
             return {"FINISHED"}
 
     class LAUDER_OT_open_model(bpy.types.Operator):
@@ -306,20 +302,18 @@ if bpy is not None:
         def execute(self, context):
             found = _open_level()
             if found is None:
-                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             repository, level = found
             try:
                 names = bake_level(repository, level, context.selected_objects)
             except (LayoutError, RuntimeError) as error:
-                context.window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
+                _tell(self, context, str(error), "ERROR")
                 return {"CANCELLED"}
             parts = names[0] if len(names) == 1 else f"{len(names)} parts"
             message = (f"Baked occlusion into the colour of {parts}, in {BAKED}/{level.key}. Save "
                        f"the level to export it.")
-            context.window_manager.lauder_message = message
-            self.report({"INFO"}, message)
+            _tell(self, context, message)
             return {"FINISHED"}
 
     class LAUDER_OT_clear_occlusion(bpy.types.Operator):
@@ -332,7 +326,7 @@ if bpy is not None:
         def execute(self, context):
             found = _open_level()
             if found is None:
-                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             repository, level = found
             names = clear_occlusion(repository, level, context.selected_objects)
@@ -340,8 +334,7 @@ if bpy is not None:
                 self.report({"ERROR"}, "Select the baked parts to clear first.")
                 return {"CANCELLED"}
             message = f"Cleared the baked occlusion of {_and(names)}."
-            context.window_manager.lauder_message = message
-            self.report({"INFO"}, message)
+            _tell(self, context, message)
             return {"FINISHED"}
 
     class LAUDER_OT_bake_shadows(bpy.types.Operator):
@@ -354,21 +347,19 @@ if bpy is not None:
 
         def execute(self, context):
             if _open_level() is None:
-                self.report({"ERROR"}, "Open the level first, with Open Level.")
+                self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             try:
                 names = bake_shadows()
             except LayoutError as error:
-                context.window_manager.lauder_message = str(error)
-                self.report({"ERROR"}, str(error))
+                _tell(self, context, str(error), "ERROR")
                 return {"CANCELLED"}
             if not names:
                 self.report({"ERROR"}, f"No part of Visual has a {SHADOW_OF} property naming "
                                        f"the parts whose shadow it is.")
                 return {"CANCELLED"}
             message = f"Baked {_and(names)} from the sun. Save the level to export it."
-            context.window_manager.lauder_message = message
-            self.report({"INFO"}, message)
+            _tell(self, context, message)
             return {"FINISHED"}
 
     class LAUDER_OT_report(bpy.types.Operator):
@@ -472,6 +463,3 @@ if bpy is not None:
         del bpy.types.Scene.lauder_repository
         del bpy.types.Scene.lauder_level
         del bpy.types.WindowManager.lauder_message
-
-    if __name__ == "__main__":
-        register()
