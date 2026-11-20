@@ -12,7 +12,7 @@ __pycache__/
 # Blender's automatic backups of a saved file
 *.blend[0-9]*
 
-# Local authoring experiments; runtime assets and editable sources live in apple/sources/content.
+# Local work: worktrees, playtest results and experiments. Levels and models live in blender/.
 .local/
 
 # Local configuration and signing material

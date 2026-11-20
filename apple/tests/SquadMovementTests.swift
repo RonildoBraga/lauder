@@ -1,4 +1,3 @@
-import RealityKit
 import Testing
 import simd
 
@@ -100,7 +99,7 @@ struct SquadMovementTests {
     var samples = 0
     var offset: Float = 0
     for frame in 0..<(6 * 60) {
-      world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60)
+      world.advanceParty(movement: stick(world, towards: [1, 0]), deltaTime: 1 / 60)
       try #require(world.diagnostic == nil, "frame \(frame)")
       // Allow 1.5 s to form up from the spawn column and turn east.
       guard frame >= 90 else { continue }
@@ -121,7 +120,8 @@ struct SquadMovementTests {
   @Test
   func settledCompanionsStayStillWhileTheLeaderWaits() {
     let world = GameWorld(level: TestYard.level)
-    for _ in 0..<120 { world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60) }
+    let east = stick(world, towards: [1, 0])
+    for _ in 0..<120 { world.advanceParty(movement: east, deltaTime: 1 / 60) }
     for _ in 0..<120 { world.advanceParty(movement: .zero, deltaTime: 1 / 60) }
     let settled = PartyMember.allCases.map { position(world, $0) }
     var largest: Float = 0
@@ -162,10 +162,11 @@ struct SquadMovementTests {
   func switchingAtTheOuterWallKeepsEveryoneOnTheFloor() throws {
     let world = GameWorld(level: TestYard.level)
     try walk(world, through: [[-6, 8.9]], label: "to the south wall")
-    for _ in 0..<60 { world.advanceParty(movement: stick(towards: [0, 1]), deltaTime: 1 / 60) }
+    let south = stick(world, towards: [0, 1])
+    for _ in 0..<60 { world.advanceParty(movement: south, deltaTime: 1 / 60) }
     world.session.cycleLeader()
     for frame in 0..<180 {
-      world.advanceParty(movement: stick(towards: [0, -1]), deltaTime: 1 / 60)
+      world.advanceParty(movement: stick(world, towards: [0, -1]), deltaTime: 1 / 60)
       try #require(world.diagnostic == nil, "frame \(frame)")
     }
     for member in PartyMember.allCases {
@@ -178,56 +179,15 @@ struct SquadMovementTests {
   @Test
   func aPreviousLeaderJoinsTheFormationAfterASwitch() throws {
     let world = GameWorld(level: TestYard.level)
-    for _ in 0..<120 { world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60) }
+    let east = stick(world, towards: [1, 0])
+    for _ in 0..<120 { world.advanceParty(movement: east, deltaTime: 1 / 60) }
     let previous = world.session.leader
     world.session.cycleLeader()
     for frame in 0..<150 {
-      world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60)
+      world.advanceParty(movement: east, deltaTime: 1 / 60)
       try #require(world.diagnostic == nil, "frame \(frame)")
     }
     let target = try #require(world.companionTargets[previous])
     #expect(simd_distance(position(world, previous), target) <= 0.6)
-  }
-
-  // MARK: - Helpers
-
-  /// Screen-relative stick axes for a world heading, as GameWorld consumes them.
-  private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let toCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
-    let forward = -simd_normalize(toCamera)
-    let right = SIMD2(-forward.y, forward.x)
-    let unit = simd_normalize(direction)
-    return SIMD2(simd_dot(unit, right), simd_dot(unit, forward))
-  }
-
-  private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {
-    guard let body = world.root.findEntity(named: "party.\(member.rawValue)") else {
-      return [.nan, .nan]
-    }
-    return SIMD2(body.position.x, body.position.z)
-  }
-
-  private func walk(_ world: GameWorld, through points: [SIMD2<Float>], label: String) throws {
-    var index = 0
-    var frame = 0
-    while index < points.count {
-      let leader = position(world, world.session.leader)
-      let offset = points[index] - leader
-      if simd_length(offset) < 0.15 {
-        index += 1
-        continue
-      }
-      world.advanceParty(movement: stick(towards: offset), deltaTime: 1 / 60)
-      frame += 1
-      try #require(world.diagnostic == nil, "\(label), frame \(frame): \(world.diagnostic ?? "")")
-      try #require(frame < 60 * 30, "\(label): the leader did not reach \(points[index])")
-    }
-  }
-
-  private func wait(_ world: GameWorld, seconds: Float) throws {
-    for frame in 0..<Int(seconds * 60) {
-      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
-      try #require(world.diagnostic == nil, "waiting, frame \(frame)")
-    }
   }
 }

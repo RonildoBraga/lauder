@@ -10,9 +10,6 @@ import simd
 /// party is Miki, Laura and Tom: for Miki, Tom is on the left and Laura on the right.
 @MainActor
 struct OrderTests {
-  /// The start of the yard's open lane, between the wreck and the south wall.
-  private static let laneStart: SIMD2<Float> = [-6, 6]
-
   // MARK: - The session
 
   @Test
@@ -207,7 +204,7 @@ struct OrderTests {
   func theDpadPointStopsShortOfAWall() throws {
     // Facing the south wall from 2 m away, the point 6 m ahead moves back in front of it.
     let world = GameWorld(level: TestYard.level)
-    try walk(world, through: [Self.laneStart, [-6, 7.4]])
+    try walk(world, through: [TestYard.laneStart, [-6, 7.4]])
     try wait(world, seconds: 1)
     give(.bothGo, to: world)
     for member in [PartyMember.laura, .tom] {
@@ -279,7 +276,7 @@ struct OrderTests {
   @Test
   func aPointNobodyCanReachIsRefusedWithABriefCross() throws {
     let world = GameWorld(level: TestYard.level)
-    try walk(world, through: [Self.laneStart, [-6, 8]])
+    try walk(world, through: [TestYard.laneStart, [-6, 8]])
     // Beyond the south wall, off the yard's ground.
     give(.bothGo, to: world, touching: [-6, 11])
     #expect(world.session.orders.isEmpty)
@@ -317,7 +314,7 @@ struct OrderTests {
 
   /// Walk to the lane and a little east, then stop, so Miki faces east with open ground ahead.
   private func faceEast(_ world: GameWorld) throws {
-    try walk(world, through: [Self.laneStart, [-5, 6]])
+    try walk(world, through: [TestYard.laneStart, [-5, 6]])
     try wait(world, seconds: 1.5)
   }
 
@@ -339,44 +336,5 @@ struct OrderTests {
 
   private func ring(_ world: GameWorld, _ member: PartyMember) -> Entity {
     world.root.findEntity(named: "order.\(member.rawValue)") ?? Entity()
-  }
-
-  /// Screen-relative stick axes for a world heading, as GameWorld consumes them.
-  private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let toCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
-    let forward = -simd_normalize(toCamera)
-    let right = SIMD2(-forward.y, forward.x)
-    let unit = simd_normalize(direction)
-    return SIMD2(simd_dot(unit, right), simd_dot(unit, forward))
-  }
-
-  private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {
-    guard let body = world.root.findEntity(named: "party.\(member.rawValue)") else {
-      return [.nan, .nan]
-    }
-    return SIMD2(body.position.x, body.position.z)
-  }
-
-  private func walk(_ world: GameWorld, through points: [SIMD2<Float>]) throws {
-    var index = 0
-    var frame = 0
-    while index < points.count {
-      let offset = points[index] - position(world, world.session.leader)
-      if simd_length(offset) < 0.15 {
-        index += 1
-        continue
-      }
-      world.advanceParty(movement: stick(towards: offset), deltaTime: 1 / 60)
-      frame += 1
-      try #require(world.diagnostic == nil, "frame \(frame): \(world.diagnostic ?? "")")
-      try #require(frame < 60 * 30, "the leader did not reach \(points[index])")
-    }
-  }
-
-  private func wait(_ world: GameWorld, seconds: Float) throws {
-    for frame in 0..<Int(seconds * 60) {
-      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
-      try #require(world.diagnostic == nil, "waiting, frame \(frame)")
-    }
   }
 }

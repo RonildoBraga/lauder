@@ -17,7 +17,7 @@ enum HUDStyle {
   static let snow = Color(red: 236 / 255, green: 233 / 255, blue: 226 / 255)
 
   /// The ink for the touch controls, which UIKit draws.
-  static let inkForTouch = UIColor(red: 54 / 255, green: 65 / 255, blue: 75 / 255, alpha: 1)
+  static let inkForTouch = UIColor(ink)
   /// The touch controls' frost: snow-tinted, translucent, and denser while pressed or chosen.
   static func frostForTouch(pressed: Bool) -> UIColor {
     UIColor(red: 0.96, green: 0.95, blue: 0.93, alpha: pressed ? 0.95 : 0.72)

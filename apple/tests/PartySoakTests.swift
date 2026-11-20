@@ -220,9 +220,7 @@ struct PartySoakTests {
     }
     // Convert the authored wall's world heading back to the same screen-relative stick
     // coordinates consumed by GameWorld. No collision result is manufactured in the test.
-    let offsetToCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
-    let forward = -simd_normalize(offsetToCamera)
-    let right = SIMD2(-forward.y, forward.x)
+    let (forward, right) = Movement.axes(cameraOffset: TestYard.cameraOffset)
     return SIMD2(simd_dot(direction, right), simd_dot(direction, forward))
   }
 

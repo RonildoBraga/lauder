@@ -9,17 +9,20 @@ struct NavigationGrid: Sendable {
   /// Centre of cell (0, 0).
   private let origin: SIMD2<Float>
   private let walkable: [Bool]
-  /// Walkable cells inside a passage narrower than `tightWidth` along either axis.
+  /// Walkable cells inside a passage narrower than 1.5 m along either axis.
   private let tight: [Bool]
   /// Connected walkable areas; -1 marks a blocked cell.
   private let region: [Int32]
 
-  init(
-    minimum: SIMD2<Float>, maximum: SIMD2<Float>, cellSize: Float, clearance: Float,
-    tightWidth: Float, obstacles: [PartyMotion.Box]
-  ) {
-    precondition(cellSize > 0 && clearance > 0 && tightWidth > 0)
+  /// The level's floor and blockers, in 20 cm cells.
+  init(level: Level) {
+    let minimum = level.bounds.minimum
+    let maximum = level.bounds.maximum
     precondition(minimum.x < maximum.x && minimum.y < maximum.y)
+    let cellSize: Float = 0.2
+    // The body's radius, the 2 mm skin and a 3 cm margin.
+    let clearance = PartyBody.radius + PartyMotion.skin + 0.03
+    let tightWidth: Float = 1.5
     self.cellSize = cellSize
     columns = Int(((maximum.x - minimum.x) / cellSize).rounded(.up))
     rows = Int(((maximum.y - minimum.y) / cellSize).rounded(.up))
@@ -30,7 +33,7 @@ struct NavigationGrid: Sendable {
     // checks just those: the same result as testing every cell against every obstacle, at a
     // cost that suits a long level such as the bridge.
     var walkable = [Bool](repeating: true, count: columns * rows)
-    for box in obstacles {
+    for box in level.obstacles {
       let low = (box.minimum - clearance - origin) / cellSize
       let high = (box.maximum + clearance - origin) / cellSize
       let firstColumn = max(0, Int(low.x.rounded(.up)))
@@ -98,15 +101,6 @@ struct NavigationGrid: Sendable {
       next += 1
     }
     self.region = region
-  }
-
-  /// The level's floor and blockers, with the body radius, 2 mm skin and a 3 cm margin.
-  init(level: Level) {
-    let bounds = level.bounds
-    self.init(
-      minimum: bounds.minimum, maximum: bounds.maximum, cellSize: 0.2,
-      clearance: PartyBody.radius + PartyMotion.skin + 0.03,
-      tightWidth: 1.5, obstacles: level.obstacles)
   }
 
   func isWalkable(_ point: SIMD2<Float>) -> Bool {

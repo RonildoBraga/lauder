@@ -14,8 +14,6 @@ after changing a texture: ./scripts/check fails until the exports match their fi
 from pathlib import Path
 import sys
 
-import bpy
-
 REPOSITORY = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY / "blender/extensions"))
 sys.dont_write_bytecode = True

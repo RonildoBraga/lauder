@@ -71,6 +71,12 @@ enum InputRules {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardFire
         || keyboardFormation || keyboardPanel || hasArrowKey
     }
+    /// Any of the controller's buttons, or its stick beyond the dead zone.
+    var hasControllerInput: Bool {
+      simd_length_squared(stick) > Movement.deadZone * Movement.deadZone || controllerAction
+        || controllerPause || controllerSwitch || controllerFire || controllerFormation
+        || controllerPanel || hasDpad
+    }
   }
 
   struct State: Equatable, Sendable {

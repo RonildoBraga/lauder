@@ -8,7 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .common import (
-    bpy, CAMERA, _collection, EXPORT_SCRIPT, from_blender, GAMEPLAY, LayoutError, ROLES, Vector,
+    bpy, CAMERA, _collection, DUPLICATE_SUFFIX, EXPORT_SCRIPT, from_blender, GAMEPLAY, LayoutError,
+    ROLES, Vector,
 )
 from .lights import _light_problems, lights_from_blender, lights_from_shapes
 
@@ -75,7 +76,7 @@ def _check_names(layout):
                 plural = "boxes" if kind == "box" else kind + "s"
                 problems.append(f"Two {plural} are named {item.name}.")
             seen.add(item.name)
-            if re.search(r"\.\d{3}$", item.name):
+            if DUPLICATE_SUFFIX.search(item.name):
                 problems.append(
                     f"{item.name} has Blender's duplicate suffix; give it a name of its own.")
     if layout.camera is None:

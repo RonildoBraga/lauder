@@ -26,7 +26,7 @@ arguments = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if len(arguments) != 1:
     sys.exit("Name the model to check, such as: -- car")
 name = arguments[0]
-place = f"{lauder_levels.ASSETS}/{name}/{name}.blend"
+place = lauder_levels.model_file(name)
 path = REPOSITORY / place
 if not path.is_file():
     models = lauder_levels.available_models(REPOSITORY)

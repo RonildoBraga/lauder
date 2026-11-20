@@ -33,12 +33,12 @@ struct PartyMotionTests {
   /// from it stays allowed, as it is near the origin.
   @Test
   func aContactFarFromTheOriginCanStillMoveAway() {
-    // A car near the bridge's Manhattan end.
-    let car = PartyMotion.Box(minimum: [-10.8, -491.6], maximum: [-8.8, -487])
-    let motion = PartyMotion(radius: radius, obstacles: [car])
+    // A block near the bridge's Manhattan end.
+    let block = PartyMotion.Box(minimum: [-10.8, -491.6], maximum: [-8.8, -487])
+    let motion = PartyMotion(radius: radius, obstacles: [block])
     for x in stride(from: Float(-10.5), through: -9.1, by: 0.1) {
       let contact = motion.resolve(start: [x, -480], delta: [0, -10])
-      #expect(abs(contact.y + 487 - radius - 0.002) < 0.0001, "stopped at the car, x = \(x)")
+      #expect(abs(contact.y + 487 - radius - 0.002) < 0.0001, "stopped at the block, x = \(x)")
       #expect(motion.canTraverse(from: contact, to: contact + [0, 1]), "moving away, x = \(x)")
     }
   }

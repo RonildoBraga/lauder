@@ -1,6 +1,6 @@
 # Visual direction
 
-**Status:** A minimalist low-poly frozen world, chosen by the maintainer on 20 November 2026. It replaces Death's Door as the reference. The bridge moves to it in small steps from today's greybox, keeping what exists where it serves, and gameplay stays readable throughout. Colours, angles and sizes below are starting values, tuned in the Simulator and on the phone. The bridge already uses the palette, the light and the camera's starting values, its towers fade while they hide the party, its world markers keep their size on screen, the HUD is light and frosted, and flagged poles and a compass show the way. A shared palette library in Blender comes with the first kit models; until then each file's materials take the palette's values.
+**Status:** A minimalist low-poly frozen world, chosen by the maintainer on 20 November 2026 to replace Death's Door as the reference. The bridge moves to it in small steps from today's greybox, keeping gameplay readable throughout, and the colours, angles and sizes below are starting values, tuned in the Simulator and on the phone.
 
 ## The direction
 
@@ -62,7 +62,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 ## Materials
 
 - One Principled BSDF per palette colour, with roughness 1, metallic 0 and no specular sparkle.
-- Every level and model uses the shared palette materials, so a colour changes in one place. A new colour joins the palette before anything uses it.
+- Every level and model uses the shared palette materials, so a colour changes in one place. A new colour joins the palette before anything uses it. A shared palette library in Blender comes with the first kit models; until then each file's materials take the palette's values.
 - No textures, apart from baked ambient occlusion where contact needs it.
 
 ## Light and shadow
@@ -79,7 +79,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 - The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower.
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
 - Tall landmarks, such as tower tops and buildings, fade to a see-through ghost while they come between the camera and the party, so the player still sees what is in the way. The ghost is unlit, in each part's own colour, since a lit see-through landmark that fills the screen costs the phone's GPU too much.
-- World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: drawn larger by as much more of the ground as the camera shows than the 14 m, 42° camera they were made for, about twice as large on the bridge.
+- World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: a camera that shows more of the ground draws them larger, as the [architecture](architecture.md#movement-and-presentation) sets out.
 
 ## Characters and interface
 
@@ -90,14 +90,14 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 Snow has buried the bridge's road, everything left on it and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look, and then chose to take every other obstacle out of the game as well, so the towers are the only cover and an invisible edge keeps the party on the line of the buried road. The towers' long shadows, baked into the snow, fall across the plain, and a tower fades to a ghost while it hides the party; its shadow stays. The maintainer chose the ghost and the baked shadows on 20 November 2026, after a full fade hid what stood in the way and took the towers' shadows with it. Thin ink poles with small rust flags stand every 25 m along both edges of the buried road, as on a polar route, so the way and the party's movement read on the white; they block nothing. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
 
-A visual pass keeps the route, the collision layout, interaction anchors and the controls.
+The bridge also uses the palette, the light and the camera's starting values, its world markers keep their size on screen, and its HUD is light and frosted, with the compass. A visual pass keeps the route, the collision layout, interaction anchors and the controls.
 
 ## Rendering budget
 
 Build decoration once, in the level's Blender file, with shared palette materials. A model in `blender/assets` keeps its own file. Decorative details do not need their own physics bodies.
 
 - At most four explicit lights, with at most one casting shadows. Suns, point lights and spot lights count alike, and only a sun or a spot light can cast the shadow. Blender's export checks this for each level's lights. Under the daylight sun, a point or spot light shows only when it is very strong, in Blender's preview as in the game.
-- At most 60,000 triangles and 150 draw calls in view, at most 16 materials, and characters of at most 400 triangles.
+- At most 60,000 triangles and 150 draw calls in view, at most 16 materials, and characters of at most 400 triangles, which today's stand-ins exceed: [Miki's README](../blender/assets/miki/README.md) gives the count.
 - No textures apart from baked ambient occlusion, at most 4 MB per level.
 - No particles or postprocessing. A static paper-grain overlay and light snowfall are candidates, each to be measured on the phone and agreed first.
 - No per-frame visual work beyond what gameplay needs, such as fading a landmark or sizing a marker.

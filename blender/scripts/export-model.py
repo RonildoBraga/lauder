@@ -15,8 +15,6 @@ fails until the scene file matches its files again.
 from pathlib import Path
 import sys
 
-import bpy  # noqa: F401  (run inside Blender)
-
 REPOSITORY = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPOSITORY / "blender/extensions"))
 sys.dont_write_bytecode = True

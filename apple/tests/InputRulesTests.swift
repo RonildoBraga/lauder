@@ -405,6 +405,21 @@ struct InputRulesTests {
     #expect(sample(held, state: &state).panelPressed)
   }
 
+  /// The panel button, like the controller's other buttons and its stick, shows the controller as
+  /// the source again; a stick inside the dead zone, the keyboard and touch do not.
+  @Test
+  func thePanelButtonIsControllerInput() {
+    #expect(InputRules.Raw(controllerPanel: true).hasControllerInput)
+    for raw in [
+      InputRules.Raw(controllerAction: true), .init(dpadUp: true), .init(stick: [0, 0.5]),
+    ] {
+      #expect(raw.hasControllerInput)
+    }
+    #expect(!InputRules.Raw(stick: [0.1, 0]).hasControllerInput)
+    #expect(!InputRules.Raw(keyboardPanel: true).hasControllerInput)
+    #expect(!InputRules.Raw(touchAction: true).hasControllerInput)
+  }
+
   @Test
   func thePauseMenuConsumesPanelPresses() {
     var state = InputRules.State(needsNeutralInput: false)

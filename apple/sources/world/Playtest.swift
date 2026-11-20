@@ -69,7 +69,6 @@
       let hitsTaken: Int
       let defeated: Int
       let ammo: Int
-      let retrying: Bool
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
       let refusedOrders: Int
@@ -115,10 +114,7 @@
       let worstLeaderGap: Double
     }
 
-    static let scenarioNames = [
-      "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
-      "orders",
-    ]
+    static let scenarioNames = scenarios.map(\.name)
     /// The screen's width over its height for touch orders: the baseline iPhone's, in landscape.
     /// The world finds the ground with the same shape, so any shape aims the same point.
     static let screenAspect: Float = 2.16
@@ -131,7 +127,8 @@
     private var index = 0
     private var stepTime: Float = 0
     private var elapsed: Float = 0
-    private var switchFrame = 0
+    /// Frames into the current step's press.
+    private var pressFrame = 0
     private var presses = 0
     private var sincePress: Float = 0
     private var talking = false
@@ -193,7 +190,8 @@
             advance()
             continue
           }
-          return InputRules.Raw(stick: stick(towards: offset))
+          return InputRules.Raw(
+            stick: Movement.stick(towards: offset, cameraOffset: BrooklynBridge.level.cameraOffset))
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -205,86 +203,58 @@
           announce(label)
           advance()
         case .act:
-          switchFrame += 1
-          if switchFrame == 1 { return InputRules.Raw(controllerAction: true) }
-          switchFrame = 0
-          advance()
-          return InputRules.Raw()
+          return press(InputRules.Raw(controllerAction: true))
         case .formation:
-          switchFrame += 1
-          if switchFrame == 1 { return InputRules.Raw(controllerFormation: true) }
-          advance()
-          return InputRules.Raw()
+          return press(InputRules.Raw(controllerFormation: true))
         case .expectFormation(let formation):
-          if snapshot.formation != formation {
-            failures.append(
-              "the formation was \(snapshot.formation.name) instead of \(formation.name) "
-                + "at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(
+            snapshot.formation == formation,
+            "the formation was \(snapshot.formation.name) instead of \(formation.name)")
         case .order(let command):
-          switchFrame += 1
-          if switchFrame == 1 {
+          let dpad =
             switch command {
-            case .bothGo: return InputRules.Raw(dpadUp: true)
-            case .hold: return InputRules.Raw(dpadDown: true)
-            case .leftGoes: return InputRules.Raw(dpadLeft: true)
-            case .rightGoes: return InputRules.Raw(dpadRight: true)
+            case .bothGo: InputRules.Raw(dpadUp: true)
+            case .hold: InputRules.Raw(dpadDown: true)
+            case .leftGoes: InputRules.Raw(dpadLeft: true)
+            case .rightGoes: InputRules.Raw(dpadRight: true)
             }
-          }
-          advance()
-          return InputRules.Raw()
+          return press(dpad)
         case .touchOrder(let command, let point):
-          switchFrame += 1
-          if switchFrame == 1 {
+          var touch: InputRules.Raw?
+          if pressFrame == 0 {
             if let screen = snapshot.camera.screen(ofGround: point),
               (0...1).contains(screen.x), (0...1).contains(screen.y)
             {
               let pressed = InputRules.ScreenPoint(
                 x: screen.x, y: screen.y, aspect: snapshot.camera.aspect)
-              return InputRules.Raw(
+              touch = InputRules.Raw(
                 touchOrder: InputRules.TouchOrder(command: command, point: pressed))
+            } else {
+              failures.append(
+                "\(Self.describe(point)) was off the screen at \(Self.seconds(elapsed))")
             }
-            failures.append(
-              "\(Self.describe(point)) was off the screen at \(Self.seconds(elapsed))")
           }
-          advance()
-          return InputRules.Raw()
+          return press(touch)
         case .switchLeader:
-          switchFrame += 1
-          if switchFrame == 1 { return InputRules.Raw(controllerSwitch: true) }
-          advance()
-          return InputRules.Raw()
+          return press(InputRules.Raw(controllerSwitch: true))
         case .expectOrder(let member, let word):
           let actual = snapshot.orders[member]?.word ?? "following"
-          if actual != word {
-            failures.append(
-              "\(member.displayName) was \(actual) instead of \(word) at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(actual == word, "\(member.displayName) was \(actual) instead of \(word)")
         case .expectNear(let member, let point, let distance):
           let position = positions[member] ?? [.nan, .nan]
-          if !(simd_distance(position, point) <= distance) {
-            failures.append(
-              "\(member.displayName) was at \(Self.describe(position)), not within "
-                + "\(distance) m of \(Self.describe(point)), at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(
+            simd_distance(position, point) <= distance,
+            "\(member.displayName) was at \(Self.describe(position)), not within \(distance) m "
+              + "of \(Self.describe(point)),")
         case .expectApart(let member, let distance):
           let position = positions[member] ?? [.nan, .nan]
-          if !(simd_distance(position, leaderPosition) >= distance) {
-            failures.append(
-              "\(member.displayName) was within \(distance) m of the leader at "
-                + Self.seconds(elapsed))
-          }
-          advance()
+          expect(
+            simd_distance(position, leaderPosition) >= distance,
+            "\(member.displayName) was within \(distance) m of the leader")
         case .expectRefused(let count):
-          if snapshot.refusedOrders != count {
-            failures.append(
-              "\(snapshot.refusedOrders) order(s) were refused instead of \(count) at "
-                + Self.seconds(elapsed))
-          }
-          advance()
+          expect(
+            snapshot.refusedOrders == count,
+            "\(snapshot.refusedOrders) order(s) were refused instead of \(count)")
         case .awaitConversation(let seconds):
           if snapshot.mode == .dialogue {
             advance()
@@ -307,8 +277,8 @@
             advance()
             continue
           }
-          if switchFrame == 1 {
-            switchFrame = 0
+          if pressFrame == 1 {
+            pressFrame = 0
             return InputRules.Raw()
           }
           // A press can land on the frame that resumes play after a conversation, which is not
@@ -323,23 +293,15 @@
           if presses == 0 || sincePress >= Self.lineSeconds {
             presses += 1
             sincePress = 0
-            switchFrame = 1
+            pressFrame = 1
             return InputRules.Raw(controllerAction: true)
           }
           return InputRules.Raw()
         case .pause:
-          switchFrame += 1
-          if switchFrame == 1 { return InputRules.Raw(controllerPause: true) }
-          advance()
-          return InputRules.Raw()
+          return press(InputRules.Raw(controllerPause: true))
         case .menu(let direction):
           // Down on the stick (negative y) moves the choice down the menu.
-          switchFrame += 1
-          if switchFrame == 1 {
-            return InputRules.Raw(stick: [0, direction > 0 ? -1 : 1])
-          }
-          advance()
-          return InputRules.Raw()
+          return press(InputRules.Raw(stick: [0, direction > 0 ? -1 : 1]))
         case .expectRestarted:
           let start = BrooklynBridge.level
           if snapshot.leader != start.party[0] || snapshot.party != start.party
@@ -360,12 +322,9 @@
           }
           advance()
         case .expectTriggers(let count):
-          if snapshot.firedTriggers != count {
-            failures.append(
-              "\(snapshot.firedTriggers) trigger(s) had fired instead of \(count) "
-                + "at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(
+            snapshot.firedTriggers == count,
+            "\(snapshot.firedTriggers) trigger(s) had fired instead of \(count)")
         case .fire(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -373,36 +332,39 @@
           }
           return InputRules.Raw(controllerFire: true)
         case .expectBeat(let beat):
-          if snapshot.beat != beat {
-            failures.append(
-              "the story was at \(snapshot.beat) instead of \(beat) at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(snapshot.beat == beat, "the story was at \(snapshot.beat) instead of \(beat)")
         case .expectDefeated(let count):
-          if snapshot.defeated != count {
-            failures.append(
-              "\(snapshot.defeated) hostile(s) were down instead of \(count) "
-                + "at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(
+            snapshot.defeated == count,
+            "\(snapshot.defeated) hostile(s) were down instead of \(count)")
         case .expectParty(let members):
-          if snapshot.party != members {
-            failures.append(
-              "the party was " + snapshot.party.map(\.displayName).joined(separator: ", ")
-                + " at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(
+            snapshot.party == members,
+            "the party was " + snapshot.party.map(\.displayName).joined(separator: ", "))
         case .expectHits(let count):
-          if snapshot.hitsTaken != count {
-            failures.append(
-              "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count) "
-                + "at \(Self.seconds(elapsed))")
-          }
-          advance()
+          expect(
+            snapshot.hitsTaken == count,
+            "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
         }
       }
       finish()
       return InputRules.Raw()
+    }
+
+    /// Presses for one frame, then ends the step with a neutral frame; with nothing to press, it
+    /// ends the step at once.
+    private mutating func press(_ raw: InputRules.Raw?) -> InputRules.Raw {
+      pressFrame += 1
+      if pressFrame == 1, let raw { return raw }
+      advance()
+      return InputRules.Raw()
+    }
+
+    /// Records a failure, saying what was found and when, unless the expectation holds, then
+    /// ends the step.
+    private mutating func expect(_ holds: Bool, _ found: String) {
+      if !holds { failures.append("\(found) at \(Self.seconds(elapsed))") }
+      advance()
     }
 
     /// Record one rendered frame's elapsed time, before any simulation runs.
@@ -457,7 +419,7 @@
     private mutating func advance() {
       index += 1
       stepTime = 0
-      switchFrame = 0
+      pressFrame = 0
       presses = 0
       talking = false
     }
@@ -667,36 +629,18 @@
         .mark("Manhattan, together"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
+    /// Every scenario, by the name `apple/scripts/playtest` gives it.
+    private static let scenarios: [(name: String, steps: [Step])] = [
+      ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
+      ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
+      ("orders", orders),
+    ]
+
     static func steps(for scenario: String) -> [Step]? {
-      switch scenario {
-      case "bridge-walk": bridgeWalk
-      case "first-fight": firstFight
-      case "fight-retry": fightRetry
-      case "ambush": ambush
-      case "laura": laura
-      case "opening": opening
-      case "formations": formations
-      case "orders": orders
-      default: nil
-      }
+      scenarios.first { $0.name == scenario }?.steps
     }
 
     // MARK: - Helpers
-
-    /// Stick axes for a world direction under the bridge's camera.
-    private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-      Self.stick(towards: direction, cameraOffset: BrooklynBridge.level.cameraOffset)
-    }
-
-    /// Screen-relative stick axes for a world direction, as Movement interprets them.
-    static func stick(towards direction: SIMD2<Float>, cameraOffset: SIMD3<Float>) -> SIMD2<Float> {
-      guard simd_length(direction) > 0.0001 else { return .zero }
-      let toCamera = SIMD2(cameraOffset.x, cameraOffset.z)
-      let forward = -simd_normalize(toCamera)
-      let right = SIMD2(-forward.y, forward.x)
-      let unit = simd_normalize(direction)
-      return SIMD2(simd_dot(unit, right), simd_dot(unit, forward))
-    }
 
     private static func timing(_ values: [Double]) -> Summary.Timing {
       guard !values.isEmpty else { return Summary.Timing(mean: 0, p99: 0, max: 0) }

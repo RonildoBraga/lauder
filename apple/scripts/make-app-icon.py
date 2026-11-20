@@ -15,7 +15,7 @@ import zlib
 SIZE = 1024
 OUTPUT = Path("apple/sources/app/Assets.xcassets/AppIcon.appiconset/AppIcon.png")
 
-# Colours from SceneStyle and the HUD.
+# The party's colours are SceneStyle's; the night ground, the head and the warm light are the icon's.
 BACKGROUND = (19, 33, 36)
 GROUND = (34, 54, 56)
 HEAD = (166, 173, 140)

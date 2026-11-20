@@ -14,10 +14,8 @@ final class EncounterStage {
     var line: String?
     /// Where the leader should face, towards the target of a shot just fired.
     var facing: SIMD2<Float>?
-    var leaderHit = false
     /// The leader took the last allowed hit: the encounter must start again.
     var retry = false
-    var won = false
     /// Members who appeared in this step, such as Tom before his shot.
     var appeared: [PartyMember] = []
     /// Members who stood up in this step, such as Laura once she is helped.
@@ -41,24 +39,24 @@ final class EncounterStage {
   static let focusShare: Float = 0.8
   static let focusLimit: Float = 7
 
-  let weapon = Weapon.carbine
   /// Holds the hostiles, aim lines, shots and target marker; the world adds it to the scene.
   let container = Entity()
   /// The leader's weapon; the world puts it in the leader's hands.
   let weaponProp: Entity
-  private(set) var encounter: Level.Encounter?
   private(set) var hostiles: [String: HostileState] = [:]
   private(set) var isDrawn = false
-  /// The assisted target while the weapon is drawn.
-  private(set) var target: String?
   /// The HUD's warning, such as "The stranger is aiming."
   private(set) var threat: String?
 
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
 
+  private let weapon = Weapon.carbine
   private let specs: [String: Level.Hostile]
   private let obstacles: [PartyMotion.Box]
+  private var encounter: Level.Encounter?
+  /// The assisted target while the weapon is drawn.
+  private var target: String?
   private var director = StoryDirector()
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
@@ -79,12 +77,18 @@ final class EncounterStage {
     specs = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
     weaponProp = style.carbine()
     markerScale = style.markerScale
-    targetMarker = ModelEntity(
-      mesh: .generateCylinder(height: 0.012, radius: 0.48), materials: [style.threat])
-    targetMarker.scale = [style.markerScale, 1, style.markerScale]
+    targetMarker = style.targetMarker()
     container.name = "combat"
     targetMarker.name = "combat.target"
     container.addChild(targetMarker)
+    /// An aim or shot line, unseen until it is placed.
+    func line(named name: String, _ material: any Material) -> Entity {
+      let line = style.line(material)
+      line.name = name
+      line.isEnabled = false
+      container.addChild(line)
+      return line
+    }
     for spec in all {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
@@ -93,15 +97,12 @@ final class EncounterStage {
       container.addChild(body)
       bodies[spec.id] = body
       visuals[spec.id] = visual
-      aimLines[spec.id] = Self.line(
-        named: "hostile.\(spec.id).aim", material: style.threat, container)
-      tracers[spec.id] = Self.line(
-        named: "hostile.\(spec.id).shot", material: style.threat, container)
+      aimLines[spec.id] = line(named: "hostile.\(spec.id).aim", style.threat)
+      tracers[spec.id] = line(named: "hostile.\(spec.id).shot", style.threat)
     }
-    tracers[leaderTracerID] = Self.line(named: "leader.shot", material: style.warm, container)
+    tracers[leaderTracerID] = line(named: "leader.shot", style.warm)
     for member in PartyMember.allCases {
-      tracers[Self.tracer(member)] = Self.line(
-        named: "\(member.rawValue).shot", material: style.warm, container)
+      tracers[Self.tracer(member)] = line(named: "\(member.rawValue).shot", style.warm)
     }
     reset()
   }
@@ -184,10 +185,7 @@ final class EncounterStage {
       if let shot = state.step(dt: dt, canHit: canHit, toward: leader) {
         fire(spec.id, from: state.position, at: leader, range: spec.range, shot: shot)
         if shot == .miss, let line = spec.missLine { outcome.line = line }
-        if shot == .hit {
-          outcome.leaderHit = true
-          if session.takeHit() { outcome.retry = true }
-        }
+        if shot == .hit, session.takeHit() { outcome.retry = true }
       }
       switch state.phase {
       case .aiming: threatNow = "\(spec.name) is aiming."
@@ -229,7 +227,6 @@ final class EncounterStage {
       director.stop()
       threat = nil
       for line in aimLines.values { line.isEnabled = false }
-      outcome.won = true
     }
     updateTarget(leader: leader, facing: facing)
     return outcome
@@ -304,7 +301,7 @@ final class EncounterStage {
       visual.position = [0, -0.6, 0]
     } else {
       let offset = (leader ?? state.position + [0, -1]) - state.position
-      visual.orientation = simd_quatf(angle: atan2(-offset.x, -offset.y), axis: [0, 1, 0])
+      visual.orientation = simd_quatf(angle: Movement.yaw(towards: offset), axis: [0, 1, 0])
       visual.position = .zero
     }
   }
@@ -369,13 +366,5 @@ final class EncounterStage {
     line.position = (from + to) / 2
     line.scale = [thickness, thickness, length]
     line.orientation = simd_quatf(from: [0, 0, 1], to: span / length)
-  }
-
-  private static func line(named name: String, material: any Material, _ root: Entity) -> Entity {
-    let line = ModelEntity(mesh: .generateBox(size: 1), materials: [material])
-    line.name = name
-    line.isEnabled = false
-    root.addChild(line)
-    return line
   }
 }

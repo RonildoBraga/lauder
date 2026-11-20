@@ -195,15 +195,22 @@ def _feeding(socket):
     return list(found.values())
 
 
-def _material_shape(material, root):
-    """What Export reads from a material (MaterialShape), and the images that it shows."""
-    source = _relative(_library_path(material.library), root) if material.library else None
-    tree = material.node_tree
+def _surface_shader(material):
+    """The node feeding the material's surface, of any type, and its output, or (None, None)."""
+    tree = material.node_tree if material is not None else None
     output = tree.get_output_node("ALL") if tree is not None else None
     socket = output.inputs.get("Surface") if output is not None else None
     if socket is None or not socket.is_linked:
+        return None, None
+    return socket.links[0].from_node, output
+
+
+def _material_shape(material, root):
+    """What Export reads from a material (MaterialShape), and the images that it shows."""
+    source = _relative(_library_path(material.library), root) if material.library else None
+    shader, _ = _surface_shader(material)
+    if shader is None:
         return MaterialShape(material.name, source), []
-    shader = socket.links[0].from_node
     if shader.type != "BSDF_PRINCIPLED":
         return MaterialShape(material.name, source, shader.type), []
     feeds, images, strengths = [], [], []

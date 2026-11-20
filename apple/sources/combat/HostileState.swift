@@ -35,7 +35,7 @@ struct HostileState {
   let spec: Level.Hostile
   private(set) var phase = Phase.hidden
   private(set) var position: SIMD2<Float>
-  private(set) var hasFired = false
+  private var hasFired = false
   private var engaged = false
 
   init(spec: Level.Hostile) {

@@ -24,54 +24,31 @@ import sys
 import tempfile
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.dont_write_bytecode = True
+
+from preflight import check_assets, iphone_simulator, mask  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
 SCENARIOS = [
     "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
     "orders",
 ]
-PRIVATE_IDENTIFIER = re.compile(
-    r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
-    re.IGNORECASE,
-)
 
 
 def say(message):
-    print(PRIVATE_IDENTIFIER.sub("<device-id>", message), flush=True)
+    print(mask(message), flush=True)
 
 
 def run(command, **options):
     return subprocess.run(command, capture_output=True, text=True, **options)
 
 
-def check_assets():
-    for name in ("BrooklynBridge", "models/hostile", "models/laura", "models/miki", "models/tom"):
-        path = ROOT / "apple/sources/content" / f"{name}.usdz"
-        with path.open("rb") as stream:
-            if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
-                raise SystemExit(f"{path.relative_to(ROOT)} is a Git LFS pointer; run 'git lfs pull'.")
-
-
 def simulator():
-    """The device named by LAUDER_DESTINATION, else a booted iOS 27+ iPhone, else any."""
+    """The device named by LAUDER_DESTINATION, else preflight's iPhone simulator."""
     match = re.search(r"(?:^|,)id=([^,]+)", os.environ.get("LAUDER_DESTINATION", ""))
-    if match:
-        return match[1]
-    result = run(["xcrun", "simctl", "list", "devices", "available", "--json"])
-    if result.returncode:
-        raise SystemExit("Unable to list simulators.")
-    candidates = []
-    for runtime, devices in json.loads(result.stdout)["devices"].items():
-        version = re.fullmatch(r"com\.apple\.CoreSimulator\.SimRuntime\.iOS-(\d+)-(\d+)(?:-(\d+))?", runtime)
-        if not version or int(version[1]) < 27:
-            continue
-        for device in devices:
-            if device.get("isAvailable") and device["name"].startswith("iPhone"):
-                rank = (device["state"] != "Booted", device["name"], device["udid"])
-                candidates.append((rank, device["udid"]))
-    if not candidates:
-        raise SystemExit("Install an iOS 27 or later iPhone simulator runtime in Xcode first.")
-    return min(candidates)[1]
+    return match[1] if match else iphone_simulator()["udid"]
 
 
 def build(device, derived):
@@ -101,7 +78,7 @@ def start_recording(device, video):
     while time.time() < deadline:
         line = recorder.stdout.readline()
         if "Recording started" in line:
-            return recorder, time.time()
+            return recorder
         if recorder.poll() is not None:
             break
     recorder.send_signal(signal.SIGINT)
@@ -150,7 +127,7 @@ def play(device, scenario, folder, timeout):
     shutil.rmtree(results, ignore_errors=True)
     video = folder / f"{scenario}.mp4"
     images = []
-    recorder, _ = start_recording(device, video)
+    recorder = start_recording(device, video)
     say(f"Playing {scenario}.")
     try:
         launched = run(["xcrun", "simctl", "launch", device, BUNDLE, "-LauderPlaytest", scenario])
@@ -190,7 +167,7 @@ def play(device, scenario, folder, timeout):
     return summary, images
 
 
-def report(summary, images, folder):
+def report(summary, images):
     verdict = "PASS" if summary["passed"] else "FAIL"
     say(f"  {verdict}: {summary['scenario']}, {summary['seconds']:.1f} s, "
         f"{summary['stepsCompleted']}/{summary['steps']} steps, {summary['frames']} frames")
@@ -233,7 +210,7 @@ def main():
     passed = True
     for scenario in options.scenarios:
         summary, images = play(device, scenario, folder, options.timeout)
-        report(summary, images, folder)
+        report(summary, images)
         passed = passed and summary["passed"]
     shown = folder.relative_to(ROOT) if folder.is_relative_to(ROOT) else folder
     say(f"Results in {shown}.")

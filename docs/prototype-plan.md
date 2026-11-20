@@ -1,6 +1,6 @@
 # Lauder — first playable prototype
 
-**Updated:** 20 November 2026\
+**Updated:** 21 November 2026\
 **Status:** The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. What follows needs its own assignment.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
@@ -43,12 +43,14 @@ Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of
 | Intent | PS5 / Xbox | Touch | Keyboard |
 |---|---|---|---|
 | Move active character | Left stick | Bottom-left analog stick | WASD |
-| Contextual action / advance text | Cross / A | Look, showing the action where there is one | E |
+| Contextual action, advance text or confirm the pause menu's choice | Cross / A | Look, showing the action where there is one, Continue in a conversation and Restart while paused | E |
 | Cycle leader, once there are two | R1 / RB | Next: name | Q |
 | Change formation, once there are two companions; after an order, call everyone back | Triangle / Y | Formation, or Follow after an order | R |
 | Order companions, once there are two: both go, the one on that side goes, or both hold | D-pad up, left or right, down | Press and hold on the ground, then Both, a name or Hold | Arrow keys |
-| Fire | R2 / RT | Fire, during a fight or once the carbine is drawn | F |
+| Fire at the assisted target: press to draw, hold to keep firing | R2 / RT | Fire, during a fight or once the carbine is drawn | F |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
+| Choose Resume or Restart in the pause menu | Left stick or D-pad, up or down | None: Look reads Restart | W / S or the up and down arrow keys |
+| Hide or show the status panel | Circle / B | None: the panel always shows with touch controls | H |
 
 Xbox RB and RT use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
 
@@ -65,7 +67,7 @@ Xbox RB and RT use the same input path as PS5, but hardware delivery remains unv
 
 ## Verification and performance
 
-Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Each change adds focused Swift Testing cases with its implementation, and scripted playtests run through the real controls: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening` for the whole sequence, `formations` and `orders`. Pure rule tests alone cannot establish spatial behaviour or feel.
+Use [Simulator and the standard checks](../CONTRIBUTING.md#validation) for everyday iteration. Each change adds focused Swift Testing cases with its implementation, and [scripted playtests](../CONTRIBUTING.md#scripted-simulator-playtests) run through the real controls. Pure rule tests alone cannot establish spatial behaviour or feel.
 
 Milestones that change controls, feel or performance get a phone checkpoint on the baseline **iPhone 13 Pro Max**: controls with touch and a controller, combat feel, Pause/Resume and recovery, and measured frame pacing. The target is **60 fps** on that phone, measured during representative play. Record the build, conditions and results; adjust scope or budget if missed. Simulator timing is not phone evidence, and Xbox controllers remain untested on hardware.
 

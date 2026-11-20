@@ -25,6 +25,26 @@ import lauder_levels as L  # noqa: E402
 ROOT = HERE.parent
 BRIDGE = L.LEVELS["brooklyn-bridge"]
 
+
+def to_blender(point):
+    """A game point (x, y, z) in Blender's z-up space."""
+    x, y, z = point
+    return (x, -z, y)
+
+
+def size_to_blender(size):
+    """A game size (across, up, along) in Blender's z-up space."""
+    x, y, z = size
+    return (x, z, y)
+
+
+def linear(red, green, blue):
+    """sRGB as scene-linear RGB."""
+    def channel(value):
+        return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+    return (channel(red), channel(green), channel(blue))
+
+
 #: A small level, with a light of each kind the game has and names that the story uses.
 SAMPLE = L.Layout(
     L.Box("deck", (0, -0.15, 0), (24, 0.3, 250)),
@@ -53,8 +73,8 @@ def shapes_for(layout):
     shapes = []
 
     def block(name, role, centre, size):
-        cx, cy, cz = L.to_blender(centre)
-        sx, sy, sz = L.size_to_blender(size)
+        cx, cy, cz = to_blender(centre)
+        sx, sy, sz = size_to_blender(size)
         shapes.append(L.Shape(name, role, (cx - sx / 2, cy - sy / 2, cz - sz / 2),
                               (cx + sx / 2, cy + sy / 2, cz + sz / 2)))
 
@@ -74,26 +94,26 @@ def shapes_for(layout):
 
 
 def camera_for(layout):
-    return L.CameraShape(L.to_blender(layout.camera.offset), layout.camera.field_of_view)
+    return L.CameraShape(to_blender(layout.camera.offset), layout.camera.field_of_view)
 
 
 def lights_for(layout):
     """What Export reads from the Blender lights that give this layout's lights."""
     shapes = []
     for light in layout.lights:
-        colour = L._linear(*light.color)
+        colour = linear(*light.color)
         if light.kind == "sun":
             shapes.append(L.LightShape(
-                light.name, "SUN", L._unit(L.to_blender(light.source)), colour,
+                light.name, "SUN", L._unit(to_blender(light.source)), colour,
                 light.intensity * L.SUN_STRENGTH_PER_LUX, light.shadow_distance is not None,
                 light.shadow_distance))
             continue
-        energy, position = light.intensity / L.LUMENS_PER_WATT, L.to_blender(light.position)
+        energy, position = light.intensity / L.LUMENS_PER_WATT, to_blender(light.position)
         if light.kind == "point":
             shapes.append(L.LightShape(light.name, "POINT", (0, 0, 1), colour, energy, False,
                                        position=position, custom_distance=True, cutoff=light.radius))
             continue
-        beam = L._unit(L.to_blender(tuple(t - p for t, p in zip(light.target, light.position))))
+        beam = L._unit(to_blender(tuple(t - p for t, p in zip(light.target, light.position))))
         inner, outer = (math.radians(angle) for angle in light.angles)
         edge = math.cos(outer / 2)
         shapes.append(L.LightShape(
@@ -218,7 +238,7 @@ class LayoutTests(unittest.TestCase):
         lights = lights_for(SAMPLE)
         lights[0].direction = (0, 0, 1)
         lights[1].energy *= 2
-        lights[1].color = L._linear(0.5, 0.6, 0.7)
+        lights[1].color = linear(0.5, 0.6, 0.7)
         key, fill, *_ = read(lights=lights).lights
         self.assertEqual(key.source, (0, 10, 0))
         self.assertEqual(fill.intensity, 1200)
@@ -269,22 +289,23 @@ class LayoutTests(unittest.TestCase):
         self.assertAlmostEqual(dimmer[2].intensity, 20490 / 4, delta=0.2)
 
 
+def scratch(folder):
+    """A copy of the bridge's level file and of the models that the game creates, the files
+    they use, their exports and their record."""
+    repository = Path(folder)
+    records = json.loads((ROOT / L.EXPORT_RECORD).read_text())
+    names = {BRIDGE.layout, BRIDGE.scene, L.EXPORT_RECORD, *records[BRIDGE.key]["made from"]}
+    for model in L.SPAWNED:
+        record = records.get(L._model_key(model), {})
+        names |= {*record.get("made from", {}), *record.get("wrote", {})}
+    for name in names:
+        (repository / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, repository / name)
+    return repository
+
+
 class ExportRecordTests(unittest.TestCase):
     """The record of what each export was made from, which ./scripts/check holds the exports to."""
-
-    def scratch(self, folder):
-        """A copy of the bridge's level file and of the models that the game creates, the files
-        they use, their exports and their record."""
-        repository = Path(folder)
-        records = json.loads((ROOT / L.EXPORT_RECORD).read_text())
-        names = {BRIDGE.layout, BRIDGE.scene, L.EXPORT_RECORD, *records[BRIDGE.key]["made from"]}
-        for model in L.SPAWNED:
-            record = records.get(L._model_key(model), {})
-            names |= {*record.get("made from", {}), *record.get("wrote", {})}
-        for name in names:
-            (repository / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(ROOT / name, repository / name)
-        return repository
 
     def test_the_bridges_exports_match_its_level_file(self):
         reason = L.stale_exports(ROOT)
@@ -300,7 +321,7 @@ class ExportRecordTests(unittest.TestCase):
 
     def test_a_models_scene_file_goes_stale_when_its_files_change(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = scratch(folder)
             self.assertIsNone(L.stale_model_export(repository, "miki"))
             with (repository / L.spawned_scene("miki")).open("ab") as stream:
                 stream.write(b"edited")
@@ -320,7 +341,7 @@ class ExportRecordTests(unittest.TestCase):
 
     def test_exports_go_stale_when_the_level_file_changes(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = scratch(folder)
             self.assertIsNone(L.stale_exports(repository))
             with (repository / BRIDGE.blend).open("ab") as stream:
                 stream.write(b"saved again")
@@ -329,7 +350,7 @@ class ExportRecordTests(unittest.TestCase):
 
     def test_exports_go_stale_when_a_model_they_use_changes(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = scratch(folder)
             # The buried bridge links no models of its own, so record its export as made from one
             # too, as the export records a level that links a model.
             record = json.loads((repository / L.EXPORT_RECORD).read_text())[BRIDGE.key]
@@ -347,7 +368,7 @@ class ExportRecordTests(unittest.TestCase):
 
     def test_an_export_edited_by_hand_goes_stale(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = scratch(folder)
             layout = repository / BRIDGE.layout
             text = layout.read_text()
             # Whatever the camera's lens, writing a digit before it is an edit by hand.
@@ -360,7 +381,7 @@ class ExportRecordTests(unittest.TestCase):
 
     def test_a_missing_export_or_record_counts_as_stale(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = scratch(folder)
             (repository / BRIDGE.scene).unlink()
             self.assertEqual(L.stale_exports(repository), f"{BRIDGE.scene} is missing.")
             (repository / L.EXPORT_RECORD).unlink()
@@ -368,7 +389,7 @@ class ExportRecordTests(unittest.TestCase):
 
     def test_an_export_by_an_earlier_extension_counts_as_stale(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = self.scratch(folder)
+            repository = scratch(folder)
             record = repository / L.EXPORT_RECORD
             record.write_text(record.read_text().replace(
                 f'"format": {L.EXPORT_FORMAT}', f'"format": {L.EXPORT_FORMAT - 1}'))
@@ -390,7 +411,7 @@ class BackgroundTests(unittest.TestCase):
 
     def test_saving_and_play_export_only_a_stale_level(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = ExportRecordTests.scratch(None, folder)
+            repository = scratch(folder)
             self.assertEqual(L.background_steps(repository, BRIDGE.key, play=False), [])
             self.assertEqual([step[0] for step in
                               L.background_steps(repository, BRIDGE.key, play=True)], ["play"])
@@ -450,7 +471,7 @@ class BackgroundTests(unittest.TestCase):
 
     def test_saving_a_model_exports_the_levels_that_used_it(self):
         with tempfile.TemporaryDirectory() as folder:
-            repository = ExportRecordTests.scratch(None, folder)
+            repository = scratch(folder)
             record = repository / L.EXPORT_RECORD
             records = json.loads(record.read_text())
             used = records[BRIDGE.key]["made from"]
@@ -466,8 +487,8 @@ class BakeTests(unittest.TestCase):
 
     def test_a_parts_image_grows_with_it_within_limits(self):
         self.assertEqual(L.bake_size((0.1, 0.1, 0.1)), L.BAKE_PIXELS[0])
-        self.assertEqual(L.bake_size((2.4, 2.4, 2.6)), 64)  # the bridge's booth
-        self.assertEqual(L.bake_size((25.2, 0.8, 1.2)), 128)  # the barricade
+        self.assertEqual(L.bake_size((2.4, 2.4, 2.6)), 64)  # a booth
+        self.assertEqual(L.bake_size((25.2, 0.8, 1.2)), 128)  # a long barricade
         self.assertEqual(L.bake_size((25.8, 644.3, 0.3)), L.BAKE_PIXELS[1])  # the deck
         for side in (L.bake_size((x, 1, 1)) for x in (0.5, 3, 30, 300)):
             self.assertEqual(side & (side - 1), 0, f"{side} is a power of two")
@@ -729,7 +750,8 @@ class ToolingTests(unittest.TestCase):
 
     def test_the_extension_finds_the_repository_it_was_installed_from(self):
         self.assertEqual(Path(L._guess_repository()), ROOT)
-        for script in (L.PLAY_SCRIPT, L.EXPORT_SCRIPT, L.CHECK_MODEL_SCRIPT, L.ADD_MODEL_SCRIPT):
+        for script in (L.PLAY_SCRIPT, L.EXPORT_SCRIPT, L.EXPORT_MODEL_SCRIPT, L.ADD_MODEL_SCRIPT,
+                       "blender/scripts/check-model.py"):
             self.assertTrue((ROOT / script).is_file(), script)
 
     def test_a_level_file_is_known_by_its_place_in_the_repository(self):

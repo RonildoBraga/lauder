@@ -65,8 +65,7 @@ PLAY_SCRIPT = "apple/scripts/play"
 #: The scripts that export a level, and a model that the game creates, in a Blender of its own.
 EXPORT_SCRIPT = "blender/scripts/export-level.py"
 EXPORT_MODEL_SCRIPT = "blender/scripts/export-model.py"
-#: The scripts that check a model, and that bring one in from a file.
-CHECK_MODEL_SCRIPT = "blender/scripts/check-model.py"
+#: The script that brings a model in from a file.
 ADD_MODEL_SCRIPT = "blender/scripts/add-model.py"
 #: Where each export records what it was made from and what it wrote, relative to the repository.
 EXPORT_RECORD = "blender/level-exports.json"
@@ -78,27 +77,10 @@ class LayoutError(Exception):
     """A level the game cannot use. The message says what to fix."""
 
 
-def to_blender(point):
-    """A game point (x, y, z) in Blender's z-up space."""
-    x, y, z = point
-    return (x, -z, y)
-
-
 def from_blender(point):
+    """A Blender point (x, y, z), z up, in the game's space, y up."""
     x, y, z = point
     return (x, z, -y)
-
-
-def size_to_blender(size):
-    x, y, z = size
-    return (x, z, y)
-
-
-def _linear(red, green, blue):
-    """sRGB as scene-linear RGB."""
-    def channel(value):
-        return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
-    return (channel(red), channel(green), channel(blue))
 
 
 def _srgb(linear):
@@ -115,6 +97,8 @@ def _unit(vector):
 
 
 _LFS_POINTER = b"version https://git-lfs.github.com/spec/v1"
+#: The suffix Blender gives a duplicate's name, such as `.001`.
+DUPLICATE_SUFFIX = re.compile(r"\.\d{3}$")
 
 
 def file_fingerprint(path):
@@ -147,7 +131,7 @@ def _and(items):
 def usd_name(name):
     """The name a Blender name has in USD, which allows only letters, digits and underscores and
     no digit first: Blender's USD export replaces every other byte with an underscore, so
-    `car-a1 model` becomes `car_a1_model`."""
+    `tower-top brooklyn` becomes `tower_top_brooklyn`."""
     letters = "".join(chr(byte) if chr(byte).isascii() and (chr(byte).isalnum() or byte == 95)
                       else "_" for byte in name.encode()) or "_"
     return "_" + letters[1:] if letters[0].isdigit() else letters

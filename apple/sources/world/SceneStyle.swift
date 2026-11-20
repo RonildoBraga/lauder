@@ -43,11 +43,11 @@ struct SceneStyle {
       1, shown(cameraOffset, fieldOfView) / shown(markerCamera.offset, markerCamera.fieldOfView))
   }
 
-  private static func color(_ value: SIMD3<Float>) -> UIColor {
+  private static func colour(_ value: SIMD3<Float>) -> UIColor {
     UIColor(red: CGFloat(value.x), green: CGFloat(value.y), blue: CGFloat(value.z), alpha: 1)
   }
 
-  // Only visual children are scaled; parent entities keep their authored layout transforms.
+  /// A box of this size, centred at `position`: the unit box, scaled.
   func block(size: SIMD3<Float>, at position: SIMD3<Float>, material: any Material)
     -> ModelEntity
   {
@@ -55,6 +55,29 @@ struct SceneStyle {
     model.scale = size
     model.position = position
     return model
+  }
+
+  /// A line for an aim or a shot: the unit box, which the fight stretches between the line's
+  /// ends.
+  func line(_ material: any Material) -> ModelEntity {
+    ModelEntity(mesh: unitBox, materials: [material])
+  }
+
+  /// The leader's mark: a solid disc on the ground beneath the body's centre, in the warm
+  /// colour.
+  func leaderMarker() -> ModelEntity {
+    let disc = ModelEntity(mesh: .generateCylinder(height: 0.015, radius: 0.34), materials: [warm])
+    disc.position.y = -PartyBody.height / 2 + 0.025
+    disc.scale = [markerScale, 1, markerScale]
+    return disc
+  }
+
+  /// The assisted target's mark: a disc on the ground beneath it, in the threats' colour.
+  func targetMarker() -> ModelEntity {
+    let disc = ModelEntity(
+      mesh: .generateCylinder(height: 0.012, radius: 0.48), materials: [threat])
+    disc.scale = [markerScale, 1, markerScale]
+    return disc
   }
 
   /// A member of the party, from the model named after them in `blender/assets`.
@@ -149,12 +172,12 @@ struct SceneStyle {
   /// level, and a point or spot light from where it stands.
   func addLights(_ lights: [Level.Light], to root: Entity) {
     for light in lights {
-      let color = Self.color(light.color)
+      let colour = Self.colour(light.color)
       let entity: Entity
       switch light.kind {
       case .sun(let source, let shadowDistance):
         let sun = DirectionalLight()
-        sun.light.color = color
+        sun.light.color = colour
         sun.light.intensity = light.intensity
         if let shadowDistance {
           var shadow = DirectionalLightComponent.Shadow(
@@ -170,7 +193,7 @@ struct SceneStyle {
       case .point(let position, let radius):
         let point = PointLight()
         point.light = PointLightComponent(
-          color: color, intensity: light.intensity, attenuationRadius: radius)
+          color: colour, intensity: light.intensity, attenuationRadius: radius)
         point.position = position
         entity = point
       case .spot(let position, let target, let radius, let innerAngle, let outerAngle, let shadow):
@@ -178,7 +201,7 @@ struct SceneStyle {
         // 10 m above the ground lights a radius of 10 tan 30° = 5.77 m (ADR 0002).
         let spot = SpotLight()
         spot.light = SpotLightComponent(
-          color: color, intensity: light.intensity, innerAngleInDegrees: innerAngle,
+          color: colour, intensity: light.intensity, innerAngleInDegrees: innerAngle,
           outerAngleInDegrees: outerAngle, attenuationRadius: radius)
         if shadow {
           spot.components.set(SpotLightComponent.Shadow())

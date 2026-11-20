@@ -21,9 +21,7 @@ struct PartySpacingTests {
       return Float(state >> 40) / Float(1 << 24)
     }
     // Screen-relative stick axes for a world heading, as GameWorld consumes them.
-    let toCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
-    let forward = -simd_normalize(toCamera)
-    let right = SIMD2(-forward.y, forward.x)
+    let (forward, right) = Movement.axes(cameraOffset: TestYard.cameraOffset)
 
     var heading: Float = 0
     var elapsed: Float = 0

@@ -47,10 +47,15 @@ enum TestYard {
     id: "test-yard", ground: ground, boxes: boxes, points: points, interactions: [],
     triggers: [], party: [.miki, .laura, .tom],
     spawns: [.miki: [-8, 3], .laura: [-8, 3.8], .tom: [-8, 4.6]], heading: [0, -1],
-    cameraOffset: cameraOffset, opening: "A walled yard.", objective: "Move together.",
-    lookAround: "Low walls, and a room with one way in.", restartNote: "Restart.")
+    cameraOffset: cameraOffset, fieldOfView: 42, opening: "A walled yard.",
+    objective: "Move together.", lookAround: "Low walls, and a room with one way in.",
+    restartNote: "Restart.")
 
   static let obstacles = level.obstacles
+
+  /// The start of the yard's open lane, between the wreck and the south wall: wide enough for
+  /// Spread from end to end.
+  static let laneStart: SIMD2<Float> = [-6, 6]
 
   /// Inside the room's walls.
   static func isInRoom(_ point: SIMD2<Float>) -> Bool {

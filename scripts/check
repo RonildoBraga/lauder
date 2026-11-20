@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Check every part: the Blender level script, then the Apple app's formatting, build and tests."""
+"""Check every part: the Blender extension's tests, then the Apple app's formatting, build and tests."""
 
-import json
 import os
 from pathlib import Path
 import re
@@ -12,14 +11,14 @@ import tempfile
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PRIVATE_IDENTIFIER = re.compile(
-    r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
-    re.IGNORECASE,
-)
+sys.path.insert(0, str(ROOT / "apple/scripts"))
+sys.dont_write_bytecode = True
+
+import preflight  # noqa: E402
 
 
 def display(output):
-    output = PRIVATE_IDENTIFIER.sub("<device-id>", output)
+    output = preflight.mask(output)
     team = os.environ.get("LAUDER_DEVELOPMENT_TEAM")
     if team:
         output = output.replace(team, "<signing-team>")
@@ -37,75 +36,17 @@ def run(command, log):
         raise SystemExit(result.returncode)
 
 
-#: The USDZ files the app and its tests need: the Brooklyn Bridge's scene file and the models the
-#: game creates.
-ASSETS = (
-    "apple/sources/content/BrooklynBridge.usdz",
-    "apple/sources/content/models/hostile.usdz",
-    "apple/sources/content/models/laura.usdz",
-    "apple/sources/content/models/miki.usdz",
-    "apple/sources/content/models/tom.usdz",
-)
-
-
-def check_assets():
-    problems = []
-    for name in ASSETS:
-        relative = Path(name)
-        path = ROOT / relative
-        if not path.is_file():
-            problems.append(f"{relative} (missing)")
-            continue
-        with path.open("rb") as stream:
-            if stream.read(128).startswith(b"version https://git-lfs.github.com/spec/v1"):
-                problems.append(f"{relative} (Git LFS pointer)")
-    if problems:
-        raise SystemExit(
-            "USDZ assets are not downloaded:\n"
-            + "\n".join(f"- {problem}" for problem in problems)
-            + "\nInstall Git LFS, then run 'git lfs install' and 'git lfs pull' "
-            "from the repository root before rerunning ./scripts/check."
-        )
-
-
 def simulator_destination():
-    result = subprocess.run(
-        ["xcrun", "simctl", "list", "devices", "available", "--json"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode:
-        display(result.stderr)
-        raise SystemExit("Unable to list available iPhone simulators.")
-    candidates = []
-    for runtime, devices in json.loads(result.stdout)["devices"].items():
-        match = re.fullmatch(r"com\.apple\.CoreSimulator\.SimRuntime\.iOS-(\d+)-(\d+)(?:-(\d+))?", runtime)
-        if not match:
-            continue
-        version = tuple(int(value or 0) for value in match.groups())
-        if version < (27, 0, 0):
-            continue
-        for device in devices:
-            if device.get("isAvailable") and device["name"].startswith("iPhone"):
-                rank = (
-                    device["state"] != "Booted",
-                    tuple(-value for value in version),
-                    device["name"],
-                    device["udid"],
-                )
-                candidates.append((rank, device))
-    if not candidates:
-        raise SystemExit("Install an iOS 27 or later iPhone simulator runtime in Xcode first.")
-    device = min(candidates, key=lambda candidate: candidate[0])[1]
+    device = preflight.iphone_simulator()
     display(f"Testing on {device['name']} using an available iOS simulator.\n")
     return f"platform=iOS Simulator,id={device['udid']}"
 
 
 def main():
-    check_assets()
+    preflight.check_assets()
     output = Path(tempfile.mkdtemp(prefix="lauder-check-"))
     try:
-        print("Checking the Blender level script.", flush=True)
+        print("Running the Blender extension's tests.", flush=True)
         run(
             [sys.executable, "-I", "-B", "blender/test_lauder_levels.py"],
             output / "blender-levels.log",

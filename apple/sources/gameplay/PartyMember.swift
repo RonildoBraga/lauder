@@ -10,12 +10,4 @@ enum PartyMember: String, CaseIterable, Sendable {
     case .tom: "Tom"
     }
   }
-
-  var role: String {
-    switch self {
-    case .miki: "Systems"
-    case .laura: "Agility"
-    case .tom: "Strength"
-    }
-  }
 }

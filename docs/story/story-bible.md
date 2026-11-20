@@ -59,7 +59,7 @@ These distinctions are not complete identities. All three can observe, talk, hel
 - Avoid repeating three obstacles each labelled for a different character. Switching should follow the player's reading of a place.
 - A specialist opening should ultimately admit the party. Laura might reach a latch to release access for the others; following her does not make them equally agile.
 - Companions should not repeatedly become stuck or need rescue to justify their presence. A narrow passage needs a credible group route before the scene is written around it.
-- Keep commands few and readable. The current leadership-switch and formation controls are recorded in the [gameplay input contract](../gameplay-script.md#readable-controls-and-party-feedback); placement and regroup controls remain design proposals rather than implemented mappings. Skill trees and separate equipment systems are not prerequisites.
+- Keep commands few and readable. The current leadership-switch and formation controls, and the squad orders built with [ADR 0003](../decisions/0003-squad-movement.md)'s phase S3, are recorded in the [input contract](../prototype-plan.md#input-and-interaction-contract); a regroup control remains a design proposal rather than an implemented mapping. Skill trees and separate equipment systems are not prerequisites.
 
 ### Combat identities
 
@@ -222,7 +222,7 @@ The repaired set serves others as well as the party. It establishes contact and 
 **Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
 **Achievement:** Three strangers reach Manhattan together, each having helped another.
 
-The whole opening is built, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Its dialogue remains to be written.
+The whole opening is built, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Its final dialogue remains to be written; the game's lines are provisional.
 
 Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 
@@ -245,8 +245,6 @@ Further along, an injured woman lies in the snow, struggling to move. Miki offer
 ### 5. Onwards
 
 The three continue towards Manhattan together. With two companions, squad movement and formations come into play. Each one's personality, abilities and role in the group emerge over the journey rather than in the opening.
-
-The dialogue is not written yet. Lines stay short and reveal nothing about anyone's past beyond what the moment needs.
 
 ## Later scene — Relay House
 
@@ -272,7 +270,7 @@ They agree to make the short salvage trip together. The keeper remains at the sh
 
 Front access is blocked. The group reads the depot and chooses an approach. The scene can demonstrate a useful leadership switch without requiring an obstacle for each skill.
 
-The current walkthrough proposes two approaches to the same service barrier: Laura reaches its release latch, or Tom shifts its loose panel from a stable grip. Either opens the passage for everyone; neither requires the other first. These are contextual actions represented simply in the graybox, not free climbing or a physics lifting system. Miki checks the regulator and isolates the disconnected equipment containing it.
+This scene proposes two approaches to the same service barrier: Laura reaches its release latch, or Tom shifts its loose panel from a stable grip. Either opens the passage for everyone; neither requires the other first. These are contextual actions represented simply in the greybox, not free climbing or a physics lifting system. Miki checks the regulator and isolates the disconnected equipment containing it.
 
 A maintained bypass supplies a neighbouring block marked empty in an old transport register. Inspection shows current use. Miki leaves that supply connected; the regulator comes from separate equipment. This decision belongs to ordinary salvage, not a new branching morality system.
 
@@ -304,11 +302,11 @@ The scene ends with lasting progress. They choose to make the next journey toget
 
 ## Later encounter proposal — The Quiet Yard
 
-After the Relay House scene, on the way toward Old Lock, the party can consider a canal maintenance yard holding spare filter seals useful to the coastal water crew. [The Quiet Yard](../encounters/the-quiet-yard.md) is a separate design exercise for occasional combat, avoidance and withdrawal, rather than an addition to the current repair prototype.
+After the Relay House scene, on the way towards Old Lock, the party can consider a canal maintenance yard holding spare filter seals useful to the coastal water crew. [The Quiet Yard](../encounters/the-quiet-yard.md) is a separate design exercise for occasional combat, avoidance and withdrawal, rather than part of the current prototype.
 
 A safe detour continues the journey without the seals. The yard can also offer a readable patrol gap and a covered route for the whole party, or an optional confrontation with two old security units of one type. Existing walls and clear approaches give the proposed roles something understandable to do. No compulsory sequence of signatures, invisible combat lock or reinforcement wave is needed. Regrouping and leaving remains a supported choice during an encounter; the encounter proposal must define fair targeting, pursuit limits and a credible exit before implementation.
 
-Evidence of recent human maintenance raises a local question about who still uses the place. It does not reveal the cause of the collapse or the trio's connections. A quiet exchange afterward can recognise both the usefulness of the seals and the people who took the risk, without declaring avoidance or fighting the only correct choice. Detailed dialogue and encounter rules remain for review.
+Evidence of recent human maintenance raises a local question about who still uses the place. It does not reveal the cause of the collapse or the trio's connections. A quiet exchange afterwards can recognise both the usefulness of the seals and the people who took the risk, without declaring avoidance or fighting the only correct choice. Detailed dialogue and encounter rules remain for review.
 
 ## Mystery and revelation
 

@@ -126,26 +126,12 @@ struct LandmarkFade {
   }
 
   /// Whether the segment from `start` to `end` passes within `margin` of `box`.
-  static func segment(
-    from start: SIMD3<Float>, to end: SIMD3<Float>, meets box: BoundingBox, margin: Float = 0
+  private static func segment(
+    from start: SIMD3<Float>, to end: SIMD3<Float>, meets box: BoundingBox, margin: Float
   ) -> Bool {
-    let low = box.min - margin
-    let high = box.max + margin
-    let direction = end - start
-    var near: Float = 0
-    var far: Float = 1
-    for axis in 0..<3 {
-      guard abs(direction[axis]) > 1e-6 else {
-        if start[axis] < low[axis] || start[axis] > high[axis] { return false }
-        continue
-      }
-      let first = (low[axis] - start[axis]) / direction[axis]
-      let second = (high[axis] - start[axis]) / direction[axis]
-      near = max(near, min(first, second))
-      far = min(far, max(first, second))
-      if near > far { return false }
-    }
-    return true
+    LineOfSight.entry(
+      from: start, along: end - start, minimum: box.min - margin, maximum: box.max + margin,
+      limit: 1) != nil
   }
 
   /// An unlit stand-in for each material, in its base colour.

@@ -1,9 +1,9 @@
 import simd
 
 /// The game camera's mapping between the screen and the ground, the plane y = 0, so a touch
-/// order can mark the ground under the finger (ADR 0003, phase S3). The camera looks at
-/// `target` from `eye` with world up as its up, and a vertical field of view, as GameWorld
-/// places it.
+/// order can mark the ground, or a block, under the finger (ADR 0003, phase S3). The camera
+/// looks at `target` from `eye` with world up as its up, and a vertical field of view, as
+/// GameWorld places it.
 struct CameraProjection {
   let eye: SIMD3<Float>
   let target: SIMD3<Float>
@@ -33,11 +33,29 @@ struct CameraProjection {
   /// The ground under a point on the screen; nil when the ray from the camera through it does
   /// not come down to the ground.
   func ground(atScreen point: SIMD2<Float>) -> SIMD2<Float>? {
-    guard let direction = direction(atScreen: point), direction.y < -0.0001, eye.y > 0 else {
-      return nil
-    }
-    let hit = eye + direction * (-eye.y / direction.y)
+    guard let direction = direction(atScreen: point), let distance = ground(along: direction)
+    else { return nil }
+    let hit = eye + direction * distance
     return SIMD2(hit.x, hit.z)
+  }
+
+  /// What the ray from the camera through a point on the screen meets first: one of these
+  /// blocks, or the ground; nil when it meets neither.
+  func firstHit(
+    atScreen point: SIMD2<Float>, blocks: [(centre: SIMD3<Float>, size: SIMD3<Float>)]
+  ) -> SIMD3<Float>? {
+    guard let direction = direction(atScreen: point) else { return nil }
+    var nearest = ground(along: direction) ?? .infinity
+    for block in blocks {
+      if let distance = entry(
+        along: direction, minimum: block.centre - block.size / 2,
+        maximum: block.centre + block.size / 2),
+        distance < nearest
+      {
+        nearest = distance
+      }
+    }
+    return nearest.isFinite ? eye + direction * nearest : nil
   }
 
   /// How far along `direction` from the camera a ray enters a box; nil when it misses, or the
@@ -45,20 +63,15 @@ struct CameraProjection {
   func entry(
     along direction: SIMD3<Float>, minimum: SIMD3<Float>, maximum: SIMD3<Float>
   ) -> Float? {
-    var near: Float = 0
-    var far = Float.infinity
-    for axis in 0..<3 {
-      if abs(direction[axis]) < 0.000001 {
-        guard eye[axis] >= minimum[axis], eye[axis] <= maximum[axis] else { return nil }
-        continue
-      }
-      let first = (minimum[axis] - eye[axis]) / direction[axis]
-      let second = (maximum[axis] - eye[axis]) / direction[axis]
-      near = max(near, min(first, second))
-      far = min(far, max(first, second))
-      guard near <= far else { return nil }
-    }
-    return near > 0 ? near : nil
+    let near = LineOfSight.entry(
+      from: eye, along: direction, minimum: minimum, maximum: maximum, limit: .infinity)
+    return near.flatMap { $0 > 0 ? $0 : nil }
+  }
+
+  /// How far along `direction` from the camera a ray comes down to the ground; nil when it
+  /// does not.
+  private func ground(along direction: SIMD3<Float>) -> Float? {
+    direction.y < -0.0001 && eye.y > 0 ? -eye.y / direction.y : nil
   }
 
   /// Where a point on the ground shows on the screen, from 0 to 1 across and down; nil when it

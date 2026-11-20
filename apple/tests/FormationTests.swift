@@ -1,4 +1,3 @@
-import RealityKit
 import Testing
 import simd
 
@@ -9,10 +8,6 @@ import simd
 /// is narrower than any gap on the bridge.
 @MainActor
 struct FormationTests {
-  /// The start of the yard's open lane, between the wreck and the south wall: wide enough for
-  /// Spread from end to end.
-  private static let laneStart: SIMD2<Float> = [-6, 6]
-
   // MARK: - The session
 
   @Test
@@ -90,7 +85,7 @@ struct FormationTests {
     var sideways: [PartyMember: Float] = [:]
     var behind: [PartyMember: Float] = [:]
     for frame in 0..<Int(7.5 * 60) {
-      world.advanceParty(movement: stick(towards: [1, 0]), deltaTime: 1 / 60)
+      world.advanceParty(movement: stick(world, towards: [1, 0]), deltaTime: 1 / 60)
       try #require(world.diagnostic == nil, "\(formation), frame \(frame)")
       // Allow 4.5 s to form up and turn east. A companion left behind at the start catches up
       // at no more than 1.25 times the leader's full speed (ADR 0003), so Spread's far side
@@ -167,9 +162,9 @@ struct FormationTests {
   func changingFormationMidRunCrossesNoPaths(from start: GameSession.Formation) throws {
     let world = GameWorld(level: TestYard.level)
     choose(start, in: world)
-    try walk(world, through: [Self.laneStart], label: "to the lane")
+    try walk(world, through: [TestYard.laneStart], label: "to the lane")
     try wait(world, seconds: 1)
-    let east = stick(towards: [1, 0])
+    let east = stick(world, towards: [1, 0])
     for _ in 0..<90 { world.advanceParty(movement: east, deltaTime: 1 / 60) }
     world.session.cycleFormation()
     let changed = world.session.formation
@@ -207,45 +202,5 @@ struct FormationTests {
       (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
     }
     return side(q1, q2, p1) * side(q1, q2, p2) < 0 && side(p1, p2, q1) * side(p1, p2, q2) < 0
-  }
-
-  /// Screen-relative stick axes for a world heading, as GameWorld consumes them.
-  private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let toCamera = SIMD2(TestYard.cameraOffset.x, TestYard.cameraOffset.z)
-    let forward = -simd_normalize(toCamera)
-    let right = SIMD2(-forward.y, forward.x)
-    let unit = simd_normalize(direction)
-    return SIMD2(simd_dot(unit, right), simd_dot(unit, forward))
-  }
-
-  private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {
-    guard let body = world.root.findEntity(named: "party.\(member.rawValue)") else {
-      return [.nan, .nan]
-    }
-    return SIMD2(body.position.x, body.position.z)
-  }
-
-  private func walk(_ world: GameWorld, through points: [SIMD2<Float>], label: String) throws {
-    var index = 0
-    var frame = 0
-    while index < points.count {
-      let leader = position(world, world.session.leader)
-      let offset = points[index] - leader
-      if simd_length(offset) < 0.15 {
-        index += 1
-        continue
-      }
-      world.advanceParty(movement: stick(towards: offset), deltaTime: 1 / 60)
-      frame += 1
-      try #require(world.diagnostic == nil, "\(label), frame \(frame): \(world.diagnostic ?? "")")
-      try #require(frame < 60 * 30, "\(label): the leader did not reach \(points[index])")
-    }
-  }
-
-  private func wait(_ world: GameWorld, seconds: Float) throws {
-    for frame in 0..<Int(seconds * 60) {
-      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
-      try #require(world.diagnostic == nil, "waiting, frame \(frame)")
-    }
   }
 }
