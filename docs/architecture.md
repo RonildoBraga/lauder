@@ -1,6 +1,6 @@
 # Lauder — architecture
 
-**Updated:** 20 November 2026\
+**Updated:** 21 November 2026\
 **Status:** Swift and RealityKit ([ADR 0001](decisions/0001-engine.md)). The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), whose Blender file is its source ([ADR 0002](decisions/0002-blender-source-of-truth.md)): Blender exports the bridge's scene file and layout file. Companions move as a squad under [ADR 0003](decisions/0003-squad-movement.md) phases S1 to S3. Persistence remains later hardening; this design does not settle open relationships.
 
 ## Decision and platform
@@ -27,20 +27,20 @@ These are responsibilities, not new frameworks or a requirement to create every 
 
 ## Scene and asset authoring
 
-A level's look comes from its scene file; the game builds the rest from typed data. Keep authored positions, collision dimensions and stable IDs in typed levels, rather than adding JSON or a parser to the game. A `Level` value holds a place's floor, blocker boxes, points of interest, interactions, trigger areas, encounters, starting party, spawn points, starting heading, the camera's offset and field of view, its lights and the name of its scene file. `BrooklynBridge` builds the one level; the world, the session and the navigation grid take the level they are given, so tests can build small levels of their own, which the game draws as plain blocks. The party and the hostiles come from their models' scene files, which Blender exports too; the gameplay signals keep their own colours in code.
+A level's look comes from its scene file; the game builds the rest from typed data. Keep authored positions, collision dimensions and stable IDs in typed levels, rather than adding JSON or a parser to the game. A `Level` value holds a place's floor, blocker boxes, points of interest, interactions, trigger areas, encounters, starting party, spawn points, starting heading, the camera's offset and field of view, its lights and the name of its scene file. `BrooklynBridge` builds the one level; the world, the session and the navigation grid take the level they are given, so tests can build small levels of their own, which the game draws as plain blocks. The party and the hostiles come from their models' scene files, which Blender exports too; the gameplay signals keep their own colours in code, in `SceneStyle`.
 
-Each level's Blender file is its source ([ADR 0002](decisions/0002-blender-source-of-truth.md)): for the bridge, `blender/levels/brooklyn-bridge.blend`, stored with Git LFS. Its Visual collection is what the player sees, with each box's look parented to its box; its Gameplay collection holds the ground, boxes, landmarks, areas and markers, each with a role; its Lights and Camera collections hold the lights, suns, point lights and spot lights, and the game camera's rig. Models are Blender files of their own in `blender/assets`, which levels link, each beside a README with its source and licence; the buried bridge links none since its vehicles went under the snow. The models the game creates itself, the party's `miki`, `tom` and `laura` and every hostile's `hostile`, get scene files of their own in `apple/sources/content/models`, which saving them exports. Saving it in Blender, through the Lauder extension in `blender/extensions/lauder_levels`, checks the game's rules and then exports, in a background Blender, two generated files: the scene file `BrooklynBridge.usdz` and the layout file `BrooklynBridgeLayout.swift`. `blender/level-exports.json` records their fingerprints, and those of the Blender file and of every model and texture it uses, and `./scripts/check` fails when any no longer matches. Saving a model exports each level that uses it. Blender's Play button exports when needed, then builds the game and opens it in the Simulator through `apple/scripts/play`. The level's own Swift file adds the words and refers to the layout's entries by name, and Export refuses to drop a name it uses.
+Each level and each model is a Blender file, its source ([ADR 0002](decisions/0002-blender-source-of-truth.md)). Saving the bridge's file through the Lauder extension, which holds a module for each job, checks the game's rules and exports its scene file, `BrooklynBridge.usdz`, and its layout file, `BrooklynBridgeLayout.swift`, as [Editing a level in Blender](../CONTRIBUTING.md#editing-a-level-in-blender) describes. The level's own Swift file adds the words and refers to the layout's entries by name, and Export refuses to drop a name it uses.
 
-`GameWorld` loads the scene file synchronously while it is made, with `Entity.load(named:in:)`, so start-up has no asynchronous step, and Restart keeps it. `SceneStyle` loads each model's scene file the same way, once, and gives every figure a copy. The game compiles the layout file as typed data, with no parser. Files from elsewhere become models through `blender/scripts/add-model.py` and the intake check. Point and spot lights come from Blender as data, the texture maps that reach the game are checked, and a level's parts can bake ambient occlusion into their colour. The Lauder extension holds a module for each job: common, lights, layouts, looks, models, exports, occlusion, background and interface.
+`GameWorld` loads the scene file synchronously while it is made, with `Entity.load(named:in:)`, so start-up has no asynchronous step, and Restart keeps it. `SceneStyle` loads each model's scene file the same way, once, and gives every figure a copy. The game compiles the layout file as typed data, with no parser.
 
-The party uses three named, differently coloured primitive stand-ins, each a Blender model with a scene file of its own. No character art or animation is required. Do not add per-frame visual work, publish character transforms to SwiftUI, or require art production before evaluating play.
+The party uses three named, differently coloured primitive stand-ins, each a Blender model with a scene file of its own. No character art or animation is required. Add no per-frame visual work beyond what gameplay needs, such as fading a landmark or sizing a marker; do not publish character transforms to SwiftUI or require art production before evaluating play.
 
 ## Swift conventions
 
 - Use **Swift 6 language mode** and complete data-race checking. Keep session/UI/world coordination main-actor isolated; concurrency boundaries must be explicit. [Swift migration guidance](https://www.swift.org/migration/documentation/swift-6-concurrency-migration-guide/enabledataracesafety/)
 - Use **Swift Testing** for rules and value-based movement tests. [Swift Testing](https://developer.apple.com/xcode/swift-testing/)
 - Use toolchain **`swift format`** with the committed [`.swift-format`](../apple/.swift-format): two-space indentation, 100-column length and otherwise tool defaults.
-- Run **`./scripts/check`** for formatting, the layout script's tests, the shared scheme's build and tests. [Validation requirements](../CONTRIBUTING.md#validation)
+- Run **`./scripts/check`** for the Blender extension's tests, then formatting and the shared scheme's build and tests. [Validation requirements](../CONTRIBUTING.md#validation)
 
 ## Runtime ownership
 
@@ -75,7 +75,7 @@ The owned world update coordinates this sequence. Rules do not retain RealityKit
 
 ## Input and command routing
 
-Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path. Mappings: left stick/WASD movement, Cross/A/E action, R1/RB/Q to cycle the leader, Triangle/Y/R to change formation or call everyone back after an order, the D-pad and arrow keys for squad orders (up both go, left or right one goes, down hold), R2/RT/F to fire, and Options/Menu/Escape Pause. R1 is read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), Triangle through button Y and R2 through the right trigger; Xbox hardware delivery remains unverified. [Touch controls](touch-controls.md) supply the same intents: a fixed bottom-left analog stick, **Look**, **Next: name**, **Formation** once there are two companions, **Pause/Resume** and, during a fight or once the carbine is drawn, **Fire**; and for orders, pressing and holding on open ground, which opens a small menu at the finger. Touch is automatic without an extended controller; an attached controller is preferred unless **Use touch controls** is selected, and **Use controller** returns to it. The preference is in memory, not persisted.
+Keep the shared GameController extended-gamepad path for PS5 DualSense/Xbox and the Simulator keyboard path; the [input contract](prototype-plan.md#input-and-interaction-contract) lists the bindings. R1 is read through the [right shoulder element](https://developer.apple.com/documentation/gamecontroller/gcextendedgamepad/rightshoulder), Triangle through button Y and R2 through the right trigger; Xbox hardware delivery remains unverified. [Touch controls](touch-controls.md) supply the same intents. Touch is automatic without an extended controller; an attached controller is preferred unless **Use touch controls** is selected, and **Use controller** returns to it. The preference is in memory, not persisted.
 
 GameControls samples hardware and TouchInput state; InputRules resolves all sources with the same mode, priority and fresh-edge history. Touch controls do not call GameSession or world actions directly. Independent zones support a stick finger alongside button fingers, and a finger on the ground for the order menu alongside both. As the menu opens, its point reaches InputRules as a share of the screen, and the world fixes what the camera's ray through it meets first, a block or the ground; the menu's choice follows once, when its finger lifts. A finger on the ground holds the release gate like any other. Source changes and inactivity cancel captures through a generation token so stale callbacks cannot affect the new source. Pause leaves capture mounted and preserves held contacts: all fingers must lift, including a centred-stick finger, before the neutral gate clears.
 
@@ -121,7 +121,7 @@ The HUD's compass points to the level's goal for the story's beat: each goal is 
 
 ## The opening
 
-The app opens on the **Brooklyn Bridge**: Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom's body waits, hidden, where his scene will use it. Laura lies hurt in view at hers, face down beside a car, until her scene stands her up; she stays out of movement and the squad until she joins. The objective line changes as the story moves on.
+The app opens on the **Brooklyn Bridge**: Miki crosses alone from the Brooklyn end, and trigger areas on the deck each show a line the first time she enters them in a run. Tom's body waits, hidden, where his scene will use it. Laura lies hurt in view at hers, face down in the snow beyond mid-span, until her scene stands her up; she stays out of movement and the squad until she joins. The objective line changes as the story moves on.
 
 ### Interactions
 
@@ -146,7 +146,7 @@ The session's last allowed hit starts the retry. The screen fades out over 0.6 s
 
 A scene is an encounter that holds the party still while its cues play, whoever leads, so that only its cues place and turn anyone; switching leader during it moves no one. It has no retry, because the leader cannot be hurt in it. An encounter can also have no hostiles at all, and then ends after its last cue. The ambush is a scene. Searching the stranger's body begins it, and its cues, all played in the fixed step, do the following in order:
 
-- step the attacker out from behind the van and set him running at Miki;
+- step the attacker out of the first tower's west arch and set him running at Miki;
 - take the body's loot into the session's shared inventory;
 - show Tom;
 - fire Tom's scripted shot, which the session counts as a takedown;
@@ -189,7 +189,7 @@ Use Simulator keyboard and single-pointer touch input for everyday iteration. Li
 
 Finished character art and animation, free jumping and climbing, combat positioning, separate inventories, generic navigation/ECS/inventory/quest frameworks, additional packages, networking, cloud saves, monetisation and scene streaming.
 
-The [future squad and combat design](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) describe intended experiences. Their [design gate](prototype-plan.md#combat-design-review-gate) precedes any implementation assignment beyond the opening's first fight. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation and formation design; phase S2 is the opening's M5, and phase S3 adds squad orders to it.
+The [future squad and combat design](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) describe intended experiences. Their [design gate](prototype-plan.md#combat-design-review-gate) precedes any implementation assignment beyond the opening. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation and formation design; phase S2 is the opening's M5, and phase S3 adds squad orders to it.
 
 ## Revisit after the first playable
 
