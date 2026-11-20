@@ -87,4 +87,41 @@ struct LevelLookTests {
     #expect(abs(bounds.min.y + PartyBody.height / 2) < 0.001, "\(name) stands on the ground")
     #expect(abs(bounds.max.y - bounds.min.y - 1.58) < 0.001, "\(name) is 1.58 m tall")
   }
+
+  /// World markers keep a readable size on screen (the visual direction). From the bridge's far
+  /// camera they are drawn larger, by as much more of the ground as it shows across the screen
+  /// than the camera they were made for, so each spans the same share of the screen as it did
+  /// from that camera. In the test yard, whose camera is close, they keep their own size.
+  @Test
+  func worldMarkersKeepTheirSizeOnScreen() throws {
+    let bridge = BrooklynBridge.level
+    let scale = SceneStyle.markerScale(
+      cameraOffset: bridge.cameraOffset, fieldOfView: bridge.fieldOfView)
+    #expect(abs(scale - 2.13) < 0.01)
+    let yard = SceneStyle.markerScale(
+      cameraOffset: TestYard.cameraOffset, fieldOfView: TestYard.level.fieldOfView)
+    #expect(abs(yard - 1) < 0.01)
+    // The share of the screen's height that a size on the ground spans at a camera's target.
+    func share(_ size: Float, _ offset: SIMD3<Float>, _ fieldOfView: Float) -> Float {
+      size / (2 * simd_length(offset) * tan(fieldOfView * .pi / 360))
+    }
+    let made = SceneStyle.markerCamera
+    let disc: Float = 0.68
+    #expect(
+      abs(
+        share(disc * scale, bridge.cameraOffset, bridge.fieldOfView)
+          - share(disc, made.offset, made.fieldOfView)) < 0.0001)
+    // The world draws its markers at that scale.
+    let world = GameWorld(level: bridge)
+    let leader = try #require(world.root.findEntity(named: "miki.marker"))
+    #expect(abs(leader.scale.x - scale) < 0.001 && leader.scale.y == 1)
+    let ring = try #require(world.root.findEntity(named: "order.tom"))
+    #expect(abs(ring.scale.x - scale) < 0.001 && abs(ring.scale.z - scale) < 0.001)
+    let target = try #require(world.root.findEntity(named: "combat.target"))
+    #expect(abs(target.scale.x - scale) < 0.001)
+    let cross = try #require(world.root.findEntity(named: "order.refused"))
+    // Its two bars, 0.8 m by 0.12 m as made, cross at 45°.
+    let across = cross.visualBounds(relativeTo: cross).extents.x
+    #expect(abs(across - (0.8 + 0.12) * scale * Float(0.5).squareRoot()) < 0.01)
+  }
 }

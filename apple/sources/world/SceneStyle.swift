@@ -20,6 +20,28 @@ struct SceneStyle {
   /// Threats: a hostile's aim and shots, and the assisted target's marker.
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
+  /// How much larger than their authored sizes the world markers show: the leader's disc, order
+  /// rings, the refusal cross, the aim marker and the aim and shot lines.
+  let markerScale: Float
+
+  /// The camera the world markers were made for: the bridge's before the frozen look, about
+  /// 14 m from its target with a 42° lens.
+  static let markerCamera = (offset: SIMD3<Float>(0, 10, 9.9), fieldOfView: Float(42))
+
+  init(markerScale: Float = 1) {
+    self.markerScale = markerScale
+  }
+
+  /// The marker scale for a level's camera, so that its markers keep a readable size on screen
+  /// (the visual direction): how much more of the ground a camera shows across the screen at
+  /// its target than the camera the markers were made for, and never less than 1.
+  static func markerScale(cameraOffset: SIMD3<Float>, fieldOfView: Float) -> Float {
+    func shown(_ offset: SIMD3<Float>, _ fieldOfView: Float) -> Float {
+      simd_length(offset) * tan(fieldOfView * .pi / 360)
+    }
+    return max(
+      1, shown(cameraOffset, fieldOfView) / shown(markerCamera.offset, markerCamera.fieldOfView))
+  }
 
   private static func color(_ value: SIMD3<Float>) -> UIColor {
     UIColor(red: CGFloat(value.x), green: CGFloat(value.y), blue: CGFloat(value.z), alpha: 1)
@@ -75,6 +97,7 @@ struct SceneStyle {
       segment.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
       ring.addChild(segment)
     }
+    ring.scale = [markerScale, 1, markerScale]
     return ring
   }
 
@@ -83,7 +106,8 @@ struct SceneStyle {
   func refusalCross() -> Entity {
     let cross = Entity()
     for angle in [Float.pi / 4, -Float.pi / 4] {
-      let bar = block(size: [0.8, 0.12, 0.02], at: .zero, material: threat)
+      let bar = block(
+        size: [0.8 * markerScale, 0.12 * markerScale, 0.02], at: .zero, material: threat)
       bar.orientation = simd_quatf(angle: angle, axis: [0, 0, 1])
       cross.addChild(bar)
     }

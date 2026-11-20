@@ -310,12 +310,15 @@ private final class OrderMenu: UIView {
     let items: [(UILabel, OrderPress.Choice)] = [
       (both, .both), (left, .left), (right, .right), (hold, .hold),
     ]
+    // Frosted items with ink words; the chosen one turns ink with frosted words (the visual
+    // direction's HUD).
     for (label, item) in items {
       let chosen = item == choice
-      label.backgroundColor = UIColor(
-        red: chosen ? 0.2 : 0.075, green: chosen ? 0.33 : 0.13, blue: chosen ? 0.33 : 0.14,
-        alpha: 0.92)
-      label.layer.borderColor = UIColor(white: 0.95, alpha: chosen ? 0.85 : 0.3).cgColor
+      label.backgroundColor =
+        chosen
+        ? HUDStyle.inkForTouch.withAlphaComponent(0.9) : HUDStyle.frostForTouch(pressed: true)
+      label.textColor = chosen ? HUDStyle.frostForTouch(pressed: true) : HUDStyle.inkForTouch
+      label.layer.borderColor = HUDStyle.inkForTouch.withAlphaComponent(chosen ? 0.9 : 0.25).cgColor
     }
   }
 
@@ -323,7 +326,7 @@ private final class OrderMenu: UIView {
     let label = UILabel()
     label.text = title
     label.font = .systemFont(ofSize: 15, weight: .semibold)
-    label.textColor = UIColor(white: 0.95, alpha: 1)
+    label.textColor = HUDStyle.inkForTouch
     label.textAlignment = .center
     label.adjustsFontSizeToFitWidth = true
     label.minimumScaleFactor = 0.8
@@ -357,13 +360,13 @@ private final class TouchZone: UIControl {
     isAccessibilityElement = true
     accessibilityTraits = .button
     label.font = .systemFont(ofSize: 15, weight: .semibold)
-    label.textColor = UIColor(white: 0.95, alpha: 1)
+    label.textColor = HUDStyle.inkForTouch
     label.textAlignment = .center
     label.adjustsFontSizeToFitWidth = true
     label.minimumScaleFactor = 0.8
     label.isUserInteractionEnabled = false
     addSubview(label)
-    thumb.backgroundColor = UIColor(white: 0.95, alpha: 0.4)
+    thumb.backgroundColor = HUDStyle.inkForTouch.withAlphaComponent(0.3)
     thumb.isUserInteractionEnabled = false
     thumb.isHidden = !isStick
     addSubview(thumb)
@@ -454,10 +457,10 @@ private final class TouchZone: UIControl {
     changed?(nil, false, captured.generation)
   }
 
+  /// Frosted with an ink outline, denser while pressed (the visual direction's HUD).
   private func refreshAppearance() {
-    backgroundColor = UIColor(
-      red: 0.075, green: 0.13, blue: 0.14, alpha: isHighlighted ? 0.95 : 0.65)
+    backgroundColor = HUDStyle.frostForTouch(pressed: isHighlighted)
     layer.borderWidth = 1
-    layer.borderColor = UIColor(white: 0.95, alpha: isHighlighted ? 0.65 : 0.3).cgColor
+    layer.borderColor = HUDStyle.inkForTouch.withAlphaComponent(isHighlighted ? 0.55 : 0.2).cgColor
   }
 }
