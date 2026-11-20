@@ -26,7 +26,7 @@ struct Level {
     var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
   }
 
-  enum ActionID: String, CaseIterable, Sendable {
+  enum ActionID: String, Sendable {
     /// Searching the stranger's body, on the bridge (M3).
     case searchStranger = "bridge.search-stranger"
     /// Helping Laura with the medical kit, at mid-span (M4).
@@ -168,7 +168,7 @@ struct Level {
   /// From the camera's target to the camera.
   let cameraOffset: SIMD3<Float>
   /// The camera's vertical field of view, in degrees.
-  var fieldOfView: Float = 42
+  let fieldOfView: Float
   /// The lights, from the level's layout file (ADR 0002).
   var lights: [Light] = []
   /// The first line a run shows.
@@ -198,10 +198,6 @@ struct Level {
       preconditionFailure("\(id) has no spawn point for \(member.rawValue).")
     }
     return point
-  }
-
-  func interaction(_ action: ActionID) -> Interaction? {
-    interactions.first { $0.id == action }
   }
 
   /// Movement blockers: the scenery, points of interest and the ground's edges. The flat-floor

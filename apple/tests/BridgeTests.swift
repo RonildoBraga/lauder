@@ -417,46 +417,8 @@ struct BridgeTests {
   // MARK: - Helpers
 
   /// A layout name as the scene file has it: USD allows only letters, digits and underscores, so
-  /// `car-a1 body` is `car_a1_body` there.
+  /// `brooklyn-tower-pier block` is `brooklyn_tower_pier_block` there.
   private static func sceneName(_ name: String) -> String {
     String(name.map { $0.isASCII && ($0.isLetter || $0.isNumber) ? $0 : "_" })
-  }
-
-  /// Steer the leader straight to a point, reporting each new line the HUD shows.
-  private func walk(
-    _ world: GameWorld, to point: SIMD2<Float>, onLine: (String) -> Void = { _ in }
-  ) {
-    var line = world.observation
-    for _ in 0..<(60 * 120) {
-      let offset = point - position(world, world.session.leader)
-      if simd_length(offset) < 0.15 { return }
-      world.advanceParty(movement: stick(towards: offset), deltaTime: 1 / 60)
-      if world.observation != line {
-        line = world.observation
-        onLine(line)
-      }
-    }
-  }
-
-  /// Screen-relative stick axes for a world direction under the bridge's camera.
-  private func stick(towards direction: SIMD2<Float>) -> SIMD2<Float> {
-    let offset = BrooklynBridge.cameraOffset
-    let forward = -simd_normalize(SIMD2(offset.x, offset.z))
-    let right = SIMD2(-forward.y, forward.x)
-    let unit = simd_normalize(direction)
-    // Slow down for the last metre so the walk stops close to the point.
-    let strength = min(1, max(0.35, simd_length(direction)))
-    return SIMD2(simd_dot(unit, right), simd_dot(unit, forward)) * strength
-  }
-
-  private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {
-    guard let body = world.root.findEntity(named: "party.\(member.rawValue)") else {
-      return [.nan, .nan]
-    }
-    return SIMD2(body.position.x, body.position.z)
-  }
-
-  private func count(_ entity: Entity) -> Int {
-    1 + entity.children.reduce(0) { $0 + count($1) }
   }
 }

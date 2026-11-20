@@ -1,7 +1,6 @@
 import Foundation
 import GameController
 import Observation
-import simd
 
 @MainActor
 @Observable
@@ -111,7 +110,8 @@ final class GameControls {
     touchGeneration = touchInput.generation
   }
 
-  // Buttons are fresh press intents; callers must not detect the same edges again.
+  /// This frame's input. Buttons are fresh press intents; callers must not detect the same edges
+  /// again.
   func sample(mode: GameSession.Mode) -> Input {
     guard isActive, status == .ready else { return .neutral }
     let keyboard = GCKeyboard.coalesced?.keyboardInput
@@ -119,21 +119,18 @@ final class GameControls {
       keyboard?.button(forKeyCode: code)?.isPressed ?? false
     }
     let touch = touchControlsEnabled ? touchInput.sample() : InputRules.Raw()
+    // The controller counts only while the touch controls are off.
+    let pad = touchControlsEnabled ? nil : gamepad
     var raw = InputRules.Raw(
-      stick: SIMD2(
-        touchControlsEnabled ? 0 : gamepad?.leftThumbstick.xAxis.value ?? 0,
-        touchControlsEnabled ? 0 : gamepad?.leftThumbstick.yAxis.value ?? 0
-      ),
-      controllerAction: !touchControlsEnabled && (gamepad?.buttonA.isPressed ?? false),
-      controllerPause: !touchControlsEnabled && (gamepad?.buttonMenu.isPressed ?? false),
-      controllerSwitch: !touchControlsEnabled && (gamepad?.rightShoulder.isPressed ?? false),
-      controllerFire: !touchControlsEnabled && (gamepad?.rightTrigger.isPressed ?? false),
-      controllerFormation: !touchControlsEnabled && (gamepad?.buttonY.isPressed ?? false),
-      controllerPanel: !touchControlsEnabled && (gamepad?.buttonB.isPressed ?? false),
-      dpadUp: !touchControlsEnabled && (gamepad?.dpad.up.isPressed ?? false),
-      dpadDown: !touchControlsEnabled && (gamepad?.dpad.down.isPressed ?? false),
-      dpadLeft: !touchControlsEnabled && (gamepad?.dpad.left.isPressed ?? false),
-      dpadRight: !touchControlsEnabled && (gamepad?.dpad.right.isPressed ?? false),
+      stick: SIMD2(pad?.leftThumbstick.xAxis.value ?? 0, pad?.leftThumbstick.yAxis.value ?? 0),
+      controllerAction: pad?.buttonA.isPressed == true,
+      controllerPause: pad?.buttonMenu.isPressed == true,
+      controllerSwitch: pad?.rightShoulder.isPressed == true,
+      controllerFire: pad?.rightTrigger.isPressed == true,
+      controllerFormation: pad?.buttonY.isPressed == true,
+      controllerPanel: pad?.buttonB.isPressed == true,
+      dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
+      dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
@@ -150,16 +147,11 @@ final class GameControls {
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
     #endif
-    let deadZone = Movement.deadZone
     if raw.hasKeyboardInput {
       showKeyboard()
     } else if touchControlsEnabled {
       showTouch()
-    } else if let gamepad,
-      simd_length_squared(raw.stick) > deadZone * deadZone
-        || raw.controllerAction || raw.controllerPause || raw.controllerSwitch
-        || raw.controllerFire || raw.controllerFormation || raw.hasDpad
-    {
+    } else if let gamepad, raw.hasControllerInput {
       showController(gamepad)
     }
     return resolve(raw, mode: mode)

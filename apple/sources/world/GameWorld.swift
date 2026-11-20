@@ -108,7 +108,7 @@ final class GameWorld {
   @ObservationIgnored private var landmarkFade = LandmarkFade()
   @ObservationIgnored private var cameraElapsed: Float = 0
   @ObservationIgnored private var unsimulatedTime: Float = 0
-  // The level's fights (ADR 0004, M2).
+  /// The level's fights (ADR 0004, M2).
   @ObservationIgnored private let stage: EncounterStage
   @ObservationIgnored private var fireHeld = false
   @ObservationIgnored private var firePressPending = false
@@ -162,7 +162,7 @@ final class GameWorld {
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
-    cameraTarget = Self.startingCameraTarget(level)
+    cameraTarget = Self.cameraTarget(over: level.spawn(level.party[0]))
     let style = SceneStyle(
       markerScale: SceneStyle.markerScale(
         cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
@@ -184,12 +184,9 @@ final class GameWorld {
       }
     }
     landmarkFade = LandmarkFade(look: root)
-    // Every action the session can refer to here must be defined exactly once, checked at load.
-    for interaction in level.interactions {
-      precondition(
-        level.interactions.filter { $0.id == interaction.id }.count == 1,
-        "\(level.id) defines \(interaction.id.rawValue) more than once.")
-    }
+    // The session refers to each action by its name, so no action is defined twice.
+    let actions = level.interactions.map(\.id)
+    precondition(Set(actions).count == actions.count, "\(level.id) defines an action twice.")
     root.addChild(stage.container)
     style.addLights(level.lights, to: root)
     camera.camera.fieldOfViewInDegrees = level.fieldOfView
@@ -201,11 +198,8 @@ final class GameWorld {
       body.name = "party.\(member.rawValue)"
       let visual = style.partyMember(member)
       body.addChild(visual)
-      let marker = ModelEntity(
-        mesh: .generateCylinder(height: 0.015, radius: 0.34), materials: [style.warm])
+      let marker = style.leaderMarker()
       marker.name = "\(member.rawValue).marker"
-      marker.position.y = -PartyBody.height / 2 + 0.025
-      marker.scale = [style.markerScale, 1, style.markerScale]
       body.addChild(marker)
       bodies[member] = body
       visuals[member] = visual
@@ -234,7 +228,7 @@ final class GameWorld {
   }
 
   /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
-  /// 0006). It loads once, while the world is made; Restart keeps it.
+  /// 0002). It loads once, while the world is made; Restart keeps it.
   private static func loadScene(named name: String, for level: Level) -> Entity {
     do {
       let scene = try Entity.load(named: name, in: .main)
@@ -245,9 +239,10 @@ final class GameWorld {
     }
   }
 
-  private static func startingCameraTarget(_ level: Level) -> SIMD3<Float> {
-    let start = level.spawn(level.party[0])
-    return [start.x, PartyBody.height / 2 + 0.1, start.y]
+  /// Where the camera looks while it is settled behind a leader standing at this point: just
+  /// above the body's centre.
+  private static func cameraTarget(over point: SIMD2<Float>) -> SIMD3<Float> {
+    [point.x, PartyBody.height / 2 + 0.1, point.y]
   }
 
   func attach(_ subscription: EventSubscription) {
@@ -270,7 +265,8 @@ final class GameWorld {
     updateActivity()
   }
 
-  // The next active step observes the preceding collision-checked body positions.
+  /// The scene's update: this frame's input, sampled in the session's mode, then `update`. Each
+  /// active step starts from the body positions that the one before checked against collisions.
   func step(deltaTime: TimeInterval) {
     MainActor.preconditionIsolated()
     guard isPresented, isApplicationActive else { return }
@@ -380,10 +376,9 @@ final class GameWorld {
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
   /// prompt left over from before a move or a switch cannot act.
   func performAction() {
-    guard session.mode == .exploring, !stage.holdsParty, let body = bodies[session.leader] else {
-      return
-    }
-    let position = SIMD2(body.position.x, body.position.z)
+    guard session.mode == .exploring, !stage.holdsParty,
+      let position = self.position(of: session.leader)
+    else { return }
     let here = level.interactions.filter { $0.approach.contains(position) }
     // Several actions can share an approach; the one offered now comes first.
     if let interaction = here.first(where: { session.offers($0.id) }) ?? here.first {
@@ -414,20 +409,10 @@ final class GameWorld {
   /// beginning of a run. Nothing is rebuilt or reloaded.
   func restart() {
     session.restart()
-    stage.reset()
     retryElapsed = nil
     retrySpot = nil
     fade = 0
-    threat = nil
-    weaponDrawn = false
-    fireHeld = false
-    firePressPending = false
     placeParty()
-    squadLeader = session.leader
-    route = RouteMemory(start: level.spawn(session.leader))
-    planner = SquadPlanner(heading: level.heading)
-    motors = Self.freshMotors()
-    companionTargets = [:]
     diagnostic = nil
     refusedOrders = 0
     touchMark = nil
@@ -435,11 +420,6 @@ final class GameWorld {
     refusalCross.isEnabled = false
     toldWhoIsMissing = false
     showOrders()
-    cameraStart = nil
-    cameraElapsed = 0
-    cameraLean = .zero
-    cameraTarget = Self.startingCameraTarget(level)
-    unsimulatedTime = 0
     skipNextStep = true
     observation = level.opening
     nearby = nil
@@ -448,17 +428,39 @@ final class GameWorld {
     objectiveAge = 0
     lineIsFresh = true
     objectiveIsFresh = true
-    updateCamera(deltaTime: 0)
-    updateNearby()
+    resetPlay(around: level.spawn(session.leader))
     // Like Resume, the new run waits for every button, key and finger to be released.
     controls.requireNeutralInput()
+  }
+
+  /// What Restart and an encounter's retry both put back, once the leader stands at `spot`:
+  /// the fights as they began, with the weapon holstered, the squad's movement around the
+  /// leader, and the camera settled behind them.
+  private func resetPlay(around spot: SIMD2<Float>) {
+    stage.reset()
+    threat = nil
+    weaponDrawn = false
+    fireHeld = false
+    firePressPending = false
+    squadLeader = session.leader
+    route = RouteMemory(start: spot)
+    planner = SquadPlanner(heading: level.heading)
+    motors = Self.freshMotors()
+    companionTargets = [:]
+    unsimulatedTime = 0
+    cameraStart = nil
+    cameraElapsed = 0
+    cameraLean = .zero
+    cameraTarget = Self.cameraTarget(over: spot)
+    updateCamera(deltaTime: 0)
+    updateNearby()
   }
 
   /// Every body at its spawn point, facing the level's starting direction. Members who have
   /// not joined yet stay out of the squad, and hidden unless they lie hurt where they wait. A
   /// lying member lies across that direction, which the camera looks along, so the pose reads.
   private func placeParty() {
-    let facing = atan2(-level.heading.x, -level.heading.y)
+    let facing = Movement.yaw(towards: level.heading)
     lying = level.lying
     for member in PartyMember.allCases {
       place(member, at: level.spawn(member))
@@ -468,8 +470,9 @@ final class GameWorld {
     showLeaderMarker()
   }
 
-  // Production spatial update, also exercised by deterministic route/soak tests.
-  // Input availability, Pause and fresh-edge handling remain in step/InputRules.
+  /// The party's movement, the fight, the camera and the HUD's lines for one frame of play, as in
+  /// production; deterministic route and soak tests drive it too. Input availability, Pause and
+  /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
     movement: SIMD2<Float>, fireHeld: Bool = false, firePressed: Bool = false, deltaTime: Float
   ) {
@@ -499,7 +502,7 @@ final class GameWorld {
     if squadLeader != session.leader { changeLeader() }
     pinHolds()
     let leader = session.leader
-    guard let leaderBody = bodies[leader] else { return }
+    guard let leaderStart = position(of: leader) else { return }
     let motion = self.motion
     let grid = self.grid
     // A scripted scene holds the party where they stand, whoever leads; only its cues place and
@@ -508,11 +511,10 @@ final class GameWorld {
     let movement = held ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
-    let leaderStart = SIMD2(leaderBody.position.x, leaderBody.position.z)
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
     if simd_length_squared(leaderDelta) > 0.000001 {
-      setYaw(leader, atan2(-leaderDelta.x, -leaderDelta.y))
+      setYaw(leader, Movement.yaw(towards: leaderDelta))
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
@@ -551,11 +553,10 @@ final class GameWorld {
         var motor = motors[member]
       else { continue }
       let order = session.order(of: member)
-      var context = CompanionMotor.Context(
+      let context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
-        speed: PartyBody.speed, dt: dt)
-      context.targetMoves = order == .following
+        speed: PartyBody.speed, dt: dt, targetMoves: order == .following)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
@@ -660,8 +661,7 @@ final class GameWorld {
 
   /// Up to `orderReach` ahead along the leader's facing, shortened by the first wall.
   private func pointAhead(of leader: SIMD2<Float>) -> SIMD2<Float> {
-    let angle = yaw[session.leader] ?? 0
-    let heading = SIMD2(-sin(angle), -cos(angle))
+    let heading = Movement.facing(yaw: yaw[session.leader] ?? 0)
     let far = leader + heading * Self.orderReach
     if motion.canTraverse(from: leader, to: far) { return far }
     var clear: Float = 0
@@ -729,9 +729,9 @@ final class GameWorld {
     -> (along: SIMD2<Float>, across: SIMD2<Float>)
   {
     let offset = point - leader
-    let angle = yaw[session.leader] ?? 0
     let along =
-      simd_length(offset) > 0.01 ? simd_normalize(offset) : SIMD2(-sin(angle), -cos(angle))
+      simd_length(offset) > 0.01
+      ? simd_normalize(offset) : Movement.facing(yaw: yaw[session.leader] ?? 0)
     return (along, SIMD2(-along.y, along.x))
   }
 
@@ -756,21 +756,11 @@ final class GameWorld {
   /// What the ray through a touch order's point meets first: one of the level's blocks, or the
   /// ground; nil when it meets neither.
   private func firstHit(at screen: InputRules.ScreenPoint) -> SIMD3<Float>? {
-    let camera = projection(aspect: screen.aspect)
-    guard let direction = camera.direction(atScreen: [screen.x, screen.y]) else { return nil }
-    var nearest = direction.y < -0.0001 ? -camera.eye.y / direction.y : Float.infinity
     let blocks =
-      level.boxes.map { ($0.position, $0.size) }
-      + level.points.map { ($0.position + [0, $0.size.y / 2, 0], $0.size) }
-    for (centre, size) in blocks {
-      if let distance = camera.entry(
-        along: direction, minimum: centre - size / 2, maximum: centre + size / 2),
-        distance < nearest
-      {
-        nearest = distance
-      }
-    }
-    return nearest.isFinite ? camera.eye + direction * nearest : nil
+      level.boxes.map { (centre: $0.position, size: $0.size) }
+      + level.points.map { (centre: $0.position + [0, $0.size.y / 2, 0], size: $0.size) }
+    return projection(aspect: screen.aspect).firstHit(
+      atScreen: [screen.x, screen.y], blocks: blocks)
   }
 
   /// Companions told to hold where they are hold where they stand now.
@@ -799,6 +789,7 @@ final class GameWorld {
       fieldOfView: level.fieldOfView, aspect: aspect)
   }
 
+  /// Where a member's body stands on the ground.
   private func position(of member: PartyMember) -> SIMD2<Float>? {
     bodies[member].map { SIMD2($0.position.x, $0.position.z) }
   }
@@ -806,8 +797,7 @@ final class GameWorld {
   /// A trigger area shows its line the first time the leader walks into it in a run, and an
   /// encounter's area begins its fight once its beat is next.
   private func checkTriggers() {
-    guard retryElapsed == nil, let body = bodies[session.leader] else { return }
-    let position = SIMD2(body.position.x, body.position.z)
+    guard retryElapsed == nil, let position = self.position(of: session.leader) else { return }
     for trigger in level.triggers where trigger.area.contains(position) {
       if session.fire(trigger.id) { observation = trigger.line }
     }
@@ -816,7 +806,7 @@ final class GameWorld {
       guard case .area(let area) = encounter.start, area.contains(position) else { continue }
       // A scene for the whole party, such as the end of the opening, waits until everyone is
       // close; companions holding elsewhere must be called back first.
-      if encounter.gathersParty, encounter.beat.rawValue == session.beat.rawValue + 1 {
+      if encounter.gathersParty, encounter.beat == session.nextBeat {
         inGatheringArea = true
         let missing = session.companions.filter { member in
           guard let point = self.position(of: member) else { return true }
@@ -845,20 +835,17 @@ final class GameWorld {
   /// world turns the leader, shows lines and the threat, and starts a retry after the last hit.
   /// Only Miki carries the carbine, and not while a scene holds her.
   private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
-    let angle = yaw[leader] ?? 0
     let armed = leader == .miki && !stage.holdsParty
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
-        bodies[member].flatMap {
-          $0.isEnabled ? (member, SIMD2($0.position.x, $0.position.z)) : nil
-        }
+        bodies[member]?.isEnabled == true ? self.position(of: member).map { (member, $0) } : nil
       })
     let outcome = stage.step(
-      dt: dt, leader: position, facing: SIMD2(-sin(angle), -cos(angle)),
+      dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
       fireHeld: armed && fireHeld, firePressed: armed && firePressPending, figures: figures,
       session: session)
     firePressPending = false
-    if let facing = outcome.facing { setYaw(leader, atan2(-facing.x, -facing.y)) }
+    if let facing = outcome.facing { setYaw(leader, Movement.yaw(towards: facing)) }
     if let line = outcome.line { observation = line }
     for member in outcome.appeared { appear(member) }
     for member in outcome.stood {
@@ -866,7 +853,7 @@ final class GameWorld {
       showPose(member)
     }
     if let shooter = outcome.shooter {
-      setYaw(shooter.member, atan2(-shooter.facing.x, -shooter.facing.y))
+      setYaw(shooter.member, Movement.yaw(towards: shooter.facing))
     }
     if let (first, second) = outcome.face { faceEachOther(first, second) }
     let threat = stage.threat
@@ -878,27 +865,26 @@ final class GameWorld {
   /// A member who has not joined appears where they wait, turned towards the nearest hostile
   /// in the open, or else towards the leader.
   private func appear(_ member: PartyMember) {
-    guard let body = bodies[member] else { return }
+    guard let body = bodies[member], let here = position(of: member) else { return }
     body.isEnabled = true
-    let here = SIMD2(body.position.x, body.position.z)
     let standing = stage.hostiles.values.filter { $0.isVisible && !$0.isDown }.map(\.position)
-    let leaderPosition = bodies[session.leader].map { SIMD2($0.position.x, $0.position.z) }
     let focus =
       standing.min { simd_distance_squared($0, here) < simd_distance_squared($1, here) }
-      ?? leaderPosition
+      ?? position(of: session.leader)
     if let focus, simd_distance(focus, here) > 0.01 {
-      let offset = focus - here
-      setYaw(member, atan2(-offset.x, -offset.y))
+      setYaw(member, Movement.yaw(towards: focus - here))
     }
   }
 
   /// Two members turn to face each other, as before a conversation.
   private func faceEachOther(_ first: PartyMember, _ second: PartyMember) {
-    guard first != second, let a = bodies[first], let b = bodies[second] else { return }
-    let offset = SIMD2(b.position.x - a.position.x, b.position.z - a.position.z)
+    guard first != second, let a = position(of: first), let b = position(of: second) else {
+      return
+    }
+    let offset = b - a
     guard simd_length(offset) > 0.01 else { return }
-    setYaw(first, atan2(-offset.x, -offset.y))
-    setYaw(second, atan2(offset.x, offset.y))
+    setYaw(first, Movement.yaw(towards: offset))
+    setYaw(second, Movement.yaw(towards: -offset))
   }
 
   /// The encounter starts again after the leader's last allowed hit: the screen fades out,
@@ -923,26 +909,10 @@ final class GameWorld {
 
   private func performRetry() {
     session.retryEncounter()
-    stage.reset()
-    threat = nil
-    weaponDrawn = false
-    fireHeld = false
-    firePressPending = false
-    let leader = session.leader
-    let spot = retrySpot ?? level.spawn(leader)
-    place(leader, at: spot)
-    setYaw(leader, atan2(-level.heading.x, -level.heading.y))
-    squadLeader = leader
-    route = RouteMemory(start: spot)
-    planner = SquadPlanner(heading: level.heading)
-    motors = Self.freshMotors()
-    companionTargets = [:]
-    unsimulatedTime = 0
-    cameraStart = nil
-    cameraLean = .zero
-    cameraTarget = [spot.x, PartyBody.height / 2 + 0.1, spot.y]
-    updateCamera(deltaTime: 0)
-    updateNearby()
+    let spot = retrySpot ?? level.spawn(session.leader)
+    place(session.leader, at: spot)
+    setYaw(session.leader, Movement.yaw(towards: level.heading))
+    resetPlay(around: spot)
     observation = "Try again."
   }
 
@@ -950,11 +920,9 @@ final class GameWorld {
     let previous = squadLeader
     let leader = session.leader
     squadLeader = leader
-    if let body = bodies[leader] { route.reset(to: SIMD2(body.position.x, body.position.z)) }
+    if let point = position(of: leader) { route.reset(to: point) }
     planner.reset()
-    for member in [previous, leader] {
-      motors[member] = CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: member))
-    }
+    for member in [previous, leader] { motors[member] = CompanionMotor(for: member) }
     showLeaderMarker()
   }
 
@@ -973,9 +941,9 @@ final class GameWorld {
   private func turn(_ member: PartyMember, moved delta: SIMD2<Float>, dt: Float) {
     let wanted: Float
     if simd_length(delta) > 0.2 * dt {
-      wanted = atan2(-delta.x, -delta.y)
+      wanted = Movement.yaw(towards: delta)
     } else if motors[member]?.isSettled == true {
-      wanted = atan2(-planner.heading.x, -planner.heading.y)
+      wanted = Movement.yaw(towards: planner.heading)
     } else {
       return
     }
@@ -1003,7 +971,7 @@ final class GameWorld {
   private var positions: [PartyMember: SIMD2<Float>] {
     Dictionary(
       uniqueKeysWithValues: session.party.compactMap { member in
-        bodies[member].map { (member, SIMD2($0.position.x, $0.position.z)) }
+        position(of: member).map { (member, $0) }
       })
   }
 
@@ -1014,11 +982,11 @@ final class GameWorld {
   }
 
   private func updateCamera(deltaTime: Float) {
-    guard let body = bodies[session.leader] else { return }
+    guard let leader = position(of: session.leader) else { return }
     // During a fight the target leans towards the threat, so both stay on screen.
-    let wanted = stage.cameraLean(leader: SIMD2(body.position.x, body.position.z))
+    let wanted = stage.cameraLean(leader: leader)
     cameraLean += (wanted - cameraLean) * min(1, deltaTime * Self.cameraLeanRate)
-    let target = body.position + [cameraLean.x, 0.1, cameraLean.y]
+    let target = Self.cameraTarget(over: leader + cameraLean)
     if let start = cameraStart {
       cameraElapsed = min(0.25, cameraElapsed + deltaTime)
       let amount = cameraElapsed / 0.25
@@ -1054,19 +1022,16 @@ final class GameWorld {
   }
 
   /// The compass to the goal for the story's beat: its name, the distance from the leader, and
-  /// its direction on screen. The camera looks along its offset's ground direction, so up the
-  /// screen is that direction and right is a quarter turn clockwise from it.
+  /// its direction on screen, turned from up the screen towards its right.
   private func updateCompass() {
     guard let goal = level.goals.last(where: { $0.beat <= session.beat })?.goal,
-      let leader = bodies[session.leader]
+      let leader = position(of: session.leader)
     else {
       if compass != nil { compass = nil }
       return
     }
-    let toward = goal.point - SIMD2(leader.position.x, leader.position.z)
-    let ground = SIMD2(level.cameraOffset.x, level.cameraOffset.z)
-    let forward = simd_length(ground) > 0.001 ? -simd_normalize(ground) : SIMD2<Float>(0, -1)
-    let right = SIMD2(-forward.y, forward.x)
+    let toward = goal.point - leader
+    let (forward, right) = Movement.axes(cameraOffset: level.cameraOffset)
     let degrees = (atan2(simd_dot(toward, right), simd_dot(toward, forward)) * 180 / .pi).rounded()
     let next = Compass(
       name: goal.name, metres: Int(simd_length(toward).rounded()), angle: degrees * .pi / 180)
@@ -1097,8 +1062,8 @@ final class GameWorld {
         leader: session.leader, party: session.party, positions: positions, mode: session.mode,
         firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
-        retrying: isRetrying, formation: session.formation, orders: session.orders,
-        refusedOrders: refusedOrders, camera: projection(aspect: PlaytestRunner.screenAspect))
+        formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
+        camera: projection(aspect: PlaytestRunner.screenAspect))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
@@ -1156,9 +1121,6 @@ final class GameWorld {
   }
 
   private static func freshMotors() -> [PartyMember: CompanionMotor] {
-    Dictionary(
-      uniqueKeysWithValues: PartyMember.allCases.map {
-        ($0, CompanionMotor(reactionDelay: CompanionMotor.reactionDelay(for: $0)))
-      })
+    Dictionary(uniqueKeysWithValues: PartyMember.allCases.map { ($0, CompanionMotor(for: $0)) })
   }
 }

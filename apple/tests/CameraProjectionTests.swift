@@ -6,7 +6,8 @@ import simd
 /// The camera's mapping between the screen and the ground, which touch orders use to mark the
 /// ground under the finger (ADR 0003, phase S3).
 struct CameraProjectionTests {
-  /// The bridge's camera over a leader at mid-span.
+  /// The bridge's earlier camera, 14 m from its target with a 42° lens, the one the world
+  /// markers were made for (SceneStyle.markerCamera), over a leader at mid-span.
   private static let camera = CameraProjection(
     eye: [-7, 10.95, -260.1], target: [-7, 0.95, -270], fieldOfView: 42, aspect: 2.16)
 

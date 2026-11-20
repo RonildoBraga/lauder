@@ -133,7 +133,8 @@ struct FirstFightTests {
     let offset = BrooklynBridge.cameraOffset
     let lean = {
       simd_length(
-        SIMD2(camera.position.x, camera.position.z) - position(world) - SIMD2(offset.x, offset.z))
+        SIMD2(camera.position.x, camera.position.z) - position(world, .miki)
+          - SIMD2(offset.x, offset.z))
     }
     walk(world, to: [6.5, 18])
     #expect(abs(lean()) < 0.01)
@@ -168,7 +169,7 @@ struct FirstFightTests {
     walk(world, to: [6.5, 15])
     walk(world, to: [6.5, 30])
     let stranger = BrooklynBridge.stranger
-    #expect(simd_distance(position(world), stranger.standAt) > stranger.range)
+    #expect(simd_distance(position(world, .miki), stranger.standAt) > stranger.range)
     for _ in 0..<2 {
       #expect(run(world, upTo: 4) { world.threat != nil })
       #expect(run(world, upTo: 2) { world.threat == nil })
@@ -214,7 +215,7 @@ struct FirstFightTests {
     #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
     #expect(!world.session.inEncounter && world.session.firedTriggers == fired)
     let retryAt = try #require(BrooklynBridge.strangerEncounter.retryAt)
-    #expect(simd_distance(position(world), retryAt) < 0.01)
+    #expect(simd_distance(position(world, .miki), retryAt) < 0.01)
     #expect(try #require(world.root.findEntity(named: "hostile.stranger")).isEnabled == false)
     #expect(count(world.root) == entities)
     // Walking back in plays the fight again from its start, deliberate miss and all.
@@ -246,67 +247,12 @@ struct FirstFightTests {
       #expect(!world.weaponDrawn && !world.showsWeapon && world.threat == nil)
       #expect(!world.isRetrying && world.fade == 0)
       #expect(world.observation == BrooklynBridge.level.opening)
-      #expect(position(world) == BrooklynBridge.level.spawn(.miki))
+      #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
       // The camera no longer leans towards the fight.
-      let behind = camera.position.z - position(world).y
+      let behind = camera.position.z - position(world, .miki).y
       #expect(abs(behind - BrooklynBridge.cameraOffset.z) < 0.001)
       #expect(!body.isEnabled)
       #expect(count(world.root) == entities)
     }
-  }
-
-  // MARK: - Helpers
-
-  /// Run the world until the condition holds, for at most the given time, and say whether it
-  /// held. Fire is pressed on the first frame and held throughout. An encounter's retry runs
-  /// through the frame update, as it does in play.
-  @discardableResult
-  private func run(
-    _ world: GameWorld, upTo seconds: Float, fire: Bool = false,
-    until done: () -> Bool = { false }
-  ) -> Bool {
-    var pressed = fire
-    for _ in 0..<Int(seconds * 60) {
-      if done() { return true }
-      if world.isRetrying {
-        world.update(with: .neutral, sampledIn: world.session.mode, deltaTime: 1 / 60)
-      } else {
-        world.advanceParty(
-          movement: .zero, fireHeld: fire, firePressed: pressed, deltaTime: 1 / 60)
-        pressed = false
-      }
-    }
-    return done()
-  }
-
-  private func pressPause(_ world: GameWorld) {
-    let pause = InputRules.Input(
-      movement: .zero, actionPressed: false, pausePressed: true, switchPressed: false)
-    world.update(with: pause, sampledIn: world.session.mode, deltaTime: 1 / 60)
-  }
-
-  /// Steer the leader straight to a point, slowing for the last metre.
-  private func walk(_ world: GameWorld, to point: SIMD2<Float>) {
-    let offset = BrooklynBridge.cameraOffset
-    let forward = -simd_normalize(SIMD2(offset.x, offset.z))
-    let right = SIMD2(-forward.y, forward.x)
-    for _ in 0..<(60 * 120) {
-      let towards = point - position(world)
-      if simd_length(towards) < 0.15 { return }
-      let unit = simd_normalize(towards)
-      let strength = min(1, max(0.35, simd_length(towards)))
-      world.advanceParty(
-        movement: SIMD2(simd_dot(unit, right), simd_dot(unit, forward)) * strength,
-        deltaTime: 1 / 60)
-    }
-  }
-
-  private func position(_ world: GameWorld) -> SIMD2<Float> {
-    guard let body = world.root.findEntity(named: "party.miki") else { return [.nan, .nan] }
-    return SIMD2(body.position.x, body.position.z)
-  }
-
-  private func count(_ entity: Entity) -> Int {
-    1 + entity.children.reduce(0) { $0 + count($1) }
   }
 }

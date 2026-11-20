@@ -17,15 +17,15 @@ struct CompanionMotor {
   static let stallLimit: Float = 1
   static let retryInterval: Float = 1
 
-  /// Delay before moving off from a settled stop; a little personality (ADR 0003).
-  let reactionDelay: Float
-  private(set) var velocity: SIMD2<Float> = .zero
   private(set) var isSettled = false
-  /// Gave up after repeated failed routes and waits before trying again.
-  private(set) var isHolding = false
   /// Set from the first give-up until the companion has moved freely again for a second;
   /// the HUD names the companion meanwhile.
   private(set) var cannotReach = false
+  /// Delay before moving off from a settled stop; a little personality (ADR 0003).
+  private let reactionDelay: Float
+  private var velocity: SIMD2<Float> = .zero
+  /// Gave up after repeated failed routes and waits before trying again.
+  private var isHolding = false
   private var wait: Float = 0
   private var route: [SIMD2<Float>] = []
   private var routeGoal: SIMD2<Float>?
@@ -36,16 +36,14 @@ struct CompanionMotor {
   private var failures = 0
   private var sinceRetry: Float = 0
 
-  init(reactionDelay: Float) {
-    self.reactionDelay = reactionDelay
-  }
-
-  static func reactionDelay(for member: PartyMember) -> Float {
-    switch member {
-    case .laura: 0.1
-    case .miki: 0.15
-    case .tom: 0.2
-    }
+  /// A motor with the member's own reaction delay.
+  init(for member: PartyMember) {
+    reactionDelay =
+      switch member {
+      case .laura: 0.1
+      case .miki: 0.15
+      case .tom: 0.2
+      }
   }
 
   struct Context {
@@ -57,7 +55,7 @@ struct CompanionMotor {
     let dt: Float
     /// How the target moves: with the leader for a formation place, not at all for a point an
     /// order marked (ADR 0003, phase S3).
-    var targetMoves = true
+    let targetMoves: Bool
   }
 
   /// The movement this companion asks for in this step.

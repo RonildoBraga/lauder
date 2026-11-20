@@ -10,7 +10,8 @@ import simd
 /// (BrooklynBridgeLayout.swift), which Blender exports (ADR 0002). This file adds the words: what
 /// each place is called and what it says.
 enum BrooklynBridge {
-  /// Where each tower's centre stands along the deck.
+  /// Where each tower's centre stands along the deck. Since this file names the piers, Blender's
+  /// export refuses to drop them.
   static var brooklynTower: Float { layout.box(named: "brooklyn-tower-pier").position.z }
   static var manhattanTower: Float { layout.box(named: "manhattan-tower-pier").position.z }
   /// The camera stands high and far, as the visual direction sets out, and looks straight along
@@ -29,8 +30,8 @@ enum BrooklynBridge {
   /// The stranger (M2). He waits unseen behind the first tower's pier, steps out beyond the
   /// north end of its east arch as Miki comes within about 10 m through the arch, and after her
   /// "Friendly!" opens fire. His first shot is a deliberate miss. Out on the snow only the pier
-  /// gives cover, to whoever keeps it between them. His reach, like her carbine's, is about what
-  /// the camera shows ahead of her, so neither is hit from off screen.
+  /// gives cover, to whoever keeps it between them. His reach, like her carbine's, is less than
+  /// the 19 m or so that the camera shows ahead of her, so neither is hit from off screen ahead.
   static let stranger = Level.Hostile(
     id: "stranger", name: "The stranger", hiddenAt: layout.marker(named: "stranger.hidden"),
     standAt: layout.marker(named: "stranger.stand"), hits: 2, windUp: 1.5, recovery: 1.4,

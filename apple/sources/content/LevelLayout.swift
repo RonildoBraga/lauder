@@ -60,7 +60,7 @@ extension Level {
     let areas: [Area]
     let markers: [Marker]
     let camera: Camera
-    /// The visual direction allows at most two lights, with at most one casting shadows.
+    /// The visual direction allows at most four lights, with at most one casting shadows.
     let lights: [Light]
 
     func box(named name: String) -> Box {
@@ -68,13 +68,6 @@ extension Level {
         preconditionFailure("The layout has no box named \(name).")
       }
       return box
-    }
-
-    func landmark(named name: String) -> Landmark {
-      guard let landmark = landmarks.first(where: { $0.name == name }) else {
-        preconditionFailure("The layout has no landmark named \(name).")
-      }
-      return landmark
     }
 
     func area(named name: String) -> PartyMotion.Box {

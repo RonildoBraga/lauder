@@ -8,7 +8,7 @@ enum MissionScript {
     let text: String
   }
 
-  enum Conversation: String, CaseIterable, Sendable {
+  enum Conversation: Sendable {
     /// On the bridge, after Tom's shot (ADR 0004, M3). When it ends, Tom joins.
     case metTom
     /// At mid-span, once Laura is on her feet (M4). When it ends, she joins.

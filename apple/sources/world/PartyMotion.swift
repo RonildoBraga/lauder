@@ -25,10 +25,10 @@ struct PartyMotion {
     let normal: Vector
   }
 
-  // A resolved contact is stored as Float, which rounds each coordinate by up to half the
-  // Float spacing there: a fraction of a micrometre near the origin, about 15 µm at the
-  // bridge's Manhattan end, 500 m away. The clearance check allows one spacing at the points
-  // it checks, and never less than a micrometre, all far inside the 2 mm skin.
+  /// A resolved contact is stored as Float, which rounds each coordinate by up to half the
+  /// Float spacing there: a fraction of a micrometre near the origin, about 15 µm at the
+  /// bridge's Manhattan end, 500 m away. The clearance check allows one spacing at the points
+  /// it checks, and never less than a micrometre, all far inside the 2 mm skin.
   private static let clearanceTolerance = 0.000001
   private static let arithmeticTolerance = 0.000000000001
   private let obstacles: [Bounds]

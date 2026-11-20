@@ -1,7 +1,5 @@
 #if DEBUG
-  import RealityKit
   import Testing
-  import simd
 
   @testable import Lauder
 
@@ -25,7 +23,7 @@
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
         runner.record(
           PlaytestRunner.Frame(
-            dt: dt, leader: world.session.leader, positions: positions(world),
+            dt: dt, leader: world.session.leader, positions: world.playtestSnapshot.positions,
             targets: world.companionTargets, warning: world.diagnostic,
             simulationMilliseconds: 0))
         frames += 1
@@ -47,19 +45,6 @@
       for name in PlaytestRunner.scenarioNames {
         #expect(PlaytestRunner.steps(for: name) != nil, "\(name)")
       }
-    }
-
-    /// The party's positions, as the rendered run records them; members yet to join are left out.
-    private func positions(_ world: GameWorld) -> [PartyMember: SIMD2<Float>] {
-      Dictionary(
-        uniqueKeysWithValues: world.session.party.map { ($0, position(world, $0)) })
-    }
-
-    private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {
-      guard let body = world.root.findEntity(named: "party.\(member.rawValue)") else {
-        return [.nan, .nan]
-      }
-      return SIMD2(body.position.x, body.position.z)
     }
   }
 #endif

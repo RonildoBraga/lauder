@@ -1,4 +1,3 @@
-import Foundation
 import RealityKit
 import Testing
 import simd
@@ -276,62 +275,5 @@ struct LauraTests {
   /// A stand-in lying face down: its head points along the deck, and it rests on it.
   private func isLying(_ visual: Entity) -> Bool {
     abs(visual.orientation.act([0, 1, 0]).y) < 0.01 && visual.position.y < -0.5
-  }
-
-  private func finishConversation(_ world: GameWorld) {
-    let press = InputRules.Input(
-      movement: .zero, actionPressed: true, pausePressed: false, switchPressed: false)
-    for _ in 0..<20 where world.session.mode == .dialogue {
-      world.update(with: press, sampledIn: .dialogue, deltaTime: 1 / 60)
-    }
-  }
-
-  /// Run the world until the condition holds, for at most the given time, and say whether it
-  /// held. Fire is pressed on the first frame and held throughout.
-  @discardableResult
-  private func run(
-    _ world: GameWorld, upTo seconds: Float, fire: Bool = false,
-    until done: () -> Bool = { false }
-  ) -> Bool {
-    var pressed = fire
-    for _ in 0..<Int(seconds * 60) {
-      if done() { return true }
-      if world.isRetrying {
-        world.update(with: .neutral, sampledIn: world.session.mode, deltaTime: 1 / 60)
-      } else {
-        world.advanceParty(
-          movement: .zero, fireHeld: fire, firePressed: pressed, deltaTime: 1 / 60)
-        pressed = false
-      }
-    }
-    return done()
-  }
-
-  /// Steer the leader straight to a point, slowing for the last metre. A scene that holds the
-  /// leader stops the walk where it is.
-  private func walk(_ world: GameWorld, to point: SIMD2<Float>) {
-    let offset = BrooklynBridge.cameraOffset
-    let forward = -simd_normalize(SIMD2(offset.x, offset.z))
-    let right = SIMD2(-forward.y, forward.x)
-    for _ in 0..<(60 * 120) where world.session.mode == .exploring {
-      let towards = point - position(world, world.session.leader)
-      if simd_length(towards) < 0.15 { return }
-      let unit = simd_normalize(towards)
-      let strength = min(1, max(0.35, simd_length(towards)))
-      world.advanceParty(
-        movement: SIMD2(simd_dot(unit, right), simd_dot(unit, forward)) * strength,
-        deltaTime: 1 / 60)
-    }
-  }
-
-  private func position(_ world: GameWorld, _ member: PartyMember) -> SIMD2<Float> {
-    guard let body = world.root.findEntity(named: "party.\(member.rawValue)") else {
-      return [.nan, .nan]
-    }
-    return SIMD2(body.position.x, body.position.z)
-  }
-
-  private func count(_ entity: Entity) -> Int {
-    1 + entity.children.reduce(0) { $0 + count($1) }
   }
 }

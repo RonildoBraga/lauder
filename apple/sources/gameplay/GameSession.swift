@@ -9,7 +9,7 @@ final class GameSession {
   }
 
   /// The opening's story beats, in order (ADR 0004). Each begins once, after the one before.
-  enum Beat: Int, CaseIterable, Comparable, Sendable {
+  enum Beat: Int, Comparable, Sendable {
     case alone, stranger
     /// Searching the stranger's body begins the ambush (M3).
     case ambush
@@ -296,12 +296,13 @@ final class GameSession {
     return firedTriggers.insert(trigger).inserted
   }
 
+  /// The beat after the current one, the only one that can begin; nil after the last.
+  var nextBeat: Beat? { Beat(rawValue: beat.rawValue + 1) }
+
   /// An encounter's beat begins: only the next beat, only while exploring and only once. What
   /// the party has now is kept, so a retry can return to it.
   func beginEncounter(_ next: Beat) -> Bool {
-    guard mode == .exploring, checkpoint == nil, next.rawValue == beat.rawValue + 1 else {
-      return false
-    }
+    guard mode == .exploring, checkpoint == nil, next == nextBeat else { return false }
     checkpoint = Checkpoint(
       beat: beat, ammo: ammo, medicalKits: medicalKits, defeated: defeated, searched: searched,
       hitsDealt: hitsDealt)
