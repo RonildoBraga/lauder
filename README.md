@@ -39,13 +39,14 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
     world/                      RealityKit bodies, squad movement, fights, camera and scene presentation
     content/
       Level.swift               A playable place as a value, and the party's shared body
+      LevelLayout.swift         The shape of a layout file: where a level's parts stand, its camera and lights
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
       BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender
       BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender
       models/                   The party's and the hostiles' looks, exported by Blender from their models
       MissionScript.swift       Conversations; the lines are provisional
   tests/                        Party/session, movement, input, combat, layout and look tests
-    support/                    The squad tests' yard; not in the app target
+    support/                    The squad tests' yard and the helpers that play a world without rendering; not in the app target
   scripts/                      Simulator playtests, Play and the app icon
   .swift-format                 Swift formatting rules
 blender/                        The levels' Blender files, in levels/, the models, in assets/, and the Lauder extension for Blender, in extensions/lauder_levels, with its tests
