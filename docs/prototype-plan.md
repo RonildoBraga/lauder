@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Updated:** 21 November 2026\
-**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. What follows, the [later hardening](#later-hardening-after-the-loop-is-worth-keeping) and the [combat design review gate](#combat-design-review-gate), needs its own assignment.\
+**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. The combat design review has settled a [first squad combat experiment](decisions/0005-squad-combat-experiment.md). It and the [later hardening](#later-hardening-after-the-loop-is-worth-keeping) each need their own assignment.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -88,3 +88,11 @@ Combat stays occasional; exploration and salvage lead. The longer-term goal is a
 The characters' [combat identities](story/story-bible.md#combat-identities), the [future squad behaviour](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) record the working design. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation, formations, orders and phases S1 to S4, of which S1 to S3 are built, and [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) settles the opening's fights.
 
 Before any formation or combat implementation beyond the opening, settle the open design choices with the maintainer and obtain an explicit assignment for a bounded greybox experiment. A reviewer recommendation or a clean review alone is not an implementation assignment.
+
+On 21 November 2026 the maintainer settled the choices for a first experiment, which [ADR 0005](decisions/0005-squad-combat-experiment.md) records:
+- a test yard outside the story;
+- companions firing by themselves from their slots and order points;
+- a third hit on anyone falling the party back while enemies keep their damage;
+- Miki's Disrupt as the only signature.
+
+Building it needs its own assignment.
