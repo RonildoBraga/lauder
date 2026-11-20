@@ -1,7 +1,8 @@
 # ADR 0004 — The Brooklyn Bridge opening
 
 **Status:** Accepted\
-**Date:** 18 November 2026
+**Date:** 18 November 2026\
+**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world))
 
 ## Context
 
@@ -23,24 +24,23 @@ Gameplay comes first: the layout, the story's triggers, combat, scavenging, recr
 
 The bridge's road and towers are at their published sizes, from Wikipedia, Structurae and STRUCTURE magazine; the 1.8 km crossing as a whole is compressed to the stretch the player walks.
 
-- **The deck** is 644 m long and 25.9 m wide: two roadways of 10.3 m, each as wide as a tower's arch, either side of a 5.3 m median. Lane lines mark three lanes in each roadway, and the river lies 38.7 m below.
+- **The deck** is 644 m long and 25.9 m wide, as wide as the two roadways of 10.3 m, each as wide as a tower's arch, and the 5.3 m median between them. Snow has buried it, with the frozen river below, under a plain level with it, and an invisible edge at its width keeps the party on it.
 - **The towers** stand 486.3 m apart. Each is 43 m wide, 18 m deep and 47 m above the road, with arches 10.3 m wide and 35.7 m tall.
 - **Only the road and the towers** mimic the real bridge: there are no cables, suspenders or raised walkway. The floor is flat; slopes and climbing are out of scope.
-- **Abandoned cars, vans, trucks and a bus** shape the routes and give cover.
+- **Only the towers** stand above the snow, and they are the only cover: the first fight and the ambush happen at the first tower, around its pier.
 
 Each beat has its own stretch, so the player walks between them:
 
 | Stretch | From the Brooklyn end | Beat |
 |---|---|---|
-| Brooklyn approach | 0–50 m | Alone: movement, the camera, looking around |
-| Before the first tower | 50–90 m | The stranger: "Friendly!" and the first fight |
-| First tower | 90–118 m | Searching the body, the knife attack, Tom |
-| Mid-span | 118–586 m | Laura on the ground, at about 360 m; helping her |
+| Brooklyn approach | 0–90 m | Alone: movement, the camera, looking around |
+| First tower | 90–125 m | The stranger: "Friendly!" and the first fight; searching the body, the knife attack, Tom |
+| Mid-span | 125–586 m | Laura on the ground, at about 360 m; helping her |
 | Second tower to Manhattan | 586–644 m | Three together; the end of the opening |
 
 At the party's 2.6 m/s, the walks from the first tower to Laura and from Laura to the second tower each take about 90 s, and the whole crossing about four minutes. The navigation grid covers about 420,000 cells, built once at load.
 
-A position is a Float, whose spacing grows with its distance from the origin: about 30 µm at the Manhattan end. The check of a straight move allows one Float spacing at its points, never less than a micrometre, well inside the 2 mm collision skin, so a body stopped against a car far from the origin can still move away.
+A position is a Float, whose spacing grows with its distance from the origin: about 30 µm at the Manhattan end. The check of a straight move allows one Float spacing at its points, never less than a micrometre, well inside the 2 mm collision skin, so a body stopped against the edge far from the origin can still move away.
 
 ### 2. Levels are values
 
@@ -62,9 +62,9 @@ A `Level` value holds a place's floor, blocker boxes, points of interest, intera
 
 | Beat | Starts when | Timeline |
 |---|---|---|
-| Stranger | Miki nears the first tower's approach | The stranger steps out. Miki calls "Friendly!" He aims and fires a scripted near miss, and the HUD shows how to fire |
-| Ambushed | Miki starts searching the body | An attacker runs at her from behind a van. Tom, close by, drops him before he reaches her. Miki turns; a short exchange; Tom joins |
-| Laura found | The party nears mid-span | Laura lies beside a car, and Miki can **Help**. The exchange gives only her name. With the medical kit from the first body she can stand, and she joins |
+| Stranger | Miki comes through the first tower's arches | The stranger steps out from behind the pier. Miki calls "Friendly!" He aims and fires a scripted near miss, and the HUD shows how to fire |
+| Ambushed | Miki starts searching the body | An attacker runs at her out of the tower's west arch. Tom, coming out of the east arch, drops him before he reaches her. Miki turns; a short exchange; Tom joins |
+| Laura found | The party nears her, beyond mid-span | Laura lies in the snow, and Miki can **Help**. The exchange gives only her name. With the medical kit from the first body she can stand, and she joins |
 | Onwards | The three reach the Manhattan end | The party stops for a short closing exchange. It waits until both companions are within 5 m of the leader, so companions left holding must be called back first |
 
 ### 5. Combat, small and plain
@@ -72,7 +72,7 @@ A `Level` value holds a place's floor, blocker boxes, points of interest, intera
 The `combat` folder holds plain-Swift types that the world drives each step:
 
 - **Assisted aim.** **Fire** shoots at the assisted target, the nearest hostile ahead within range and in sight, marked on screen. The first press draws the weapon, which is holstered while exploring, so a quiet walk never starts a fight by accident. There is no manual aiming on a phone.
-- **Line of sight and cover.** A shot is a ray against the same blocker boxes that collision uses, so cars give real cover to both sides.
+- **Line of sight and cover.** A shot is a ray against the same blocker boxes that collision uses, so the towers give real cover to both sides.
 - **Enemies.** A small state machine for each enemy, defined as data: hidden, alert, attacking (a visible wind-up, then a shot) and down. The knife attacker approaches and strikes. The stranger's wind-up is long enough to teach the player to answer it.
 - **Damage.** The [placeholder hit rule](../encounters/the-quiet-yard.md#placeholder-hit-rule): Miki can take three hits, shown beside her name, and enemies two. On a third hit the screen fades and the encounter starts again, with nothing lost. It is a short retry in memory, not a save.
 - **Ammunition.** One count for Miki's carbine, shown on the HUD. Firing spends it, and searching bodies refills it. No reloading, weapon changes or upgrades.

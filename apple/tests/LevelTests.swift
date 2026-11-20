@@ -57,8 +57,10 @@ struct LevelTests {
     }
   }
 
+  /// On the buried bridge the way is open from the Brooklyn end to the Manhattan end, through
+  /// either arch of each tower, and an invisible edge keeps everyone on the road.
   @Test
-  func theBridgeConnectsBrooklynToManhattanThroughTheCollapsedDivider() throws {
+  func theBuriedBridgeIsOpenEndToEndWithinItsEdges() throws {
     let level = BrooklynBridge.level
     let grid = NavigationGrid(level: level)
     let start = level.spawn(.miki)
@@ -66,26 +68,23 @@ struct LevelTests {
     #expect(grid.region(at: start) != nil)
     #expect(grid.region(at: start) == grid.region(at: end))
     #expect(grid.route(from: start, to: end) != nil)
-    // The bus closes the east roadway from the divider to the railing, so the east lanes beyond
-    // it are reached only round the far end, and the gap in the divider is open.
-    let gap: SIMD2<Float> = [0, -227.15]
-    #expect(grid.isWalkable(gap))
     let motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
-    let bus = BrooklynBridge.layout.landmark(named: "bridge.bus")
-    let divider = BrooklynBridge.layout.box(named: "divider-north")
-    let railing = BrooklynBridge.layout.box(named: "railing-east")
-    let across = stride(
-      from: divider.position.x + divider.size.x / 2,
-      through: railing.position.x - railing.size.x / 2, by: 0.05)
-    for x in across {
-      #expect(
-        !motion.canTraverse(from: [x, bus.position.z + 4], to: [x, bus.position.z - 4]),
-        "a way past the bus at x = \(x)")
-    }
     // The arches are open on both roadways at both towers.
     for z in [BrooklynBridge.brooklynTower, BrooklynBridge.manhattanTower] {
       #expect(motion.canTraverse(from: [7, z + 7], to: [7, z - 7]))
       #expect(motion.canTraverse(from: [-7, z + 7], to: [-7, z - 7]))
+    }
+    // Nobody walks off the road's sides or ends.
+    let road = level.bounds
+    let middle = (road.minimum.y + road.maximum.y) / 2
+    let crossings: [(SIMD2<Float>, SIMD2<Float>)] = [
+      ([road.maximum.x - 1, middle], [road.maximum.x + 1, middle]),
+      ([road.minimum.x + 1, middle], [road.minimum.x - 1, middle]),
+      ([0, road.maximum.y - 1], [0, road.maximum.y + 1]),
+      ([0, road.minimum.y + 1], [0, road.minimum.y - 1]),
+    ]
+    for (inside, outside) in crossings {
+      #expect(!motion.canTraverse(from: inside, to: outside), "off the road at \(outside)")
     }
   }
 

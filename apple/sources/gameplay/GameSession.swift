@@ -15,7 +15,7 @@ final class GameSession {
     case ambush
     /// After the exchange that follows Tom's shot, Tom travels with Miki.
     case withTom
-    /// The party nears mid-span, where Laura lies hurt between the cars (M4).
+    /// The party nears the place beyond mid-span where Laura lies hurt in the snow (M4).
     case lauraFound
     /// Helping Laura: the medical kit lets her stand (M4).
     case helpingLaura

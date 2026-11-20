@@ -523,25 +523,25 @@
       .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
     ]
 
-    /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1 and M2): up the east
-    /// roadway, past the stranger once he is down, through the first tower, across the collapsed
-    /// divider beside the jammed bus, then up the west roadway through the second tower. Each
-    /// trigger area shows its line once, then a Restart returns her to the start with none fired.
+    /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1 and M2), along the
+    /// buried road: through the first tower's east arch, where the stranger steps out from behind
+    /// the pier, past him once he is down and on beyond the tower, which fades while it hides
+    /// her, then across to the west side and through the second tower. Each trigger area shows
+    /// its line once, then a Restart returns her to the start with none fired.
     private static let bridgeWalk: [Step] =
       [
-        .mark("start"), .walk([6.5, 66]), .mark("cars ahead"), .walk([6.5, 51]),
-        .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1),
-        .mark("stranger down"), .walk([6.5, 20]),
-        .mark("first tower"), .walk([6.5, -206.15]), .mark("mid-span"), .walk([6.5, -225.15]),
-        .mark("blocked lanes"), .walk([-7, -228.15]), .mark("across the divider"),
+        .mark("start"), .walk([6.5, 66]), .mark("buried road"), .walk([6.5, 20]),
+        .mark("first tower"), .walk([6.5, 15]), .expectBeat(.stranger), .wait(seconds: 3.4),
+        .fire(seconds: 2), .expectDefeated(1), .mark("stranger down"), .walk([6.5, -12]),
+        .mark("beyond the first tower"), .walk([6.5, -206.15]), .mark("mid-span"),
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .mark("Manhattan end"),
-        .expectTriggers(6), .walk([-7, -494.3]), .walk([-7, -502.3]), .expectTriggers(6),
+        .expectTriggers(5), .walk([-7, -494.3]), .walk([-7, -502.3]), .expectTriggers(5),
         .wait(seconds: 0.5),
       ] + restartRun + [.expectTriggers(0)]
 
-    /// Up to the stranger's area: his fight begins as Miki stops in the open lane.
+    /// Up to the stranger's area: his fight begins as Miki stops in the first tower's east arch.
     private static let toTheStranger: [Step] = [
-      .mark("start"), .walk([6.5, 66]), .walk([6.5, 51]), .mark("Friendly!"),
+      .mark("start"), .walk([6.5, 66]), .walk([6.5, 15]), .mark("Friendly!"),
       .expectBeat(.stranger),
     ]
 
@@ -560,42 +560,41 @@
       toTheStranger + [
         .wait(seconds: 7), .expectHits(1), .mark("hit"), .wait(seconds: 7.5),
         .expectBeat(.alone), .expectHits(0), .expectDefeated(0), .mark("retry"),
-        .walk([6.5, 51]), .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2),
+        .walk([6.5, 15]), .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2),
         .expectDefeated(1), .mark("won after the retry"),
       ]
 
     /// From the start to Tom joining: the first fight, the search and the ambush.
     private static let toTom: [Step] =
       toTheStranger + [
-        .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1), .walk([6.5, 43]),
+        .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1), .walk([4.4, 4.6]),
         .mark("at the body"), .act, .wait(seconds: 2.3), .mark("the attacker"),
         .wait(seconds: 1.3), .talk, .expectBeat(.withTom), .expectParty([.miki, .tom]),
         .expectDefeated(2), .mark("Tom joins"),
       ]
 
     /// The ambush (ADR 0004, M3): after the first fight Miki searches the stranger, the attacker
-    /// runs at her, Tom drops him and joins after a short exchange. Tom then follows her through
-    /// the first tower to mid-span, and a Restart leaves Miki alone again.
+    /// runs at her out of the west arch, Tom drops him and joins after a short exchange. Tom then
+    /// follows her on to mid-span, and a Restart leaves Miki alone again.
     private static let ambush: [Step] =
       toTom + [
-        .walk([6.5, 20]), .mark("through the tower"), .walk([6.5, -206.15]),
+        .walk([6.5, -12]), .mark("beyond the tower with Tom"), .walk([6.5, -206.15]),
         .mark("mid-span with Tom"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
-    /// From the start to Laura joining (M4): with Tom, across the gap in the divider, where a
-    /// woman calls out; Help uses the medical kit, she stands, and the exchange ends with her
-    /// joining.
+    /// From the start to Laura joining (M4): with Tom, beyond mid-span, where a woman calls out;
+    /// Help uses the medical kit, she stands, and the exchange ends with her joining.
     private static let toLaura: [Step] =
       toTom + [
-        .walk([6.5, 20]), .walk([6.5, -206.15]), .walk([6.5, -225.15]), .walk([-6, -228.15]),
-        .walk([-6.5, -230.15]), .wait(seconds: 0.6), .expectBeat(.lauraFound), .mark("Laura found"),
+        .walk([6.5, -206.15]), .walk([6.5, -225.15]), .walk([-6.5, -230.15]),
+        .wait(seconds: 0.6), .expectBeat(.lauraFound), .mark("Laura found"),
         .wait(seconds: 2), .walk([-7, -234.15]),
         .mark("at Laura"), .act, .wait(seconds: 1.8), .mark("on her feet"), .wait(seconds: 0.8),
         .talk, .expectBeat(.withLaura), .expectParty([.miki, .tom, .laura]),
         .mark("Laura joins"),
       ]
 
-    /// Laura (M4): she joins, then both companions follow Miki up the west roadway, and a
+    /// Laura (M4): she joins, then both companions follow Miki on towards Manhattan, and a
     /// Restart leaves Miki alone again.
     private static let laura: [Step] =
       toLaura + [.walk([-7, -257.15]), .mark("three together"), .wait(seconds: 0.5)] + restartRun
@@ -606,34 +605,32 @@
     private static let opening: [Step] =
       toLaura + [
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .talk,
-        .expectBeat(.arrived), .mark("Manhattan, together"), .expectTriggers(6),
+        .expectBeat(.arrived), .mark("Manhattan, together"), .expectTriggers(5),
         .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki]), .expectTriggers(0)]
 
     /// Formations (M5): once Laura joins, the formation button cycles Close, Spread and Column
-    /// on the west roadway's open deck. Spread squeezes past the car and the debris beyond
-    /// Laura, and between the two cars before the Manhattan end, then spreads out again; the
-    /// closing exchange keeps the formation, and Restart returns to Close with Miki alone.
+    /// on the open snow. Spread keeps its width through the second tower's west arch, which is
+    /// wide enough for it; the closing exchange keeps the formation, and Restart returns to Close
+    /// with Miki alone.
     private static let formations: [Step] =
       toLaura + [
-        .expectFormation(.close), .formation, .expectFormation(.spread), .walk([-7, -248]),
-        .mark("spread"), .walk([-7, -254]), .mark("past the car"), .walk([-7, -270]),
-        .mark("spread again"), .walk([-7, -275]), .formation, .expectFormation(.column),
+        .expectFormation(.close), .formation, .expectFormation(.spread), .walk([-7, -250]),
+        .mark("spread"), .walk([-7, -275]), .formation, .expectFormation(.column),
         .walk([-7, -295]), .mark("column"), .walk([-7, -300]), .formation,
         .expectFormation(.close), .walk([-7, -315]), .mark("close"), .walk([-7, -320]),
         .formation, .expectFormation(.spread), .walk([-7, -456.3]),
-        .mark("second tower in spread"), .walk([-7, -490]), .mark("past the first car"),
-        .walk([-7, -496.5]), .mark("past the second car"), .walk([-7, -502.3]), .talk,
-        .expectBeat(.arrived), .expectFormation(.spread), .mark("Manhattan, together"),
-        .wait(seconds: 0.5),
+        .mark("second tower in spread"), .walk([-7, -472]), .mark("in the arch in spread"),
+        .walk([-7, -502.3]), .talk, .expectBeat(.arrived), .expectFormation(.spread),
+        .mark("Manhattan, together"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
     /// Squad orders (ADR 0003, phase S3), once Laura joins. The D-pad sends both companions
     /// ahead, and they hold there while Miki walks off until Formation calls them back. Then one
     /// companion goes while the other follows, the other goes beside the first, and Hold keeps
     /// both where they stand. A switch leaves the previous leader holding with them. Touch
-    /// orders send both to a marked spot and refuse one aimed at the divider, and the end of the
-    /// opening waits for companions left holding until they are called back.
+    /// orders send both to a marked spot and refuse one aimed off the buried road, and the end of
+    /// the opening waits for companions left holding until they are called back.
     private static let orders: [Step] =
       toLaura + [
         .walk([-7, -270]), .wait(seconds: 1), .mark("ready"), .order(.bothGo),
@@ -661,8 +658,8 @@
         .wait(seconds: 3),
         .touchOrder(.bothGo, at: [-9.5, -297]), .wait(seconds: 0.5), .mark("touch: both go"),
         .wait(seconds: 4), .expectNear(.miki, [-9.5, -297], within: 1.2),
-        .expectNear(.laura, [-9.5, -297], within: 1.2), .touchOrder(.leftGoes, at: [0, -296]),
-        .expectRefused(1), .mark("refused at the divider"), .wait(seconds: 0.6), .formation,
+        .expectNear(.laura, [-9.5, -297], within: 1.2), .touchOrder(.leftGoes, at: [-16, -296]),
+        .expectRefused(1), .mark("refused off the road"), .wait(seconds: 0.6), .formation,
         .walk([-7, -440]),
         .wait(seconds: 2), .order(.hold), .walk([-7, -502.3]), .wait(seconds: 2),
         .expectBeat(.withLaura), .mark("waiting for the others"), .wait(seconds: 0.6), .formation,

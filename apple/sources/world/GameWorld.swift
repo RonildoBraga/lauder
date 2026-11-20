@@ -70,6 +70,8 @@ final class GameWorld {
   @ObservationIgnored private var nearby: Level.PointOfInterest?
   @ObservationIgnored private var cameraTarget: SIMD3<Float>
   @ObservationIgnored private var cameraStart: SIMD3<Float>?
+  /// Tall landmarks, such as the towers, that fade while they hide the party.
+  @ObservationIgnored private var landmarkFade = LandmarkFade()
   @ObservationIgnored private var cameraElapsed: Float = 0
   @ObservationIgnored private var unsimulatedTime: Float = 0
   // The level's fights (ADR 0004, M2).
@@ -143,6 +145,7 @@ final class GameWorld {
         root.addChild(entity)
       }
     }
+    landmarkFade = LandmarkFade(look: root)
     // Every action the session can refer to here must be defined exactly once, checked at load.
     for interaction in level.interactions {
       precondition(
@@ -154,6 +157,7 @@ final class GameWorld {
     camera.camera.fieldOfViewInDegrees = level.fieldOfView
     camera.name = "camera"
     root.addChild(camera)
+    landmarkFade.prepare(before: camera)
     for member in PartyMember.allCases {
       let body = Entity()
       body.name = "party.\(member.rawValue)"
@@ -977,7 +981,10 @@ final class GameWorld {
     } else {
       cameraTarget = target
     }
-    camera.look(at: cameraTarget, from: cameraTarget + level.cameraOffset, relativeTo: nil)
+    let eye = cameraTarget + level.cameraOffset
+    camera.look(at: cameraTarget, from: eye, relativeTo: nil)
+    let party = ([session.leader] + session.companions).compactMap { bodies[$0]?.position }
+    landmarkFade.update(eye: eye, seeing: party + [cameraTarget], deltaTime: deltaTime)
   }
 
   private func updateNearby() {

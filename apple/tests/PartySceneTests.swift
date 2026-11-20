@@ -36,7 +36,9 @@ struct PartySceneTests {
         })
     }
     #expect(world.root.components[PhysicsSimulationComponent.self] == nil)
-    #expect(level.obstacles.count == level.boxes.count + level.points.count)
+    // Besides the boxes and points, only the ground's four invisible edges block movement.
+    #expect(level.edges.count == 4)
+    #expect(level.obstacles.count == level.boxes.count + level.points.count + level.edges.count)
     for point in level.points {
       let centre = SIMD2(point.position.x, point.position.z)
       let half = SIMD2(point.size.x, point.size.z) / 2

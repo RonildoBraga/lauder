@@ -196,9 +196,22 @@ struct Level {
     interactions.first { $0.id == action }
   }
 
-  /// Movement blockers: the scenery and points of interest. The flat-floor footprints come from
-  /// the same dimensions as the visible blocks.
-  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + points.map(\.footprint) }
+  /// Movement blockers: the scenery, points of interest and the ground's edges. The flat-floor
+  /// footprints come from the same dimensions as the visible blocks.
+  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + points.map(\.footprint) + edges }
+
+  /// The ground's edges: a metre-thick wall just outside each side of its footprint, which
+  /// nobody sees, so the party keeps to the ground, as on the buried bridge's road.
+  var edges: [PartyMotion.Box] {
+    let low = bounds.minimum
+    let high = bounds.maximum
+    return [
+      PartyMotion.Box(minimum: [low.x - 1, low.y - 1], maximum: [low.x, high.y + 1]),
+      PartyMotion.Box(minimum: [high.x, low.y - 1], maximum: [high.x + 1, high.y + 1]),
+      PartyMotion.Box(minimum: [low.x, low.y - 1], maximum: [high.x, low.y]),
+      PartyMotion.Box(minimum: [low.x, high.y], maximum: [high.x, high.y + 1]),
+    ]
+  }
 
   static func footprint(position: SIMD3<Float>, size: SIMD3<Float>) -> PartyMotion.Box {
     let centre = SIMD2(position.x, position.z)

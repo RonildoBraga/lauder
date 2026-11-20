@@ -330,22 +330,30 @@ class ExportRecordTests(unittest.TestCase):
     def test_exports_go_stale_when_a_model_they_use_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             repository = self.scratch(folder)
-            made_from = json.loads((repository / L.EXPORT_RECORD).read_text())[BRIDGE.key]
-            models = [name for name in made_from["made from"]
-                      if L.model_of_path(repository, repository / name)]
-            self.assertTrue(models, "the bridge uses models")
-            with (repository / models[0]).open("ab") as stream:
+            # The buried bridge links no models of its own, so record its export as made from one
+            # too, as the export records a level that links a model.
+            record = json.loads((repository / L.EXPORT_RECORD).read_text())[BRIDGE.key]
+            model = L.model_file("hostile")
+            self.assertTrue(L.model_of_path(repository, repository / model))
+            made_from = {**record["made from"], model: L.file_fingerprint(repository / model)}
+            L.record_exports(repository, BRIDGE.key, made_from, record["wrote"])
+            self.assertIsNone(L.stale_exports(repository))
+            with (repository / model).open("ab") as stream:
                 stream.write(b"saved again")
             self.assertEqual(L.stale_exports(repository),
-                             f"{models[0]} changed since {BRIDGE.title} was exported.")
-            (repository / models[0]).unlink()
-            self.assertEqual(L.stale_exports(repository), f"{models[0]} is missing.")
+                             f"{model} changed since {BRIDGE.title} was exported.")
+            (repository / model).unlink()
+            self.assertEqual(L.stale_exports(repository), f"{model} is missing.")
 
     def test_an_export_edited_by_hand_goes_stale(self):
         with tempfile.TemporaryDirectory() as folder:
             repository = self.scratch(folder)
             layout = repository / BRIDGE.layout
-            layout.write_text(layout.read_text().replace("fieldOfView: 42", "fieldOfView: 45"))
+            text = layout.read_text()
+            # Whatever the camera's lens, writing a digit before it is an edit by hand.
+            edited = text.replace("fieldOfView: ", "fieldOfView: 1", 1)
+            self.assertNotEqual(edited, text)
+            layout.write_text(edited)
             reason = L.stale_exports(repository)
             self.assertIn(BRIDGE.layout, reason)
             self.assertIn("change the level in Blender", reason)
