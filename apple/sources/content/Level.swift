@@ -177,6 +177,8 @@ struct Level {
   let objective: String
   /// The objective from each of these beats on, in story order.
   var objectiveChanges: [(beat: GameSession.Beat, text: String)] = []
+  /// Where the compass points from each of these beats on, in story order; nil hides it.
+  var goals: [(beat: GameSession.Beat, goal: Goal?)] = []
   /// What a look shows with nothing nearby.
   let lookAround: String
   /// What the pause menu says Restart does.
@@ -184,6 +186,12 @@ struct Level {
 
   /// The floor's footprint, which the navigation grid covers.
   var bounds: PartyMotion.Box { ground.footprint }
+
+  /// A place the compass points to: what the HUD calls it, and where it is on the ground.
+  struct Goal: Equatable, Sendable {
+    let name: String
+    let point: SIMD2<Float>
+  }
 
   func spawn(_ member: PartyMember) -> SIMD2<Float> {
     guard let point = spawns[member] else {

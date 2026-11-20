@@ -379,6 +379,41 @@ struct InputRulesTests {
     #expect(sample(held, state: &state).formationPressed)
   }
 
+  // MARK: - The panel button
+
+  @Test(arguments: [InputRules.Raw(controllerPanel: true), InputRules.Raw(keyboardPanel: true)])
+  func eachPanelPressCountsOnce(raw: InputRules.Raw) {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(raw, state: &state).panelPressed)
+    #expect(!sample(raw, state: &state).panelPressed, "a held button does not repeat")
+    #expect(!sample(.init(), state: &state).panelPressed)
+    #expect(sample(raw, state: &state).panelPressed)
+    // In a conversation it works too, so the panel can be hidden while people talk.
+    #expect(!sample(.init(), state: &state).panelPressed)
+    #expect(sample(raw, mode: .dialogue, state: &state).panelPressed)
+  }
+
+  @Test
+  func thePanelKeyIsKeyboardInputAndHoldsTheReleaseGate() {
+    #expect(InputRules.Raw(keyboardPanel: true).hasKeyboardInput)
+    var state = InputRules.State()
+    let held = InputRules.Raw(controllerPanel: true)
+    #expect(!sample(held, state: &state).panelPressed)
+    #expect(state.needsNeutralInput, "a held panel button keeps the gate closed")
+    _ = sample(.init(), state: &state)
+    #expect(!state.needsNeutralInput)
+    #expect(sample(held, state: &state).panelPressed)
+  }
+
+  @Test
+  func thePauseMenuConsumesPanelPresses() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let held = InputRules.Raw(controllerPanel: true)
+    #expect(!sample(held, mode: .paused, state: &state).panelPressed)
+    // Still held when play resumes: it was consumed, not queued.
+    #expect(!sample(held, state: &state).panelPressed)
+  }
+
   // MARK: - Squad orders (ADR 0003, phase S3)
 
   private static let touchPoint = InputRules.ScreenPoint(x: 0.4, y: 0.6, aspect: 2)

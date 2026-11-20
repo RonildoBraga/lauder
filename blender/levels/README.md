@@ -4,9 +4,9 @@ Each Blender file here is a level's source ([ADR 0002](../../docs/decisions/0002
 
 ## brooklyn-bridge.blend
 
-The Brooklyn Bridge, the opening's greybox level, buried in snow as the frozen [visual direction](../../docs/visual-direction.md) has it: only the towers stand above a white plain, and an invisible edge keeps the party on the line of the buried road.
+The Brooklyn Bridge, the opening's greybox level, buried in snow as the frozen [visual direction](../../docs/visual-direction.md) has it: only the towers stand above a white plain, with thin flagged poles every 25 m along both edges of the buried road, and an invisible edge keeps the party on its line.
 
 - **Made** for Lauder on 19 November 2026, by the Lauder extension's Load, from the hand-kept layout and palette files that it replaces. Its vehicles are copies of the `car`, `van` and `truck` models, linked from [blender/assets](../assets/README.md). It holds no third-party assets or textures.
 - **Licence:** the repository's MIT licence.
-- **Size:** about 102 KB, stored with Git LFS. A copy without its payload is a small pointer file; run `git lfs pull`.
-- **Exports:** `apple/sources/content/BrooklynBridge.usdz`, about 3 KB, and `apple/sources/content/BrooklynBridgeLayout.swift`. `blender/level-exports.json` records the fingerprints of both, of the level file, and of the models it links.
+- **Size:** about 113 KB, stored with Git LFS. A copy without its payload is a small pointer file; run `git lfs pull`.
+- **Exports:** `apple/sources/content/BrooklynBridge.usdz`, about 20 KB, and `apple/sources/content/BrooklynBridgeLayout.swift`. `blender/level-exports.json` records the fingerprints of both, of the level file, and of the models it links.

@@ -20,6 +20,8 @@ final class GameControls {
   private(set) var switchButtonName = "Switch"
   private(set) var fireButtonName = "Fire"
   private(set) var formationButtonName = "Formation"
+  /// The button that hides or shows the status panel; touch has none.
+  private(set) var panelButtonName = "Panel"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -127,6 +129,7 @@ final class GameControls {
       controllerSwitch: !touchControlsEnabled && (gamepad?.rightShoulder.isPressed ?? false),
       controllerFire: !touchControlsEnabled && (gamepad?.rightTrigger.isPressed ?? false),
       controllerFormation: !touchControlsEnabled && (gamepad?.buttonY.isPressed ?? false),
+      controllerPanel: !touchControlsEnabled && (gamepad?.buttonB.isPressed ?? false),
       dpadUp: !touchControlsEnabled && (gamepad?.dpad.up.isPressed ?? false),
       dpadDown: !touchControlsEnabled && (gamepad?.dpad.down.isPressed ?? false),
       dpadLeft: !touchControlsEnabled && (gamepad?.dpad.left.isPressed ?? false),
@@ -135,7 +138,7 @@ final class GameControls {
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
       keyboardSwitch: pressed(.keyQ), keyboardFire: pressed(.keyF),
-      keyboardFormation: pressed(.keyR),
+      keyboardFormation: pressed(.keyR), keyboardPanel: pressed(.keyH),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
@@ -227,33 +230,33 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
-        fire: "R2", formation: "Triangle")
+        fire: "R2", formation: "Triangle", panel: "Circle")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
-        fire: "RT", formation: "Y")
+        fire: "RT", formation: "Y", panel: "B")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
-        cycle: "Right shoulder", fire: "Right trigger", formation: "Button Y")
+        cycle: "Right shoulder", fire: "Right trigger", formation: "Button Y", panel: "Button B")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F",
-      formation: "R")
+      formation: "R", panel: "H")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
-      formation: "Formation")
+      formation: "Formation", panel: "Panel")
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, cycle: String, fire: String,
-    formation: String
+    formation: String, panel: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -261,6 +264,7 @@ final class GameControls {
     if switchButtonName != cycle { switchButtonName = cycle }
     if fireButtonName != fire { fireButtonName = fire }
     if formationButtonName != formation { formationButtonName = formation }
+    if panelButtonName != panel { panelButtonName = panel }
   }
 
   isolated deinit {

@@ -23,7 +23,7 @@ Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapon
 
 No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
-With the East River frozen, the opening needs a reason to cross by the bridge rather than over the ice. A proposal: the line of the buried road is the one way across known to be solid, and off it the snow hides thin ice and channels of open water near Manhattan. The places beyond the bridge that assume open water, such as Old Lock's crossing, the canal route and the coastal water crew, need revisiting for the frozen world.
+With the East River frozen, the opening needs a reason to cross by the bridge rather than over the ice. A proposal: the line of the buried road is the one way across known to be solid, marked by someone with flagged poles, and off it the snow hides thin ice and channels of open water near Manhattan. The places beyond the bridge that assume open water, such as Old Lock's crossing, the canal route and the coastal water crew, need revisiting for the frozen world.
 
 The [Chapter One outline](#chapter-one--across-the-bridge) below records the remaining dialogue work. The [gameplay walkthrough](../gameplay-script.md) condenses it into what the player sees and does.
 

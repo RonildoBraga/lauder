@@ -25,8 +25,14 @@ struct GameView: View {
       .realityViewCameraControls(.none)
       .ignoresSafeArea()
 
+      if let compass = world.compass, !world.isPaused {
+        compassChip(compass)
+      }
+
       HStack(alignment: .top) {
-        status(talking: talking)
+        if !world.panelHidden {
+          status(talking: talking)
+        }
         Spacer()
         VStack(alignment: .trailing, spacing: 10) {
           if world.controls.touchControlsEnabled {
@@ -162,9 +168,28 @@ struct GameView: View {
     }
   }
 
-  /// The status panel, small and light (the visual direction): who leads, marked, and who
-  /// follows, with the leader's hits during a fight and the squad's formation; the objective;
-  /// the latest line; and a threat, the carbine's rounds or supplies only while there are any.
+  /// Where to go: an arrow turned towards the story's current goal, its name and how far away
+  /// it is, in a small chip at the top centre, so the white plain still shows the way.
+  private func compassChip(_ compass: GameWorld.Compass) -> some View {
+    HStack(spacing: 6) {
+      Image(systemName: "location.north.fill")
+        .rotationEffect(.radians(Double(compass.angle)))
+      Text("\(compass.name) · \(compass.metres) m")
+    }
+    .font(.footnote.weight(.semibold))
+    .padding(.horizontal, 12)
+    .padding(.vertical, 6)
+    .frostedPanel(cornerRadius: 14)
+    .padding(.top)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Goal: \(compass.name), \(compass.metres) metres")
+    .allowsHitTesting(false)
+  }
+
+  /// The status panel, small and with just the essentials: who leads, marked, and who follows,
+  /// with the leader's hits during a fight and the squad's formation. A new objective or line
+  /// shows for a few seconds; a threat, the carbine's rounds, a warning or the release guidance
+  /// only while they matter. The panel button hides it, and shows it again.
   private func status(talking: Bool) -> some View {
     VStack(alignment: .leading, spacing: 3) {
       HStack(spacing: 6) {
@@ -185,31 +210,19 @@ struct GameView: View {
         }
       }
       .font(.caption)
-      Text(world.objective).font(.subheadline.weight(.semibold))
+      if world.objectiveIsFresh {
+        Text(world.objective).font(.subheadline.weight(.semibold))
+      }
       // During a conversation its panel carries the words; the result of the step appears here
       // once the conversation ends.
-      if !talking {
+      if !talking && world.lineIsFresh {
         Text(world.observation).font(.caption)
       }
       if let threat = world.threat {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
       }
-      if world.showsWeapon || world.session.medicalKits > 0 {
-        HStack(spacing: 10) {
-          if world.showsWeapon {
-            Text("Carbine · \(world.session.ammo)")
-          }
-          if world.session.medicalKits > 0 {
-            // The party's small shared inventory (ADR 0004, M3).
-            Label(
-              world.session.medicalKits == 1
-                ? "Medical kit" : "Medical kits · \(world.session.medicalKits)",
-              systemImage: "cross.case.fill"
-            )
-            .foregroundStyle(HUDStyle.supply)
-          }
-        }
-        .font(.caption)
+      if world.showsWeapon {
+        Text("Carbine · \(world.session.ammo)").font(.caption)
       }
       if let diagnostic = world.diagnostic {
         Text(diagnostic).font(.caption).foregroundStyle(HUDStyle.warning)
@@ -220,9 +233,9 @@ struct GameView: View {
         Text(releaseGuidance).font(.caption)
       }
     }
-    .frame(maxWidth: 240, alignment: .leading)
+    .frame(maxWidth: 220, alignment: .leading)
     .padding(.horizontal, 10)
-    .padding(.vertical, 8)
+    .padding(.vertical, 7)
     .frostedPanel()
     .allowsHitTesting(false)
   }
@@ -241,6 +254,8 @@ struct GameView: View {
     if world.session.formationsAvailable {
       others.append("\(world.controls.formationButtonName) · \(formationAction)")
     }
+    others.append(
+      "\(world.controls.panelButtonName) · \(world.panelHidden ? "Show" : "Hide") panel")
     if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
       // The D-pad's or arrow keys' orders, with the companions in their fixed order.
       others.append("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Both · ▼ Hold")

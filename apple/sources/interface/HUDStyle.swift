@@ -13,8 +13,6 @@ enum HUDStyle {
   static let threat = Color(red: 122 / 255, green: 46 / 255, blue: 42 / 255)
   /// Warnings, such as a companion who cannot find a way, in the palette's rust.
   static let warning = Color(red: 166 / 255, green: 90 / 255, blue: 67 / 255)
-  /// Supplies, such as a medical kit, in the palette's faded teal.
-  static let supply = Color(red: 94 / 255, green: 124 / 255, blue: 128 / 255)
   /// The palette's snow, behind the scene.
   static let snow = Color(red: 236 / 255, green: 233 / 255, blue: 226 / 255)
 

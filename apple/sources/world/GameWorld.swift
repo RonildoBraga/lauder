@@ -28,6 +28,22 @@ final class GameWorld {
   private(set) var weaponDrawn = false
   /// How dark the screen is while an encounter starts again, from 0 to 1.
   private(set) var fade: Float = 0
+  /// The compass to the level's current goal; nil when there is none.
+  private(set) var compass: Compass?
+  /// Whether the player has hidden the status panel. It stays hidden or shown across Restart.
+  private(set) var panelHidden = false
+  /// Whether the latest line and the objective are new enough to show in the status panel.
+  private(set) var lineIsFresh = true
+  private(set) var objectiveIsFresh = true
+
+  /// What the HUD's compass shows: the goal's name, how far away it is, and which way, as an
+  /// angle clockwise from straight up the screen.
+  struct Compass: Equatable {
+    let name: String
+    let metres: Int
+    /// Radians, to the nearest degree.
+    let angle: Float
+  }
 
   @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
@@ -69,6 +85,11 @@ final class GameWorld {
   @ObservationIgnored private var wasRunning = false
   @ObservationIgnored private var nearby: Level.PointOfInterest?
   @ObservationIgnored private var cameraTarget: SIMD3<Float>
+  /// The line and objective the status panel last saw change, and for how long they have shown.
+  @ObservationIgnored private var agedLine = ""
+  @ObservationIgnored private var agedObjective = ""
+  @ObservationIgnored private var lineAge: Float = 0
+  @ObservationIgnored private var objectiveAge: Float = 0
   @ObservationIgnored private var cameraStart: SIMD3<Float>?
   /// Tall landmarks, such as the towers, that fade while they hide the party.
   @ObservationIgnored private var landmarkFade = LandmarkFade()
@@ -103,6 +124,8 @@ final class GameWorld {
   static let crossTime: Float = 1
   /// How close every companion must be before a scene that gathers the party begins.
   static let gatherRadius: Float = 5
+  /// How long a new line or objective shows in the status panel, in seconds of play.
+  static let lineTime: Float = 6
 
   var isPaused: Bool { session.isPaused }
   /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
@@ -304,6 +327,7 @@ final class GameWorld {
         session.movePauseChoice(by: input.menuMove)
       }
     case .dialogue:
+      if input.panelPressed { panelHidden.toggle() }
       if input.pausePressed {
         togglePause()
       } else if input.actionPressed {
@@ -312,6 +336,7 @@ final class GameWorld {
         if session.mode != .dialogue { updateNearby() }
       }
     case .exploring:
+      if input.panelPressed { panelHidden.toggle() }
       if input.pausePressed {
         togglePause()
       } else if input.switchPressed, session.nextLeader != nil {
@@ -406,6 +431,10 @@ final class GameWorld {
     observation = level.opening
     nearby = nil
     nearbyName = nil
+    lineAge = 0
+    objectiveAge = 0
+    lineIsFresh = true
+    objectiveIsFresh = true
     updateCamera(deltaTime: 0)
     updateNearby()
     // Like Resume, the new run waits for every button, key and finger to be released.
@@ -444,6 +473,7 @@ final class GameWorld {
       simulateStep(movement: movement, dt: Self.simulationStep)
     }
     updateCamera(deltaTime: elapsed)
+    ageLines(by: elapsed)
     updateNearby()
     checkTriggers()
     if crossRemaining > 0 {
@@ -991,7 +1021,47 @@ final class GameWorld {
     landmarkFade.update(eye: eye, seeing: party + [cameraTarget], deltaTime: deltaTime)
   }
 
+  /// A new line or objective shows in the status panel for `lineTime` seconds of play, then
+  /// leaves it to the essentials; Pause and conversations hold the time.
+  private func ageLines(by dt: Float) {
+    if observation != agedLine {
+      agedLine = observation
+      lineAge = 0
+    } else {
+      lineAge += dt
+    }
+    if objective != agedObjective {
+      agedObjective = objective
+      objectiveAge = 0
+    } else {
+      objectiveAge += dt
+    }
+    if (lineAge < Self.lineTime) != lineIsFresh { lineIsFresh.toggle() }
+    if (objectiveAge < Self.lineTime) != objectiveIsFresh { objectiveIsFresh.toggle() }
+  }
+
+  /// The compass to the goal for the story's beat: its name, the distance from the leader, and
+  /// its direction on screen. The camera looks along its offset's ground direction, so up the
+  /// screen is that direction and right is a quarter turn clockwise from it.
+  private func updateCompass() {
+    guard let goal = level.goals.last(where: { $0.beat <= session.beat })?.goal,
+      let leader = bodies[session.leader]
+    else {
+      if compass != nil { compass = nil }
+      return
+    }
+    let toward = goal.point - SIMD2(leader.position.x, leader.position.z)
+    let ground = SIMD2(level.cameraOffset.x, level.cameraOffset.z)
+    let forward = simd_length(ground) > 0.001 ? -simd_normalize(ground) : SIMD2<Float>(0, -1)
+    let right = SIMD2(-forward.y, forward.x)
+    let degrees = (atan2(simd_dot(toward, right), simd_dot(toward, forward)) * 180 / .pi).rounded()
+    let next = Compass(
+      name: goal.name, metres: Int(simd_length(toward).rounded()), angle: degrees * .pi / 180)
+    if next != compass { compass = next }
+  }
+
   private func updateNearby() {
+    updateCompass()
     guard let player = bodies[session.leader] else { return }
     updatePrompt(at: SIMD2(player.position.x, player.position.z))
     let position = player.position * [1, 0, 1]
