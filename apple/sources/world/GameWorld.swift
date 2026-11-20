@@ -157,6 +157,7 @@ final class GameWorld {
     camera.camera.fieldOfViewInDegrees = level.fieldOfView
     camera.name = "camera"
     root.addChild(camera)
+    landmarkFade.prepare(before: camera)
     for member in PartyMember.allCases {
       let body = Entity()
       body.name = "party.\(member.rawValue)"

@@ -80,9 +80,9 @@ struct FirstFightTests {
     let world = GameWorld(level: BrooklynBridge.level)
     let body = try #require(world.root.findEntity(named: "hostile.stranger"))
     #expect(!body.isEnabled)
-    walk(world, to: [6.5, 54])
+    walk(world, to: [6.5, 18])
     #expect(world.session.beat == .alone && !body.isEnabled && !world.showsWeapon)
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(world.session.beat == .stranger && world.showsWeapon)
     #expect(run(world, upTo: 1) { world.observation == "Miki: “Friendly!”" })
     #expect(body.isEnabled)
@@ -92,7 +92,7 @@ struct FirstFightTests {
   func fireBeforeHeOpensFireDrawsButDoesNotShoot() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let marker = try #require(world.root.findEntity(named: "combat.target"))
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     // Until he fires, nobody knows he is hostile: Miki draws, but has nothing to shoot at.
     #expect(run(world, upTo: 4, fire: true) { world.threat != nil })
     #expect(world.weaponDrawn && !marker.isEnabled)
@@ -103,7 +103,7 @@ struct FirstFightTests {
   func afterHisDeliberateMissTwoShotsPutHimDown() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let marker = try #require(world.root.findEntity(named: "combat.target"))
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(run(world, upTo: 4) { world.threat != nil })
     #expect(world.threat == "The stranger is aiming.")
     // His first shot goes wide on purpose, and the HUD says how to answer it.
@@ -123,17 +123,21 @@ struct FirstFightTests {
     #expect(try #require(world.root.findEntity(named: "hostile.stranger")).isEnabled)
   }
 
-  /// The bridge camera shows only about 10 m ahead of Miki, so during the fight it leans
+  /// The bridge camera shows only about 19 m ahead of Miki, so during the fight it leans
   /// towards the stranger, and back once he is down.
   @Test
   func theCameraLeansTowardsHimWhileHeStands() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let camera = try #require(world.root.findEntity(named: "camera"))
-    // How far the camera has moved ahead of where it sits behind Miki.
-    let lean = { BrooklynBridge.cameraOffset.z - (camera.position.z - position(world).y) }
-    walk(world, to: [6.5, 54])
+    // How far the camera has moved from where it sits behind Miki.
+    let offset = BrooklynBridge.cameraOffset
+    let lean = {
+      simd_length(
+        SIMD2(camera.position.x, camera.position.z) - position(world) - SIMD2(offset.x, offset.z))
+    }
+    walk(world, to: [6.5, 18])
     #expect(abs(lean()) < 0.01)
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(run(world, upTo: 2) { lean() > EncounterStage.cameraLeanLimit - 0.1 })
     #expect(lean() < EncounterStage.cameraLeanLimit + 0.01)
     // Once he is down, it settles back behind her.
@@ -143,13 +147,14 @@ struct FirstFightTests {
     #expect(run(world, upTo: 3) { abs(lean()) < 0.05 })
   }
 
+  /// Through the west arch, the tower's pier stands between Miki and him.
   @Test
-  func coverBehindTheCarBlocksHisShots() {
+  func coverBehindThePierBlocksHisShots() {
     let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [6.5, 60])
-    walk(world, to: [4.6, 51.5])
+    walk(world, to: [-6.5, 30])
+    walk(world, to: [-4, 10])
     #expect(world.session.beat == .stranger)
-    // He aims and fires three times: the deliberate miss, then twice into the car.
+    // He aims and fires three times: the deliberate miss, then twice into the pier.
     for _ in 0..<3 {
       #expect(run(world, upTo: 4) { world.threat != nil })
       #expect(run(world, upTo: 2) { world.threat == nil })
@@ -160,8 +165,8 @@ struct FirstFightTests {
   @Test
   func outOfRangeHisShotsFallShort() {
     let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [6.5, 51])
-    walk(world, to: [6.5, 70])
+    walk(world, to: [6.5, 15])
+    walk(world, to: [6.5, 30])
     let stranger = BrooklynBridge.stranger
     #expect(simd_distance(position(world), stranger.standAt) > stranger.range)
     for _ in 0..<2 {
@@ -174,7 +179,7 @@ struct FirstFightTests {
   @Test
   func pauseHoldsTheFight() {
     let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(run(world, upTo: 4) { world.threat != nil })
     pressPause(world)
     #expect(world.isPaused)
@@ -191,7 +196,7 @@ struct FirstFightTests {
   func theThirdHitStartsTheFightAgainWithNothingLost() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let entities = count(world.root)
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     let fired = world.session.firedTriggers
     #expect(run(world, upTo: 8) { world.session.hitsTaken == 1 })
     #expect(run(world, upTo: 8) { world.isRetrying })
@@ -213,7 +218,7 @@ struct FirstFightTests {
     #expect(try #require(world.root.findEntity(named: "hostile.stranger")).isEnabled == false)
     #expect(count(world.root) == entities)
     // Walking back in plays the fight again from its start, deliberate miss and all.
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(world.session.beat == .stranger)
     #expect(run(world, upTo: 4) { world.threat != nil })
     #expect(run(world, upTo: 2) { world.threat == nil })
@@ -228,7 +233,7 @@ struct FirstFightTests {
     let body = try #require(world.root.findEntity(named: "hostile.stranger"))
     let camera = try #require(world.root.findEntity(named: "camera"))
     for retrying in [false, false, true] {
-      walk(world, to: [6.5, 51])
+      walk(world, to: [6.5, 15])
       #expect(run(world, upTo: 4) { world.threat != nil })
       #expect(run(world, upTo: 2) { world.threat == nil })
       #expect(run(world, upTo: 1, fire: true) { world.session.ammo == 11 })

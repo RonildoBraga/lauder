@@ -1,6 +1,6 @@
 # car
 
-A car buried in snow, as the greybox shows it: a body with a cabin on top, both white with snow. The Brooklyn Bridge's cars are copies of it, and one, `car-b4`, is turned across the lanes and shortened to fill its 4 m box.
+A car buried in snow, as the greybox shows it: a body with a cabin on top, both white with snow. The Brooklyn Bridge's vehicles were copies of it until 20 November 2026, when the snow buried them; no level uses it now.
 
 - **Source:** Made for Lauder with Claude's assistance on 19 November 2026, from the Brooklyn Bridge's greybox car parts, which the Lauder extension had made from the game's earlier drawing code. No third-party models or textures were used.
 - **Licence:** The repository's [MIT licence](../../../LICENSE).

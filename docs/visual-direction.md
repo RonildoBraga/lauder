@@ -86,7 +86,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 ## The bridge in the frozen world
 
-Snow has buried the bridge's road, its vehicles and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look. Snowbanks follow the old railings and the walkway's base, so the old roadways still read as the way across. Drifts cover the cars, the bus, the barricades and the debris, which still block the way and give cover. The towers' long shadows fall across the plain. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
+Snow has buried the bridge's road, everything left on it and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look, and then chose to take every other obstacle out of the game as well, so the towers are the only cover and an invisible edge keeps the party on the line of the buried road. The towers' long shadows fall across the plain, and a tower fades while it hides the party. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
 
 A visual pass keeps the route, the collision layout, interaction anchors and the controls.
 

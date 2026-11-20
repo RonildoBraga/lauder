@@ -228,11 +228,11 @@ Keep the opening's lines short. They should reveal nothing about anyone's past b
 
 ### 1. Alone on the bridge
 
-Miki starts at the Brooklyn end. Snow has buried the bridge's road and the frozen East River alike, and only the towers stand above the white plain. Drifts cover abandoned and damaged vehicles, debris and obstacles. She is alone, so the player learns to move and look around.
+Miki starts at the Brooklyn end. Snow has buried the bridge's road, everything left on it and the frozen East River alike, and only the towers stand above the white plain. She is alone, so the player learns to move and look around.
 
 ### 2. Friendly?
 
-A stranger stands among the cars. Not knowing whether he is hostile, Miki calls out, "Friendly!" He uses her hesitation and fires. The player draws and returns fire: this is the first fight. Afterwards Miki can approach the body.
+A stranger waits behind the first tower. Not knowing whether he is hostile, Miki calls out, "Friendly!" He uses her hesitation and fires. The player draws and returns fire: this is the first fight. Afterwards Miki can approach the body.
 
 ### 3. The search, and Tom
 
@@ -240,7 +240,7 @@ Miki searches the body for ammunition and supplies. While she is distracted, ano
 
 ### 4. Laura
 
-Further along, an injured woman is crawling between the cars, struggling to move. Miki offers help. A short exchange gives her name, Laura, and after receiving help she joins them.
+Further along, an injured woman lies in the snow, struggling to move. Miki offers help. A short exchange gives her name, Laura, and after receiving help she joins them.
 
 ### 5. Onwards
 

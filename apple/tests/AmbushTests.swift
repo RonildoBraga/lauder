@@ -69,7 +69,7 @@ struct AmbushTests {
   @Test
   func theAttackerStepsOutThenRunsAtTheLeaderAndStopsShortOfHer() {
     var attacker = HostileState(spec: BrooklynBridge.attacker)
-    let target = SIMD2<Float>(6.5, 43)
+    let target = SIMD2<Float>(4.4, 4.6)
     let dt = GameWorld.simulationStep
     attacker.reveal()
     attacker.engage()
@@ -98,7 +98,7 @@ struct AmbushTests {
     let world = GameWorld(level: BrooklynBridge.level)
     winTheFight(world)
     #expect(world.actionName == nil)
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     #expect(world.actionName == "Search")
   }
 
@@ -108,7 +108,7 @@ struct AmbushTests {
     var runs: [[String]] = []
     for _ in 0..<3 {
       winTheFight(world)
-      walk(world, to: [6.5, 43])
+      walk(world, to: [4.4, 4.6])
       let searchedFrom = position(world, .miki)
       world.performAction()
       #expect(world.session.beat == .ambush)
@@ -135,7 +135,7 @@ struct AmbushTests {
     let tom = try #require(world.root.findEntity(named: "party.tom"))
     let attacker = try #require(world.root.findEntity(named: "hostile.attacker"))
     winTheFight(world)
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     let ammo = world.session.ammo
     world.performAction()
     #expect(world.observation == BrooklynBridge.searchStranger.result)
@@ -147,17 +147,20 @@ struct AmbushTests {
     #expect(world.session.ammo == ammo + 6)
     #expect(run(world, upTo: 2) { world.session.defeated.contains("attacker") })
     #expect(tom.isEnabled && world.session.party == [.miki] && world.threat == nil)
+    // He falls well short of Miki, round the pier's corner, where Tom had a clear shot at him.
     let fell = SIMD2(attacker.position.x, attacker.position.z)
     #expect(simd_distance(fell, position(world, .miki)) > 5)
-    #expect(simd_distance(fell, position(world, .tom)) < 4)
+    #expect(
+      LineOfSight.isClear(
+        from: position(world, .tom), to: fell, obstacles: BrooklynBridge.level.obstacles))
     #expect(run(world, upTo: 2) { world.session.mode == .dialogue })
     #expect(world.session.currentLine?.speaker == "Tom")
     #expect(!world.session.inEncounter)
     finishConversation(world)
     #expect(world.session.party == [.miki, .tom] && world.session.beat == .withTom)
     #expect(world.session.nextLeader == .tom)
-    // Tom follows Miki through the first tower's arch.
-    walk(world, to: [6.5, 22])
+    // Tom follows Miki on towards Manhattan.
+    walk(world, to: [6.5, -12])
     run(world, upTo: 3)
     #expect(simd_distance(position(world, .tom), position(world, .miki)) < 3)
     #expect(world.diagnostic == nil)
@@ -170,7 +173,7 @@ struct AmbushTests {
     let attacker = try #require(world.root.findEntity(named: "hostile.attacker"))
     let tom = try #require(world.root.findEntity(named: "party.tom"))
     winTheFight(world)
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     world.performAction()
     #expect(run(world, upTo: 2) { world.threat != nil })
     let before = attacker.position
@@ -196,9 +199,9 @@ struct AmbushTests {
   func theSearchPromptDoesNotOutliveAMove() {
     let world = GameWorld(level: BrooklynBridge.level)
     winTheFight(world)
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     #expect(world.actionName == "Search")
-    walk(world, to: [6.5, 47])
+    walk(world, to: [4.4, 8.6])
     #expect(world.actionName == nil)
     world.performAction()
     #expect(world.session.searched.isEmpty && world.session.beat == .stranger)
@@ -208,7 +211,7 @@ struct AmbushTests {
   func inTheExchangeTheActionOnlyShowsTheNextLine() {
     let world = GameWorld(level: BrooklynBridge.level)
     winTheFight(world)
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     world.performAction()
     #expect(run(world, upTo: 6) { world.session.mode == .dialogue })
     let line = world.session.lineIndex
@@ -228,7 +231,7 @@ struct AmbushTests {
   func thePauseMenuConfirmsItsChoiceAndNeverActsOnTheBody() {
     let world = GameWorld(level: BrooklynBridge.level)
     winTheFight(world)
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     #expect(world.actionName == "Search")
     let pause = InputRules.Input(
       movement: .zero, actionPressed: false, pausePressed: true, switchPressed: false)
@@ -275,7 +278,7 @@ struct AmbushTests {
 
   /// From the start of a run: walk into the stranger's fight and put him down after his miss.
   private func winTheFight(_ world: GameWorld) {
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(run(world, upTo: 4) { world.threat != nil })
     #expect(run(world, upTo: 2) { world.threat == nil })
     #expect(run(world, upTo: 2, fire: true) { world.session.defeated.contains("stranger") })

@@ -20,12 +20,18 @@ struct LandmarkFade {
   /// How far clear of a part, in metres, a line of sight must pass.
   static let margin: Float = 1
 
+  /// How long, in seconds, each landmark's material shows see-through in a speck before the
+  /// camera, so that the renderer prepares it before the first fade instead of stalling then.
+  static let preparing: Float = 0.5
+
   private struct Landmark {
     var parts: [(entity: Entity, bounds: BoundingBox)]
     var opacity: Float = 1
   }
 
   private var landmarks: [Landmark] = []
+  private var specks: [Entity] = []
+  private var prepared: Float = 0
 
   /// No landmarks.
   init() {}
@@ -51,10 +57,33 @@ struct LandmarkFade {
     }
   }
 
+  /// Shows each landmark's material see-through in a speck a metre before `camera`, too small
+  /// and faint to notice, for the first `preparing` seconds of play. A landmark is usually out
+  /// of view when play starts, and the first see-through frame of a material is slow to prepare:
+  /// on the Simulator, the first fade stalled for 0.7 seconds. The specks stay, disabled.
+  mutating func prepare(before camera: Entity) {
+    for landmark in landmarks {
+      guard let materials = landmark.parts.first?.entity.components[ModelComponent.self]?.materials
+      else { continue }
+      let speck = ModelEntity(mesh: .generateBox(size: 0.002), materials: materials)
+      speck.name = "landmark.speck"
+      speck.position = [0, 0, -1]
+      speck.components.set(OpacityComponent(opacity: 0.01))
+      camera.addChild(speck)
+      specks.append(speck)
+    }
+  }
+
   /// Fades each landmark out while the line from `eye` to any of `points` passes through one of
   /// its parts, and back in once none does. A camera that jumps without time passing, as at the
   /// start, on Restart or on a retry, settles every landmark at once.
   mutating func update(eye: SIMD3<Float>, seeing points: [SIMD3<Float>], deltaTime: Float) {
+    if prepared < Self.preparing {
+      prepared += max(0, deltaTime)
+      if prepared >= Self.preparing {
+        for speck in specks { speck.isEnabled = false }
+      }
+    }
     let step = deltaTime > 0 ? deltaTime / Self.time * (1 - Self.faded) : 1
     for index in landmarks.indices {
       let hides = landmarks[index].parts.contains { part in

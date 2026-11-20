@@ -1,10 +1,10 @@
 import simd
 
-/// The opening: a compressed, flat greybox of the Brooklyn Bridge (ADR 0004). Brooklyn is at +z
-/// and Manhattan at -z. Two roadways run either side of the raised walkway's base, which has
-/// collapsed at mid-span; a bus jammed across the east roadway sends the route through that gap.
-/// Vehicles stand where the later scenes need them: cover before the first tower, a van beside
-/// it, and a car on the west roadway near the gap.
+/// The opening: a compressed, flat greybox of the Brooklyn Bridge (ADR 0004), buried in snow.
+/// Brooklyn is at +z and Manhattan at -z. The road and everything on it lie under a white plain
+/// level with the old deck, and only the two towers stand above it. The party keeps to the line
+/// of the buried road, inside an invisible edge at its width. The towers are the only cover: the
+/// stranger and the man who runs at Miki wait behind the first tower's pier.
 ///
 /// Where everything stands, the decoration, the camera and the lights are in `layout`
 /// (BrooklynBridgeLayout.swift), which Blender exports (ADR 0002). This file adds the words: what
@@ -17,38 +17,28 @@ enum BrooklynBridge {
   /// the deck, so pushing up walks towards Manhattan. Blender edits it with the rest of the layout.
   static var cameraOffset: SIMD3<Float> { layout.camera.offset }
 
-  static let points: [Level.PointOfInterest] = [
-    point(
-      "bridge.booth", "Checkpoint booth",
-      "A checkpoint booth, its window shattered. Nobody has staffed it in years."),
-    point(
-      "bridge.bus", "Bus", "A bus jammed across the lanes. Beside it, the divider has given way."),
-    point(
-      "bridge.manhattan-barricade", "Barricade", "Cars and wire close off the Manhattan end."),
-  ]
-
   /// Each shows its line the first time the leader walks in, once per run.
   static let triggers: [Level.Trigger] = [
-    trigger("cars-ahead", "Cars stand where they stopped, doors still open."),
+    trigger("buried-road", "Snow covers the road and everything left on it."),
     trigger("first-tower", "The first tower. Its arches still stand."),
     trigger("mid-span", "Mid-span. The wind is stronger out here."),
-    trigger("blocked-lanes", "The lanes ahead are blocked. The divider has given way here."),
     trigger("second-tower", "The second tower. Manhattan is close now."),
-    trigger("manhattan-end", "The Manhattan end. The way into the city is barricaded."),
+    trigger("manhattan-end", "The Manhattan end. The city lies buried beyond it."),
   ]
 
-  /// The stranger (M2). He waits unseen behind the car turned across the east roadway, steps
-  /// into the lane as Miki comes within about 10 m, and after her "Friendly!" opens fire. His
-  /// first shot is a deliberate miss. Miki can take cover behind the car to her left; the turned
-  /// car covers him from her right. His reach, like her carbine's, is about what the camera shows
-  /// ahead of her, so neither is hit from off screen.
+  /// The stranger (M2). He waits unseen behind the first tower's pier, steps out beyond the
+  /// north end of its east arch as Miki comes within about 10 m through the arch, and after her
+  /// "Friendly!" opens fire. His first shot is a deliberate miss. Out on the snow only the pier
+  /// gives cover, to whoever keeps it between them. His reach, like her carbine's, is about what
+  /// the camera shows ahead of her, so neither is hit from off screen.
   static let stranger = Level.Hostile(
     id: "stranger", name: "The stranger", hiddenAt: layout.marker(named: "stranger.hidden"),
     standAt: layout.marker(named: "stranger.stand"), hits: 2, windUp: 1.5, recovery: 1.4,
     range: 14, firstShotMisses: true, missLine: "He opened fire. Fire back, or take cover.",
     loot: Level.Loot(rounds: 6, medicalKits: 1))
 
-  /// The first fight, as Miki nears the first tower. A retry starts just outside its area.
+  /// The first fight, as Miki walks through the first tower. A retry starts just outside its
+  /// area, in the east arch.
   static let strangerEncounter = Level.Encounter(
     beat: .stranger, start: .area(layout.area(named: "stranger")),
     retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger],
@@ -64,15 +54,15 @@ enum BrooklynBridge {
     approach: layout.area(named: "search.stranger"), result: "Miki searches the stranger.",
     repeated: "Nothing more on him.", early: "Not while he's standing.")
 
-  /// The man who runs at Miki from behind the van while she searches (M3).
+  /// The man who runs at Miki out of the tower's west arch while she searches (M3).
   static let attacker = Level.Hostile(
     id: "attacker", name: "The attacker", hiddenAt: layout.marker(named: "attacker.hidden"),
     standAt: layout.marker(named: "attacker.stand"), hits: 1, attack: .charge(speed: 5))
 
   /// The ambush (M3), a short scene that plays the same way every time: the search begins it
-  /// and holds Miki still. The attacker steps out from behind the van and runs at her; she
-  /// finishes the search; Tom appears and drops the attacker before he reaches her. They turn to
-  /// each other, and the exchange that follows ends with Tom joining.
+  /// and holds Miki still. The attacker steps out of the west arch and runs at her round the
+  /// pier; she finishes the search; Tom appears in the east arch and drops the attacker before he
+  /// reaches her. They turn to each other, and the exchange that follows ends with Tom joining.
   static let ambush = Level.Encounter(
     beat: .ambush, start: .action(.searchStranger), retryAt: nil, hostiles: [attacker],
     cues: [
@@ -86,9 +76,9 @@ enum BrooklynBridge {
     ],
     holdsParty: true)
 
-  /// Laura (M4) lies hurt beside a car just past the gap in the divider. Once Tom has joined, the
-  /// party's approach finds her: she calls out, the camera leans towards her so that she shows
-  /// clear of the HUD, Miki answers, and Help is offered at her side.
+  /// Laura (M4) lies hurt in the snow beyond mid-span. Once Tom has joined, the party's approach
+  /// finds her: she calls out, the camera leans towards her so that she shows clear of the HUD,
+  /// Miki answers, and Help is offered at her side.
   static let lauraFound = Level.Encounter(
     beat: .lauraFound, start: .area(layout.area(named: "laura.found")), retryAt: nil,
     hostiles: [],
@@ -125,7 +115,7 @@ enum BrooklynBridge {
   static let level = Level(
     id: "brooklyn-bridge", ground: layout.ground, boxes: layout.boxes,
     // What the player sees, exported by Blender with the layout file from the level's own file.
-    scene: "BrooklynBridge", points: points,
+    scene: "BrooklynBridge", points: [],
     interactions: [searchStranger, helpLaura], triggers: triggers,
     encounters: [strangerEncounter, ambush, lauraFound, helping, arrival],
     startingAmmo: 12,
@@ -142,22 +132,12 @@ enum BrooklynBridge {
     opening: "The Brooklyn end of the bridge. Manhattan is on the far side.",
     objective: "Cross the bridge to Manhattan.",
     objectiveChanges: [
-      (.lauraFound, "Help the woman between the cars."),
+      (.lauraFound, "Help the woman in the snow."),
       (.withLaura, "Cross to Manhattan together."),
       (.arrived, "Manhattan, together."),
     ],
     lookAround: "Manhattan is ahead, across the bridge.",
     restartNote: "Restart begins a new run at the Brooklyn end.")
-
-  /// A landmark from the layout, with what it is called and what a look shows.
-  private static func point(_ id: String, _ name: String, _ observation: String)
-    -> Level.PointOfInterest
-  {
-    let landmark = layout.landmark(named: id)
-    return Level.PointOfInterest(
-      id: id, name: name, position: landmark.position, size: landmark.size,
-      observation: observation)
-  }
 
   /// A trigger area from the layout, with the line it shows.
   private static func trigger(_ id: String, _ line: String) -> Level.Trigger {

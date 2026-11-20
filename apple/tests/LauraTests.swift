@@ -77,13 +77,13 @@ struct LauraTests {
     let laura = try #require(world.root.findEntity(named: "party.laura"))
     let visual = try #require(laura.children.first)
     joinTom(world)
-    // Across the gap in the divider, a woman calls out. Until she joins, only Tom follows.
+    // Beyond mid-span, a woman calls out. Until she joins, only Tom follows.
     walk(world, to: [6.5, -225.15])
     #expect(Set(world.companionTargets.keys) == [.tom])
     walk(world, to: [-6, -228.15])
     walk(world, to: [-6.5, -230.15])
     #expect(world.session.beat == .lauraFound)
-    #expect(world.objective == "Help the woman between the cars.")
+    #expect(world.objective == "Help the woman in the snow.")
     #expect(run(world, upTo: 1) { world.observation == "A woman: “Please. Over here.”" })
     // The camera leans towards her while she calls out, then settles back behind Miki.
     let camera = try #require(world.root.findEntity(named: "camera"))
@@ -109,7 +109,7 @@ struct LauraTests {
     finishConversation(world)
     #expect(world.session.party == [.miki, .tom, .laura] && world.session.beat == .withLaura)
     #expect(world.objective == "Cross to Manhattan together.")
-    // Both companions follow up the west roadway.
+    // Both companions follow on towards Manhattan.
     walk(world, to: [-7, -257.15])
     run(world, upTo: 3)
     for member in [PartyMember.tom, .laura] {
@@ -121,7 +121,7 @@ struct LauraTests {
     #expect(world.session.mode == .dialogue)
     finishConversation(world)
     #expect(world.session.beat == .arrived && world.objective == "Manhattan, together.")
-    // Restart puts Laura back on the deck, hurt, without adding entities.
+    // Restart puts Laura back in the snow, hurt, without adding entities.
     world.restart()
     #expect(world.session.party == [.miki] && world.session.beat == .alone)
     #expect(laura.isEnabled && isLying(visual))
@@ -194,19 +194,19 @@ struct LauraTests {
   /// The same in play, from the start of a run: the stranger's fight, the search, the ambush
   /// and the exchange.
   private func joinTom(_ world: GameWorld) {
-    walk(world, to: [6.5, 51])
+    walk(world, to: [6.5, 15])
     #expect(run(world, upTo: 4) { world.threat != nil })
     #expect(run(world, upTo: 2) { world.threat == nil })
     #expect(run(world, upTo: 2, fire: true) { world.session.defeated.contains("stranger") })
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
-    walk(world, to: [6.5, 43])
+    walk(world, to: [4.4, 4.6])
     world.performAction()
     #expect(run(world, upTo: 6) { world.session.mode == .dialogue })
     finishConversation(world)
     #expect(world.session.beat == .withTom)
   }
 
-  /// From Tom joining, across the gap in the divider until Laura has called out.
+  /// From Tom joining, on past mid-span until Laura has called out.
   private func findLaura(_ world: GameWorld) {
     walk(world, to: [6.5, -225.15])
     walk(world, to: [-6, -228.15])

@@ -21,22 +21,24 @@ struct CombatTests {
     #expect(LineOfSight.isClear(from: [1.5, -3], to: [1.5, 3], obstacles: [box]))
   }
 
-  /// On the bridge, the cars before the first tower give cover to both sides.
+  /// On the buried bridge only the towers give cover: the first tower's pier, between its two
+  /// arches, covers either side from the other.
   @Test
-  func carsBeforeTheFirstTowerGiveCoverBothWays() {
+  func theFirstTowersPierGivesCoverBothWays() {
     let obstacles = BrooklynBridge.level.obstacles
     let stranger = BrooklynBridge.stranger.standAt
-    // In the open lane where the fight begins, each can see the other.
-    #expect(LineOfSight.isClear(from: [6.5, 51], to: stranger, obstacles: obstacles))
-    // Behind the car to Miki's left.
-    #expect(!LineOfSight.isClear(from: [4.6, 51.5], to: stranger, obstacles: obstacles))
-    // Off to the right, the car turned across the lane covers him.
-    #expect(!LineOfSight.isClear(from: [10.5, 51], to: stranger, obstacles: obstacles))
-    // He waits unseen behind that car.
-    #expect(
-      !LineOfSight.isClear(
-        from: [6.5, 51], to: BrooklynBridge.stranger.hiddenAt, obstacles: obstacles)
-    )
+    // In the east arch, where the fight begins, each can see the other.
+    #expect(LineOfSight.isClear(from: [6.5, 15], to: stranger, obstacles: obstacles))
+    // In the west arch, the pier stands between them.
+    #expect(!LineOfSight.isClear(from: [-4, 10], to: stranger, obstacles: obstacles))
+    // Out beyond the tower, on the west side, nothing does.
+    #expect(LineOfSight.isClear(from: [-4, 3], to: stranger, obstacles: obstacles))
+    // He waits unseen behind the pier as Miki comes through the east arch.
+    for miki: SIMD2<Float> in [[6.5, 30], [6.5, 16]] {
+      #expect(
+        !LineOfSight.isClear(
+          from: miki, to: BrooklynBridge.stranger.hiddenAt, obstacles: obstacles))
+    }
   }
 
   @Test
