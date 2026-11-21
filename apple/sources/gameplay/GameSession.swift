@@ -84,8 +84,8 @@ final class GameSession {
     case hold
   }
 
-  /// Hits the leader can take in an encounter; the last one starts it again (the placeholder
-  /// hit rule of The Quiet Yard).
+  /// Hits a member can take in an encounter; the last one starts it again, or falls the party
+  /// back where the level has that rule (the placeholder hit rule of The Quiet Yard).
   static let hitsAllowed = 3
 
   /// What an encounter's retry returns to: the state when it began.
@@ -116,8 +116,8 @@ final class GameSession {
   private let beatStarted: [Level.ActionID: Beat]
   /// The story's progress on the bridge.
   private(set) var beat = Beat.alone
-  /// Hits the leader has taken in the current encounter.
-  private(set) var hitsTaken = 0
+  /// Hits each member has taken in the current encounter. On the bridge only the leader is hit.
+  private var hits: [PartyMember: Int] = [:]
   /// Rounds left for the leader's weapon.
   private(set) var ammo: Int
   /// Hostiles defeated in this run.
@@ -163,6 +163,14 @@ final class GameSession {
 
   /// Whether an encounter is under way.
   var inEncounter: Bool { checkpoint != nil }
+
+  /// Hits the leader has taken in the current encounter.
+  var hitsTaken: Int { hits(of: leader) }
+
+  /// Hits a member has taken in the current encounter.
+  func hits(of member: PartyMember) -> Int {
+    hits[member] ?? 0
+  }
 
   var isPaused: Bool { mode == .paused }
   var currentLine: MissionScript.Line? {
@@ -362,9 +370,16 @@ final class GameSession {
 
   /// The leader is hit; true on the last allowed hit, when the encounter must start again.
   func takeHit() -> Bool {
+    takeHit(leader)
+  }
+
+  /// A member is hit; true on their last allowed hit, when the encounter must start again or,
+  /// where the level has that rule, the party falls back.
+  func takeHit(_ member: PartyMember) -> Bool {
     guard mode == .exploring, inEncounter else { return false }
-    hitsTaken += 1
-    return hitsTaken >= Self.hitsAllowed
+    let taken = hits(of: member) + 1
+    hits[member] = taken
+    return taken >= Self.hitsAllowed
   }
 
   /// The encounter starts again from its beginning: everything from before it stays, and
@@ -377,14 +392,26 @@ final class GameSession {
     defeated = checkpoint.defeated
     searched = checkpoint.searched
     hitsDealt = checkpoint.hitsDealt
-    hitsTaken = 0
+    hits = [:]
     self.checkpoint = nil
   }
 
-  /// The encounter is won; the leader's hits recover.
+  /// The party falls back after the last allowed hit on anyone (ADR 0005). The encounter is no
+  /// longer under way and can begin again, everyone's hits recover and every companion follows
+  /// again; the hostiles keep the damage dealt, whoever is down stays down, and nothing else
+  /// is undone.
+  func fallBack() {
+    guard let checkpoint else { return }
+    beat = checkpoint.beat
+    hits = [:]
+    orders = [:]
+    self.checkpoint = nil
+  }
+
+  /// The encounter is won; everyone's hits recover.
   func endEncounter() {
     checkpoint = nil
-    hitsTaken = 0
+    hits = [:]
   }
 
   /// Whether the action is offered at its approach now.
@@ -457,7 +484,7 @@ final class GameSession {
     orders = [:]
     firedTriggers = []
     beat = .alone
-    hitsTaken = 0
+    hits = [:]
     ammo = startingAmmo
     defeated = []
     searched = []

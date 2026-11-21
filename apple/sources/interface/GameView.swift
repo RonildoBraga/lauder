@@ -201,9 +201,10 @@ struct GameView: View {
   }
 
   /// The status panel, small and with just the essentials: who leads, marked, and who follows,
-  /// with the leader's hits during a fight and the squad's formation. A new objective or line
-  /// shows for a few seconds; a threat, the carbine's rounds, a warning or the release guidance
-  /// only while they matter. The panel button hides it, and shows it again.
+  /// with the leader's hits during a fight, or everyone's in the combat yard, and the squad's
+  /// formation. A new objective or line shows for a few seconds; a threat, the carbine's rounds,
+  /// a warning or the release guidance only while they matter. The panel button hides it, and
+  /// shows it again.
   private func status(talking: Bool) -> some View {
     VStack(alignment: .leading, spacing: 3) {
       HStack(spacing: 6) {
@@ -212,18 +213,23 @@ struct GameView: View {
           Text(member.displayName)
             .fontWeight(leading ? .semibold : .regular)
             .underline(leading)
-          if world.session.inEncounter, leading {
+          if world.session.inEncounter, leading || world.showsEveryonesHits {
             // The placeholder hit rule: three hits, shown beside the name.
-            Text(hitPips).foregroundStyle(HUDStyle.threat)
+            Text(hitPips(of: member)).foregroundStyle(HUDStyle.threat)
           }
         }
-        if world.session.formationsAvailable {
+        if world.session.formationsAvailable, !world.showsEveryonesHits {
           // The squad's formation and what it is doing (ADR 0003, phases S2 and S3).
           Text("· \(world.session.formation.name) · \(world.session.squadState)")
             .foregroundStyle(HUDStyle.muted)
         }
       }
       .font(.caption)
+      if world.session.formationsAvailable, world.showsEveryonesHits {
+        // With everyone's hits beside their names, the formation takes a line of its own.
+        Text("\(world.session.formation.name) · \(world.session.squadState)")
+          .font(.caption).foregroundStyle(HUDStyle.muted)
+      }
       if world.objectiveIsFresh {
         Text(world.objective).font(.subheadline.weight(.semibold))
       }
@@ -310,9 +316,9 @@ struct GameView: View {
     return (left.displayName, right.displayName)
   }
 
-  /// The leader's hits left in this encounter, then those taken.
-  private var hitPips: String {
-    let taken = min(world.session.hitsTaken, GameSession.hitsAllowed)
+  /// A member's hits left in this encounter, then those taken.
+  private func hitPips(of member: PartyMember) -> String {
+    let taken = min(world.session.hits(of: member), GameSession.hitsAllowed)
     return String(repeating: "●", count: GameSession.hitsAllowed - taken)
       + String(repeating: "○", count: taken)
   }

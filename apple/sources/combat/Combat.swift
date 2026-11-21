@@ -4,15 +4,58 @@ import simd
 struct Weapon: Sendable {
   /// The farthest an assisted shot reaches, in metres.
   let range: Float
-  /// Seconds between shots while Fire is held.
+  /// Seconds between shots while Fire is held, or between a companion's bursts.
   let interval: Float
-  /// Seconds from the first Fire press until a holstered weapon can shoot.
+  /// Seconds from the first Fire press until a holstered weapon can shoot; for a companion's,
+  /// from the moment a fight is under way until they first fire.
   let drawTime: Float
+  /// Shots in each of a companion's bursts, `burstGap` seconds apart; one for single shots.
+  var burst = 1
+  var burstGap: Float = 0
+  /// Hits each shot deals: a scatter weapon's blast counts for more than one.
+  var damage = 1
 
   /// Miki's precision carbine. Starting values for playtests; the range is less than the 19 m
   /// or so that the camera shows ahead of her, so she never shoots at something off screen
   /// ahead.
   static let carbine = Weapon(range: 14, interval: 0.4, drawTime: 0.35)
+  /// Laura's light burst weapon (ADR 0005): bursts of three quick shots, reaching a little
+  /// less far than the carbine. Starting values, to tune in play.
+  static let lightBurst = Weapon(
+    range: 12, interval: 1.8, drawTime: 0.5, burst: 3, burstGap: 0.12)
+  /// Tom's close scatter weapon (ADR 0005): a slow blast that counts as two hits, only at close
+  /// range. Starting values, to tune in play.
+  static let closeScatter = Weapon(range: 7, interval: 1.5, drawTime: 0.7, damage: 2)
+}
+
+/// When a weapon that fires by itself shoots, as a companion's does once a fight is under way
+/// (ADR 0005): first after its draw time, then each shot of a burst a short gap apart, with the
+/// weapon's interval between bursts. It holds fire while there is nothing to shoot at, and a
+/// burst whose target is gone stops there.
+struct AutoFire {
+  private var wait: Float
+  private var shotsLeft = 0
+
+  init(weapon: Weapon) {
+    wait = weapon.drawTime
+  }
+
+  /// One simulation step: true when a shot fires now.
+  mutating func step(dt: Float, weapon: Weapon, hasTarget: Bool) -> Bool {
+    wait = max(0, wait - dt)
+    guard hasTarget else {
+      if shotsLeft > 0 {
+        shotsLeft = 0
+        wait = weapon.interval
+      }
+      return false
+    }
+    guard wait <= 0 else { return false }
+    if shotsLeft == 0 { shotsLeft = weapon.burst }
+    shotsLeft -= 1
+    wait = shotsLeft > 0 ? weapon.burstGap : weapon.interval
+    return true
+  }
 }
 
 /// Sight lines on the flat floor: a shot is a straight line against the same blocker footprints
@@ -85,6 +128,19 @@ enum Targeting {
     }
     let pool = ahead.isEmpty ? visible : ahead
     return pool.min {
+      simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
+    }?.id
+  }
+
+  /// The nearest candidate within range and in sight, whichever way the shooter faces: a
+  /// companion's own target, and whom a hostile that can aim at anyone aims at (ADR 0005).
+  static func nearest(
+    from position: SIMD2<Float>, candidates: [Candidate], range: Float,
+    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
+  ) -> String? {
+    candidates.filter {
+      simd_distance($0.position, position) <= range && isClear(position, $0.position)
+    }.min {
       simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
     }?.id
   }

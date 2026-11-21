@@ -10,6 +10,11 @@ import simd
 /// left and Tom on the right, as the HUD orders them at the end of the opening. Two shooters of
 /// the stranger's type wait in view beyond the wall, out of the party's clear sight, so the party
 /// approaches; the fight begins once the leader comes level with the wall.
+///
+/// The experiment's rules are the yard's own, and the bridge keeps the opening's: the shooters
+/// aim at anyone in clear sight within reach and are targets from their first wind-up, the
+/// companions fire by themselves once the fight is under way, everyone can take three hits and
+/// the third on anyone falls the party back to the entrance, and Miki can Disrupt.
 enum CombatYard {
   /// The entrance: where each member starts, and where the party falls back to.
   static let spawns: [PartyMember: SIMD2<Float>] = [
@@ -35,7 +40,14 @@ enum CombatYard {
   static let fight = Level.Encounter(
     beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -16], maximum: [15, 1])),
     retryAt: spawns[.miki], hostiles: [leftShooter, rightShooter],
-    cues: [(0.4, .engage(rightShooter.id)), (1.1, .engage(leftShooter.id))])
+    cues: [(0.4, .engage(rightShooter.id)), (1.1, .engage(leftShooter.id))],
+    clearedLine: "The yard is clear. Restart to fight again.")
+
+  /// The experiment's rules. Each member fires by themselves while someone else leads: Miki
+  /// with her carbine, Laura with her light burst weapon and Tom with his close scatter weapon.
+  static let combat = Level.Combat(
+    companionWeapons: [.miki: .carbine, .laura: .lightBurst, .tom: .closeScatter],
+    fallsBack: true, disrupt: true)
 
   static let level = Level(
     id: "combat-yard",
@@ -48,7 +60,7 @@ enum CombatYard {
     fieldOfView: BrooklynBridge.layout.camera.fieldOfView, lights: BrooklynBridge.layout.lights,
     opening: "The combat yard, a test of squad fighting outside the story.",
     objective: "Clear the yard.", lookAround: "A wall, two blocks, and two shooters beyond.",
-    restartNote: "Restart begins the yard again.")
+    restartNote: "Restart begins the yard again.", combat: combat)
 
   /// The pause menu's third choice while the experiment lasts: from any other level it reads
   /// Combat test and starts the yard, and in the yard it reads Bridge and returns to a new run of
@@ -59,11 +71,12 @@ enum CombatYard {
       : ("Combat test", "Combat test opens the combat yard, outside the story.", Self.level)
   }
 
-  /// A shooter of the stranger's type, waiting in view where it fights. Starting values for
-  /// playtests: the stranger's wind-up, recovery and reach, and six hits to take down.
+  /// A shooter of the stranger's type, waiting in view where it fights, that aims at anyone and
+  /// is a target from its first wind-up. Starting values for playtests: the stranger's wind-up,
+  /// recovery and reach, and six hits to take down, since three members can fire at it.
   private static func shooter(id: String, name: String, at point: SIMD2<Float>) -> Level.Hostile {
     Level.Hostile(
       id: id, name: name, hiddenAt: point, standAt: point, hits: 6, windUp: 1.5, recovery: 1.4,
-      range: 14, inView: true)
+      range: 14, inView: true, targetsAnyone: true, targetFromWindUp: true)
   }
 }

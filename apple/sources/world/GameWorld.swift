@@ -71,6 +71,8 @@ final class GameWorld {
   @ObservationIgnored private var crossRemaining: Float = 0
   /// Orders refused in this run because nobody could reach their point. Tests read it.
   @ObservationIgnored private(set) var refusedOrders = 0
+  /// How often the party has fallen back in this run (ADR 0005). Tests and playtests read it.
+  @ObservationIgnored private(set) var fallBacks = 0
   /// Whether the leader has been told, on this visit to a gathering area, who is missing.
   @ObservationIgnored private var toldWhoIsMissing = false
   /// What the touch order menu marked as it opened: its point on the screen, and what the ray
@@ -145,8 +147,11 @@ final class GameWorld {
   var isPaused: Bool { session.isPaused }
   /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
   var showsWeapon: Bool { session.inEncounter || weaponDrawn }
-  /// Whether an encounter's retry is under way.
+  /// Whether an encounter's retry, or the party's fall back, is under way.
   var isRetrying: Bool { retryElapsed != nil }
+  /// Whether the HUD shows everyone's hits during a fight, as the combat yard does, rather than
+  /// only the leader's.
+  var showsEveryonesHits: Bool { session.inEncounter && level.combat.fallsBack }
   /// The HUD's objective: the level's own, until the story changes it.
   var objective: String {
     level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
@@ -425,6 +430,7 @@ final class GameWorld {
     placeParty()
     diagnostic = nil
     refusedOrders = 0
+    fallBacks = 0
     touchMark = nil
     crossRemaining = 0
     refusalCross.isEnabled = false
@@ -446,6 +452,12 @@ final class GameWorld {
   /// leader, and the camera settled behind them.
   private func resetPlay(around spot: SIMD2<Float>) {
     stage.reset()
+    resetSquad(around: spot)
+  }
+
+  /// What a fall back puts back too, once the leader stands at `spot`: the squad's movement
+  /// around the leader and the camera settled behind them, with the weapon holstered.
+  private func resetSquad(around spot: SIMD2<Float>) {
     threat = nil
     weaponDrawn = false
     fireHeld = false
@@ -914,12 +926,33 @@ final class GameWorld {
   }
 
   private func performRetry() {
+    if level.combat.fallsBack {
+      fallBack()
+      return
+    }
     session.retryEncounter()
     let spot = retrySpot ?? level.spawn(session.leader)
     place(session.leader, at: spot)
     setYaw(session.leader, Movement.yaw(towards: level.heading))
     resetPlay(around: spot)
     observation = "Try again."
+  }
+
+  /// The whole party falls back to the level's spawn points after the last allowed hit on
+  /// anyone (ADR 0005): everyone's hits recover and every companion follows again, while the
+  /// hostiles keep the damage dealt and wait where they stand, and whoever is down stays down.
+  private func fallBack() {
+    session.fallBack()
+    stage.fallBack()
+    let facing = Movement.yaw(towards: level.heading)
+    for member in session.party {
+      place(member, at: level.spawn(member))
+      setYaw(member, facing)
+    }
+    fallBacks += 1
+    resetSquad(around: level.spawn(session.leader))
+    showOrders()
+    observation = "The party falls back to the entrance."
   }
 
   private func changeLeader() {
@@ -942,12 +975,18 @@ final class GameWorld {
     bodies[member]?.position = [point.x, PartyBody.height / 2, point.y]
   }
 
-  /// Companions turn towards their movement, or to the formation's heading once settled, at a
-  /// limited rate so they never snap round.
+  /// Companions turn towards their movement, or towards their target while they fire by
+  /// themselves, or to the formation's heading once settled, at a limited rate so they never
+  /// snap round.
   private func turn(_ member: PartyMember, moved delta: SIMD2<Float>, dt: Float) {
     let wanted: Float
     if simd_length(delta) > 0.2 * dt {
       wanted = Movement.yaw(towards: delta)
+    } else if let aim = stage.aims[member], let here = position(of: member),
+      simd_distance(aim, here) > 0.01
+    {
+      // A companion firing by themselves faces their target (ADR 0005).
+      wanted = Movement.yaw(towards: aim - here)
     } else if motors[member]?.isSettled == true {
       wanted = Movement.yaw(towards: planner.heading)
     } else {
