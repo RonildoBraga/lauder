@@ -69,12 +69,13 @@ func wait(_ world: GameWorld, seconds: Float) throws {
 }
 
 /// Run the world until the condition holds, for at most the given time, and say whether it
-/// held. Fire is pressed on the first frame and held throughout. An encounter's retry runs
-/// through the frame update, as it does in play.
+/// held. Fire is pressed on the first frame and held throughout, and the right stick held at
+/// `aim` (ADR 0007). An encounter's retry runs through the frame update, as it does in play.
 @MainActor
 @discardableResult
 func run(
-  _ world: GameWorld, upTo seconds: Float, fire: Bool = false, until done: () -> Bool = { false }
+  _ world: GameWorld, upTo seconds: Float, fire: Bool = false, aim: SIMD2<Float>? = nil,
+  until done: () -> Bool = { false }
 ) -> Bool {
   var pressed = fire
   for _ in 0..<Int(seconds * 60) {
@@ -82,7 +83,8 @@ func run(
     if world.isRetrying {
       world.update(with: .neutral, sampledIn: world.session.mode, deltaTime: 1 / 60)
     } else {
-      world.advanceParty(movement: .zero, fireHeld: fire, firePressed: pressed, deltaTime: 1 / 60)
+      world.advanceParty(
+        movement: .zero, aim: aim, fireHeld: fire, firePressed: pressed, deltaTime: 1 / 60)
       pressed = false
     }
   }

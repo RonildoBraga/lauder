@@ -30,6 +30,13 @@
       case expectTriggers(Int)
       /// Hold Fire, which draws the weapon and then shoots at the assisted target.
       case fire(seconds: Float)
+      /// Hold the right stick towards this direction on the ground, and Fire, for this long
+      /// (ADR 0007).
+      case fireAimed(SIMD2<Float>, seconds: Float)
+      /// How many rounds the carbine has left.
+      case expectAmmo(Int)
+      /// At least this many shots' marks show on blocks (ADR 0007).
+      case expectMarks(atLeast: Int)
       case expectBeat(GameSession.Beat)
       /// How many hostiles are down in this run.
       case expectDefeated(Int)
@@ -113,6 +120,8 @@
       let disrupts: Int
       let companionShots: [PartyMember: Int]
       let fallBacks: Int
+      /// How many shots' marks show on blocks.
+      let shotMarks: Int
     }
 
     struct Frame {
@@ -387,6 +396,20 @@
             return InputRules.Raw()
           }
           return InputRules.Raw(controllerFire: true)
+        case .fireAimed(let direction, let seconds):
+          guard stepTime < seconds else {
+            advance()
+            return InputRules.Raw()
+          }
+          return InputRules.Raw(
+            aimStick: Movement.stick(towards: direction, cameraOffset: snapshot.level.cameraOffset),
+            controllerFire: true)
+        case .expectAmmo(let count):
+          expect(snapshot.ammo == count, "the carbine had \(snapshot.ammo) round(s), not \(count)")
+        case .expectMarks(let count):
+          expect(
+            snapshot.shotMarks >= count,
+            "\(snapshot.shotMarks) shot mark(s) showed instead of at least \(count)")
         case .expectBeat(let beat):
           expect(snapshot.beat == beat, "the story was at \(snapshot.beat) instead of \(beat)")
         case .expectDefeated(let count):
@@ -762,7 +785,9 @@
     ]
 
     /// The combat yard (ADR 0005), entered from the bridge through the pause menu's third
-    /// choice. The companions hold behind the wall while Miki steps out past its east end alone,
+    /// choice. Before the fight, Miki aims her carbine up at the wall and fires, which spends no
+    /// rounds and marks the wall (ADR 0007). The companions hold behind it while she steps out
+    /// past its east end alone,
     /// where both shooters can see her; the formation button, which regroups in a fight, calls
     /// them to her, and the shooters' third hit falls the party back to the entrance. Then all
     /// three go round together: Miki disrupts a wind-up, the companions take cover and fire by
@@ -772,7 +797,9 @@
     private static let combatYard: [Step] =
       [.mark("the bridge")] + otherLevel + [
         .expectLevel("combat-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
-        .walk([0, 2.5]), .wait(seconds: 1), .order(.hold), .expectOrder(.tom, "holding"),
+        .fireAimed([0, -1], seconds: 1.5), .expectAmmo(60), .expectMarks(atLeast: 2),
+        .mark("practice on the wall"), .walk([0, 2.5]), .wait(seconds: 1), .order(.hold),
+        .expectOrder(.tom, "holding"),
         .walk([6.5, 2.5]), .walk([6.5, -1.5]), .expectBeat(.stranger),
         .mark("alone beyond the wall"), .formation, .expectSquad("regrouping"),
         .expectOrder(.tom, "following"), .mark("regroup"), .awaitFallBacks(1, seconds: 20),

@@ -148,6 +148,13 @@ final class GameWorld {
   /// The level's fights (ADR 0004, M2).
   @ObservationIgnored private let stage: EncounterStage
   @ObservationIgnored private var fireHeld = false
+  /// Where the right stick aims, in the stick's terms, and where that is on the ground while the
+  /// leader is armed to aim (ADR 0007).
+  @ObservationIgnored private var aimStick: SIMD2<Float>?
+  @ObservationIgnored private var aimDirection: SIMD2<Float>?
+  /// The camera's lens now, in degrees: the level's own while exploring, narrowing in a fight or
+  /// while the right stick aims (ADR 0007).
+  @ObservationIgnored private var lens: Float
   @ObservationIgnored private var firePressPending = false
   @ObservationIgnored private var signaturePressPending = false
   /// Where the current encounter's retry places the leader.
@@ -180,10 +187,17 @@ final class GameWorld {
   static let gatherRadius: Float = 5
   /// How long a new line or objective shows in the status panel, in seconds of play.
   static let lineTime: Float = 6
+  /// How much the lens narrows in a fight or while the right stick aims, and roughly how long
+  /// it takes to get there, in seconds (ADR 0007): about 14° from the bridge's 20°.
+  static let fightLens: Float = 0.7
+  static let lensTime: Float = 0.3
 
   var isPaused: Bool { session.isPaused }
-  /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
-  var showsWeapon: Bool { session.inEncounter || weaponDrawn }
+  /// Whether the weapon's controls show: while Miki leads, since she carries the carbine and can
+  /// fire it in a fight or out of one (ADR 0007).
+  var showsWeapon: Bool { session.leader == .miki }
+  /// Whether the carbine's rounds show: during a fight, or while the weapon is drawn.
+  var showsAmmo: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry, or the party's fall back, is under way.
   var isRetrying: Bool { retryElapsed != nil }
   /// Whether the HUD shows everyone's hits during a fight, as the combat yard does, rather than
@@ -197,6 +211,12 @@ final class GameWorld {
   /// How many shots each companion has fired by themselves in this run. Tests and playtests
   /// read it.
   var companionShots: [PartyMember: Int] { stage.companionShots }
+  /// How many shots' marks show on blocks now (ADR 0007). Tests and playtests read it.
+  var shotMarks: Int { stage.effects.marksShown }
+  /// The camera's lens now, in degrees (ADR 0007). Tests read it.
+  var cameraLens: Float { lens }
+  /// The direction on the ground a member faces. Tests read it.
+  func facing(of member: PartyMember) -> SIMD2<Float> { Movement.facing(yaw: yaw[member] ?? 0) }
   /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
   var disrupts: Int { stage.disrupts }
   /// The HUD's objective: the level's own, until the story changes it or a salvage task's
@@ -214,6 +234,7 @@ final class GameWorld {
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
+    lens = level.fieldOfView
     // Build the route grid while loading, not on the first frame of play, and in a salvage
     // task the gate's open one as well.
     func ways(adding gate: [PartyMotion.Box]) -> (motion: PartyMotion, grid: NavigationGrid) {
@@ -386,8 +407,9 @@ final class GameWorld {
       let started = DispatchTime.now().uptimeNanoseconds
     #endif
     advanceParty(
-      movement: input.movement, fireHeld: input.fireHeld, firePressed: input.firePressed,
-      signaturePressed: input.signaturePressed, deltaTime: deltaTime)
+      movement: input.movement, aim: input.aim, fireHeld: input.fireHeld,
+      firePressed: input.firePressed, signaturePressed: input.signaturePressed,
+      deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
         dt: deltaTime,
@@ -546,6 +568,8 @@ final class GameWorld {
     threat = nil
     weaponDrawn = false
     fireHeld = false
+    aimStick = nil
+    aimDirection = nil
     firePressPending = false
     signaturePressPending = false
     signatureCue = nil
@@ -560,6 +584,7 @@ final class GameWorld {
     cameraElapsed = 0
     cameraLean = .zero
     cameraTarget = Self.cameraTarget(over: spot)
+    lens = level.fieldOfView
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
   }
@@ -582,11 +607,12 @@ final class GameWorld {
   /// production; deterministic route and soak tests drive it too. Input availability, Pause and
   /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
-    movement: SIMD2<Float>, fireHeld: Bool = false, firePressed: Bool = false,
-    signaturePressed: Bool = false, deltaTime: Float
+    movement: SIMD2<Float>, aim: SIMD2<Float>? = nil, fireHeld: Bool = false,
+    firePressed: Bool = false, signaturePressed: Bool = false, deltaTime: Float
   ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     self.fireHeld = fireHeld
+    aimStick = aim
     if firePressed { firePressPending = true }
     if signaturePressed { signaturePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
@@ -624,15 +650,20 @@ final class GameWorld {
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
-    if simd_length_squared(leaderDelta) > 0.000001 {
+    // Only Miki carries the carbine, and not while a scene holds her. While the right stick aims
+    // it, she faces her aim, whichever way she moves (ADR 0007).
+    let armed = leader == .miki && !held
+    aimDirection =
+      armed ? aimStick.map { Movement.aim(for: $0, cameraOffset: level.cameraOffset) } : nil
+    if let aimDirection {
+      setYaw(leader, Movement.yaw(towards: aimDirection))
+    } else if simd_length_squared(leaderDelta) > 0.000001 {
       setYaw(leader, Movement.yaw(towards: leaderDelta))
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
-    if !level.encounters.isEmpty {
-      stepEncounter(leader: leader, at: leaderEnd, dt: dt)
-      if retryElapsed != nil { return }
-    }
+    stepStage(leader: leader, at: leaderEnd, armed: armed, dt: dt)
+    if retryElapsed != nil { return }
     // The hold lasts through the step whose cue ends the scene and begins its exchange.
     if held || session.mode != .exploring {
       companionTargets = [:]
@@ -932,11 +963,12 @@ final class GameWorld {
     }
   }
 
-  /// The camera's mapping between the screen and the ground, for a screen of this shape.
+  /// The camera's mapping between the screen and the ground, for a screen of this shape, through
+  /// its lens as it is now.
   func projection(aspect: Float) -> CameraProjection {
     CameraProjection(
-      eye: cameraTarget + level.cameraOffset, target: cameraTarget,
-      fieldOfView: level.fieldOfView, aspect: aspect)
+      eye: cameraTarget + level.cameraOffset, target: cameraTarget, fieldOfView: lens,
+      aspect: aspect)
   }
 
   /// Where a member's body stands on the ground.
@@ -984,16 +1016,17 @@ final class GameWorld {
   /// One step of the fight: the stage plays the encounter and fires the leader's weapon; the
   /// world turns the leader, shows lines, the threat and who can answer it, and starts a retry
   /// or a fall back after the last hit. Only Miki carries the carbine and has Disrupt, and not
-  /// while a scene holds her.
-  private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
-    let armed = leader == .miki && !stage.holdsParty
+  /// while a scene holds her; outside an encounter, only her carbine acts (ADR 0007).
+  private func stepStage(
+    leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
+  ) {
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
         bodies[member]?.isEnabled == true ? self.position(of: member).map { (member, $0) } : nil
       })
     let outcome = stage.step(
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
-      fireHeld: armed && fireHeld, firePressed: armed && firePressPending,
+      aim: aimDirection, fireHeld: armed && fireHeld, firePressed: armed && firePressPending,
       mayDisrupt: leaderHasSignature && !stage.holdsParty,
       signaturePressed: signaturePressPending, figures: figures, session: session)
     firePressPending = false
@@ -1181,6 +1214,15 @@ final class GameWorld {
     }
     let eye = cameraTarget + level.cameraOffset
     camera.look(at: cameraTarget, from: eye, relativeTo: nil)
+    // In a fight, or while the right stick aims, the lens narrows so the camera comes closer
+    // through it, keeping its height and angle (ADR 0007, the visual direction); a scene keeps
+    // the level's lens for its framing.
+    let close = (session.inEncounter && !stage.holdsParty) || aimDirection != nil
+    let goal = level.fieldOfView * (close ? Self.fightLens : 1)
+    lens += (goal - lens) * min(1, deltaTime / Self.lensTime)
+    if abs(camera.camera.fieldOfViewInDegrees - lens) > 0.001 {
+      camera.camera.fieldOfViewInDegrees = lens
+    }
     let party = ([session.leader] + session.companions).compactMap { bodies[$0]?.position }
     landmarkFade.update(eye: eye, seeing: party + [cameraTarget], deltaTime: deltaTime)
   }
@@ -1239,7 +1281,8 @@ final class GameWorld {
         line: gameLine, salvageContents: session.salvage.contents,
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
-        disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks)
+        disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks,
+        shotMarks: shotMarks)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
@@ -1337,7 +1380,7 @@ final class GameWorld {
   /// open as a thin wall into the depot, and change only when it does; the gate then swings
   /// open over a moment, or Restart shuts it at once. The rest shows in the looks.
   private func showSalvage() {
-    guard let ways = gateWays else { return }
+    guard let task = level.salvage, let ways = gateWays else { return }
     let progress = session.salvage
     if progress.gateOpen != gateShownOpen {
       gateShownOpen = progress.gateOpen
@@ -1347,6 +1390,7 @@ final class GameWorld {
         gateHinge?.orientation = simd_quatf(angle: 0, axis: [0, 1, 0])
       }
     }
+    stage.setGate(progress.gateOpen ? task.openGate : task.gate.footprint)
     salvageLooks?.show(progress)
   }
 

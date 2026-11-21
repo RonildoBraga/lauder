@@ -17,6 +17,8 @@ enum InputRules {
 
   struct Raw: Equatable, Sendable {
     var stick: SIMD2<Float> = .zero
+    /// The right stick: the armed leader's aim, apart from movement (ADR 0007).
+    var aimStick: SIMD2<Float> = .zero
     var controllerAction = false
     var controllerPause = false
     var controllerSwitch = false
@@ -55,6 +57,11 @@ enum InputRules {
     var arrowDown = false
     var arrowLeft = false
     var arrowRight = false
+    /// I, K, J and L: the keyboard's aim, as the right stick's (ADR 0007).
+    var aimUp = false
+    var aimDown = false
+    var aimLeft = false
+    var aimRight = false
     var touchStick: SIMD2<Float> = .zero
     var touchIsTouching = false
     var touchAction = false
@@ -79,15 +86,19 @@ enum InputRules {
     var hasMovementKey: Bool { left || right || up || down }
     var hasArrowKey: Bool { arrowUp || arrowDown || arrowLeft || arrowRight }
     var hasDpad: Bool { dpadUp || dpadDown || dpadLeft || dpadRight }
+    var hasAimKey: Bool { aimUp || aimDown || aimLeft || aimRight }
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardPrevious
         || keyboardFire || keyboardFormation || keyboardPanel || keyboardSignature || hasArrowKey
+        || hasAimKey
     }
-    /// Any of the controller's buttons, or its stick beyond the dead zone.
+    /// Any of the controller's buttons, or either stick beyond the dead zone.
     var hasControllerInput: Bool {
-      simd_length_squared(stick) > Movement.deadZone * Movement.deadZone || controllerAction
-        || controllerPause || controllerSwitch || controllerPrevious || controllerFire
-        || controllerFormation || controllerPanel || controllerSignature || hasDpad
+      let deadZone = Movement.deadZone * Movement.deadZone
+      return simd_length_squared(stick) > deadZone || simd_length_squared(aimStick) > deadZone
+        || controllerAction || controllerPause || controllerSwitch || controllerPrevious
+        || controllerFire || controllerFormation || controllerPanel || controllerSignature
+        || hasDpad
     }
   }
 
@@ -145,6 +156,9 @@ enum InputRules {
     var previousPressed = false
     /// A fresh Signature press while exploring: the leader's signature, such as Disrupt.
     var signaturePressed = false
+    /// Where the right stick, or I, K, J and L, aims while exploring, in the stick's terms: up
+    /// and right on the screen. Nil inside the dead zone (ADR 0007).
+    var aim: SIMD2<Float>?
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -173,6 +187,14 @@ enum InputRules {
         Float(raw.right ? 1 : 0) - Float(raw.left ? 1 : 0),
         Float(raw.up ? 1 : 0) - Float(raw.down ? 1 : 0))
       : raw.touchIsTouching ? raw.touchStick : raw.stick
+    let aimKeys = SIMD2<Float>(
+      Float(raw.aimRight ? 1 : 0) - Float(raw.aimLeft ? 1 : 0),
+      Float(raw.aimUp ? 1 : 0) - Float(raw.aimDown ? 1 : 0))
+    let aimed = raw.hasAimKey ? aimKeys : raw.aimStick
+    let aim =
+      aimed.x.isFinite && aimed.y.isFinite
+        && simd_length_squared(aimed) > Movement.deadZone * Movement.deadZone
+      ? aimed : nil
     // The pause menu takes the D-pad and arrow keys as well as the stick and movement keys.
     let direction = movement.y > 0.5 || up ? -1 : movement.y < -0.5 || down ? 1 : 0
     // Consume raw holds even when a gate, mode or higher-priority command suppresses them.
@@ -192,6 +214,8 @@ enum InputRules {
       next.needsNeutralInput =
         simd_length_squared(raw.stick) > deadZone * deadZone
         || !raw.stick.x.isFinite || !raw.stick.y.isFinite
+        || simd_length_squared(raw.aimStick) > deadZone * deadZone
+        || !raw.aimStick.x.isFinite || !raw.aimStick.y.isFinite
         || raw.touchIsTouching
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
@@ -266,7 +290,8 @@ enum InputRules {
           markPoint: raw.touchMark,
           panelPressed: panelEdge,
           previousPressed: previousEdge,
-          signaturePressed: signatureEdge
+          signaturePressed: signatureEdge,
+          aim: aim
         ), next
       )
     }
