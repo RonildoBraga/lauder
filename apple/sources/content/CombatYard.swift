@@ -15,7 +15,9 @@ import simd
 /// aim at anyone in clear sight within reach and are targets from their first wind-up, the
 /// companions fire by themselves once the fight is under way, everyone can take three hits and
 /// the third on anyone falls the party back to the entrance, and Miki can Disrupt. Since the
-/// first session the companions also take cover near their places in a fight.
+/// first session the yard also tries ADR 0003's combat positioning: companions take cover near
+/// their places, each by their own preference, keep off the ground the shooters see, and
+/// regroup on the formation button.
 enum CombatYard {
   /// The entrance: where each member starts, and where the party falls back to.
   static let spawns: [PartyMember: SIMD2<Float>] = [
@@ -46,10 +48,10 @@ enum CombatYard {
 
   /// The experiment's rules. While someone else leads, each member fires by themselves, Miki
   /// with her carbine, Laura with her light burst weapon and Tom with his close scatter weapon,
-  /// and takes cover near their place.
+  /// and positions themselves as ADR 0003's combat positioning has it.
   static let combat = Level.Combat(
     companionWeapons: [.miki: .carbine, .laura: .lightBurst, .tom: .closeScatter],
-    fallsBack: true, disrupt: true, takesCover: true)
+    fallsBack: true, disrupt: true, combatPositioning: true)
 
   static let level = Level(
     id: "combat-yard",

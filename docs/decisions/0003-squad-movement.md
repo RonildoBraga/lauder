@@ -112,6 +112,6 @@ Each phase is its own assignment and pull request.
 | **S1** Natural following, built | Grid, routes, the Close formation, motion, switching, and keep-clear for tight cells | No companion gets stuck; while the leader runs in open ground, each companion is within 0.6 m of their slot 90% of the time; a settled companion stays still while the leader stands; soak tests show no stuck member, no overlap with blockers and nothing non-finite |
 | **S2** Formations, built | Spread and Column, the cycle button, compression and the HUD label | Each shape holds in open ground, compresses through narrow passages and re-forms; changing formation mid-run crosses no paths |
 | **S3** Orders, built | D-pad and touch commands, markers | Orders reach their spots; unreachable spots are refused visibly; switching while holding follows the rule; the touch long-press never fights the stick or buttons; a phone check of the controls |
-| **S4** Combat positioning, its cover near the slot tried in the combat yard ([ADR 0005](0005-squad-combat-experiment.md#after-the-first-session)) | Cover choice, personality weights, sight-aware routes | Designed and checked with the combat systems |
+| **S4** Combat positioning, built in the combat yard ([ADR 0005](0005-squad-combat-experiment.md#after-the-second-session)) | Cover choice, personality weights, sight-aware routes | Designed and checked with the combat systems |
 
 Tuning values are starting points and will change in playtests. If a phase is not reliable after three focused work sessions, stop and reassess with the maintainer.

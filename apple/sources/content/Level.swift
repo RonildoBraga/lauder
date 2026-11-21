@@ -101,10 +101,12 @@ struct Level {
     /// While Miki leads, Signature can Disrupt a hostile's wind-up within her reach and in her
     /// clear sight.
     var disrupt = false
-    /// Once a fight is under way, companions take cover near their formation slots or order
-    /// points (ADR 0003's phase S4, tried in the combat yard), step out to fire and step back
-    /// while a shooter aims at them. See `CoverPlanner`.
-    var takesCover = false
+    /// ADR 0003's combat positioning, phase S4, tried in the combat yard. Once a fight is under
+    /// way, companions take cover near their formation slots or order points, each weighing the
+    /// spots by their own preferences, and step out to fire and back while a shooter aims at
+    /// them (`CoverPlanner`); they keep off open ground where another way exists (`OpenGround`);
+    /// and the formation button regroups them instead of changing the formation.
+    var combatPositioning = false
   }
 
   /// What happens at a moment after an encounter begins.

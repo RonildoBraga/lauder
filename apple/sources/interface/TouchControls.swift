@@ -80,7 +80,8 @@ struct TouchControls: UIViewRepresentable {
       fire.accessibilityLabel = "Fire"
       fire.accessibilityHint = "Draws the weapon, then fires at the marked target while held."
       formation.accessibilityHint =
-        "Changes the formation: Close, Spread, then Column. After an order, calls everyone back."
+        "Changes the formation: Close, Spread, then Column. After an order, calls everyone back. "
+        + "In a fight in the combat yard, regroups everyone."
       signature.accessibilityHint = "Uses the leader's signature: Miki's Disrupt cancels a shot."
       otherLevel.accessibilityHint = "Leaves this run for a new run of another level."
       stick.accessibilityLabel = "Move"
