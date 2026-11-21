@@ -141,8 +141,8 @@ struct FirstFightTests {
     walk(world, to: [6.5, 18])
     #expect(abs(lean()) < 0.01)
     walk(world, to: [6.5, 15])
-    #expect(run(world, upTo: 2) { lean() > EncounterStage.cameraLeanLimit - 0.1 })
-    #expect(lean() < EncounterStage.cameraLeanLimit + 0.01)
+    #expect(run(world, upTo: 2) { lean() > FightSimulation.cameraLeanLimit - 0.1 })
+    #expect(lean() < FightSimulation.cameraLeanLimit + 0.01)
     // Once he is down, it settles back behind her.
     #expect(run(world, upTo: 4) { world.threat != nil })
     #expect(run(world, upTo: 2) { world.threat == nil })

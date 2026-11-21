@@ -18,7 +18,12 @@ struct GameView: View {
         world.attach(
           content.subscribe(to: SceneEvents.Update.self) {
             [weak world] event in
-            world?.step(deltaTime: event.deltaTime)
+            guard let world else { return }
+            world.step(deltaTime: event.deltaTime)
+            // A pause-menu choice can replace the world inside this step. The old view's
+            // callback must not start its feedback again after the world has stopped.
+            guard world.isActive else { return }
+            Self.playFeedback(for: world)
           }
         )
       }
@@ -171,10 +176,25 @@ struct GameView: View {
     // follows whether it is active.
     .onChange(of: scenePhase, initial: true) { _, phase in
       world.setApplicationActive(phase == .active)
+      if phase != .active { CombatFeedback.shared.suspend() }
     }
     .onDisappear {
       world.stop()
+      CombatFeedback.shared.suspend()
     }
+  }
+
+  /// Plays this frame's events from the current camera target, with vibration on the selected
+  /// input device and the trigger armed only while the leader can fire.
+  private static func playFeedback(for world: GameWorld) {
+    let device: CombatFeedback.Device =
+      !world.vibrationEnabled
+      ? .none
+      : world.controls.touchControlsEnabled
+        ? .phone : world.controls.activeController.map { .controller($0) } ?? .none
+    CombatFeedback.shared.play(
+      world.takeCombatEvents(), listener: world.listenerPoint, right: world.screenRight,
+      device: device, triggerArmed: world.canFire)
   }
 
   /// What the pause menu calls each choice: the third names the level it starts.
