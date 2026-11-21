@@ -100,7 +100,7 @@ Scripted Simulator playtests come first. Then the maintainer plays it on the bas
 
 ## After the first session
 
-On 21 November 2026 the maintainer played the yard on TestFlight build 0.1.0 (12) and reported **“Everything worked as expected”**. Asked whether companions should take cover by themselves next, the maintainer answered **“Yes, try cover next”**: the evidence for S4 that this record asks for.
+On 21 November 2026, asked how the first session in the combat yard went on TestFlight build 0.1.0 (12), the maintainer answered **“Everything worked as expected”**. Asked whether companions should take cover by themselves next, the maintainer answered **“Yes, try cover next”**: the evidence for S4 that this record asks for.
 
 So the yard now tries the first part of ADR 0003's [combat positioning](0003-squad-movement.md#combat-positioning), cover near the slot:
 - **Where:** once a fight is under way, each companion weighs the spots within about 1.5 m of their place in Close and Column, or 2.5 m in Spread. Their place is their formation slot, or the point an order keeps them to, so orders still win.
@@ -112,6 +112,8 @@ So the yard now tries the first part of ADR 0003's [combat positioning](0003-squ
 The second session judges it, with the questions above and two more:
 - Do companions in cover look like a coordinated squad?
 - Does cover make the fights too safe?
+
+On build 0.1.0 (13), asked how companions taking cover played in the combat yard, the maintainer answered **“Worked well”**. One of the three sessions remains.
 
 ## Options considered
 
