@@ -1,6 +1,6 @@
 # ADR 0006 — A first salvage and exploration experiment
 
-**Status:** Accepted\
+**Status:** Accepted; its first session is done\
 **Date:** 21 November 2026
 
 ## Context
@@ -91,6 +91,10 @@ Scripted Simulator playtests come first. Then the maintainer plays it on the bas
 - Do Miki's inspection and the wrong model make the search satisfying rather than a chore?
 - Does the trip feel purposeful without any meters?
 - Does the yard hold 60 fps?
+
+## After the first session
+
+On build 0.1.0 (16), asked how the salvage yard played, the maintainer answered **“Yes it went well”**. It was not instrumented, so the yard's frame rate on the phone has not been measured. Two of the three sessions remain.
 
 ## Options considered
 
