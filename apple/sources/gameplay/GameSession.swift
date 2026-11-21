@@ -112,6 +112,9 @@ final class GameSession {
 
   private let startingParty: [PartyMember]
   private let startingAmmo: Int
+  /// Whether the formation button regroups the companions in a fight: in a level with combat
+  /// positioning (ADR 0003, phase S4), such as the combat yard.
+  private let regroupsInFights: Bool
   /// The beat each encounter-starting action begins, from the level's encounters.
   private let beatStarted: [Level.ActionID: Beat]
   /// The story's progress on the bridge.
@@ -144,6 +147,10 @@ final class GameSession {
   private(set) var formation = Formation.close
   /// Companions going to or holding a point; everyone else follows (ADR 0003, phase S3).
   private(set) var orders: [PartyMember: Order] = [:]
+  /// Whether the companions are regrouping: in a fight they leave cover and firing positions,
+  /// hold their fire and come back to the formation, until they are back in it or the fight
+  /// ends (ADR 0003, phase S4).
+  private(set) var regrouping = false
   /// Where Resume returns: exploring, or the conversation at its current line.
   private var resumeMode = Mode.exploring
 
@@ -151,6 +158,7 @@ final class GameSession {
     precondition(!level.party.isEmpty, "\(level.id) must start with someone.")
     startingParty = level.party
     startingAmmo = level.startingAmmo
+    regroupsInFights = level.combat.combatPositioning
     ammo = level.startingAmmo
     beatStarted = Dictionary(
       level.encounters.compactMap { encounter in
@@ -260,6 +268,7 @@ final class GameSession {
       return false
     }
     orders[member] = .going(point)
+    regrouping = false
     return true
   }
 
@@ -268,6 +277,7 @@ final class GameSession {
   func holdAll() -> Bool {
     guard mode == .exploring, ordersAvailable else { return false }
     for member in companions { orders[member] = .holding(nil) }
+    regrouping = false
     return true
   }
 
@@ -283,16 +293,35 @@ final class GameSession {
     orders[member] = .holding(point)
   }
 
-  /// The formation button (ADR 0003): with anyone going or holding it calls everyone back to
-  /// follow in the current formation; otherwise it cycles the formation.
+  /// The formation button (ADR 0003): in a fight where the level has combat positioning it
+  /// regroups the companions; otherwise, with anyone going or holding, it calls everyone back to
+  /// follow in the current formation, and else it cycles the formation.
   func pressFormation() {
     guard mode == .exploring, formationsAvailable else { return }
-    if orders.isEmpty { cycleFormation() } else { orders = [:] }
+    if formationPressRegroups {
+      orders = [:]
+      regrouping = true
+    } else if orders.isEmpty {
+      cycleFormation()
+    } else {
+      orders = [:]
+    }
   }
 
-  /// What the squad is doing, for the HUD: "following", "going" or "holding" when the
-  /// companions agree, otherwise who is not following, such as "Laura holding".
+  /// Whether the formation button regroups the companions now, rather than changing the
+  /// formation or calling them back: in a fight, in a level with combat positioning (ADR 0003,
+  /// phase S4).
+  var formationPressRegroups: Bool { regroupsInFights && inEncounter }
+
+  /// The companions are back in the formation, and their regrouping ends.
+  func endRegroup() {
+    regrouping = false
+  }
+
+  /// What the squad is doing, for the HUD: "regrouping"; or "following", "going" or "holding"
+  /// when the companions agree, otherwise who is not following, such as "Laura holding".
   var squadState: String {
+    if regrouping { return "regrouping" }
     let words = companions.map { order(of: $0).word }
     if let first = words.first, words.allSatisfy({ $0 == first }) { return first }
     return companions.filter { orders[$0] != nil }
@@ -409,6 +438,7 @@ final class GameSession {
     searched = checkpoint.searched
     hitsDealt = checkpoint.hitsDealt
     hits = [:]
+    regrouping = false
     self.checkpoint = nil
   }
 
@@ -421,13 +451,15 @@ final class GameSession {
     beat = checkpoint.beat
     hits = [:]
     orders = [:]
+    regrouping = false
     self.checkpoint = nil
   }
 
-  /// The encounter is won; everyone's hits recover.
+  /// The encounter is won; everyone's hits recover, and a regroup ends.
   func endEncounter() {
     checkpoint = nil
     hits = [:]
+    regrouping = false
   }
 
   /// Whether the action is offered at its approach now.
@@ -498,6 +530,7 @@ final class GameSession {
     leader = startingParty[0]
     formation = .close
     orders = [:]
+    regrouping = false
     firedTriggers = []
     beat = .alone
     hits = [:]

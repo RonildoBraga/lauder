@@ -85,8 +85,13 @@ final class GameWorld {
   @ObservationIgnored private let grid: NavigationGrid
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
-  /// Where companions take cover in a fight, in a level with that rule (ADR 0003, phase S4).
+  /// Where companions take cover in a fight, in a level with combat positioning (ADR 0003,
+  /// phase S4).
   @ObservationIgnored private var cover: CoverPlanner
+  /// What blocks sight, for what the shooters can see: the level's blockers, worked out once.
+  @ObservationIgnored private let sightBlockers: [PartyMotion.Box]
+  /// What the shooters see, remembered across the routes planned in a fight.
+  @ObservationIgnored private let sightMemo = SightMemo()
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
@@ -142,6 +147,9 @@ final class GameWorld {
   static let spotSpacing: Float = 1
   /// How close a going companion comes to their point before they hold there.
   static let arrivalDistance: Float = 0.35
+  /// How close every companion must be to their place in the formation for a regroup to end
+  /// (ADR 0003, phase S4).
+  static let regroupDistance: Float = 1
   /// How long the cross shows where an order could not go.
   static let crossTime: Float = 1
   /// How close every companion must be before a scene that gathers the party begins.
@@ -187,7 +195,8 @@ final class GameWorld {
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
-    cover = CoverPlanner(obstacles: level.obstacles)
+    sightBlockers = level.obstacles
+    cover = CoverPlanner(obstacles: sightBlockers)
     motors = Self.freshMotors()
     cameraTarget = Self.cameraTarget(over: level.spawn(level.party[0]))
     let style = SceneStyle(
@@ -596,14 +605,29 @@ final class GameWorld {
     for member in session.party where member != leader {
       if let point = Self.point(of: session.order(of: member)) { targets[member] = point }
     }
-    // Once a fight is under way, companions take cover near those places, where the level has
-    // that rule (ADR 0003, phase S4).
-    let takingCover = level.combat.takesCover && stage.fightUnderWay
+    // Once a fight is under way in a level with combat positioning (ADR 0003, phase S4),
+    // companions keep off the ground the shooters see, and take cover near those places unless
+    // they are regrouping, which ends once everyone is back in the formation.
+    let positioning = level.combat.combatPositioning && stage.fightUnderWay
+    let threats = positioning ? stage.threats : []
+    sightMemo.prepare(for: threats)
+    let openGround =
+      threats.isEmpty
+      ? nil : OpenGround(threats: threats, obstacles: sightBlockers, memo: sightMemo)
+    if session.regrouping,
+      session.companions.allSatisfy({ member in
+        guard let here = current[member], let place = targets[member] else { return true }
+        return simd_distance(here, place) <= Self.regroupDistance
+      })
+    {
+      session.endRegroup()
+    }
+    let takingCover = positioning && !session.regrouping
     if takingCover {
       targets = cover.targets(
         for: CoverPlanner.Input(
           places: targets, positions: current, leaderPosition: leaderEnd,
-          formation: session.formation, threats: stage.threats,
+          formation: session.formation, threats: threats,
           weaponRanges: level.combat.companionWeapons.mapValues(\.range), dt: dt),
         grid: grid)
     } else {
@@ -627,7 +651,8 @@ final class GameWorld {
       let context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
-        speed: PartyBody.speed, dt: dt, targetMoves: order == .following && !inCover)
+        speed: PartyBody.speed, dt: dt, targetMoves: order == .following && !inCover,
+        openGround: openGround)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
@@ -1157,7 +1182,8 @@ final class GameWorld {
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
-        formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
+        formation: session.formation, orders: session.orders, squadState: session.squadState,
+        refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks)
     }

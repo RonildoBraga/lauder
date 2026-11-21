@@ -48,6 +48,10 @@
       case switchLeader
       /// A member's order: "following", "going" or "holding".
       case expectOrder(PartyMember, String)
+      /// What the squad is doing, as the HUD says it, such as "following" or "regrouping".
+      case expectSquad(String)
+      /// Wait until the squad is doing this, as the HUD says it; fails after this many seconds.
+      case awaitSquad(String, seconds: Float)
       /// A member stands within this distance of a point.
       case expectNear(PartyMember, SIMD2<Float>, within: Float)
       /// A member stands at least this far from the leader.
@@ -90,6 +94,8 @@
       let ammo: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
+      /// What the squad is doing, as the HUD says it.
+      let squadState: String
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
@@ -264,6 +270,21 @@
         case .expectOrder(let member, let word):
           let actual = snapshot.orders[member]?.word ?? "following"
           expect(actual == word, "\(member.displayName) was \(actual) instead of \(word)")
+        case .expectSquad(let state):
+          expect(
+            snapshot.squadState == state,
+            "the squad was \(snapshot.squadState) instead of \(state)")
+        case .awaitSquad(let state, let seconds):
+          if snapshot.squadState == state {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("the squad was not \(state) within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
         case .expectNear(let member, let point, let distance):
           let position = positions[member] ?? [.nan, .nan]
           expect(
@@ -712,23 +733,26 @@
 
     /// The combat yard (ADR 0005), entered from the bridge through the pause menu's third
     /// choice. The companions hold behind the wall while Miki steps out past its east end alone,
-    /// where both shooters can see her, and their third hit falls the party back to the
-    /// entrance. Then all three go round together: Miki disrupts a wind-up, the companions fire
-    /// by themselves, and Miki's carbine and theirs clear the yard. Restart begins the yard
-    /// again, and the third choice returns to the bridge.
+    /// where both shooters can see her; the formation button, which regroups in a fight, calls
+    /// them to her, and the shooters' third hit falls the party back to the entrance. Then all
+    /// three go round together: Miki disrupts a wind-up, the companions take cover and fire by
+    /// themselves, and Miki's carbine and theirs clear the yard, after which the formation
+    /// button changes the formation again. Restart begins the yard again, and the third choice
+    /// returns to the bridge.
     private static let combatYard: [Step] =
       [.mark("the bridge")] + otherLevel + [
         .expectLevel("combat-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
         .walk([0, 2.5]), .wait(seconds: 1), .order(.hold), .expectOrder(.tom, "holding"),
         .walk([6.5, 2.5]), .walk([6.5, -1.5]), .expectBeat(.stranger),
-        .mark("alone beyond the wall"), .awaitFallBacks(1, seconds: 20), .mark("falling back"),
-        .wait(seconds: 1.2), .expectHits(0), .expectOrder(.tom, "following"),
+        .mark("alone beyond the wall"), .formation, .expectSquad("regrouping"),
+        .expectOrder(.tom, "following"), .mark("regroup"), .awaitFallBacks(1, seconds: 20),
+        .mark("falling back"), .wait(seconds: 1.2), .expectHits(0), .expectSquad("following"),
         .expectOrder(.laura, "following"), .expectNear(.miki, [0, 6], within: 0.3),
         .expectDefeated(0), .mark("fell back"), .walk([6.5, 2.5]), .walk([6.5, -1.5]),
         .awaitDisrupt(seconds: 6), .signature, .expectDisrupts(1), .mark("Miki disrupts"),
         .wait(seconds: 1.5), .mark("the companions fire"), .fireUntilDefeated(2, seconds: 30),
         .expectFired(.laura), .expectFired(.tom), .expectFallBacks(1),
-        .mark("the yard is clear"), .wait(seconds: 1),
+        .mark("the yard is clear"), .formation, .expectFormation(.spread), .wait(seconds: 1),
       ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
         .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
       ]

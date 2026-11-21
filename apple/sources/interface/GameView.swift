@@ -315,9 +315,11 @@ struct GameView: View {
     }
   }
 
-  /// The formation button's job: after an order it calls everyone back (ADR 0003).
+  /// The formation button's job: in a fight where the level has combat positioning it regroups
+  /// the companions, and otherwise after an order it calls everyone back (ADR 0003).
   private var formationAction: String {
-    world.session.orders.isEmpty ? "Formation" : "Follow"
+    if world.session.formationPressRegroups { return "Regroup" }
+    return world.session.orders.isEmpty ? "Formation" : "Follow"
   }
 
   /// The companions the touch order menu offers on its left and right, once orders are offered.

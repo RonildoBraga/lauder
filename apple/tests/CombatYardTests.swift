@@ -49,8 +49,8 @@ struct CombatYardTests {
     }
     #expect(simd_distance(yard.spawn(.laura), entrance + [-0.9, 0.9]) < 0.01)
     #expect(simd_distance(yard.spawn(.tom), entrance + [0.9, 0.9]) < 0.01)
-    // Companions take cover in the yard's fights, and not in the opening's.
-    #expect(yard.combat.takesCover && !BrooklynBridge.level.combat.takesCover)
+    // Combat positioning is the yard's, and not the opening's.
+    #expect(yard.combat.combatPositioning && !BrooklynBridge.level.combat.combatPositioning)
   }
 
   @Test
@@ -289,7 +289,7 @@ struct CombatYardTests {
     let world = GameWorld(
       level: range(
         spawns: [.miki: [-3.5, 2], .tom: [-4.5, 2.9], .laura: hold],
-        shooters: [Shooter(id: "a", at: [0, -8], hits: 6)], cover: true))
+        shooters: [Shooter(id: "a", at: [0, -8], hits: 6)], positioning: true))
     func isHidden(_ member: PartyMember) -> Bool {
       !LineOfSight.isClear(
         from: [0, -8], to: position(world, member), obstacles: world.level.obstacles)
@@ -310,6 +310,26 @@ struct CombatYardTests {
     #expect(world.companionTargets[.laura] == hold)
   }
 
+  @Test
+  func aFormationPressInAFightRegroupsTheCompanions() {
+    // Laura holds in the open, in the shooter's sight; Tom holds behind the wall near Miki.
+    let world = GameWorld(
+      level: range(
+        spawns: [.miki: [-3.5, 2], .tom: [-4.5, 2.9], .laura: [3, 2]],
+        shooters: [Shooter(id: "a", at: [0, -8])], positioning: true))
+    #expect(world.session.holdAll())
+    #expect(run(world, upTo: 3) { world.companionShots[.laura, default: 0] > 0 })
+    press(InputRules.Raw(controllerFormation: true), in: world)
+    // The orders clear and the formation stays: the companions regroup.
+    #expect(world.session.regrouping && world.session.orders.isEmpty)
+    #expect(world.session.squadState == "regrouping" && world.session.formation == .close)
+    // They hold their fire until they are back in the formation, and then the regroup ends.
+    let shots = world.companionShots[.laura, default: 0]
+    #expect(run(world, upTo: 8) { !world.session.regrouping })
+    #expect(world.companionShots[.laura, default: 0] == shots)
+    #expect(simd_distance(position(world, .laura), position(world, .miki)) < 2.5)
+  }
+
   // MARK: - Helpers
 
   /// One of a range's shooters, like the yard's, engaged `engageAt` seconds into the fight.
@@ -323,9 +343,10 @@ struct CombatYardTests {
   /// A small range with the combat yard's rules, for focused checks: open snow 30 m across, a
   /// wall from x = -6 to x = -1 across z = -1, and the given shooters, each named "Shooter" and
   /// its id in capitals. The party is the yard's, and the fight begins at once wherever it is.
-  /// Companions take cover only where a check asks, so the others see where orders put them.
+  /// Combat positioning is on only where a check asks, so the others see where orders put the
+  /// companions.
   private func range(
-    spawns: [PartyMember: SIMD2<Float>], shooters: [Shooter], cover: Bool = false
+    spawns: [PartyMember: SIMD2<Float>], shooters: [Shooter], positioning: Bool = false
   ) -> Level {
     let hostiles = shooters.map {
       Level.Hostile(
@@ -338,7 +359,7 @@ struct CombatYardTests {
       retryAt: spawns[.miki], hostiles: hostiles,
       cues: shooters.map { (at: $0.engageAt, cue: Level.Cue.engage($0.id)) })
     var rules = CombatYard.combat
-    rules.takesCover = cover
+    rules.combatPositioning = positioning
     return Level(
       id: "test-range",
       ground: Level.Box(name: "ground", position: [0, -0.15, 0], size: [30, 0.3, 30]),

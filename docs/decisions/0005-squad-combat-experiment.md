@@ -1,6 +1,6 @@
 # ADR 0005 — A first squad combat experiment
 
-**Status:** Accepted; amended after the first session\
+**Status:** Accepted; amended after the first and second sessions\
 **Date:** 21 November 2026
 
 ## Context
@@ -115,6 +115,23 @@ The second session judges it, with the questions above and two more:
 
 On build 0.1.0 (13), asked how companions taking cover played in the combat yard, the maintainer answered **“Worked well”**. One of the three sessions remains.
 
+## After the second session
+
+Asked whether the third session should finish the rest of S4 in the yard, the maintainer answered **“Yes, finish S4”**. So the yard now has all of ADR 0003's [combat positioning](0003-squad-movement.md#combat-positioning):
+- **Each member's preference** weighs their choice of cover, but never outweighs being hidden. Their place, from the formation or an order, still bounds the choice:
+  - Miki likes 6 to 10 m between her firing position and her target;
+  - Laura likes to stand, or step out to fire, off the most dangerous threat's facing;
+  - Tom likes to stand between a close threat and the teammate nearest it.
+- **Sight-aware routes:** in a fight, ground the shooters see costs four times as much to cross. A companion takes no straight way of more than 1.5 m across it while the grid offers another. Sight is the game's own, the same straight line against the blockers' footprints as for shots: The Quiet Yard's proposal that low barriers block only movement is not used.
+- **Regroup:** in a yard fight, the formation button reads **Regroup**, so the formation can only be changed outside a fight.
+  - **What it does:** it clears any orders, and the companions leave cover and firing positions, hold their fire and come back to the formation on sight-aware routes.
+  - **When it ends:** once both are within a metre of their places in the formation, when a new order is given, or when the fight ends. Then they take cover near those places again.
+  - **Not to be confused with** ADR 0003's regroup option for a stuck companion, which would move them to a safe point and stays unbuilt.
+
+The third session judges it, with the questions above and two more:
+- Does Regroup bring the companions back when they are needed?
+- Do they keep out of the shooters' sight on the move?
+
 ## Options considered
 
 - **Venue:**
@@ -137,11 +154,10 @@ On build 0.1.0 (13), asked how companions taking cover played in the combat yard
 ## What this does not settle
 
 - **Not settled here:**
-  - the rest of S4: personality weights, sight-aware routes and Regroup;
+  - S4 outside the combat yard;
   - Reposition and Brace;
   - chargers that strike;
   - patrols, noticing and a perimeter;
-  - Regroup;
   - an ammunition economy;
   - persistence across a saved game;
   - how often fights happen and whether any is required.

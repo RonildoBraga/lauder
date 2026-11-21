@@ -92,8 +92,8 @@ struct NavigationGrid: Sendable {
       region[seed] = next
       stack.append(seed)
       while let cell = stack.popLast() {
-        for (neighbour, _) in Self.neighbours(of: cell, columns: columns, rows: rows, walkable)
-        where region[neighbour] < 0 {
+        Self.forEachNeighbour(of: cell, columns: columns, rows: rows, walkable) { neighbour, _ in
+          guard region[neighbour] < 0 else { return }
           region[neighbour] = next
           stack.append(neighbour)
         }
@@ -173,13 +173,25 @@ struct NavigationGrid: Sendable {
   }
 
   /// Cell centres from near `start` to near `goal`, or nil when no connected route exists.
-  /// The result is not straightened; see `straightened(_:isClear:)`.
-  func route(from start: SIMD2<Float>, to goal: SIMD2<Float>) -> [SIMD2<Float>]? {
+  /// `extraCost` adds to each metre of crossing a cell, given its centre: in a fight, ground a
+  /// shooter sees costs more (ADR 0003, phase S4). The result is not straightened; see
+  /// `straightened(_:isClear:)`.
+  func route(
+    from start: SIMD2<Float>, to goal: SIMD2<Float>,
+    extraCost: ((SIMD2<Float>) -> Float)? = nil
+  ) -> [SIMD2<Float>]? {
     guard let first = nearestWalkable(to: start, within: 0.6).flatMap(index(of:)),
       let last = nearestWalkable(to: goal, within: 1, region: region[first]).flatMap(index(of:))
     else { return nil }
     if first == last { return [centre(of: last)] }
 
+    // Each cell's extra cost is worked out once in a search, when it is first reached.
+    var extra = [Float](repeating: -1, count: extraCost == nil ? 0 : walkable.count)
+    func weight(of cell: Int) -> Float {
+      guard let extraCost else { return 1 }
+      if extra[cell] < 0 { extra[cell] = max(0, extraCost(centre(of: cell))) }
+      return 1 + extra[cell]
+    }
     var cost = [Float](repeating: .infinity, count: walkable.count)
     var previous = [Int32](repeating: -1, count: walkable.count)
     var closed = [Bool](repeating: false, count: walkable.count)
@@ -190,10 +202,11 @@ struct NavigationGrid: Sendable {
       guard !closed[current] else { continue }
       if current == last { break }
       closed[current] = true
-      for (neighbour, step) in Self.neighbours(of: current, columns: columns, rows: rows, walkable)
-      where !closed[neighbour] {
-        let candidate = cost[current] + step * cellSize
-        guard candidate < cost[neighbour] else { continue }
+      Self.forEachNeighbour(of: current, columns: columns, rows: rows, walkable) {
+        neighbour, step in
+        guard !closed[neighbour] else { return }
+        let candidate = cost[current] + step * cellSize * weight(of: neighbour)
+        guard candidate < cost[neighbour] else { return }
         cost[neighbour] = candidate
         previous[neighbour] = Int32(current)
         open.push(candidate + heuristic(neighbour, last), neighbour)
@@ -248,26 +261,34 @@ struct NavigationGrid: Sendable {
     return (max(dx, dy) + (Float(2).squareRoot() - 1) * min(dx, dy)) * cellSize
   }
 
-  /// Eight-direction neighbours. A diagonal step needs both orthogonal cells walkable, so a
-  /// route never cuts past a corner.
-  private static func neighbours(
-    of cell: Int, columns: Int, rows: Int, _ walkable: [Bool]
-  ) -> [(cell: Int, step: Float)] {
+  /// Each of a cell's eight-direction neighbours, with the length of the step to it in cells,
+  /// in a fixed order: east, west, south and north, then the diagonals. A diagonal step needs
+  /// both orthogonal cells walkable, so a route never cuts past a corner. It builds nothing, as
+  /// a search in a fight may visit most of a level's cells.
+  private static func forEachNeighbour(
+    of cell: Int, columns: Int, rows: Int, _ walkable: [Bool], _ body: (Int, Float) -> Void
+  ) {
     let column = cell % columns
     let row = cell / columns
     func open(_ c: Int, _ r: Int) -> Bool {
       c >= 0 && c < columns && r >= 0 && r < rows && walkable[r * columns + c]
     }
-    var result: [(cell: Int, step: Float)] = []
-    for (dc, dr) in [(1, 0), (-1, 0), (0, 1), (0, -1)] where open(column + dc, row + dr) {
-      result.append(((row + dr) * columns + column + dc, 1))
-    }
-    for (dc, dr) in [(1, 1), (1, -1), (-1, 1), (-1, -1)]
-    where open(column + dc, row + dr) && open(column + dc, row) && open(column, row + dr) {
-      result.append(((row + dr) * columns + column + dc, Float(2).squareRoot()))
-    }
-    return result
+    let east = open(column + 1, row)
+    let west = open(column - 1, row)
+    let south = open(column, row + 1)
+    let north = open(column, row - 1)
+    if east { body(cell + 1, 1) }
+    if west { body(cell - 1, 1) }
+    if south { body(cell + columns, 1) }
+    if north { body(cell - columns, 1) }
+    if east && south && open(column + 1, row + 1) { body(cell + columns + 1, diagonal) }
+    if east && north && open(column + 1, row - 1) { body(cell - columns + 1, diagonal) }
+    if west && south && open(column - 1, row + 1) { body(cell + columns - 1, diagonal) }
+    if west && north && open(column - 1, row - 1) { body(cell - columns - 1, diagonal) }
   }
+
+  /// The length of a diagonal step, in cells.
+  private static let diagonal = Float(2).squareRoot()
 
   private static func distance(from point: SIMD2<Float>, to box: PartyMotion.Box) -> Float {
     simd_distance(point, simd_clamp(point, box.minimum, box.maximum))

@@ -65,9 +65,9 @@ final class EncounterStage {
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
 
-  /// The current fight's standing shooters, as companions taking cover see them: where each
-  /// stands, how far it reaches, whom its wind-up aims at, and whether it is a target yet (ADR
-  /// 0003, phase S4).
+  /// The current fight's standing shooters, as companions see them in a fight: where each
+  /// stands, how far it reaches, whom its wind-up aims at, whether it is a target yet, and
+  /// which way it faces (ADR 0003, phase S4).
   var threats: [CoverPlanner.Threat] {
     guard let encounter else { return [] }
     return encounter.hostiles.compactMap { spec in
@@ -75,7 +75,7 @@ final class EncounterStage {
       else { return nil }
       return CoverPlanner.Threat(
         position: state.position, range: spec.range, aimingAt: victims[spec.id],
-        isTarget: state.isTargetable)
+        isTarget: state.isTargetable, facing: facings[spec.id] ?? lookout)
     }
   }
 
@@ -89,6 +89,8 @@ final class EncounterStage {
   private var encounter: Level.Encounter?
   /// Whom each hostile that aims at anyone began its current wind-up at.
   private var victims: [String: PartyMember] = [:]
+  /// Which way each hostile in the fight faces: towards whom it aims at, as a unit vector.
+  private var facings: [String: SIMD2<Float>] = [:]
   /// When each companion's weapon fires next.
   private var companionFire: [PartyMember: AutoFire] = [:]
   /// The assisted target while the weapon is drawn.
@@ -188,6 +190,7 @@ final class EncounterStage {
   private func endFight() {
     fightUnderWay = false
     victims = [:]
+    facings = [:]
     companionFire = [:]
     aims = [:]
     canDisrupt = false
@@ -286,6 +289,8 @@ final class EncounterStage {
       default: break
       }
       hostiles[spec.id] = state
+      let facing = aimPosition - state.position
+      if simd_length(facing) > 0.001 { facings[spec.id] = simd_normalize(facing) }
       show(spec.id, state, facing: aimPosition)
       showAim(spec.id, state, at: aimPosition)
     }
@@ -312,9 +317,9 @@ final class EncounterStage {
         outcome.line = "Out of ammunition."
       }
     }
-    // Companions fire by themselves once the fight is under way, never before, and not while a
-    // scene holds the party (ADR 0005).
-    if fightUnderWay, !encounter.holdsParty, !rules.companionWeapons.isEmpty {
+    // Companions fire by themselves once the fight is under way, never before, not while a
+    // scene holds the party (ADR 0005), and not while they regroup (ADR 0003, phase S4).
+    if fightUnderWay, !encounter.holdsParty, !rules.companionWeapons.isEmpty, !session.regrouping {
       fireCompanions(dt: dt, party: party, session: session, outcome: &outcome)
     } else {
       aims = [:]

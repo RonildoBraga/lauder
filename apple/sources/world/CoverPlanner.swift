@@ -9,7 +9,9 @@ import simd
 ///
 /// A spot scores for being hidden from the shooters, the most dangerous first, for having a
 /// firing position close by, for being near the place, and for being reachable without crossing
-/// open ground. Orders still win: cover is only ever sought near the place an order gives.
+/// open ground. Each member's own preference weighs the choice too: Miki likes 6–10 m from her
+/// target, Laura an angle off a threat's facing, and Tom a place between a close threat and a
+/// teammate. Orders still win: cover is only ever sought near the place an order gives.
 struct CoverPlanner {
   /// How long a companion keeps a choice before weighing the spots again.
   static let commitTime: Float = 2
@@ -41,6 +43,20 @@ struct CoverPlanner {
   static let perOpenCrossing: Float = 1
   static let crossings: [Float] = [0.25, 0.5, 0.75]
 
+  // Each member's own preference (ADR 0003), which only weighs the choice.
+  /// Miki likes this far between her firing position and the target she would shoot from it.
+  static let mikisRange: ClosedRange<Float> = 6...10
+  /// What each metre outside that range costs her.
+  static let perMetreOutsideMikisRange: Float = 0.5
+  /// Laura likes to stand off the most dangerous threat's facing: straight in front of it costs
+  /// her this much, and at its side or behind it nothing.
+  static let inFrontForLaura: Float = 2
+  /// Tom likes to stand between a close threat, one within this distance, and the teammate
+  /// nearest it.
+  static let closeThreatForTom: Float = 10
+  /// What each metre off the line between them costs him, up to three metres.
+  static let perMetreOffTomsLine: Float = 0.5
+
   /// A standing hostile, as cover sees it.
   struct Threat {
     let position: SIMD2<Float>
@@ -50,6 +66,8 @@ struct CoverPlanner {
     var aimingAt: PartyMember?
     /// Whether companions may shoot at it yet.
     var isTarget = true
+    /// Which way it faces, as a unit vector, if known.
+    var facing: SIMD2<Float>?
   }
 
   struct Input {
@@ -110,10 +128,13 @@ struct CoverPlanner {
         kept.kept += input.dt
         cover = kept
       } else {
+        let teammates =
+          [input.leaderPosition] + input.positions.filter { $0.key != member }.map(\.value)
         cover = Scoring(
           member: member, place: place, position: input.positions[member] ?? place,
           threats: input.threats, weaponRange: weaponRange,
-          taken: taken(by: member, input: input), obstacles: obstacles, grid: grid
+          taken: taken(by: member, input: input), teammates: teammates, obstacles: obstacles,
+          grid: grid
         ).choose(within: Self.reach(in: input.formation), keeping: covers[member])
       }
       covers[member] = cover
@@ -164,6 +185,51 @@ struct CoverPlanner {
     }
   }
 
+  /// Each member's own preference in a fight (ADR 0003), which only weighs the choice:
+  /// - Miki likes 6–10 m between her firing position and the nearest target she can shoot
+  ///   from it;
+  /// - Laura likes to stand, or step out to fire, off the most dangerous threat's facing;
+  /// - Tom likes to stand between a close threat and the teammate nearest it.
+  static func personality(
+    of member: PartyMember, at spot: SIMD2<Float>, firing: SIMD2<Float>?, threats: [Threat],
+    danger: Int?, teammates: [SIMD2<Float>]
+  ) -> Float {
+    switch member {
+    case .miki:
+      guard let firing,
+        let target = threats.filter(\.isTarget).map({ simd_distance($0.position, firing) }).min()
+      else { return 0 }
+      let outside = max(0, mikisRange.lowerBound - target, target - mikisRange.upperBound)
+      return outside * perMetreOutsideMikisRange
+    case .laura:
+      guard let danger, let facing = threats[danger].facing else { return 0 }
+      let offset = (firing ?? spot) - threats[danger].position
+      guard simd_length(offset) > 0.001 else { return inFrontForLaura }
+      return max(0, simd_dot(simd_normalize(offset), facing)) * inFrontForLaura
+    case .tom:
+      guard
+        let threat = threats.map(\.position).filter({
+          simd_distance($0, spot) <= closeThreatForTom
+        }).min(by: { simd_distance($0, spot) < simd_distance($1, spot) }),
+        let teammate = teammates.min(by: {
+          simd_distance($0, threat) < simd_distance($1, threat)
+        })
+      else { return 0 }
+      return min(3, distance(from: spot, toSegment: teammate, threat)) * perMetreOffTomsLine
+    }
+  }
+
+  /// How far `point` lies from the segment from `start` to `end`.
+  private static func distance(
+    from point: SIMD2<Float>, toSegment start: SIMD2<Float>, _ end: SIMD2<Float>
+  ) -> Float {
+    let along = end - start
+    let lengthSquared = simd_length_squared(along)
+    guard lengthSquared > 0.000001 else { return simd_distance(point, start) }
+    let share = max(0, min(1, simd_dot(point - start, along) / lengthSquared))
+    return simd_distance(point, start + along * share)
+  }
+
   /// Weighs one companion's choices.
   private struct Scoring {
     let member: PartyMember
@@ -172,8 +238,12 @@ struct CoverPlanner {
     let threats: [Threat]
     let weaponRange: Float
     let taken: [SIMD2<Float>]
+    /// The leader and the other companion, for Tom's preference.
+    let teammates: [SIMD2<Float>]
     let obstacles: [PartyMotion.Box]
     let grid: NavigationGrid
+    /// What the shooters see.
+    let ground: OpenGround
     /// The most dangerous shooter: whoever aims at the companion, or else the nearest.
     let danger: Int?
     /// Where the companion can walk: the area they stand in, or else their place's.
@@ -181,8 +251,8 @@ struct CoverPlanner {
 
     init(
       member: PartyMember, place: SIMD2<Float>, position: SIMD2<Float>, threats: [Threat],
-      weaponRange: Float, taken: [SIMD2<Float>], obstacles: [PartyMotion.Box],
-      grid: NavigationGrid
+      weaponRange: Float, taken: [SIMD2<Float>], teammates: [SIMD2<Float>],
+      obstacles: [PartyMotion.Box], grid: NavigationGrid
     ) {
       self.member = member
       self.place = place
@@ -190,8 +260,10 @@ struct CoverPlanner {
       self.threats = threats
       self.weaponRange = weaponRange
       self.taken = taken
+      self.teammates = teammates
       self.obstacles = obstacles
       self.grid = grid
+      ground = OpenGround(threats: threats, obstacles: obstacles)
       danger =
         threats.firstIndex { $0.aimingAt == member }
         ?? threats.indices.min {
@@ -207,16 +279,17 @@ struct CoverPlanner {
     func choose(within reach: Float, keeping kept: Cover?) -> Cover {
       // Keeping to the place: no stepping out, since the place moves.
       let placeCost =
-        baseCost(of: place) + (canShoot(from: place) ? 0 : CoverPlanner.noFiringPosition)
+        baseCost(of: place) + extraCost(at: place, firing: canShoot(from: place) ? place : nil)
       var best = (cost: placeCost, cover: Cover(spot: nil, firing: nil))
-      // Spots in order of their cost before a firing position, the costliest part to find: once
-      // that alone reaches the best so far, no later spot can win.
+      // Spots in order of their cost before a firing position, the costliest part to find, and
+      // the member's preference, which depends on it: once that alone reaches the best so far,
+      // no later spot can win.
       let spots = grid.roomySpots(within: reach, of: place, stride: CoverPlanner.stride)
         .filter(isOpen).map { (spot: $0, cost: baseCost(of: $0)) }.sorted { $0.cost < $1.cost }
       for (spot, base) in spots {
         guard base < best.cost else { break }
         let firing = firingPosition(near: spot)
-        let cost = base + (firing == nil ? CoverPlanner.noFiringPosition : 0)
+        let cost = base + extraCost(at: spot, firing: firing)
         if cost < best.cost { best = (cost, Cover(spot: spot, firing: firing)) }
       }
       guard let kept else { return best.cover }
@@ -226,7 +299,7 @@ struct CoverPlanner {
       }
       guard simd_distance(spot, place) <= reach, isOpen(spot) else { return best.cover }
       let firing = firingPosition(near: spot)
-      let cost = baseCost(of: spot) + (firing == nil ? CoverPlanner.noFiringPosition : 0)
+      let cost = baseCost(of: spot) + extraCost(at: spot, firing: firing)
       return cost <= best.cost + CoverPlanner.switchSaving
         ? Cover(spot: spot, firing: firing) : best.cover
     }
@@ -236,6 +309,15 @@ struct CoverPlanner {
     private func isOpen(_ spot: SIMD2<Float>) -> Bool {
       grid.isRoomy(spot) && (region == nil || grid.region(at: spot) == region)
         && taken.allSatisfy { simd_distance($0, spot) >= CoverPlanner.spacing }
+    }
+
+    /// What a firing position, or the lack of one, and the member's own preference add to a
+    /// spot's cost.
+    private func extraCost(at spot: SIMD2<Float>, firing: SIMD2<Float>?) -> Float {
+      (firing == nil ? CoverPlanner.noFiringPosition : 0)
+        + CoverPlanner.personality(
+          of: member, at: spot, firing: firing, threats: threats, danger: danger,
+          teammates: teammates)
     }
 
     /// What standing at `spot` costs, before any firing position: in the shooters' sight, away
@@ -294,9 +376,7 @@ struct CoverPlanner {
 
     /// Whether any shooter can see and reach `point`.
     private func isSeen(_ point: SIMD2<Float>) -> Bool {
-      threats.contains {
-        simd_distance($0.position, point) <= $0.range && sees($0.position, point)
-      }
+      ground.isSeen(point)
     }
 
     private func sees(_ from: SIMD2<Float>, _ to: SIMD2<Float>) -> Bool {
