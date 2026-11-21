@@ -320,6 +320,7 @@ struct InputRulesTests {
     InputRules.Raw(keyboardSignature: true),
     InputRules.Raw(touchSignature: true),
     InputRules.Raw(touchOtherLevel: true),
+    InputRules.Raw(touchVibration: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()
@@ -627,6 +628,24 @@ struct InputRulesTests {
     let chosen = sample(choice, mode: .paused, state: &state)
     #expect(chosen.otherLevelPressed && !chosen.actionPressed && !chosen.restartPressed)
     #expect(!sample(choice, mode: .paused, state: &state).otherLevelPressed)
+  }
+
+  /// ADR 0008: the touch Vibration button acts only in the pause menu, once for each press,
+  /// and not while the release gate waits for a held finger to lift.
+  @Test
+  func theTouchVibrationButtonActsOnlyInThePauseMenuOnceTheGateIsOpen() {
+    let press = InputRules.Raw(touchVibration: true)
+    var gated = InputRules.State()
+    #expect(!sample(press, mode: .paused, state: &gated).vibrationPressed)
+    #expect(gated.needsNeutralInput)
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(press, state: &state) == .neutral)
+    #expect(sample(.init(), state: &state) == .neutral)
+    #expect(sample(press, mode: .dialogue, state: &state) == .neutral)
+    #expect(sample(.init(), mode: .paused, state: &state) == .neutral)
+    let chosen = sample(press, mode: .paused, state: &state)
+    #expect(chosen.vibrationPressed && !chosen.actionPressed && !chosen.otherLevelPressed)
+    #expect(!sample(press, mode: .paused, state: &state).vibrationPressed)
   }
 
   private func sample(

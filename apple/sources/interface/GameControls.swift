@@ -160,6 +160,7 @@ final class GameControls {
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
       touchRestart: touch.touchRestart, touchOtherLevel: touch.touchOtherLevel,
+      touchVibration: touch.touchVibration,
       touchFire: touch.touchFire,
       touchFormation: touch.touchFormation, touchSignature: touch.touchSignature,
       touchGround: touch.touchGround,

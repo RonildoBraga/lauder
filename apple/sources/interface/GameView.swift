@@ -60,20 +60,6 @@ struct GameView: View {
             }
             .buttonStyle(.plain)
           }
-          // With touch, the pause menu's Vibration choice is a button here; a controller or
-          // keyboard chooses it in the menu (ADR 0008).
-          if world.isPaused && world.controls.touchControlsEnabled {
-            Button {
-              world.toggleVibration()
-            } label: {
-              Text(vibrationTitle)
-                .font(.caption)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .frostedPanel(cornerRadius: 22)
-            }
-            .buttonStyle(.plain)
-          }
         }
       }
       .padding()
@@ -176,6 +162,7 @@ struct GameView: View {
           formationTitle: formationAction,
           orderNames: orderNames,
           otherLevelTitle: world.otherLevel.name,
+          vibrationTitle: vibrationTitle,
           mode: world.session.mode)
       }
     }

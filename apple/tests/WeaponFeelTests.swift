@@ -346,6 +346,12 @@ struct WeaponFeelTests {
     #expect(!other.vibrationEnabled)
     world.update(with: confirm, sampledIn: .paused, deltaTime: 1 / 60)
     #expect(world.vibrationEnabled)
+    // With touch, its button sends the same command through the input rules.
+    let touch = InputRules.Input(
+      movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
+      vibrationPressed: true)
+    world.update(with: touch, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(!world.vibrationEnabled && world.isPaused)
   }
 
   /// A small open range with the combat yard's rules: Miki in the open with the companions just

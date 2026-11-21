@@ -52,7 +52,7 @@ Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of
 | Aim Miki's carbine apart from movement, which also draws it ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)) | Right stick | None: assisted aim | I, K, J, L |
 | The leader's signature: Miki's Disrupt, in the combat yard ([ADR 0005](decisions/0005-squad-combat-experiment.md)) | Square / X | Signature, during a yard fight while Miki leads | X |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
-| Choose Resume, Restart, while the experiments last the next level in a cycle, or Vibration, in the pause menu: Combat test on the bridge, Salvage test in the combat yard, Bridge in the salvage yard | Left stick or D-pad, up or down | Resume, Look reading Restart, a button beside Resume naming the next level, and a Vibration button below | W / S or the up and down arrow keys |
+| Choose Resume, Restart, while the experiments last the next level in a cycle, or Vibration, in the pause menu: Combat test on the bridge, Salvage test in the combat yard, Bridge in the salvage yard | Left stick or D-pad, up or down | Resume, Look reading Restart, a button beside Resume naming the next level, and a Vibration button beside it | W / S or the up and down arrow keys |
 | Hide or show the status panel | Circle / B | None: the panel always shows with touch controls | H |
 
 Xbox RB, LB, RT and X use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.

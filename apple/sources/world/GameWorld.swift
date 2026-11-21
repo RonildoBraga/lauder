@@ -473,6 +473,8 @@ final class GameWorld {
         restart()
       } else if input.otherLevelPressed {
         leave?(otherLevel.level)
+      } else if input.vibrationPressed {
+        toggleVibration()
       } else if input.actionPressed {
         switch session.pauseChoice {
         case .resume: togglePause()
