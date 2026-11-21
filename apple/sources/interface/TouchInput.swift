@@ -7,6 +7,10 @@ struct TouchInput {
     case action, cycle, pause, restart, fire, formation
     /// A finger pressing the ground, where holding opens the order menu (ADR 0003, phase S3).
     case ground
+    /// The pause menu's third choice, shown only while paused (ADR 0005).
+    case otherLevel
+    /// The leader's signature, shown in a fight while the leader has one (ADR 0005).
+    case signature
   }
 
   private(set) var generation = 0
@@ -55,8 +59,10 @@ struct TouchInput {
       touchStick: stick, touchIsTouching: isTouching,
       touchAction: pressed.contains(.action), touchPause: pressed.contains(.pause),
       touchSwitch: pressed.contains(.cycle), touchRestart: pressed.contains(.restart),
+      touchOtherLevel: pressed.contains(.otherLevel),
       touchFire: pressed.contains(.fire), touchFormation: pressed.contains(.formation),
-      touchGround: pressed.contains(.ground), touchMark: mark, touchOrder: order)
+      touchSignature: pressed.contains(.signature), touchGround: pressed.contains(.ground),
+      touchMark: mark, touchOrder: order)
   }
 
   /// Invalidate old captures immediately, before the next SwiftUI/UIKit update.

@@ -33,21 +33,28 @@ struct HostileState {
   static let reach: Float = 0.9
 
   let spec: Level.Hostile
-  private(set) var phase = Phase.hidden
+  private(set) var phase = Phase.hidden {
+    didSet {
+      if case .aiming = phase { hasAimed = true }
+    }
+  }
   private(set) var position: SIMD2<Float>
   private var hasFired = false
+  /// Whether it has begun a wind-up: what it remembers of the fight after a fall back.
+  private var hasAimed = false
   private var engaged = false
 
   init(spec: Level.Hostile) {
     self.spec = spec
-    position = spec.hiddenAt
+    position = spec.inView ? spec.standAt : spec.hiddenAt
+    if spec.inView { phase = .waiting }
   }
 
   var isVisible: Bool { phase != .hidden }
   var isDown: Bool { phase == .down }
-  /// A target for assisted aim only once it has opened fire: before that, nobody knows it is
-  /// hostile.
-  var isTargetable: Bool { hasFired && !isDown }
+  /// A target for assisted aim only once it has opened fire, or, for one that is a target from
+  /// its first wind-up, once it has begun to aim: before that, nobody knows it is hostile.
+  var isTargetable: Bool { !isDown && (hasFired || spec.targetFromWindUp && hasAimed) }
 
   mutating func reveal() {
     guard phase == .hidden else { return }
@@ -67,6 +74,23 @@ struct HostileState {
 
   mutating func knockDown() {
     phase = .down
+  }
+
+  /// Disrupt (ADR 0005): a wind-up is cancelled before its shot, and the hostile recovers
+  /// before it can aim again.
+  mutating func disrupt() {
+    guard case .aiming = phase else { return }
+    phase = .recovering(remaining: spec.recovery)
+  }
+
+  /// The party fell back (ADR 0005): a hostile still standing stops fighting and waits where it
+  /// stands until it is engaged again. It remembers having aimed, so it stays a target; the
+  /// session keeps the damage dealt to it.
+  mutating func standDown() {
+    guard isVisible, !isDown else { return }
+    position = spec.standAt
+    phase = .waiting
+    engaged = false
   }
 
   /// Advance by one simulation step. A shot returns when a wind-up completes; `canHit` says

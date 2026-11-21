@@ -21,6 +21,10 @@ final class GameControls {
   private(set) var formationButtonName = "Formation"
   /// The button that hides or shows the status panel; touch has none.
   private(set) var panelButtonName = "Panel"
+  /// The button that leads as the member before the leader; touch has none, and Next cycles.
+  private(set) var previousButtonName = "Previous"
+  /// The button for the leader's signature, such as Miki's Disrupt.
+  private(set) var signatureButtonName = "Signature"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -29,7 +33,8 @@ final class GameControls {
   @ObservationIgnored private var isActive = false
   @ObservationIgnored private var inputState = InputRules.State()
   @ObservationIgnored private var touchInput = TouchInput()
-  @ObservationIgnored private var prefersTouch = false
+  /// Whether the player chose touch controls while a controller is attached.
+  @ObservationIgnored private(set) var prefersTouch = false
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
@@ -126,22 +131,27 @@ final class GameControls {
       controllerAction: pad?.buttonA.isPressed == true,
       controllerPause: pad?.buttonMenu.isPressed == true,
       controllerSwitch: pad?.rightShoulder.isPressed == true,
+      controllerPrevious: pad?.leftShoulder.isPressed == true,
       controllerFire: pad?.rightTrigger.isPressed == true,
       controllerFormation: pad?.buttonY.isPressed == true,
       controllerPanel: pad?.buttonB.isPressed == true,
+      controllerSignature: pad?.buttonX.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
-      keyboardSwitch: pressed(.keyQ), keyboardFire: pressed(.keyF),
-      keyboardFormation: pressed(.keyR), keyboardPanel: pressed(.keyH),
+      keyboardSwitch: pressed(.keyQ), keyboardPrevious: pressed(.keyZ),
+      keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
+      keyboardPanel: pressed(.keyH), keyboardSignature: pressed(.keyX),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
-      touchRestart: touch.touchRestart, touchFire: touch.touchFire,
-      touchFormation: touch.touchFormation, touchGround: touch.touchGround,
+      touchRestart: touch.touchRestart, touchOtherLevel: touch.touchOtherLevel,
+      touchFire: touch.touchFire,
+      touchFormation: touch.touchFormation, touchSignature: touch.touchSignature,
+      touchGround: touch.touchGround,
       touchMark: touch.touchMark, touchOrder: touch.touchOrder
     )
     #if DEBUG
@@ -222,41 +232,44 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
-        fire: "R2", formation: "Triangle", panel: "Circle")
+        previous: "L1", fire: "R2", formation: "Triangle", panel: "Circle", signature: "Square")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
-        fire: "RT", formation: "Y", panel: "B")
+        previous: "LB", fire: "RT", formation: "Y", panel: "B", signature: "X")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
-        cycle: "Right shoulder", fire: "Right trigger", formation: "Button Y", panel: "Button B")
+        cycle: "Right shoulder", previous: "Left shoulder", fire: "Right trigger",
+        formation: "Button Y", panel: "Button B", signature: "Button X")
     }
   }
 
   private func showKeyboard() {
     showSource(
-      "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F",
-      formation: "R", panel: "H")
+      "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", previous: "Z",
+      fire: "F", formation: "R", panel: "H", signature: "X")
   }
 
   private func showTouch() {
     showSource(
-      "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
-      formation: "Formation", panel: "Panel")
+      "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", previous: "Next",
+      fire: "Fire", formation: "Formation", panel: "Panel", signature: "Signature")
   }
 
   private func showSource(
-    _ name: String, action: String?, pause: String, cycle: String, fire: String,
-    formation: String, panel: String
+    _ name: String, action: String?, pause: String, cycle: String, previous: String,
+    fire: String, formation: String, panel: String, signature: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
     if pauseButtonName != pause { pauseButtonName = pause }
     if switchButtonName != cycle { switchButtonName = cycle }
+    if previousButtonName != previous { previousButtonName = previous }
     if fireButtonName != fire { fireButtonName = fire }
     if formationButtonName != formation { formationButtonName = formation }
     if panelButtonName != panel { panelButtonName = panel }
+    if signatureButtonName != signature { signatureButtonName = signature }
   }
 
   isolated deinit {

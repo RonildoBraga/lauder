@@ -107,13 +107,16 @@ struct GameView: View {
         VStack(spacing: 14) {
           Text("Paused").font(.title2.bold())
           if world.controls.touchControlsEnabled {
-            Text("Tap Resume to continue, or Restart to begin a new run.")
+            Text(
+              "Tap Resume to continue, Restart to begin a new run, or \(world.otherLevel.name)."
+            )
+            Text(world.otherLevel.note).font(.caption)
           } else {
             // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
             VStack(spacing: 6) {
               ForEach(GameSession.PauseChoice.allCases, id: \.self) { choice in
                 let chosen = choice == world.session.pauseChoice
-                Text(choice == .resume ? "Resume" : "Restart")
+                Text(pauseChoiceName(choice))
                   .font(.headline)
                   .frame(width: 180, height: 36)
                   .background(
@@ -127,6 +130,7 @@ struct GameView: View {
               }
             }
             Text(world.level.restartNote).font(.caption)
+            Text(world.otherLevel.note).font(.caption)
             HStack(spacing: 12) {
               Text("Up or down to choose").font(.caption)
               Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
@@ -151,20 +155,31 @@ struct GameView: View {
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
+          showsSignature: world.showsSignature,
           showsFormation: world.session.formationsAvailable,
           formationTitle: formationAction,
           orderNames: orderNames,
+          otherLevelTitle: world.otherLevel.name,
           mode: world.session.mode)
       }
     }
     .handlesGameControllerEvents(matching: .gamepad)
+    // The app keeps the screen awake while the game is in the foreground; this world only
+    // follows whether it is active.
     .onChange(of: scenePhase, initial: true) { _, phase in
       world.setApplicationActive(phase == .active)
-      UIApplication.shared.isIdleTimerDisabled = phase == .active
     }
     .onDisappear {
       world.stop()
-      UIApplication.shared.isIdleTimerDisabled = false
+    }
+  }
+
+  /// What the pause menu calls each choice: the third names the level it starts.
+  private func pauseChoiceName(_ choice: GameSession.PauseChoice) -> String {
+    switch choice {
+    case .resume: "Resume"
+    case .restart: "Restart"
+    case .otherLevel: world.otherLevel.name
     }
   }
 
@@ -187,9 +202,10 @@ struct GameView: View {
   }
 
   /// The status panel, small and with just the essentials: who leads, marked, and who follows,
-  /// with the leader's hits during a fight and the squad's formation. A new objective or line
-  /// shows for a few seconds; a threat, the carbine's rounds, a warning or the release guidance
-  /// only while they matter. The panel button hides it, and shows it again.
+  /// with the leader's hits during a fight, or everyone's in the combat yard, and the squad's
+  /// formation. A new objective or line shows for a few seconds; a threat, the carbine's rounds,
+  /// a warning or the release guidance only while they matter. The panel button hides it, and
+  /// shows it again.
   private func status(talking: Bool) -> some View {
     VStack(alignment: .leading, spacing: 3) {
       HStack(spacing: 6) {
@@ -198,18 +214,23 @@ struct GameView: View {
           Text(member.displayName)
             .fontWeight(leading ? .semibold : .regular)
             .underline(leading)
-          if world.session.inEncounter, leading {
+          if world.session.inEncounter, leading || world.showsEveryonesHits {
             // The placeholder hit rule: three hits, shown beside the name.
-            Text(hitPips).foregroundStyle(HUDStyle.threat)
+            Text(hitPips(of: member)).foregroundStyle(HUDStyle.threat)
           }
         }
-        if world.session.formationsAvailable {
+        if world.session.formationsAvailable, !world.showsEveryonesHits {
           // The squad's formation and what it is doing (ADR 0003, phases S2 and S3).
           Text("· \(world.session.formation.name) · \(world.session.squadState)")
             .foregroundStyle(HUDStyle.muted)
         }
       }
       .font(.caption)
+      if world.session.formationsAvailable, world.showsEveryonesHits {
+        // With everyone's hits beside their names, the formation takes a line of its own.
+        Text("\(world.session.formation.name) · \(world.session.squadState)")
+          .font(.caption).foregroundStyle(HUDStyle.muted)
+      }
       if world.objectiveIsFresh {
         Text(world.objective).font(.subheadline.weight(.semibold))
       }
@@ -220,6 +241,10 @@ struct GameView: View {
       }
       if let threat = world.threat {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
+      }
+      if let cue = world.signatureCue {
+        // Who can answer the wind-up (ADR 0005).
+        Text(cue).font(.caption.bold())
       }
       if world.showsWeapon {
         Text("Carbine · \(world.session.ammo)").font(.caption)
@@ -248,8 +273,15 @@ struct GameView: View {
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
     }
+    if world.showsSignature {
+      others.append("\(world.controls.signatureButtonName) · Disrupt")
+    }
     if let next = world.session.nextLeader {
       others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
+    }
+    if let previous = world.session.previousLeader, previous != world.session.nextLeader {
+      // With two in the party, Previous leads as the same member as Next.
+      others.append("\(world.controls.previousButtonName) · Lead as \(previous.displayName)")
     }
     if world.session.formationsAvailable {
       others.append("\(world.controls.formationButtonName) · \(formationAction)")
@@ -296,9 +328,9 @@ struct GameView: View {
     return (left.displayName, right.displayName)
   }
 
-  /// The leader's hits left in this encounter, then those taken.
-  private var hitPips: String {
-    let taken = min(world.session.hitsTaken, GameSession.hitsAllowed)
+  /// A member's hits left in this encounter, then those taken.
+  private func hitPips(of member: PartyMember) -> String {
+    let taken = min(world.session.hits(of: member), GameSession.hitsAllowed)
     return String(repeating: "●", count: GameSession.hitsAllowed - taken)
       + String(repeating: "○", count: taken)
   }

@@ -2,10 +2,11 @@ import RealityKit
 import simd
 
 /// A level's fights and scripted scenes (ADR 0004, M2 to M4). It plays an encounter's cues,
-/// runs each hostile, fires the leader's weapon at the assisted target and shows what happens:
-/// the hostiles' bodies, their aim before each shot, the shots, the target marker and the drawn
-/// weapon. The session keeps the hits, the rounds, the loot and who is down; this keeps only
-/// spatial and moment-to-moment state, and every entity is made once, at load.
+/// runs each hostile, fires the leader's weapon at the assisted target, and, where the level's
+/// rules have it, the companions' weapons (ADR 0005), and shows what happens: the hostiles'
+/// bodies, their aim before each shot, the shots, the target marker and the drawn weapon. The
+/// session keeps the hits, the rounds, the loot and who is down; this keeps only spatial and
+/// moment-to-moment state, and every entity is made once, at load.
 @MainActor
 final class EncounterStage {
   /// What one simulation step of a fight produced.
@@ -14,7 +15,8 @@ final class EncounterStage {
     var line: String?
     /// Where the leader should face, towards the target of a shot just fired.
     var facing: SIMD2<Float>?
-    /// The leader took the last allowed hit: the encounter must start again.
+    /// Someone took the last allowed hit: the encounter must start again, or the party falls
+    /// back where the level has that rule.
     var retry = false
     /// Members who appeared in this step, such as Tom before his shot.
     var appeared: [PartyMember] = []
@@ -47,6 +49,18 @@ final class EncounterStage {
   private(set) var isDrawn = false
   /// The HUD's warning, such as "The stranger is aiming."
   private(set) var threat: String?
+  /// Whether the fight is under way: a hostile has begun a wind-up, or the leader has fired.
+  /// Companions never fire before (ADR 0005).
+  private(set) var fightUnderWay = false
+  /// Where each companion firing by themselves aims, at their target, for them to face.
+  private(set) var aims: [PartyMember: SIMD2<Float>] = [:]
+  /// How many shots each companion has fired by themselves in this run. Tests and playtests
+  /// read it.
+  private(set) var companionShots: [PartyMember: Int] = [:]
+  /// Whether the leader can Disrupt a wind-up now, for the HUD (ADR 0005).
+  private(set) var canDisrupt = false
+  /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
+  private(set) var disrupts = 0
 
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
@@ -54,7 +68,15 @@ final class EncounterStage {
   private let weapon = Weapon.carbine
   private let specs: [String: Level.Hostile]
   private let obstacles: [PartyMotion.Box]
+  private let rules: Level.Combat
+  /// Which way a hostile waiting in view faces: back along the level's starting heading,
+  /// towards where the party comes from.
+  private let lookout: SIMD2<Float>
   private var encounter: Level.Encounter?
+  /// Whom each hostile that aims at anyone began its current wind-up at.
+  private var victims: [String: PartyMember] = [:]
+  /// When each companion's weapon fires next.
+  private var companionFire: [PartyMember: AutoFire] = [:]
   /// The assisted target while the weapon is drawn.
   private var target: String?
   private var director = StoryDirector()
@@ -73,6 +95,8 @@ final class EncounterStage {
 
   init(level: Level, style: SceneStyle) {
     obstacles = level.obstacles
+    rules = level.combat
+    lookout = -level.heading
     let all = level.encounters.flatMap(\.hostiles)
     specs = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
     weaponProp = style.carbine()
@@ -107,12 +131,29 @@ final class EncounterStage {
     reset()
   }
 
-  /// Back to before any fight: hostiles unseen where they wait, nothing aimed or in flight, the
-  /// weapon holstered. Restart and an encounter's retry both use it.
+  /// Back to before any fight: hostiles unseen where they wait, or in view where they stand,
+  /// nothing aimed or in flight, the weapon holstered. Restart and an encounter's retry both
+  /// use it.
   func reset() {
+    hostiles = specs.mapValues { HostileState(spec: $0) }
+    companionShots = [:]
+    disrupts = 0
+    stopFighting()
+  }
+
+  /// The party fell back after the last allowed hit on anyone (ADR 0005): the fight stops, and
+  /// every hostile still standing waits where it stands, keeping the damage dealt; those down
+  /// stay down. Nothing is aimed or in flight, and the weapon is holstered.
+  func fallBack() {
+    for id in hostiles.keys { hostiles[id]?.standDown() }
+    stopFighting()
+  }
+
+  /// No encounter under way, nothing aimed or in flight, the weapon holstered, and every
+  /// hostile shown as it now is.
+  private func stopFighting() {
     encounter = nil
     director.stop()
-    hostiles = specs.mapValues { HostileState(spec: $0) }
     isDrawn = false
     drawRemaining = 0
     cooldown = 0
@@ -120,6 +161,7 @@ final class EncounterStage {
     threat = nil
     reportedEmpty = false
     tracerRemaining = [:]
+    endFight()
     for line in aimLines.values { line.isEnabled = false }
     for tracer in tracers.values { tracer.isEnabled = false }
     targetMarker.isEnabled = false
@@ -127,17 +169,30 @@ final class EncounterStage {
     for (id, state) in hostiles { show(id, state) }
   }
 
-  /// An encounter begins: its cues start playing.
+  /// The fight is over: nobody is aimed at, nothing can be disrupted, and the companions hold
+  /// their fire.
+  private func endFight() {
+    fightUnderWay = false
+    victims = [:]
+    companionFire = [:]
+    aims = [:]
+    canDisrupt = false
+  }
+
+  /// An encounter begins: its cues start playing. Its hostiles stay as they are: unseen where
+  /// they wait, or in view where they stand, as Restart and a retry left them.
   func begin(_ encounter: Level.Encounter) {
     self.encounter = encounter
-    for spec in encounter.hostiles { hostiles[spec.id] = HostileState(spec: spec) }
     director.start(encounter.cues)
   }
 
-  /// One simulation step: cues, hostiles, then the leader's weapon. `figures` are the members
-  /// who can be seen, the leader included, for scripted shots.
+  /// One simulation step: cues, the leader's Disrupt, hostiles, the leader's weapon, then the
+  /// companions'. `figures` are the members who can be seen, the leader included, for scripted
+  /// shots and for hostiles that can aim at anyone. `mayDisrupt` says whether the leader has
+  /// Disrupt to use: Miki, in a level that has it.
   func step(
     dt: Float, leader: SIMD2<Float>, facing: SIMD2<Float>, fireHeld: Bool, firePressed: Bool,
+    mayDisrupt: Bool, signaturePressed: Bool,
     figures: [PartyMember: SIMD2<Float>], session: GameSession
   ) -> Outcome {
     var outcome = Outcome()
@@ -176,27 +231,52 @@ final class EncounterStage {
       case .talk(let conversation): _ = session.converse(conversation)
       }
     }
+    // The party, where they can be seen: who a hostile can hit, and who fires by themselves.
+    let party = figures.filter { session.party.contains($0.key) }
+    // Disrupt comes before the hostiles move on, so a press on the step that a wind-up would
+    // end still answers it.
+    if mayDisrupt, signaturePressed, let id = disruptable(from: leader, in: encounter) {
+      disrupt(id, from: leader, outcome: &outcome)
+    }
     var threatNow: String?
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
-      let inRange = simd_distance(state.position, leader) <= spec.range
+      // The leader, or whoever a hostile that aims at anyone began its wind-up at.
+      let victim = spec.targetsAnyone ? victims[spec.id] ?? session.leader : session.leader
+      let aimedAt = party[victim] ?? leader
+      let inRange = simd_distance(state.position, aimedAt) <= spec.range
       let canHit =
-        inRange && LineOfSight.isClear(from: state.position, to: leader, obstacles: obstacles)
+        inRange && LineOfSight.isClear(from: state.position, to: aimedAt, obstacles: obstacles)
       if let shot = state.step(dt: dt, canHit: canHit, toward: leader) {
-        fire(spec.id, from: state.position, at: leader, range: spec.range, shot: shot)
+        fire(spec.id, from: state.position, at: aimedAt, range: spec.range, shot: shot)
         if shot == .miss, let line = spec.missLine { outcome.line = line }
-        if shot == .hit, session.takeHit() { outcome.retry = true }
+        if shot == .hit, session.takeHit(victim) { outcome.retry = true }
       }
+      if case .aiming = state.phase {
+        fightUnderWay = true
+        if spec.targetsAnyone, victims[spec.id] == nil {
+          victims[spec.id] = nearestInSight(of: state, among: party) ?? session.leader
+        }
+      } else {
+        victims[spec.id] = nil
+      }
+      // Whom it aims at now, for its aim line, its facing and the HUD.
+      let aim = spec.targetsAnyone ? victims[spec.id] ?? session.leader : session.leader
+      let aimPosition = party[aim] ?? leader
       switch state.phase {
-      case .aiming: threatNow = "\(spec.name) is aiming."
+      case .aiming:
+        threatNow =
+          spec.targetsAnyone
+          ? "\(spec.name) is aiming at \(aim.displayName)." : "\(spec.name) is aiming."
       case .charging: threatNow = "\(spec.name) is running at you."
       default: break
       }
       hostiles[spec.id] = state
-      show(spec.id, state, facing: leader)
-      showAim(spec.id, state, at: leader)
+      show(spec.id, state, facing: aimPosition)
+      showAim(spec.id, state, at: aimPosition)
     }
     threat = threatNow
+    canDisrupt = mayDisrupt && disruptable(from: leader, in: encounter) != nil
     if outcome.retry { return outcome }
     updateTarget(leader: leader, facing: facing)
     drawRemaining -= dt
@@ -205,20 +285,25 @@ final class EncounterStage {
       let state = hostiles[target]
     {
       if session.spendRound() {
+        fightUnderWay = true
         cooldown = weapon.interval
         showTracer(leaderTracerID, from: leader, to: state.position)
         let offset = state.position - leader
         if simd_length(offset) > 0.001 { outcome.facing = simd_normalize(offset) }
         if session.hit(target, toughness: state.spec.hits) {
-          hostiles[target]?.knockDown()
-          if let down = hostiles[target] { show(target, down, facing: leader) }
-          aimLines[target]?.isEnabled = false
-          outcome.line = "\(state.spec.name) is down."
+          knockDown(target, from: leader, outcome: &outcome)
         }
       } else if !reportedEmpty {
         reportedEmpty = true
         outcome.line = "Out of ammunition."
       }
+    }
+    // Companions fire by themselves once the fight is under way, never before, and not while a
+    // scene holds the party (ADR 0005).
+    if fightUnderWay, !encounter.holdsParty, !rules.companionWeapons.isEmpty {
+      fireCompanions(dt: dt, party: party, session: session, outcome: &outcome)
+    } else {
+      aims = [:]
     }
     // A fight ends once everyone in it is down; a scene also plays its timeline to the end.
     if !director.isPlaying, encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) }) {
@@ -227,9 +312,90 @@ final class EncounterStage {
       director.stop()
       threat = nil
       for line in aimLines.values { line.isEnabled = false }
+      if let line = encounter.clearedLine { outcome.line = line }
+      endFight()
     }
     updateTarget(leader: leader, facing: facing)
     return outcome
+  }
+
+  /// Each companion with a weapon fires by themselves at their own assisted target, the nearest
+  /// hostile that is a target, in clear sight and within reach, at their weapon's own pace. Their
+  /// shots spend no rounds.
+  private func fireCompanions(
+    dt: Float, party: [PartyMember: SIMD2<Float>], session: GameSession,
+    outcome: inout Outcome
+  ) {
+    var aims: [PartyMember: SIMD2<Float>] = [:]
+    for member in session.companions {
+      guard let weapon = rules.companionWeapons[member], let from = party[member] else { continue }
+      let candidates = hostiles.values.filter(\.isTargetable).map {
+        Targeting.Candidate(id: $0.spec.id, position: $0.position)
+      }
+      let target = Targeting.nearest(
+        from: from, candidates: candidates, range: weapon.range,
+        isClear: { LineOfSight.isClear(from: $0, to: $1, obstacles: self.obstacles) })
+      var trigger = companionFire[member] ?? AutoFire(weapon: weapon)
+      let fires = trigger.step(dt: dt, weapon: weapon, hasTarget: target != nil)
+      companionFire[member] = trigger
+      guard let target, let state = hostiles[target] else { continue }
+      aims[member] = state.position
+      guard fires else { continue }
+      showTracer(Self.tracer(member), from: from, to: state.position)
+      companionShots[member, default: 0] += 1
+      // A blast that counts as several hits stops counting once the hostile is down.
+      for _ in 0..<weapon.damage {
+        guard session.hit(target, toughness: state.spec.hits) else { continue }
+        knockDown(target, from: from, outcome: &outcome)
+        break
+      }
+    }
+    self.aims = aims
+  }
+
+  /// Whom a hostile that aims at anyone begins its wind-up at: the nearest member in clear
+  /// sight within its reach. Nil when there is nobody, and it aims at the leader, whose shot
+  /// cover or distance will stop.
+  private func nearestInSight(of state: HostileState, among party: [PartyMember: SIMD2<Float>])
+    -> PartyMember?
+  {
+    let candidates = party.map { Targeting.Candidate(id: $0.key.rawValue, position: $0.value) }
+    return Targeting.nearest(
+      from: state.position, candidates: candidates, range: state.spec.range,
+      isClear: { LineOfSight.isClear(from: $0, to: $1, obstacles: self.obstacles) }
+    ).flatMap(PartyMember.init(rawValue:))
+  }
+
+  /// The wind-up that Disrupt from the leader would cancel now, if any.
+  private func disruptable(from leader: SIMD2<Float>, in encounter: Level.Encounter) -> String? {
+    Disrupt.target(
+      from: leader, hostiles: encounter.hostiles.compactMap { hostiles[$0.id] },
+      isClear: { LineOfSight.isClear(from: $0, to: $1, obstacles: self.obstacles) })
+  }
+
+  /// Miki's Disrupt (ADR 0005): her precise shot cancels the hostile's wind-up, and it recovers
+  /// before it can aim again. It spends no round.
+  private func disrupt(_ id: String, from leader: SIMD2<Float>, outcome: inout Outcome) {
+    guard var state = hostiles[id] else { return }
+    state.disrupt()
+    hostiles[id] = state
+    victims[id] = nil
+    aimLines[id]?.isEnabled = false
+    disrupts += 1
+    showTracer(leaderTracerID, from: leader, to: state.position)
+    let offset = state.position - leader
+    if simd_length(offset) > 0.001 { outcome.facing = simd_normalize(offset) }
+    outcome.line = "\(state.spec.name)'s shot is disrupted."
+  }
+
+  /// A hostile goes down where it stood, facing whoever shot it; its aim goes, and the HUD says
+  /// so.
+  private func knockDown(_ id: String, from shooter: SIMD2<Float>, outcome: inout Outcome) {
+    hostiles[id]?.knockDown()
+    if let down = hostiles[id] { show(id, down, facing: shooter) }
+    aimLines[id]?.isEnabled = false
+    victims[id] = nil
+    if let name = specs[id]?.name { outcome.line = "\(name) is down." }
   }
 
   /// What a search found, for the HUD.
@@ -290,9 +456,10 @@ final class EncounterStage {
     }
   }
 
-  /// A hostile's body: unseen while it waits, facing the leader while it stands, lying on the
-  /// ground once down.
-  private func show(_ id: String, _ state: HostileState, facing leader: SIMD2<Float>? = nil) {
+  /// A hostile's body: unseen while it waits out of view, facing whom it aims at while it
+  /// fights, or the way the party comes from while it waits in view, and lying on the ground once
+  /// down.
+  private func show(_ id: String, _ state: HostileState, facing point: SIMD2<Float>? = nil) {
     guard let body = bodies[id], let visual = visuals[id] else { return }
     body.isEnabled = state.isVisible
     body.position = [state.position.x, PartyBody.height / 2, state.position.y]
@@ -300,41 +467,42 @@ final class EncounterStage {
       visual.orientation = simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
       visual.position = [0, -0.6, 0]
     } else {
-      let offset = (leader ?? state.position + [0, -1]) - state.position
+      let offset = (point ?? state.position + lookout) - state.position
       visual.orientation = simd_quatf(angle: Movement.yaw(towards: offset), axis: [0, 1, 0])
       visual.position = .zero
     }
   }
 
-  /// The aim line from a hostile winding up its shot to the leader: the warning to take cover.
-  private func showAim(_ id: String, _ state: HostileState, at leader: SIMD2<Float>) {
+  /// The aim line from a hostile winding up its shot to whom it aims at: the warning to take
+  /// cover.
+  private func showAim(_ id: String, _ state: HostileState, at point: SIMD2<Float>) {
     guard let line = aimLines[id] else { return }
     guard case .aiming = state.phase else {
       line.isEnabled = false
       return
     }
-    place(line, from: state.position, to: leader, thickness: 0.025 * markerScale)
+    place(line, from: state.position, to: point, thickness: 0.025 * markerScale)
     line.isEnabled = true
   }
 
-  /// A hostile's shot: into the cover, or falling short of a leader out of range; otherwise just
-  /// past the leader when it misses on purpose, or into the leader.
+  /// A hostile's shot at the leader, or at whom it aims: into the cover, or falling short of
+  /// someone out of range; otherwise just past them when it misses on purpose, or into them.
   private func fire(
-    _ id: String, from start: SIMD2<Float>, at leader: SIMD2<Float>, range: Float,
+    _ id: String, from start: SIMD2<Float>, at point: SIMD2<Float>, range: Float,
     shot: HostileState.Shot
   ) {
-    let distance = simd_distance(start, leader)
+    let distance = simd_distance(start, point)
     guard distance > 0.001 else { return }
-    let block = LineOfSight.firstBlock(from: start, to: leader, obstacles: obstacles) ?? 1
+    let block = LineOfSight.firstBlock(from: start, to: point, obstacles: obstacles) ?? 1
     let reach = min(block, range / distance)
-    let direction = (leader - start) / distance
+    let direction = (point - start) / distance
     if reach < 1 {
-      showTracer(id, from: start, to: start + (leader - start) * reach)
+      showTracer(id, from: start, to: start + (point - start) * reach)
     } else if shot == .miss {
       showTracer(
-        id, from: start, to: leader + SIMD2(-direction.y, direction.x) * 0.7 + direction * 3)
+        id, from: start, to: point + SIMD2(-direction.y, direction.x) * 0.7 + direction * 3)
     } else {
-      showTracer(id, from: start, to: leader)
+      showTracer(id, from: start, to: point)
     }
   }
 

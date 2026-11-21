@@ -27,9 +27,12 @@ final class GameSession {
     static func < (lhs: Beat, rhs: Beat) -> Bool { lhs.rawValue < rhs.rawValue }
   }
 
-  /// The pause menu's two choices. It opens on Resume.
+  /// The pause menu's choices, in order. It opens on Resume.
   enum PauseChoice: CaseIterable, Sendable {
     case resume, restart
+    /// While the combat experiment lasts, the other level as a new run: the combat yard from
+    /// the bridge, and the bridge from the yard (ADR 0005).
+    case otherLevel
   }
 
   /// How the companions arrange themselves around the leader, in the order the formation
@@ -81,8 +84,8 @@ final class GameSession {
     case hold
   }
 
-  /// Hits the leader can take in an encounter; the last one starts it again (the placeholder
-  /// hit rule of The Quiet Yard).
+  /// Hits a member can take in an encounter; the last one starts it again, or falls the party
+  /// back where the level has that rule (the placeholder hit rule of The Quiet Yard).
   static let hitsAllowed = 3
 
   /// What an encounter's retry returns to: the state when it began.
@@ -113,8 +116,8 @@ final class GameSession {
   private let beatStarted: [Level.ActionID: Beat]
   /// The story's progress on the bridge.
   private(set) var beat = Beat.alone
-  /// Hits the leader has taken in the current encounter.
-  private(set) var hitsTaken = 0
+  /// Hits each member has taken in the current encounter. On the bridge only the leader is hit.
+  private var hits: [PartyMember: Int] = [:]
   /// Rounds left for the leader's weapon.
   private(set) var ammo: Int
   /// Hostiles defeated in this run.
@@ -161,6 +164,14 @@ final class GameSession {
   /// Whether an encounter is under way.
   var inEncounter: Bool { checkpoint != nil }
 
+  /// Hits the leader has taken in the current encounter.
+  var hitsTaken: Int { hits(of: leader) }
+
+  /// Hits a member has taken in the current encounter.
+  func hits(of member: PartyMember) -> Int {
+    hits[member] ?? 0
+  }
+
   var isPaused: Bool { mode == .paused }
   var currentLine: MissionScript.Line? {
     conversation.map { MissionScript.lines($0)[lineIndex] }
@@ -170,6 +181,13 @@ final class GameSession {
   var nextLeader: PartyMember? {
     guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
     return party[(index + 1) % party.count]
+  }
+
+  /// Who Previous would switch to: the member before the leader in switching order, the same as
+  /// Next while there are two, or nil while the leader travels alone (ADR 0005).
+  var previousLeader: PartyMember? {
+    guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
+    return party[(index + party.count - 1) % party.count]
   }
 
   func togglePause() {
@@ -182,10 +200,13 @@ final class GameSession {
     }
   }
 
-  /// Up (-1) chooses Resume and down (1) chooses Restart.
+  /// Up (-1) and down (1) move the choice one place through Resume, Restart and the other level,
+  /// stopping at either end.
   func movePauseChoice(by step: Int) {
     guard mode == .paused, step != 0 else { return }
-    pauseChoice = step < 0 ? .resume : .restart
+    let all = PauseChoice.allCases
+    let index = all.firstIndex(of: pauseChoice) ?? 0
+    pauseChoice = all[min(max(index + step.signum(), 0), all.count - 1)]
   }
 
   /// Who the right D-pad direction sends: whoever Next would lead as, since R1 is on the right.
@@ -193,10 +214,7 @@ final class GameSession {
 
   /// Who the left D-pad direction sends: the member before the leader in the switching order.
   /// The two sides keep this order for whoever leads, as the HUD's "◀ Laura · Tom ▶" shows.
-  var leftCompanion: PartyMember? {
-    guard party.count > 2, let index = party.firstIndex(of: leader) else { return nil }
-    return party[(index + party.count - 1) % party.count]
-  }
+  var leftCompanion: PartyMember? { party.count > 2 ? previousLeader : nil }
 
   /// The leader's companions, in switching order from the leader.
   var companions: [PartyMember] {
@@ -204,13 +222,25 @@ final class GameSession {
     return (1..<party.count).map { party[(index + $0) % party.count] }
   }
 
+  /// Next: lead as the member after the leader, only while exploring.
+  func cycleLeader() {
+    guard let next = nextLeader else { return }
+    lead(as: next)
+  }
+
+  /// Previous: lead as the member before the leader, on the same terms as Next (ADR 0005).
+  func cycleLeaderBackwards() {
+    guard let previous = previousLeader else { return }
+    lead(as: previous)
+  }
+
   /// A switch clears the new leader's order. The previous leader takes the squad's state: if
   /// the others are going or holding, they hold where they stand; otherwise they follow.
-  func cycleLeader() {
-    guard mode == .exploring, let next = nextLeader else { return }
+  private func lead(as member: PartyMember) {
+    guard mode == .exploring else { return }
     let previous = leader
-    leader = next
-    orders[next] = nil
+    leader = member
+    orders[member] = nil
     if !orders.isEmpty { orders[previous] = .holding(nil) }
   }
 
@@ -356,9 +386,16 @@ final class GameSession {
 
   /// The leader is hit; true on the last allowed hit, when the encounter must start again.
   func takeHit() -> Bool {
+    takeHit(leader)
+  }
+
+  /// A member is hit; true on their last allowed hit, when the encounter must start again or,
+  /// where the level has that rule, the party falls back.
+  func takeHit(_ member: PartyMember) -> Bool {
     guard mode == .exploring, inEncounter else { return false }
-    hitsTaken += 1
-    return hitsTaken >= Self.hitsAllowed
+    let taken = hits(of: member) + 1
+    hits[member] = taken
+    return taken >= Self.hitsAllowed
   }
 
   /// The encounter starts again from its beginning: everything from before it stays, and
@@ -371,14 +408,26 @@ final class GameSession {
     defeated = checkpoint.defeated
     searched = checkpoint.searched
     hitsDealt = checkpoint.hitsDealt
-    hitsTaken = 0
+    hits = [:]
     self.checkpoint = nil
   }
 
-  /// The encounter is won; the leader's hits recover.
+  /// The party falls back after the last allowed hit on anyone (ADR 0005). The encounter is no
+  /// longer under way and can begin again, everyone's hits recover and every companion follows
+  /// again; the hostiles keep the damage dealt, whoever is down stays down, and nothing else
+  /// is undone.
+  func fallBack() {
+    guard let checkpoint else { return }
+    beat = checkpoint.beat
+    hits = [:]
+    orders = [:]
+    self.checkpoint = nil
+  }
+
+  /// The encounter is won; everyone's hits recover.
   func endEncounter() {
     checkpoint = nil
-    hitsTaken = 0
+    hits = [:]
   }
 
   /// Whether the action is offered at its approach now.
@@ -451,7 +500,7 @@ final class GameSession {
     orders = [:]
     firedTriggers = []
     beat = .alone
-    hitsTaken = 0
+    hits = [:]
     ammo = startingAmmo
     defeated = []
     searched = []

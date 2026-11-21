@@ -75,6 +75,32 @@ struct Level {
     var missLine: String?
     /// What searching the body yields once the hostile is down.
     var loot: Loot?
+    /// It waits in view where it fights from the start of a run, instead of unseen until a cue
+    /// reveals it, as the combat yard's shooters do beyond its wall (ADR 0005).
+    var inView = false
+    /// It aims at whichever member of the party is nearest in clear sight within its reach,
+    /// instead of always at the leader (ADR 0005).
+    var targetsAnyone = false
+    /// It becomes a target for assisted aim from its first wind-up, so that its first shot can
+    /// be answered, instead of from its first shot (ADR 0005).
+    var targetFromWindUp = false
+  }
+
+  /// How a level's fights go beyond what its hostiles do (ADR 0005). The defaults are the
+  /// opening's (ADR 0004): only the leader fires, only the leader takes hits, and the last
+  /// allowed hit starts the encounter again with everything restored.
+  struct Combat: Sendable {
+    /// The members' weapons as companions. Once a fight is under way, a companion with one
+    /// fires by themselves at their own assisted target, in clear sight and within reach. It
+    /// spends no rounds: only the leader's carbine uses the count.
+    var companionWeapons: [PartyMember: Weapon] = [:]
+    /// Every member takes hits, and the last allowed hit on anyone falls the whole party back
+    /// to the level's spawn points, while the hostiles keep the damage dealt, instead of
+    /// starting the encounter again.
+    var fallsBack = false
+    /// While Miki leads, Signature can Disrupt a hostile's wind-up within her reach and in her
+    /// clear sight.
+    var disrupt = false
   }
 
   /// What happens at a moment after an encounter begins.
@@ -124,6 +150,8 @@ struct Level {
     /// The encounter waits until every companion is close to the leader, so a scene for the
     /// whole party never begins with someone holding elsewhere (ADR 0003, phase S3).
     var gathersParty = false
+    /// A line shown once every hostile is down, such as the combat yard's.
+    var clearedLine: String?
   }
 
   /// A short name, such as "brooklyn-bridge", for the scene and messages.
@@ -167,6 +195,8 @@ struct Level {
   let lookAround: String
   /// What the pause menu says Restart does.
   let restartNote: String
+  /// How its fights go; the opening's rules unless the level says otherwise.
+  var combat = Combat()
 
   /// The floor's footprint, which the navigation grid covers.
   var bounds: PartyMotion.Box { ground.footprint }

@@ -17,6 +17,10 @@ final class GameWorld {
   let root = Entity()
   let controls = GameControls()
   let session: GameSession
+  /// Asks the world's owner for a new run of another level, in a world of its own: the pause
+  /// menu's third choice while the combat experiment lasts (ADR 0005). Without an owner, as in
+  /// most tests, the choice does nothing.
+  @ObservationIgnored var leave: ((Level) -> Void)?
   /// The latest line the HUD shows: a place's words, an action's result, a beat's line. Every
   /// line counts as new, even one that repeats the last, so it shows again in the status panel.
   private(set) var observation: String {
@@ -33,6 +37,8 @@ final class GameWorld {
   private(set) var actionName: String?
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
+  /// Who can answer a wind-up, such as "Miki can Disrupt" (ADR 0005); nil when nobody can.
+  private(set) var signatureCue: String?
   /// Whether the leader's weapon is drawn.
   private(set) var weaponDrawn = false
   /// How dark the screen is while an encounter starts again, from 0 to 1.
@@ -67,6 +73,8 @@ final class GameWorld {
   @ObservationIgnored private var crossRemaining: Float = 0
   /// Orders refused in this run because nobody could reach their point. Tests read it.
   @ObservationIgnored private(set) var refusedOrders = 0
+  /// How often the party has fallen back in this run (ADR 0005). Tests and playtests read it.
+  @ObservationIgnored private(set) var fallBacks = 0
   /// Whether the leader has been told, on this visit to a gathering area, who is missing.
   @ObservationIgnored private var toldWhoIsMissing = false
   /// What the touch order menu marked as it opened: its point on the screen, and what the ray
@@ -110,6 +118,7 @@ final class GameWorld {
   @ObservationIgnored private let stage: EncounterStage
   @ObservationIgnored private var fireHeld = false
   @ObservationIgnored private var firePressPending = false
+  @ObservationIgnored private var signaturePressPending = false
   /// Where the current encounter's retry places the leader.
   @ObservationIgnored private var retrySpot: SIMD2<Float>?
   /// Time into an encounter's retry: the fade out, the reset, the fade back in.
@@ -141,11 +150,28 @@ final class GameWorld {
   var isPaused: Bool { session.isPaused }
   /// Whether the weapon's controls show: during a fight, or while the weapon is drawn.
   var showsWeapon: Bool { session.inEncounter || weaponDrawn }
-  /// Whether an encounter's retry is under way.
+  /// Whether an encounter's retry, or the party's fall back, is under way.
   var isRetrying: Bool { retryElapsed != nil }
+  /// Whether the HUD shows everyone's hits during a fight, as the combat yard does, rather than
+  /// only the leader's.
+  var showsEveryonesHits: Bool { session.inEncounter && level.combat.fallsBack }
+  /// Whether the leader has a signature to use: Miki's Disrupt, in a level that has it (ADR
+  /// 0005). The others' signatures are left out of the experiment.
+  var leaderHasSignature: Bool { level.combat.disrupt && session.leader == .miki }
+  /// Whether the signature's controls show: during a fight, while the leader has one.
+  var showsSignature: Bool { session.inEncounter && leaderHasSignature }
+  /// How many shots each companion has fired by themselves in this run. Tests and playtests
+  /// read it.
+  var companionShots: [PartyMember: Int] { stage.companionShots }
+  /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
+  var disrupts: Int { stage.disrupts }
   /// The HUD's objective: the level's own, until the story changes it.
   var objective: String {
     level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
+  }
+  /// The pause menu's third choice: what it reads, what it does and the level it starts.
+  var otherLevel: (name: String, note: String, level: Level) {
+    CombatYard.pauseChoice(leaving: level)
   }
 
   init(level: Level = BrooklynBridge.level) {
@@ -169,8 +195,10 @@ final class GameWorld {
     if let scene = level.scene {
       root.addChild(Self.loadScene(named: scene, for: level))
     } else {
+      // A greybox, such as the combat yard or a test's level: snow underfoot, and plain blocks.
       for box in [level.ground] + level.boxes {
-        let entity = style.block(size: box.size, at: box.position, material: style.scenery)
+        let material = box.name == level.ground.name ? style.snow : style.scenery
+        let entity = style.block(size: box.size, at: box.position, material: material)
         entity.name = box.name
         root.addChild(entity)
       }
@@ -212,11 +240,6 @@ final class GameWorld {
     placeParty()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
-    #if DEBUG
-      if let scenario = UserDefaults.standard.string(forKey: "LauderPlaytest") {
-        startPlaytest(scenario, style: style)
-      }
-    #endif
   }
 
   /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
@@ -255,6 +278,13 @@ final class GameWorld {
     subscription?.cancel()
     subscription = nil
     updateActivity()
+  }
+
+  /// What the player chose in another level's world carries over to this one: a hidden status
+  /// panel, and touch controls in place of an attached controller.
+  func takePreferences(from other: GameWorld) {
+    panelHidden = other.panelHidden
+    if other.controls.prefersTouch { controls.useTouchControls() }
   }
 
   /// The scene's update: this frame's input, sampled in the session's mode, then `update`. Each
@@ -304,7 +334,7 @@ final class GameWorld {
     #endif
     advanceParty(
       movement: input.movement, fireHeld: input.fireHeld, firePressed: input.firePressed,
-      deltaTime: deltaTime)
+      signaturePressed: input.signaturePressed, deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
         dt: deltaTime,
@@ -322,8 +352,14 @@ final class GameWorld {
         togglePause()
       } else if input.restartPressed {
         restart()
+      } else if input.otherLevelPressed {
+        leave?(otherLevel.level)
       } else if input.actionPressed {
-        if session.pauseChoice == .restart { restart() } else { togglePause() }
+        switch session.pauseChoice {
+        case .resume: togglePause()
+        case .restart: restart()
+        case .otherLevel: leave?(otherLevel.level)
+        }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
       }
@@ -342,12 +378,10 @@ final class GameWorld {
         togglePause()
       } else if input.switchPressed, session.nextLeader != nil {
         session.cycleLeader()
-        // A previous leader who joins a holding squad holds where they stand.
-        pinHolds()
-        cameraStart = cameraTarget
-        cameraElapsed = 0
-        showLeaderMarker()
-        updatePromptAndCompass()
+        followNewLeader()
+      } else if input.previousPressed, session.previousLeader != nil {
+        session.cycleLeaderBackwards()
+        followNewLeader()
       }
       // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
       // an order the button calls everyone back instead.
@@ -363,6 +397,16 @@ final class GameWorld {
   private func togglePause() {
     session.togglePause()
     controls.requireNeutralInput()
+  }
+
+  /// After Next or Previous: the camera eases to the new leader, and a previous leader who
+  /// joins a holding squad holds where they stand.
+  private func followNewLeader() {
+    pinHolds()
+    cameraStart = cameraTarget
+    cameraElapsed = 0
+    showLeaderMarker()
+    updatePromptAndCompass()
   }
 
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
@@ -407,6 +451,7 @@ final class GameWorld {
     placeParty()
     diagnostic = nil
     refusedOrders = 0
+    fallBacks = 0
     touchMark = nil
     crossRemaining = 0
     refusalCross.isEnabled = false
@@ -428,10 +473,18 @@ final class GameWorld {
   /// leader, and the camera settled behind them.
   private func resetPlay(around spot: SIMD2<Float>) {
     stage.reset()
+    resetSquad(around: spot)
+  }
+
+  /// What a fall back puts back too, once the leader stands at `spot`: the squad's movement
+  /// around the leader and the camera settled behind them, with the weapon holstered.
+  private func resetSquad(around spot: SIMD2<Float>) {
     threat = nil
     weaponDrawn = false
     fireHeld = false
     firePressPending = false
+    signaturePressPending = false
+    signatureCue = nil
     squadLeader = session.leader
     route = RouteMemory(start: spot)
     planner = SquadPlanner(heading: level.heading)
@@ -464,11 +517,13 @@ final class GameWorld {
   /// production; deterministic route and soak tests drive it too. Input availability, Pause and
   /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
-    movement: SIMD2<Float>, fireHeld: Bool = false, firePressed: Bool = false, deltaTime: Float
+    movement: SIMD2<Float>, fireHeld: Bool = false, firePressed: Bool = false,
+    signaturePressed: Bool = false, deltaTime: Float
   ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     self.fireHeld = fireHeld
     if firePressed { firePressPending = true }
+    if signaturePressed { signaturePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
     // remainder, always under one step, carries to the next frame. A retry, or a conversation a
@@ -820,8 +875,9 @@ final class GameWorld {
   // MARK: - Fights
 
   /// One step of the fight: the stage plays the encounter and fires the leader's weapon; the
-  /// world turns the leader, shows lines and the threat, and starts a retry after the last hit.
-  /// Only Miki carries the carbine, and not while a scene holds her.
+  /// world turns the leader, shows lines, the threat and who can answer it, and starts a retry
+  /// or a fall back after the last hit. Only Miki carries the carbine and has Disrupt, and not
+  /// while a scene holds her.
   private func stepEncounter(leader: PartyMember, at position: SIMD2<Float>, dt: Float) {
     let armed = leader == .miki && !stage.holdsParty
     let figures = Dictionary(
@@ -830,9 +886,13 @@ final class GameWorld {
       })
     let outcome = stage.step(
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
-      fireHeld: armed && fireHeld, firePressed: armed && firePressPending, figures: figures,
-      session: session)
+      fireHeld: armed && fireHeld, firePressed: armed && firePressPending,
+      mayDisrupt: leaderHasSignature && !stage.holdsParty,
+      signaturePressed: signaturePressPending, figures: figures, session: session)
     firePressPending = false
+    signaturePressPending = false
+    let cue = stage.canDisrupt ? "\(leader.displayName) can Disrupt" : nil
+    if signatureCue != cue { signatureCue = cue }
     if let facing = outcome.facing { setYaw(leader, Movement.yaw(towards: facing)) }
     if let line = outcome.line { observation = line }
     for member in outcome.appeared { appear(member) }
@@ -896,12 +956,33 @@ final class GameWorld {
   }
 
   private func performRetry() {
+    if level.combat.fallsBack {
+      fallBack()
+      return
+    }
     session.retryEncounter()
     let spot = retrySpot ?? level.spawn(session.leader)
     place(session.leader, at: spot)
     setYaw(session.leader, Movement.yaw(towards: level.heading))
     resetPlay(around: spot)
     observation = "Try again."
+  }
+
+  /// The whole party falls back to the level's spawn points after the last allowed hit on
+  /// anyone (ADR 0005): everyone's hits recover and every companion follows again, while the
+  /// hostiles keep the damage dealt and wait where they stand, and whoever is down stays down.
+  private func fallBack() {
+    session.fallBack()
+    stage.fallBack()
+    let facing = Movement.yaw(towards: level.heading)
+    for member in session.party {
+      place(member, at: level.spawn(member))
+      setYaw(member, facing)
+    }
+    fallBacks += 1
+    resetSquad(around: level.spawn(session.leader))
+    showOrders()
+    observation = "The party falls back to the entrance."
   }
 
   private func changeLeader() {
@@ -924,12 +1005,18 @@ final class GameWorld {
     bodies[member]?.position = [point.x, PartyBody.height / 2, point.y]
   }
 
-  /// Companions turn towards their movement, or to the formation's heading once settled, at a
-  /// limited rate so they never snap round.
+  /// Companions turn towards their movement, or towards their target while they fire by
+  /// themselves, or to the formation's heading once settled, at a limited rate so they never
+  /// snap round.
   private func turn(_ member: PartyMember, moved delta: SIMD2<Float>, dt: Float) {
     let wanted: Float
     if simd_length(delta) > 0.2 * dt {
       wanted = Movement.yaw(towards: delta)
+    } else if let aim = stage.aims[member], let here = position(of: member),
+      simd_distance(aim, here) > 0.01
+    {
+      // A companion firing by themselves faces their target (ADR 0005).
+      wanted = Movement.yaw(towards: aim - here)
     } else if motors[member]?.isSettled == true {
       wanted = Movement.yaw(towards: planner.heading)
     } else {
@@ -1037,24 +1124,38 @@ final class GameWorld {
     /// What a scripted playtest can see each frame.
     var playtestSnapshot: PlaytestRunner.Snapshot {
       PlaytestRunner.Snapshot(
-        leader: session.leader, party: session.party, positions: positions, mode: session.mode,
-        firedTriggers: session.firedTriggers.count, beat: session.beat,
+        level: level, leader: session.leader, party: session.party, positions: positions,
+        mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
-        camera: projection(aspect: PlaytestRunner.screenAspect))
+        camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
+        disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
-    func startPlaytest(_ scenario: String, style: SceneStyle = SceneStyle()) {
+    func startPlaytest(_ scenario: String) {
       guard let runner = PlaytestRunner(scenario: scenario) else {
         observation =
           "Unknown playtest \"\(scenario)\". Try: "
           + PlaytestRunner.scenarioNames.joined(separator: ", ") + "."
         return
       }
+      install(runner)
+    }
+
+    /// A playtest that another level's world began carries on here, after the pause menu's
+    /// third choice made this world.
+    func continuePlaytest(from other: GameWorld) {
+      guard let runner = other.playtest else { return }
+      other.playtest = nil
+      install(runner)
+    }
+
+    private func install(_ runner: PlaytestRunner) {
       playtest = runner
       observation = runner.status
       // Small discs at each companion's target, so screenshots show where they are heading.
+      let style = SceneStyle()
       for member in PartyMember.allCases {
         let disc = ModelEntity(
           mesh: .generateCylinder(height: 0.01, radius: 0.12), materials: [style.signal])

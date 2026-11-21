@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Updated:** 21 November 2026\
-**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. The combat design review has settled a [first squad combat experiment](decisions/0005-squad-combat-experiment.md). It and the [later hardening](#later-hardening-after-the-loop-is-worth-keeping) each need their own assignment.\
+**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. The combat design review settled a [first squad combat experiment](decisions/0005-squad-combat-experiment.md), which the maintainer assigned the same day, “Yes, build it”; it is built in a greybox combat yard and awaits the maintainer's playtest. The [later hardening](#later-hardening-after-the-loop-is-worth-keeping) needs its own assignment.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -45,19 +45,21 @@ Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of
 | Move active character | Left stick | Bottom-left analog stick | WASD |
 | Contextual action, advance text or confirm the pause menu's choice | Cross / A | Look, showing the action where there is one, Continue in a conversation and Restart while paused | E |
 | Cycle leader, once there are two | R1 / RB | Next: name | Q |
+| Lead as the previous member, wherever Next is | L1 / LB | None: Next cycles | Z |
 | Change formation, once there are two companions; after an order, call everyone back | Triangle / Y | Formation, or Follow after an order | R |
 | Order companions, once there are two: both go, the one on that side goes, or both hold | D-pad up, left or right, down | Press and hold on the ground, then Both, a name or Hold | Arrow keys |
 | Fire at the assisted target: press to draw, hold to keep firing | R2 / RT | Fire, during a fight or once the carbine is drawn | F |
+| The leader's signature: Miki's Disrupt, in the combat yard ([ADR 0005](decisions/0005-squad-combat-experiment.md)) | Square / X | Signature, during a yard fight while Miki leads | X |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
-| Choose Resume or Restart in the pause menu | Left stick or D-pad, up or down | None: Look reads Restart | W / S or the up and down arrow keys |
+| Choose Resume, Restart or, while the combat experiment lasts, Combat test (Bridge in the yard) in the pause menu | Left stick or D-pad, up or down | Resume, Look reading Restart, and a Combat test or Bridge button beside Resume | W / S or the up and down arrow keys |
 | Hide or show the status panel | Circle / B | None: the panel always shows with touch controls | H |
 
-Xbox RB and RT use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
+Xbox RB, LB, RT and X use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
 
-- Switching, changing formation and orders are available only while exploring. Pause and dialogue ignore their presses rather than queueing them.
+- Switching, changing formation, orders and the signature are available only while exploring. Pause and dialogue ignore their presses rather than queueing them.
 - A switch changes leadership and eases the camera target to the new leader over a short transition, preserving every character's world position and all party progress. It does not teleport the party.
 - Held movement may continue on the new leader, including a stick touch held alongside **Next: name**. Switching alone does not close the neutral-input gate. Source changes cancel old captures and require neutral input. After Pause, interruption or reconnection, all keys, buttons and fingers must release; a centred-stick finger still counts as held input.
-- Consume a switch, formation or order edge before an action edge from the same input sample, discarding that action. A held action must be released and pressed again before it acts.
+- Consume a switch, formation or order edge before a signature or action edge from the same input sample, discarding them, and a signature edge before an action edge. Next wins over Previous pressed with it. A held action or signature must be released and pressed again before it acts.
 - Prompts describe what the leader can do from an accessible approach. On press, revalidate the leader, the approach and the current progress; a stale prompt cannot act through a wall.
 
 | Interaction | Who | Result |
@@ -95,4 +97,4 @@ On 21 November 2026 the maintainer settled the choices for a first experiment, w
 - a third hit on anyone falling the party back while enemies keep their damage;
 - Miki's Disrupt as the only signature.
 
-Building it needs its own assignment.
+The maintainer assigned it on 21 November 2026: “Yes, build it”. It is built in a greybox combat yard that the pause menu's **Combat test** opens, and its playtests decide what comes next.
