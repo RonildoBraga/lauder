@@ -21,6 +21,13 @@ struct SceneStyle {
   let gear = SimpleMaterial(
     color: UIColor(red: 0.16, green: 0.25, blue: 0.25, alpha: 1), roughness: 0.9,
     isMetallic: false)
+  /// The palette's colours that the salvage yard's greybox adds (the visual direction): rust for
+  /// a barrier or a warning, ink for a pole, faded teal for old paintwork, and stone.
+  let rust = SceneStyle.palette(166, 90, 67)
+  let ink = SceneStyle.palette(54, 65, 75)
+  let fadedTeal = SceneStyle.palette(94, 124, 128)
+  let stone = SceneStyle.palette(183, 172, 157)
+  /// Amber: things to use, and the leader's disc.
   let warm = UnlitMaterial(color: UIColor(red: 1, green: 0.75, blue: 0.4, alpha: 1))
   /// Threats: a hostile's aim and shots, and the assisted target's marker.
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
@@ -46,6 +53,14 @@ struct SceneStyle {
     }
     return max(
       1, shown(cameraOffset, fieldOfView) / shown(markerCamera.offset, markerCamera.fieldOfView))
+  }
+
+  /// A palette colour, from its 8-bit values, as the visual direction sets its materials: matte,
+  /// and not metallic.
+  private static func palette(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> SimpleMaterial {
+    SimpleMaterial(
+      color: UIColor(red: red / 255, green: green / 255, blue: blue / 255, alpha: 1), roughness: 1,
+      isMetallic: false)
   }
 
   private static func colour(_ value: SIMD3<Float>) -> UIColor {

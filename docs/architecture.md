@@ -170,16 +170,21 @@ The session counts each member's hits, and the stage keeps whom each hostile aim
 ### Salvage
 
 A level can hold a salvage task, as the salvage yard of [ADR 0006](decisions/0006-salvage-and-exploration-experiment.md) does: a gate, cabinets, a transmitter and the approach area of each. The session keeps what the party has done in `SalvageProgress`:
-- **The progress:** what each cabinet holds in this run, whether the gate is open, which cabinets the party knows, which are emptied, the regulators in the shared bag, and whether the repair is done. Each run, Restart included, deals the cabinets' contents afresh, in a random order.
+- **The progress:** what each cabinet holds in this run, whether the gate is open, which cabinets the party knows, which are emptied, the regulators in the shared bag and whether the party knows each one's model, and whether the repair is done. Each run, Restart included, deals the cabinets' contents afresh, in a random order.
 - **The rules:** what whoever leads can do at each place, decided afresh on each press.
   - Laura reaches the latch, or Tom shifts the panel.
-  - Miki inspects, and then takes only the right regulator.
+  - Miki inspects. Once the party knows a cabinet, anyone takes the right regulator from it, and nobody takes the wrong model.
   - Anyone else searches blind, and nobody opens the live cabinet.
-  - Anyone fits a regulator at the transmitter.
+  - Anyone fits a regulator at the transmitter while one in the bag might fit. A failed fit tells the party what it carries, and the bag then names it.
 
-The world finds which place the leader stands in, names its action in the prompt, and shows the line that comes back. Where someone can do nothing at the gate, the line says who could.
+The world finds which place the leader stands in, names its action in the prompt, and shows the line that comes back. Where someone can do nothing at the gate, the line says who could; at the transmitter, with only the wrong model in the bag, it says who could tell the models apart.
 
-The gate blocks movement while it is shut. When it opens or shuts, the world makes the movement blockers and the navigation grid again, with or without it, and shows or hides the gate. The repaired transmitter shows lit. Restart starts the task afresh.
+The gate blocks movement while it is shut; once open, it stands as a thin wall into the depot. When it opens or shuts, the world makes the movement blockers and the navigation grid again. The gate then swings open on its hinge over a moment, or Restart shuts it at once. The world shows the rest of the task's progress in the palette's colours (the visual direction):
+- the latch and the panel in amber until the gate opens;
+- a tag on each cabinet the party knows, and an emptied cabinet in ink;
+- the transmitter in faded teal under an ink aerial, then amber once repaired.
+
+Restart starts the task afresh.
 
 ### Scenes
 

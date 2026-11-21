@@ -791,19 +791,26 @@
 
     /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
     /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
-    /// loose panel and it opens. Miki inspects the three cabinets, wherever this run dealt the
-    /// wrong model, the live one and the right one, takes the right regulator and fits it at the
-    /// transmitter. Restart begins the yard again, and the third choice returns to the bridge.
+    /// loose panel and it swings open. Tom searches the cabinet that holds the wrong model in this
+    /// run without knowing it, and at the transmitter it does not fit; Fit is then withdrawn, and
+    /// Look there says who could tell the models apart. Miki inspects the live cabinet and the
+    /// right one, wherever this run dealt them, takes the right regulator and fits it. Restart
+    /// begins the yard again, and the third choice returns to the bridge.
     private static let salvageYard: [Step] =
       [.mark("the bridge")] + otherLevel + [.expectLevel("combat-yard")] + otherLevel + [
         .expectLevel("salvage-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
         .walk([-1.7, -3.2]), .act, .expectLine("Laura could reach the latch."),
         .mark("Miki at the gate"), .switchLeader, .wait(seconds: 0.5), .walk([1.7, -3.2]), .act,
-        .expectLine("Tom shifts the loose panel, and the gate opens."), .mark("the gate opens"),
-        .switchLeader, .switchLeader, .wait(seconds: 0.5), .walk([0, -2]), .walk([0, -6]),
+        .expectLine("Tom shifts the loose panel, and the gate swings open."),
+        .wait(seconds: 1), .mark("the gate opens"), .walk([0, -2]), .walk([0, -6]),
         .walkToCabinet(.otherModel), .act,
-        .expectLine("A regulator of a different model. It won't fit."), .walkToCabinet(.live),
-        .act, .expectLine("Live: it still feeds the next shelter. Leave it connected."),
+        .expectLine("Tom takes a regulator, but only Miki can tell its model."),
+        .mark("a blind search"), .walk([0, -6]), .walk([0, -2]), .walk([-2, 5]), .act,
+        .expectLine("This regulator is a different model. It won't fit."), .act,
+        .expectLine("This regulator won't fit. Miki could tell the models apart."),
+        .mark("the wrong model"), .switchLeader, .switchLeader, .wait(seconds: 0.5),
+        .walk([0, -2]), .walk([0, -6]), .walkToCabinet(.live), .act,
+        .expectLine("Live: it still feeds the next shelter. Leave it connected."),
         .walkToCabinet(.compatible), .act,
         .expectLine("A compatible regulator, disconnected. Safe to take."), .act,
         .expectLine("Miki takes the regulator."), .mark("the right regulator"),

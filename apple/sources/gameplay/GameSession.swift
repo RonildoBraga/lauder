@@ -475,7 +475,7 @@ final class GameSession {
     guard mode == .exploring, let action = salvage.action(for: leader, at: place) else {
       return nil
     }
-    return salvage.perform(action)
+    return salvage.perform(action, by: leader)
   }
 
   /// A new run's salvage progress, with the task's cabinets dealt afresh.
