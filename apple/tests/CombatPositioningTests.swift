@@ -16,17 +16,18 @@ struct CombatPositioningTests {
     let threat = CoverPlanner.Threat(position: [0, 0], range: 14, facing: [0, 1])
     func cost(
       _ member: PartyMember, at spot: SIMD2<Float>, firing: SIMD2<Float>? = nil,
-      teammates: [SIMD2<Float>] = []
+      target: SIMD2<Float>? = nil, teammates: [SIMD2<Float>] = []
     ) -> Float {
       CoverPlanner.personality(
-        of: member, at: spot, firing: firing, threats: [threat], danger: 0,
+        of: member, at: spot, firing: firing, target: target, threats: [threat], danger: 0,
         teammates: teammates)
     }
     // Miki: 6–10 m from her target is free; each metre nearer or further costs 0.5.
-    #expect(cost(.miki, at: [0, 8], firing: [0, 8]) == 0)
-    #expect(abs(cost(.miki, at: [0, 3], firing: [0, 3]) - 1.5) < 0.001)
-    #expect(abs(cost(.miki, at: [0, 12], firing: [0, 12]) - 1) < 0.001)
-    #expect(cost(.miki, at: [0, 3]) == 0)
+    #expect(cost(.miki, at: [0, 8], firing: [0, 8], target: [0, 0]) == 0)
+    #expect(abs(cost(.miki, at: [0, 3], firing: [0, 3], target: [0, 0]) - 1.5) < 0.001)
+    #expect(abs(cost(.miki, at: [0, 12], firing: [0, 12], target: [0, 0]) - 1) < 0.001)
+    // With nobody she could fire at, she has no preference.
+    #expect(cost(.miki, at: [0, 3], firing: [0, 3]) == 0)
     // Laura: straight in front of the threat's facing costs 2, at its side or behind nothing.
     #expect(abs(cost(.laura, at: [0, 5]) - 2) < 0.001)
     #expect(abs(cost(.laura, at: [5, 5]) - 2 * Float(0.5).squareRoot()) < 0.001)
@@ -42,6 +43,32 @@ struct CombatPositioningTests {
     #expect(abs(cost(.tom, at: [6, 3], teammates: teammates) - 1.5) < 0.001)
     // A threat more than 10 m away is not close.
     #expect(cost(.tom, at: [0, 30], teammates: teammates) == 0)
+  }
+
+  @Test
+  func aCompanionsTargetIsTheNearestTheyCanShoot() {
+    // The nearer shooter stands behind a wall, so a companion at the origin would fire at the
+    // other one, and Miki's preferred range is measured to that one.
+    let wall = [PartyMotion.Box(minimum: [-1, 2], maximum: [1, 2.5])]
+    let threats = [
+      CoverPlanner.Threat(position: [0, 5], range: 14),
+      CoverPlanner.Threat(position: [6, 6], range: 14),
+    ]
+    func target(
+      range: Float = 14, among threats: [CoverPlanner.Threat], blockers: [PartyMotion.Box] = wall
+    )
+      -> SIMD2<Float>?
+    {
+      CoverPlanner.target(from: [0, 0], threats: threats, weaponRange: range, obstacles: blockers)
+    }
+    #expect(target(among: threats) == [6, 6])
+    // Out of the weapon's reach, or not yet a target, a shooter is not chosen.
+    #expect(target(range: 7, among: threats) == nil)
+    var notYet = threats
+    notYet[1].isTarget = false
+    #expect(target(among: notYet) == nil)
+    // With nothing in the way, the nearest.
+    #expect(target(among: threats, blockers: []) == [0, 5])
   }
 
   // MARK: - Open ground

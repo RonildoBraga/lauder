@@ -179,27 +179,40 @@ struct CoverPlanner {
   private static func canShoot(
     from point: SIMD2<Float>, threats: [Threat], weaponRange: Float, obstacles: [PartyMotion.Box]
   ) -> Bool {
-    threats.contains {
-      $0.isTarget && simd_distance(point, $0.position) <= weaponRange
-        && LineOfSight.isClear(from: $0.position, to: point, obstacles: obstacles)
+    target(from: point, threats: threats, weaponRange: weaponRange, obstacles: obstacles) != nil
+  }
+
+  /// Where the shooter stands that a companion at `point` would fire at, chosen as the stage
+  /// chooses a companion's target: the nearest that is a target, within their weapon's reach
+  /// and in clear sight; nil when there is none.
+  static func target(
+    from point: SIMD2<Float>, threats: [Threat], weaponRange: Float, obstacles: [PartyMotion.Box]
+  ) -> SIMD2<Float>? {
+    var nearest: (distance: Float, position: SIMD2<Float>)?
+    for threat in threats where threat.isTarget {
+      let distance = simd_distance(point, threat.position)
+      guard distance <= weaponRange, nearest.map({ distance < $0.distance }) ?? true,
+        LineOfSight.isClear(from: threat.position, to: point, obstacles: obstacles)
+      else { continue }
+      nearest = (distance, threat.position)
     }
+    return nearest?.position
   }
 
   /// Each member's own preference in a fight (ADR 0003), which only weighs the choice:
-  /// - Miki likes 6–10 m between her firing position and the nearest target she can shoot
-  ///   from it;
+  /// - Miki likes 6–10 m between her firing position and `target`, the shooter she would fire
+  ///   at from there (see `target(from:threats:weaponRange:obstacles:)`);
   /// - Laura likes to stand, or step out to fire, off the most dangerous threat's facing;
   /// - Tom likes to stand between a close threat and the teammate nearest it.
   static func personality(
-    of member: PartyMember, at spot: SIMD2<Float>, firing: SIMD2<Float>?, threats: [Threat],
-    danger: Int?, teammates: [SIMD2<Float>]
+    of member: PartyMember, at spot: SIMD2<Float>, firing: SIMD2<Float>?, target: SIMD2<Float>?,
+    threats: [Threat], danger: Int?, teammates: [SIMD2<Float>]
   ) -> Float {
     switch member {
     case .miki:
-      guard let firing,
-        let target = threats.filter(\.isTarget).map({ simd_distance($0.position, firing) }).min()
-      else { return 0 }
-      let outside = max(0, mikisRange.lowerBound - target, target - mikisRange.upperBound)
+      guard let firing, let target else { return 0 }
+      let range = simd_distance(firing, target)
+      let outside = max(0, mikisRange.lowerBound - range, range - mikisRange.upperBound)
       return outside * perMetreOutsideMikisRange
     case .laura:
       guard let danger, let facing = threats[danger].facing else { return 0 }
@@ -314,9 +327,16 @@ struct CoverPlanner {
     /// What a firing position, or the lack of one, and the member's own preference add to a
     /// spot's cost.
     private func extraCost(at spot: SIMD2<Float>, firing: SIMD2<Float>?) -> Float {
-      (firing == nil ? CoverPlanner.noFiringPosition : 0)
+      // Only Miki's preference depends on whom she would fire at.
+      let target =
+        member == .miki
+        ? firing.flatMap {
+          CoverPlanner.target(
+            from: $0, threats: threats, weaponRange: weaponRange, obstacles: obstacles)
+        } : nil
+      return (firing == nil ? CoverPlanner.noFiringPosition : 0)
         + CoverPlanner.personality(
-          of: member, at: spot, firing: firing, threats: threats, danger: danger,
+          of: member, at: spot, firing: firing, target: target, threats: threats, danger: danger,
           teammates: teammates)
     }
 

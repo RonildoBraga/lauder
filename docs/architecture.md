@@ -113,7 +113,7 @@ In a level whose fight rules have it, the combat yard's, companions follow ADR 0
 - **The choices:** keeping to their place, which wins a tie, or a spot within 1.5 m of it in Close and Column, or 2.5 m in Spread. Spots are navigation-grid cells about 40 cm apart, in the companion's connected area, 0.8 m clear of the leader and the other companion.
 - **The cost:** the cheapest choice wins. Being in sight and reach of the most dangerous shooter, whoever aims at the companion or else the nearest, costs 10, and of each other shooter 5. No firing position within a metre costs 4. Each metre from the place costs 1, each metre walked 0.5, and each of three points on the way there that a shooter can see 1. Hidden means hidden even 0.3 m to either side.
 - **Each member's preference** adds to that cost, never enough to outweigh being seen:
-  - Miki pays 0.5 for each metre her firing position lies outside 6 to 10 m from her target.
+  - Miki pays 0.5 for each metre her firing position lies outside 6 to 10 m from her target, the shooter she would fire at from there: the nearest target in her sight and reach, as the stage chooses.
   - Laura pays up to 2 for standing, or stepping out to fire, in front of the most dangerous threat's facing, which is towards whom it aims at.
   - Tom pays 0.5 for each metre, up to three, off the line between a threat within 10 m and the teammate nearest it.
 - **Commitment:** a choice is kept for two seconds, and then another replaces it only if it costs at least 1 less.
