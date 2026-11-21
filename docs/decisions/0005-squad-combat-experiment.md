@@ -1,6 +1,6 @@
 # ADR 0005 — A first squad combat experiment
 
-**Status:** Accepted; amended after the first and second sessions\
+**Status:** Accepted; amended after the first and second sessions; its three sessions are done\
 **Date:** 21 November 2026
 
 ## Context
@@ -131,6 +131,10 @@ Asked whether the third session should finish the rest of S4 in the yard, the ma
 The third session judges it, with the questions above and two more:
 - Does Regroup bring the companions back when they are needed?
 - Do they keep out of the shooters' sight on the move?
+
+## After the third session
+
+On build 0.1.0 (15), asked how the rest of S4 played in the combat yard, the maintainer answered **“Worked well”**. That was the last of the experiment's three sessions. None of them was instrumented, so the yard's frame rate on the phone has not been measured. What comes next, from what this record leaves unsettled, needs the maintainer's decision.
 
 ## Options considered
 
