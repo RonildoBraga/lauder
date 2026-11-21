@@ -488,21 +488,21 @@ final class EncounterStage {
   /// A hostile's shot at the leader, or at whom it aims: into the cover, or falling short of
   /// someone out of range; otherwise just past them when it misses on purpose, or into them.
   private func fire(
-    _ id: String, from start: SIMD2<Float>, at leader: SIMD2<Float>, range: Float,
+    _ id: String, from start: SIMD2<Float>, at point: SIMD2<Float>, range: Float,
     shot: HostileState.Shot
   ) {
-    let distance = simd_distance(start, leader)
+    let distance = simd_distance(start, point)
     guard distance > 0.001 else { return }
-    let block = LineOfSight.firstBlock(from: start, to: leader, obstacles: obstacles) ?? 1
+    let block = LineOfSight.firstBlock(from: start, to: point, obstacles: obstacles) ?? 1
     let reach = min(block, range / distance)
-    let direction = (leader - start) / distance
+    let direction = (point - start) / distance
     if reach < 1 {
-      showTracer(id, from: start, to: start + (leader - start) * reach)
+      showTracer(id, from: start, to: start + (point - start) * reach)
     } else if shot == .miss {
       showTracer(
-        id, from: start, to: leader + SIMD2(-direction.y, direction.x) * 0.7 + direction * 3)
+        id, from: start, to: point + SIMD2(-direction.y, direction.x) * 0.7 + direction * 3)
     } else {
-      showTracer(id, from: start, to: leader)
+      showTracer(id, from: start, to: point)
     }
   }
 
