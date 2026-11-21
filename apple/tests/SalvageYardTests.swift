@@ -220,13 +220,13 @@ struct SalvageYardTests {
     let leaf = try #require(world.root.findEntity(named: "gate"))
     let hinge = try #require(world.root.findEntity(named: "gate.hinge"))
     // The gate stands out from the fence, the latch and the panel show as things to use, and
-    // the transmitter wears faded teal under an ink aerial.
+    // the transmitter wears faded teal under ink aerials.
     #expect(rgb(of: leaf) == rgb(style.rust))
     #expect(rgb(of: leaf) != rgb(of: world.root.findEntity(named: "fence-south-west")))
     #expect(rgb(of: latch) == rgb(style.warm) && rgb(of: panel) == rgb(style.warm))
     #expect(rgb(of: world.root.findEntity(named: "transmitter")) == rgb(style.fadedTeal))
-    #expect(rgb(of: world.root.findEntity(named: "aerial-mast")) == rgb(style.ink))
-    #expect(rgb(of: world.root.findEntity(named: "aerial-arm")) == rgb(style.ink))
+    #expect(rgb(of: world.root.findEntity(named: "aerial-long")) == rgb(style.ink))
+    #expect(rgb(of: world.root.findEntity(named: "aerial-short")) == rgb(style.ink))
     // No cabinet shows a tag before anyone knows what it holds.
     for cabinet in task.cabinets {
       #expect(world.root.findEntity(named: "\(cabinet.id).tag")?.isEnabled == false)

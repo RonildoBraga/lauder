@@ -89,13 +89,19 @@ final class GameWorld {
   /// through it met then. The order that follows uses it, though the camera has moved since.
   @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
   @ObservationIgnored private let camera = PerspectiveCamera()
-  /// Movement against the level's blockers, and the salvage gate while it is shut (ADR 0006);
-  /// both are made again when the gate opens or shuts.
+  /// Movement against the level's blockers, and the salvage gate as it stands (ADR 0006).
   @ObservationIgnored private var motion: PartyMotion
   @ObservationIgnored private var grid: NavigationGrid
+  /// Both of those with the salvage gate shut and open, made while loading, so that the gate
+  /// opening or shutting stalls no frame (ADR 0006).
+  @ObservationIgnored private var gateWays:
+    (
+      shut: (motion: PartyMotion, grid: NavigationGrid),
+      open: (motion: PartyMotion, grid: NavigationGrid)
+    )?
   /// The salvage gate's hinge, which swings it open into the depot; how far open it shows, from
-  /// 0 shut to 1 open; and whether the blockers have it open, so they are made again only when
-  /// that changes (ADR 0006).
+  /// 0 shut to 1 open; and whether the blockers have it open, so they change only when that
+  /// does (ADR 0006).
   @ObservationIgnored private var gateHinge: Entity?
   @ObservationIgnored private var gateSwing: Float = 0
   @ObservationIgnored private var gateShownOpen = false
@@ -208,10 +214,17 @@ final class GameWorld {
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
-    let shutGate = level.salvage.map { [$0.gate.footprint] } ?? []
-    motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + shutGate)
-    // Build the route grid while loading, not on the first frame of play.
-    grid = NavigationGrid(level: level, adding: shutGate)
+    // Build the route grid while loading, not on the first frame of play, and in a salvage
+    // task the gate's open one as well.
+    func ways(adding gate: [PartyMotion.Box]) -> (motion: PartyMotion, grid: NavigationGrid) {
+      (
+        PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + gate),
+        NavigationGrid(level: level, adding: gate)
+      )
+    }
+    let start = ways(adding: level.salvage.map { [$0.gate.footprint] } ?? [])
+    (motion, grid) = start
+    gateWays = level.salvage.map { (shut: start, open: ways(adding: [$0.openGate])) }
     squadLeader = level.party[0]
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
@@ -1321,16 +1334,14 @@ final class GameWorld {
   }
 
   /// Shows the salvage task as the session has it. Movement's blockers have the gate shut, or
-  /// open as a thin wall into the depot, and are made again only when that changes; the gate
-  /// then swings open over a moment, or Restart shuts it at once. The rest shows in the looks.
+  /// open as a thin wall into the depot, and change only when it does; the gate then swings
+  /// open over a moment, or Restart shuts it at once. The rest shows in the looks.
   private func showSalvage() {
-    guard let task = level.salvage else { return }
+    guard let ways = gateWays else { return }
     let progress = session.salvage
     if progress.gateOpen != gateShownOpen {
       gateShownOpen = progress.gateOpen
-      let gate = [progress.gateOpen ? task.openGate : task.gate.footprint]
-      motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + gate)
-      grid = NavigationGrid(level: level, adding: gate)
+      (motion, grid) = progress.gateOpen ? ways.open : ways.shut
       if !progress.gateOpen {
         gateSwing = 0
         gateHinge?.orientation = simd_quatf(angle: 0, axis: [0, 1, 0])
@@ -1365,7 +1376,7 @@ final class GameWorld {
 
   /// How a salvage task shows what the party has done (ADR 0006), in the palette's meanings:
   /// - **The latch and the panel:** amber, as things to use, until the gate opens.
-  /// - **The transmitter:** faded teal under an ink aerial, then amber once repaired.
+  /// - **The transmitter:** faded teal under ink aerials, then amber once repaired.
   /// - **Each cabinet:** a tag on its top once the party knows what it holds, amber for the right
   ///   regulator, stone for the wrong model and rust for the live equipment; ink once emptied.
   @MainActor
@@ -1381,7 +1392,7 @@ final class GameWorld {
     let empty: any Material
 
     /// The looks for a task whose blocks are already in `root`, by name, with the marks, the
-    /// aerial and the cabinets' tags added to it.
+    /// aerials and the cabinets' tags added to it.
     init(task: Level.Salvage, in root: Entity, style: SceneStyle) {
       func add(_ box: Level.Box, _ material: any Material) -> ModelEntity {
         let entity = style.block(size: box.size, at: box.position, material: material)

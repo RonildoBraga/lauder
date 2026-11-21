@@ -115,7 +115,7 @@ On 21 November 2026, instead of playing build 0.1.0 (17) on the phone, the maint
 Asked **“Merge the shuffle and fix these clarity problems next?”**, the maintainer answered **“Yes, do both”**. With plain shapes in the palette's colours:
 - **The gate** is rust, like the world's other barriers, and swings open into the depot over a moment, where it stands as a thin wall.
 - **The latch,** high on the fence beside the gate, and **the loose panel** on its other side show in amber, as things to use, until the gate opens.
-- **The transmitter** is lower, faded teal under an ink aerial, and turns amber once repaired. Its approach reaches back towards the depot.
+- **The transmitter** is lower, faded teal under ink aerials, and turns amber once repaired. Its approach reaches back towards the depot.
 - **A cabinet the party knows** wears a tag on its top: amber for the right regulator, stone for the wrong model and rust for the live equipment. An emptied cabinet turns ink.
 - **The bag** names a regulator known to be of a different model. Fit is offered only while a regulator in the bag might fit, and otherwise Look at the transmitter says “Miki could tell the models apart.”
 - **Once the party knows a cabinet,** anyone takes the right regulator from it, and nobody takes the wrong model.

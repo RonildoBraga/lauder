@@ -241,7 +241,7 @@ struct Level {
     let cabinets: [Cabinet]
     /// The broken transmitter, where a regulator is fitted.
     let transmitter: Box
-    /// The transmitter's aerial, which marks it as the goal. It blocks no one.
+    /// The transmitter's aerials, which mark it as the goal. They block no one.
     let aerial: [Box]
     let transmitterApproach: PartyMotion.Box
     /// The objective once the repair is done.

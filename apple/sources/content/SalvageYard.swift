@@ -44,7 +44,7 @@ enum SalvageYard {
 
   /// The gate, rust-red like the world's other barriers, hangs in the fence's gap. The latch, high
   /// on the fence beside it, and the loose panel on its other side show in amber, as things to
-  /// use. The transmitter's aerial rises from its back corner, and its approach reaches back
+  /// use. The transmitter's two aerials rise from its back corners, and its approach reaches back
   /// towards the depot, so a leader who arrives from there can fit a regulator straight away.
   static let salvage = Level.Salvage(
     gate: .box("gate", at: [0, 1.1, -4], size: [2, 2.2, 0.3]),
@@ -54,8 +54,8 @@ enum SalvageYard {
     panelMark: .box("panel", at: [1.7, 0.75, -3.81], size: [1, 1.2, 0.08]),
     cabinets: cabinets, transmitter: transmitter,
     aerial: [
-      .box("aerial-mast", at: [-3.25, 1.75, 4.8], size: [0.08, 1.5, 0.08]),
-      .box("aerial-arm", at: [-3.25, 2.3, 4.8], size: [0.7, 0.06, 0.06]),
+      .box("aerial-long", at: [-3.38, 1.7, 4.72], size: [0.07, 1.4, 0.07]),
+      .box("aerial-short", at: [-2.62, 1.4, 4.72], size: [0.07, 0.8, 0.07]),
     ],
     transmitterApproach: PartyMotion.Box(minimum: [-4.4, 3.2], maximum: [-1.6, 6.3]),
     doneObjective: "The transmitter works. Restart to try again.")

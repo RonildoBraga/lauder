@@ -179,10 +179,10 @@ A level can hold a salvage task, as the salvage yard of [ADR 0006](decisions/000
 
 The world finds which place the leader stands in, names its action in the prompt, and shows the line that comes back. Where someone can do nothing at the gate, the line says who could; at the transmitter, with only the wrong model in the bag, it says who could tell the models apart.
 
-The gate blocks movement while it is shut; once open, it stands as a thin wall into the depot. When it opens or shuts, the world makes the movement blockers and the navigation grid again. The gate then swings open on its hinge over a moment, or Restart shuts it at once. The world shows the rest of the task's progress in the palette's colours (the visual direction):
+The gate blocks movement while it is shut; once open, it stands as a thin wall into the depot. While loading, the world makes the movement blockers and the navigation grid both ways, and swaps them when the gate opens or shuts, so that neither stalls a frame. The gate then swings open on its hinge over a moment, or Restart shuts it at once. The world shows the rest of the task's progress in the palette's colours (the visual direction):
 - the latch and the panel in amber until the gate opens;
 - a tag on each cabinet the party knows, and an emptied cabinet in ink;
-- the transmitter in faded teal under an ink aerial, then amber once repaired.
+- the transmitter in faded teal under ink aerials, then amber once repaired.
 
 Restart starts the task afresh.
 
