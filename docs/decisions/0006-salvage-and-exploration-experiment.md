@@ -34,7 +34,14 @@ On 21 November 2026 the maintainer chose salvage and exploration as the next tra
 | How each member helps | **“Alternative approaches”** |
 | How the party carries what it finds | **“Shared bag only”** |
 
-Each was the recommended option. This record turns them into one experiment. The details below are working defaults that play will tune.
+Each was the recommended option. Asked to build the experiment with the defaults offered alongside them, the maintainer answered **“Yes, build it”**:
+- no hostiles in the salvage yard;
+- the pause menu's choice for other levels naming the next in a cycle;
+- Miki unable to open the gate herself, with the HUD naming who could;
+- nobody opening the live cabinet;
+- at most three focused sessions.
+
+This record turns them into one experiment, whose details play will tune.
 
 ## Decision
 
@@ -108,4 +115,3 @@ Scripted Simulator playtests come first. Then the maintainer plays it on the bas
   - more kinds of equipment and parts;
   - persistence across a saved game.
 - **Answered by evidence:** the experiment's results decide which of them come next.
-- **Nothing is assigned yet:** building the experiment needs the maintainer's explicit assignment.
