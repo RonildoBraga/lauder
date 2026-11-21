@@ -18,6 +18,9 @@ final class GameControls {
   private(set) var pauseButtonName = "Pause"
   private(set) var switchButtonName = "Switch"
   private(set) var fireButtonName = "Fire"
+  /// What aims the carbine apart from movement, such as the right stick; touch has nothing,
+  /// and Fire takes the assisted target (ADR 0007).
+  private(set) var aimControlName: String?
   private(set) var formationButtonName = "Formation"
   /// The button that hides or shows the status panel; touch has none.
   private(set) var panelButtonName = "Panel"
@@ -128,6 +131,8 @@ final class GameControls {
     let pad = touchControlsEnabled ? nil : gamepad
     var raw = InputRules.Raw(
       stick: SIMD2(pad?.leftThumbstick.xAxis.value ?? 0, pad?.leftThumbstick.yAxis.value ?? 0),
+      aimStick: SIMD2(
+        pad?.rightThumbstick.xAxis.value ?? 0, pad?.rightThumbstick.yAxis.value ?? 0),
       controllerAction: pad?.buttonA.isPressed == true,
       controllerPause: pad?.buttonMenu.isPressed == true,
       controllerSwitch: pad?.rightShoulder.isPressed == true,
@@ -146,6 +151,8 @@ final class GameControls {
       keyboardPanel: pressed(.keyH), keyboardSignature: pressed(.keyX),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
+      aimUp: pressed(.keyI), aimDown: pressed(.keyK), aimLeft: pressed(.keyJ),
+      aimRight: pressed(.keyL),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
       touchRestart: touch.touchRestart, touchOtherLevel: touch.touchOtherLevel,
@@ -232,34 +239,35 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
-        previous: "L1", fire: "R2", formation: "Triangle", panel: "Circle", signature: "Square")
+        previous: "L1", fire: "R2", aim: "Right stick", formation: "Triangle", panel: "Circle",
+        signature: "Square")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
-        previous: "LB", fire: "RT", formation: "Y", panel: "B", signature: "X")
+        previous: "LB", fire: "RT", aim: "Right stick", formation: "Y", panel: "B", signature: "X")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
         cycle: "Right shoulder", previous: "Left shoulder", fire: "Right trigger",
-        formation: "Button Y", panel: "Button B", signature: "Button X")
+        aim: "Right stick", formation: "Button Y", panel: "Button B", signature: "Button X")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", previous: "Z",
-      fire: "F", formation: "R", panel: "H", signature: "X")
+      fire: "F", aim: "IJKL", formation: "R", panel: "H", signature: "X")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", previous: "Next",
-      fire: "Fire", formation: "Formation", panel: "Panel", signature: "Signature")
+      fire: "Fire", aim: nil, formation: "Formation", panel: "Panel", signature: "Signature")
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, cycle: String, previous: String,
-    fire: String, formation: String, panel: String, signature: String
+    fire: String, aim: String?, formation: String, panel: String, signature: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -267,6 +275,7 @@ final class GameControls {
     if switchButtonName != cycle { switchButtonName = cycle }
     if previousButtonName != previous { previousButtonName = previous }
     if fireButtonName != fire { fireButtonName = fire }
+    if aimControlName != aim { aimControlName = aim }
     if formationButtonName != formation { formationButtonName = formation }
     if panelButtonName != panel { panelButtonName = panel }
     if signatureButtonName != signature { signatureButtonName = signature }

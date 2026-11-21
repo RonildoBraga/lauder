@@ -81,7 +81,7 @@ struct FirstFightTests {
     let body = try #require(world.root.findEntity(named: "hostile.stranger"))
     #expect(!body.isEnabled)
     walk(world, to: [6.5, 18])
-    #expect(world.session.beat == .alone && !body.isEnabled && !world.showsWeapon)
+    #expect(world.session.beat == .alone && !body.isEnabled && !world.showsAmmo)
     walk(world, to: [6.5, 15])
     #expect(world.session.beat == .stranger && world.showsWeapon)
     #expect(run(world, upTo: 1) { world.observation == "Miki: “Friendly!”" })
@@ -89,12 +89,14 @@ struct FirstFightTests {
   }
 
   @Test
-  func fireBeforeHeOpensFireDrawsButDoesNotShoot() throws {
+  func mikiHoldsFireAtHimUntilHeOpensFire() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let marker = try #require(world.root.findEntity(named: "combat.target"))
     walk(world, to: [6.5, 15])
-    // Until he fires, nobody knows he is hostile: Miki draws, but has nothing to shoot at.
-    #expect(run(world, upTo: 4, fire: true) { world.threat != nil })
+    // Until he fires, nobody knows he is hostile: aimed at him, Miki draws but holds her fire,
+    // and he is not marked (ADR 0007).
+    let atHim = stick(world, towards: BrooklynBridge.stranger.standAt - position(world, .miki))
+    #expect(run(world, upTo: 4, fire: true, aim: atHim) { world.threat != nil })
     #expect(world.weaponDrawn && !marker.isEnabled)
     #expect(world.session.ammo == 12)
   }
@@ -244,7 +246,7 @@ struct FirstFightTests {
       #expect(world.session.beat == .alone && !world.session.inEncounter)
       #expect(world.session.ammo == 12 && world.session.hitsTaken == 0)
       #expect(world.session.defeated.isEmpty && world.session.firedTriggers.isEmpty)
-      #expect(!world.weaponDrawn && !world.showsWeapon && world.threat == nil)
+      #expect(!world.weaponDrawn && !world.showsAmmo && world.threat == nil)
       #expect(!world.isRetrying && world.fade == 0)
       #expect(world.observation == BrooklynBridge.level.opening)
       #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))

@@ -20,6 +20,13 @@ enum Movement {
     return SIMD3(ground.x, 0, ground.y)
   }
 
+  /// The direction on the ground, as a unit vector, that the right stick aims under the camera,
+  /// whatever its tilt beyond the dead zone (ADR 0007).
+  static func aim(for input: SIMD2<Float>, cameraOffset: SIMD3<Float>) -> SIMD2<Float> {
+    let (forward, right) = axes(cameraOffset: cameraOffset)
+    return simd_normalize(right * input.x + forward * input.y)
+  }
+
   /// The full-tilt stick input that moves the leader along a direction on the ground: the
   /// inverse of `direction(for:cameraOffset:)`. None for no direction.
   static func stick(towards direction: SIMD2<Float>, cameraOffset: SIMD3<Float>) -> SIMD2<Float> {

@@ -2,7 +2,7 @@
 
 **Status:** Accepted\
 **Date:** 18 November 2026\
-**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world)); and on 21 November 2026, when the unused points of interest were removed
+**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world)); on 21 November 2026, when the unused points of interest were removed; and the same day, when [ADR 0007](0007-aiming-and-shot-feedback.md) gave a controller's right stick manual aim and let shots strike the scenery
 
 ## Context
 
@@ -71,7 +71,7 @@ A `Level` value holds a place's floor, blocker boxes, points of interest, intera
 
 The `combat` folder holds plain-Swift types that the world drives each step:
 
-- **Assisted aim.** **Fire** shoots at the assisted target, the nearest hostile ahead within range and in sight, marked on screen. The first press draws the weapon, which is holstered while exploring, so a quiet walk never starts a fight by accident. There is no manual aiming on a phone.
+- **Assisted aim.** **Fire** shoots at the assisted target, the nearest hostile ahead within range and in sight, marked on screen. The first press draws the weapon, which is holstered while exploring, so a quiet walk never starts a fight by accident. There is no manual aiming on a phone. Since [ADR 0007](0007-aiming-and-shot-feedback.md), that holds for touch: a controller's right stick aims, and a shot that hits nobody strikes the scenery.
 - **Line of sight and cover.** A shot is a ray against the same blocker boxes that collision uses, so the towers give real cover to both sides.
 - **Enemies.** A small state machine for each enemy, defined as data: hidden, alert, attacking (a visible wind-up, then a shot) and down. The knife attacker approaches and strikes. The stranger's wind-up is long enough to teach the player to answer it.
 - **Damage.** The [placeholder hit rule](../encounters/the-quiet-yard.md#placeholder-hit-rule): Miki can take three hits, shown beside her name, and enemies two. On a third hit the screen fades and the encounter starts again, with nothing lost. It is a short retry in memory, not a save.

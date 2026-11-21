@@ -76,7 +76,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 ## Camera and scale
 
 - A high three-quarter view along the route, rather than a strict isometric one, with a long lens of about 20° and a view about 50° down.
-- The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower.
+- The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower. In a fight, or while the right stick aims, the lens narrows to 70%, about 14° ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)).
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
 - Tall landmarks, such as tower tops and buildings, fade to a see-through ghost while they come between the camera and the party, so the player still sees what is in the way. The ghost is unlit, in each part's own colour, since a lit see-through landmark that fills the screen costs the phone's GPU too much.
 - World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: a camera that shows more of the ground draws them larger, as the [architecture](architecture.md#movement-and-presentation) sets out.
@@ -99,7 +99,7 @@ Build decoration once, in the level's Blender file, with shared palette material
 - At most four explicit lights, with at most one casting shadows. Suns, point lights and spot lights count alike, and only a sun or a spot light can cast the shadow. Blender's export checks this for each level's lights. Under the daylight sun, a point or spot light shows only when it is very strong, in Blender's preview as in the game.
 - At most 60,000 triangles and 150 draw calls in view, at most 16 materials, and characters of at most 400 triangles, which today's stand-ins exceed: [Miki's README](../blender/assets/miki/README.md) gives the count.
 - No textures apart from baked ambient occlusion, at most 4 MB per level.
-- No particles or postprocessing. A static paper-grain overlay and light snowfall are candidates, each to be measured on the phone and agreed first.
+- No particles or postprocessing. A static paper-grain overlay and light snowfall are candidates, each to be measured on the phone and agreed first. Shots are the exception ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)): streaks, flashes, chips and marks made of plain blocks in the palette's colours, made once and reused.
 - No per-frame visual work beyond what gameplay needs, such as fading a landmark or sizing a marker.
 
 These are limits, not measured performance guarantees. Record the actual scene, material and light counts and the validation with the change.

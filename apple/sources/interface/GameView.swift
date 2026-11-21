@@ -248,7 +248,7 @@ struct GameView: View {
         // Who can answer the wind-up (ADR 0005).
         Text(cue).font(.caption.bold())
       }
-      if world.showsWeapon {
+      if world.showsAmmo {
         Text("Carbine · \(world.session.ammo)").font(.caption)
       }
       if world.level.salvage != nil, let bag = world.session.salvage.bag {
@@ -278,6 +278,7 @@ struct GameView: View {
     var others: [String] = []
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
+      if let aim = world.controls.aimControlName { others.append("\(aim) · Aim") }
     }
     if world.showsSignature {
       others.append("\(world.controls.signatureButtonName) · Disrupt")
