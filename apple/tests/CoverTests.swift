@@ -114,6 +114,36 @@ struct CoverTests {
     }
   }
 
+  @Test
+  func aFiringPositionKeepsItsShotWhereTheMotorSettles() throws {
+    // In the yard, Laura holds at [5, 0.3], beside the wall's east end and in the right shooter's
+    // sight. The nearest cell clear of the wall, [4.7, 0.1], only just clears it, and a companion
+    // settles up to 0.25 m short of a target, where the wall would still block her shot.
+    let level = CombatYard.level
+    let grid = NavigationGrid(level: level)
+    var planner = CoverPlanner(obstacles: level.obstacles)
+    var shooter = CoverPlanner.Threat(
+      position: CombatYard.rightShooter.standAt, range: CombatYard.rightShooter.range)
+    func target() -> SIMD2<Float>? {
+      planner.targets(
+        for: CoverPlanner.Input(
+          places: [.laura: [5, 0.3]], positions: [.laura: [5, 0.3]], leaderPosition: [8, 3],
+          formation: .close, threats: [shooter], weaponRanges: [.laura: Weapon.lightBurst.range],
+          dt: 1 / 120),
+        grid: grid)[.laura]
+    }
+    shooter.aimingAt = .laura
+    let spot = try #require(target())
+    shooter.aimingAt = nil
+    let firing = try #require(target())
+    #expect(firing != spot)
+    // Stepping out from her spot, she can shoot wherever she stops.
+    let settled = firing - simd_normalize(firing - spot) * CompanionMotor.settleDistance
+    for point in [firing, settled] {
+      #expect(LineOfSight.isClear(from: shooter.position, to: point, obstacles: level.obstacles))
+    }
+  }
+
   // MARK: - Helpers
 
   /// One planning step of 1/120 s, with Laura's and Tom's weapons.

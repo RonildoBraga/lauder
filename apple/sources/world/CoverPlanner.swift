@@ -253,14 +253,26 @@ struct CoverPlanner {
       return cost
     }
 
-    /// The nearest point to `spot`, within `peekReach`, from which the companion can shoot;
-    /// nil when there is none.
+    /// The nearest point to `spot`, within `peekReach`, from which the companion can shoot,
+    /// even where they stop on the way to it; nil when there is none.
     private func firingPosition(near spot: SIMD2<Float>) -> SIMD2<Float>? {
       guard weaponRange > 0 else { return nil }
-      if canShoot(from: spot) { return spot }
+      if canShoot(arrivingAt: spot, from: position) { return spot }
       return grid.roomySpots(within: CoverPlanner.peekReach, of: spot, stride: CoverPlanner.stride)
         .sorted { simd_distance_squared($0, spot) < simd_distance_squared($1, spot) }
-        .first { isOpen($0) && canShoot(from: $0) }
+        .first { isOpen($0) && canShoot(arrivingAt: $0, from: spot) }
+    }
+
+    /// Whether the companion can shoot from `point`, and from where the motor may settle on the
+    /// way there from `origin`: up to `CompanionMotor.settleDistance` short of it. A point that
+    /// only just clears a wall's end would leave them settled behind the wall, unable to fire.
+    private func canShoot(arrivingAt point: SIMD2<Float>, from origin: SIMD2<Float>) -> Bool {
+      let offset = point - origin
+      let distance = simd_length(offset)
+      let short =
+        distance > CompanionMotor.settleDistance
+        ? point - offset / distance * CompanionMotor.settleDistance : origin
+      return canShoot(from: point) && canShoot(from: short)
     }
 
     private func canShoot(from point: SIMD2<Float>) -> Bool {

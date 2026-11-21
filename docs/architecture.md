@@ -113,7 +113,7 @@ In a level whose fight rules have it, the combat yard's, companions take cover o
 - **The choices:** keeping to their place, which wins a tie, or a spot within 1.5 m of it in Close and Column, or 2.5 m in Spread. Spots are navigation-grid cells about 40 cm apart, in the companion's connected area, 0.8 m clear of the leader and the other companion.
 - **The cost:** the cheapest choice wins. Being in sight and reach of the most dangerous shooter, whoever aims at the companion or else the nearest, costs 10, and of each other shooter 5. No firing position within a metre costs 4. Each metre from the place costs 1, each metre walked 0.5, and each of three points on the way there that a shooter can see 1. Hidden means hidden even 0.3 m to either side.
 - **Commitment:** a choice is kept for two seconds, and then another replaces it only if it costs at least 1 less.
-- **Firing:** from a spot the companion steps out to its firing position while a target is in sight from there, and back while a shooter's wind-up aims at them. The motor steers to either as to a still target, and moves a settled companion off however short the step.
+- **Firing:** from a spot the companion steps out to its firing position while a target is in sight from there, and back while a shooter's wind-up aims at them. A firing position keeps its shot even 0.25 m short of it, where the motor may settle. The motor steers to either as to a still target, and moves a settled companion off however short the step.
 
 The stage tells the planner where each standing shooter is, how far it reaches and whom its wind-up aims at. Keeping to the place, a companion follows it as before.
 
