@@ -100,6 +100,7 @@ Build decoration once, in the level's Blender file, with shared palette material
 - At most 60,000 triangles and 150 draw calls in view, at most 16 materials, and characters of at most 400 triangles, which today's stand-ins exceed: [Miki's README](../blender/assets/miki/README.md) gives the count.
 - No textures apart from baked ambient occlusion, at most 4 MB per level.
 - No particles or postprocessing. A static paper-grain overlay and light snowfall are candidates, each to be measured on the phone and agreed first. Shots are the exception ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)): streaks, flashes, chips and marks made of plain blocks in the palette's colours, made once and reused.
+- No line shows the leader's aim ([ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md)). Her pose shows it: the carbine held low across her body, or raised to her shoulder along her facing, and kicked by each shot. Figures rock back from their own shots and away from a hit, and a downed hostile falls away from the shot. The figures have no rig, so these move whole figures and the weapon.
 - No per-frame visual work beyond what gameplay needs, such as fading a landmark or sizing a marker.
 
 These are limits, not measured performance guarantees. Record the actual scene, material and light counts and the validation with the change.

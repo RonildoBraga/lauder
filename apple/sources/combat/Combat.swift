@@ -1,7 +1,15 @@
 import simd
 
-/// A weapon's timing and reach (ADR 0004). Plain values: the world times shots with them.
+/// A weapon's timing and reach (ADR 0004), and how its shots scatter (ADR 0008). Plain values:
+/// the world times shots with them.
 struct Weapon: Sendable {
+  /// Which weapon it is, for how its shots sound and feel (ADR 0008). The hostiles' rifle has
+  /// no timing of its own here: their wind-ups time its shots.
+  enum Kind: CaseIterable, Sendable {
+    case carbine, lightBurst, closeScatter, rifle
+  }
+
+  let kind: Kind
   /// The farthest an assisted shot reaches, in metres.
   let range: Float
   /// Seconds between shots while Fire is held, or between a companion's bursts.
@@ -14,18 +22,100 @@ struct Weapon: Sendable {
   var burstGap: Float = 0
   /// Hits each shot deals: a scatter weapon's blast counts for more than one.
   var damage = 1
+  /// How far its shots scatter when the player fires it (ADR 0008).
+  var spread = Spread.none
 
   /// Miki's precision carbine. Starting values for playtests; the range is less than the 19 m
   /// or so that the camera shows ahead of her, so she never shoots at something off screen
-  /// ahead.
-  static let carbine = Weapon(range: 14, interval: 0.4, drawTime: 0.35)
+  /// ahead. Standing still, its first shot lands within 10 cm at full reach; a long burst, or
+  /// firing on the move, scatters (ADR 0008).
+  static let carbine = Weapon(
+    kind: .carbine, range: 14, interval: 0.4, drawTime: 0.35,
+    spread: Spread(
+      rest: Spread.degrees(0.4), perShot: Spread.degrees(1.6), widest: Spread.degrees(6),
+      recovery: Spread.degrees(2.5), moving: Spread.degrees(2.5), turning: Spread.degrees(2)))
   /// Laura's light burst weapon (ADR 0005): bursts of three quick shots, reaching a little
   /// less far than the carbine. Starting values, to tune in play.
   static let lightBurst = Weapon(
-    range: 12, interval: 1.8, drawTime: 0.5, burst: 3, burstGap: 0.12)
+    kind: .lightBurst, range: 12, interval: 1.8, drawTime: 0.5, burst: 3, burstGap: 0.12)
   /// Tom's close scatter weapon (ADR 0005): a slow blast that counts as two hits, only at close
   /// range. Starting values, to tune in play.
-  static let closeScatter = Weapon(range: 7, interval: 1.5, drawTime: 0.7, damage: 2)
+  static let closeScatter = Weapon(
+    kind: .closeScatter, range: 7, interval: 1.5, drawTime: 0.7, damage: 2)
+}
+
+/// How a weapon's shots scatter (ADR 0008): each goes within a cone either side of where it is
+/// aimed. Each shot widens the cone, up to the widest, and it narrows again with time; moving
+/// and turning widen it while they last. Angles are in radians, either side of the aim.
+struct Spread: Sendable {
+  /// The cone at rest, standing still.
+  var rest: Float
+  /// What each shot adds.
+  var perShot: Float
+  /// The widest it can be.
+  var widest: Float
+  /// How fast it narrows again, in radians a second.
+  var recovery: Float
+  /// What moving adds at full speed, and turning at full turning speed.
+  var moving: Float
+  var turning: Float
+
+  /// No spread at all: every shot goes exactly where it is aimed.
+  static let none = Spread(rest: 0, perShot: 0, widest: 0, recovery: 0, moving: 0, turning: 0)
+
+  static func degrees(_ value: Float) -> Float { value * .pi / 180 }
+}
+
+/// A weapon's spread as the shooter fires, moves and turns (ADR 0008): the widening its shots
+/// have built up, which narrows again with time.
+struct Scatter: Sendable {
+  private(set) var bloom: Float = 0
+
+  /// One simulation step: the widening narrows.
+  mutating func settle(dt: Float, spread: Spread) {
+    bloom = max(0, bloom - spread.recovery * dt)
+  }
+
+  /// A shot widens it, up to the widest.
+  mutating func fired(spread: Spread) {
+    bloom = min(max(0, spread.widest - spread.rest), bloom + spread.perShot)
+  }
+
+  /// The cone now, either side of the aim, for a shooter moving at `speed` and turning at
+  /// `turning`, each a share of full speed from 0 to 1.
+  func angle(spread: Spread, speed: Float, turning: Float) -> Float {
+    let movement = spread.moving * min(max(speed, 0), 1) + spread.turning * min(max(turning, 0), 1)
+    return min(spread.widest, spread.rest + bloom + movement)
+  }
+
+  /// How far one shot turns from its aim within a cone of `angle` either side: anywhere in it,
+  /// more often near the middle.
+  static func deviation(within angle: Float, using generator: inout some RandomNumberGenerator)
+    -> Float
+  {
+    guard angle > 0 else { return 0 }
+    let first = Float.random(in: 0...1, using: &generator)
+    let second = Float.random(in: 0...1, using: &generator)
+    return (first + second - 1) * angle
+  }
+}
+
+/// A small, repeatable source of random numbers (SplitMix64): the same seed gives the same shots,
+/// so tests and playtests replay exactly.
+struct SeededRandom: RandomNumberGenerator, Sendable {
+  private var state: UInt64
+
+  init(seed: UInt64) {
+    state = seed
+  }
+
+  mutating func next() -> UInt64 {
+    state &+= 0x9E37_79B9_7F4A_7C15
+    var value = state
+    value = (value ^ (value >> 30)) &* 0xBF58_476D_1CE4_E5B9
+    value = (value ^ (value >> 27)) &* 0x94D0_49BB_1331_11EB
+    return value ^ (value >> 31)
+  }
 }
 
 /// When a weapon that fires by itself shoots, as a companion's does once a fight is under way
@@ -221,6 +311,26 @@ enum Aim {
     }
     return ShotPath(
       start: start, end: start + unit * reach, strike: block == nil ? .nothing : .scenery)
+  }
+
+  /// The leader's shot `path` turned by `angle` within its spread (ADR 0008): it flies on from
+  /// the shooter along the turned direction, meeting the first hostile it passes close to before
+  /// any block, or striking the first block, or running out at `range`, so a scattered shot can
+  /// miss its target. If the turned shot would meet someone who is not yet a target, it keeps to
+  /// `path`: the leader never fires first, even by a stray shot.
+  static func scattered(
+    _ path: ShotPath, by angle: Float, range: Float, hostiles: [Hostile],
+    blockers: [PartyMotion.Box]
+  ) -> ShotPath {
+    let offset = path.end - path.start
+    guard angle != 0, simd_length(offset) > 0.0001 else { return path }
+    let direction = simd_normalize(offset)
+    let turned = SIMD2(
+      direction.x * cos(angle) - direction.y * sin(angle),
+      direction.x * sin(angle) + direction.y * cos(angle))
+    return ray(
+      from: path.start, along: turned, range: range, hostiles: hostiles, blockers: blockers)
+      ?? path
   }
 
   /// What stops a shot fired at `height`: the footprints of the blocks that rise above it, so a

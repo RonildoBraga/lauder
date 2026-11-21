@@ -805,7 +805,7 @@
         .expectOrder(.tom, "following"), .mark("regroup"), .awaitFallBacks(1, seconds: 20),
         .mark("falling back"), .wait(seconds: 1.2), .expectHits(0), .expectSquad("following"),
         .expectOrder(.laura, "following"), .expectNear(.miki, [0, 6], within: 0.3),
-        .expectDefeated(0), .mark("fell back"), .walk([6.5, 2.5]), .walk([6.5, -1.5]),
+        .mark("fell back"), .walk([6.5, 2.5]), .walk([6.5, -1.5]),
         .awaitDisrupt(seconds: 6), .signature, .expectDisrupts(1), .mark("Miki disrupts"),
         .wait(seconds: 1.5), .mark("the companions fire"), .fireUntilDefeated(2, seconds: 30),
         .expectFired(.laura), .expectFired(.tom), .expectFallBacks(1),

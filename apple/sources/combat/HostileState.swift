@@ -31,11 +31,17 @@ struct HostileState {
   static let stepOutTime: Float = 0.8
   /// How close a charger comes to the leader before it stops.
   static let reach: Float = 0.9
+  /// Seconds each hit during a wind-up delays its shot, and the most that hits can delay one
+  /// wind-up in all (ADR 0008). Starting values for playtests.
+  static let flinchDelay: Float = 0.2
+  static let flinchLimit: Float = 0.5
 
   let spec: Level.Hostile
   private(set) var phase = Phase.hidden {
     didSet {
-      if case .aiming = phase { hasAimed = true }
+      guard case .aiming = phase else { return }
+      hasAimed = true
+      if case .aiming = oldValue {} else { flinched = 0 }
     }
   }
   private(set) var position: SIMD2<Float>
@@ -43,6 +49,8 @@ struct HostileState {
   /// Whether it has begun a wind-up: what it remembers of the fight after a fall back.
   private var hasAimed = false
   private var engaged = false
+  /// How long hits have delayed the current wind-up so far.
+  private var flinched: Float = 0
 
   init(spec: Level.Hostile) {
     self.spec = spec
@@ -74,6 +82,16 @@ struct HostileState {
 
   mutating func knockDown() {
     phase = .down
+  }
+
+  /// A hit that does not down it (ADR 0008): during a wind-up, its shot comes a little later,
+  /// up to a limit for each wind-up. Only Disrupt cancels a wind-up.
+  mutating func flinch() {
+    guard case .aiming(let remaining) = phase else { return }
+    let delay = min(Self.flinchDelay, Self.flinchLimit - flinched)
+    guard delay > 0 else { return }
+    flinched += delay
+    phase = .aiming(remaining: remaining + delay)
   }
 
   /// Disrupt (ADR 0005): a wind-up is cancelled before its shot, and the hostile recovers

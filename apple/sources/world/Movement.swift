@@ -5,6 +5,15 @@ import simd
 enum Movement {
   /// Stick or touch movement smaller than this counts as none.
   static let deadZone: Float = 0.15
+  /// How fast the leader turns, in radians a second: two full turns, quick but never a snap
+  /// (ADR 0008). Companions turn a little slower.
+  static let leaderTurnRate: Float = 4 * .pi
+  static let companionTurnRate: Float = 3 * .pi
+
+  /// The turn from `current` towards `wanted`, by at most `limit` radians either way.
+  static func turn(from current: Float, towards wanted: Float, limit: Float) -> Float {
+    current + max(-limit, min(limit, (wanted - current).remainder(dividingBy: 2 * .pi)))
+  }
 
   /// The direction on the ground that stick or touch movement moves the leader, and how fast,
   /// from none at the dead zone to 1 at full tilt.

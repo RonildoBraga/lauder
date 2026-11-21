@@ -66,6 +66,10 @@ final class GameControls {
     }
   }
 
+  /// The controller the player is playing with, which vibrates in their hands (ADR 0008); nil
+  /// with touch controls or without a controller.
+  var activeController: GCController? { touchControlsEnabled ? nil : controller }
+
   func requireNeutralInput() {
     // Preserve held fingers on Pause: even a centred stick contact must be released.
     inputState = InputRules.State()

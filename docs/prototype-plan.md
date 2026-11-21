@@ -48,11 +48,11 @@ Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of
 | Lead as the previous member, wherever Next is | L1 / LB | None: Next cycles | Z |
 | Change formation, once there are two companions; after an order, call everyone back; in a fight in the combat yard, regroup ([ADR 0005](decisions/0005-squad-combat-experiment.md#after-the-second-session)) | Triangle / Y | Formation, Follow after an order, or Regroup in a yard fight | R |
 | Order companions, once there are two: both go, the one on that side goes, or both hold | D-pad up, left or right, down | Press and hold on the ground, then Both, a name or Hold | Arrow keys |
-| Fire, along the aim or at the assisted target, or straight ahead: press to draw, hold to keep firing; free outside a fight ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)) | R2 / RT | Fire, while Miki leads | F |
+| Fire, the way the leader faces or at the assisted target once she faces it, or straight ahead, within the weapon's spread: press to draw, hold to keep firing; free outside a fight ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md), [ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md)) | R2 / RT | Fire, while Miki leads | F |
 | Aim Miki's carbine apart from movement, which also draws it ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)) | Right stick | None: assisted aim | I, K, J, L |
 | The leader's signature: Miki's Disrupt, in the combat yard ([ADR 0005](decisions/0005-squad-combat-experiment.md)) | Square / X | Signature, during a yard fight while Miki leads | X |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
-| Choose Resume, Restart or, while the experiments last, the next level in a cycle in the pause menu: Combat test on the bridge, Salvage test in the combat yard, Bridge in the salvage yard | Left stick or D-pad, up or down | Resume, Look reading Restart, and a button beside Resume naming the next level | W / S or the up and down arrow keys |
+| Choose Resume, Restart, while the experiments last the next level in a cycle, or Vibration, in the pause menu: Combat test on the bridge, Salvage test in the combat yard, Bridge in the salvage yard | Left stick or D-pad, up or down | Resume, Look reading Restart, a button beside Resume naming the next level, and a Vibration button below | W / S or the up and down arrow keys |
 | Hide or show the status panel | Circle / B | None: the panel always shows with touch controls | H |
 
 Xbox RB, LB, RT and X use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
@@ -82,7 +82,7 @@ Then repeat full runs and restarts on the physical phone over roughly **15–20 
 
 ## Outside the first playable
 
-Free jumping and climbing, combat positioning outside the combat yard ([ADR 0003](decisions/0003-squad-movement.md)'s phase S4), separate character inventories, skill trees, multiplayer, health and hunger systems, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what ADR 0004 brings into the opening, assisted aim, a placeholder hit rule and one ammunition count, with [ADR 0007](decisions/0007-aiming-and-shot-feedback.md)'s right-stick aim, shots that strike the scenery and their effects. Expand only in response to a concrete playtest need.
+Free jumping and climbing, combat positioning outside the combat yard ([ADR 0003](decisions/0003-squad-movement.md)'s phase S4), separate character inventories, skill trees, multiplayer, health and hunger systems, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what ADR 0004 brings into the opening, assisted aim, a placeholder hit rule and one ammunition count, with [ADR 0007](decisions/0007-aiming-and-shot-feedback.md)'s right-stick aim, shots that strike the scenery and their effects, and the first phase of [ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md): a pose in place of the aim line, spread, enemies' reactions, sound and vibration. Expand only in response to a concrete playtest need.
 
 ## Combat design review gate
 
@@ -99,6 +99,8 @@ On 21 November 2026 the maintainer settled the choices for a first experiment, w
 - Miki's Disrupt as the only signature.
 
 The maintainer assigned it on 21 November 2026: “Yes, build it”. It is built in a greybox combat yard that the pause menu's **Combat test** opens, and its playtests decide what comes next. After the first session the maintainer reported “Everything worked as expected” and chose cover next, “Yes, try cover next”, so the yard's companions now take cover near their places, as ADR 0005 records [after the first session](decisions/0005-squad-combat-experiment.md#after-the-first-session). On build 0.1.0 (13) that “Worked well”, and the maintainer chose to finish S4 in the yard, “Yes, finish S4”, as ADR 0005 records [after the second session](decisions/0005-squad-combat-experiment.md#after-the-second-session). On build 0.1.0 (15) that “Worked well”, the last of the experiment's three sessions.
+
+After ADR 0007's shooting, the maintainer asked on 21 November 2026 to take combat further, with The Division 2 as the reference, and to see research, a comparison and a phased plan first. [ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md) records the plan's five phases: the shot, cover for the leader, the squad's weapons, companion combat and enemies that fight back. On 22 November 2026 the maintainer chose to begin, “Start Phase 1”. Its first phase is built: no aim line, a pose that shows the aim, spread, enemies that flinch and fall, sound and vibration. Each later phase gets its own record when it begins.
 
 ## Salvage and exploration review
 

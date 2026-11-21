@@ -1,11 +1,12 @@
 import RealityKit
 import simd
 
-/// A level's fights and scripted scenes (ADR 0004, M2 to M4), and the leader's carbine (ADR
-/// 0007). It plays an encounter's cues, runs each hostile, fires the leader's weapon where the
-/// leader aims, in a fight or out of one, and, where the level's rules have it, the companions'
+/// A level's fights and scripted scenes (ADR 0004, M2 to M4), and the leader's carbine (ADR 0007,
+/// ADR 0008). It plays an encounter's cues, runs each hostile, fires the leader's weapon the way
+/// she faces, in a fight or out of one, and, where the level's rules have it, the companions'
 /// weapons (ADR 0005), and shows what happens: the hostiles' bodies, their aim before each shot,
-/// the leader's aim, the shots, the target marker and the drawn weapon. The session keeps the
+/// the shots, the target marker, the weapon in the leader's hands, and how bodies rock and fall.
+/// It reports what players hear and feel as events for the interface. The session keeps the
 /// hits, the rounds, the loot and who is down; this keeps only spatial and moment-to-moment
 /// state, and every entity is made once, at load.
 @MainActor
@@ -14,7 +15,8 @@ final class EncounterStage {
   struct Outcome {
     /// A short line for the HUD, such as Miki's "Friendly!".
     var line: String?
-    /// Where the leader should face, towards where a shot just fired went.
+    /// Where the leader should turn to face: towards the assisted target while Fire turns her
+    /// to it, or towards the wind-up she disrupted.
     var facing: SIMD2<Float>?
     /// Someone took the last allowed hit: the encounter must start again, or the party falls
     /// back where the level has that rule.
@@ -39,12 +41,14 @@ final class EncounterStage {
   /// way towards it, so it comes into view clear of the HUD whichever way the party approaches.
   static let focusShare: Float = 0.8
   static let focusLimit: Float = 7
+  /// Where the leader's shots' spread starts its numbers, so every run scatters the same way.
+  static let seed: UInt64 = 8
 
   /// Holds the hostiles, aim lines, shots and target marker; the world adds it to the scene.
   let container = Entity()
   /// What every shot looks like (ADR 0007).
   let effects: ShotEffects
-  /// The leader's weapon; the world puts it in the leader's hands.
+  /// The leader's weapon, posed at its grip; the world puts it in the leader's hands.
   let weaponProp: Entity
   private(set) var hostiles: [String: HostileState] = [:]
   private(set) var isDrawn = false
@@ -62,6 +66,12 @@ final class EncounterStage {
   private(set) var canDisrupt = false
   /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
   private(set) var disrupts = 0
+  /// How each member of the party rocks after firing or being hit, while it lasts (ADR 0008).
+  private(set) var jolts: [PartyMember: BodyJolt] = [:]
+  /// How the leader holds her weapon now (ADR 0008).
+  private(set) var pose = WeaponPose()
+  /// What players hear and feel since the world last took them (ADR 0008).
+  private(set) var events: [CombatEvent] = []
 
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
@@ -102,15 +112,22 @@ final class EncounterStage {
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
   private var aimLines: [String: Entity] = [:]
-  /// The leader's aim while the right stick aims the drawn carbine, out to where a shot would
-  /// strike (ADR 0007).
-  private let aimSight: Entity
   private let targetMarker: Entity
   /// How much larger than authored the aim marker and the aim and shot lines show.
   private let markerScale: Float
   private var drawRemaining: Float = 0
   private var cooldown: Float = 0
   private var reportedEmpty = false
+  /// The leader's spread, and what picks where in it each shot goes (ADR 0008).
+  private var scatter = Scatter()
+  private var random = SeededRandom(seed: EncounterStage.seed)
+  /// Where the leader stood and faced a step ago: how fast she moves and turns widens her spread.
+  private var lastLeader: (position: SIMD2<Float>, facing: SIMD2<Float>)?
+  /// Each standing hostile's turn, how it rocks after firing or being hit, and the fall of each
+  /// one downed (ADR 0008).
+  private var yaws: [String: Float] = [:]
+  private var hostileJolts: [String: BodyJolt] = [:]
+  private var falls: [String: Fall] = [:]
 
   init(level: Level, style: SceneStyle) {
     obstacles = level.obstacles
@@ -118,7 +135,6 @@ final class EncounterStage {
     let shots = Entity()
     shots.name = "combat.shots"
     effects = ShotEffects(style: style, in: shots)
-    aimSight = style.line(style.warm)
     rules = level.combat
     lookout = -level.heading
     let all = level.encounters.flatMap(\.hostiles)
@@ -130,9 +146,6 @@ final class EncounterStage {
     targetMarker.name = "combat.target"
     container.addChild(targetMarker)
     container.addChild(shots)
-    aimSight.name = "leader.aim"
-    aimSight.isEnabled = false
-    container.addChild(aimSight)
     /// An aim or shot line, unseen until it is placed.
     func line(named name: String, _ material: any Material) -> Entity {
       let line = style.line(material)
@@ -161,6 +174,10 @@ final class EncounterStage {
     hostiles = specs.mapValues { HostileState(spec: $0) }
     companionShots = [:]
     disrupts = 0
+    random = SeededRandom(seed: Self.seed)
+    falls = [:]
+    hostileJolts = [:]
+    jolts = [:]
     stopFighting()
   }
 
@@ -182,10 +199,12 @@ final class EncounterStage {
     cooldown = 0
     threat = nil
     reportedEmpty = false
+    pose.holster()
+    scatter = Scatter()
+    lastLeader = nil
     endFight()
     for line in aimLines.values { line.isEnabled = false }
     effects.clear()
-    aimSight.isEnabled = false
     targetMarker.isEnabled = false
     weaponProp.isEnabled = false
     for (id, state) in hostiles { show(id, state) }
@@ -209,32 +228,44 @@ final class EncounterStage {
     director.start(encounter.cues)
   }
 
+  /// What players hear and feel since the last call, which empties the list (ADR 0008).
+  func takeEvents() -> [CombatEvent] {
+    defer { events.removeAll(keepingCapacity: true) }
+    return events
+  }
+
   /// One simulation step: cues, the leader's Disrupt, hostiles, the leader's weapon, then the
-  /// companions'. `aim` is where the right stick aims the leader's carbine on the ground, if it
-  /// does. `figures` are the members who can be seen, the leader included, for scripted shots
-  /// and for hostiles that can aim at anyone. `mayDisrupt` says whether the leader has Disrupt to
-  /// use: Miki, in a level that has it. Outside an encounter, only the leader's weapon acts, and
-  /// its shots spend no rounds (ADR 0007).
+  /// companions'. `facing` is the way the leader faces, which her shots leave along; `aiming`
+  /// says whether the right stick aims her carbine, and Fire otherwise turns her towards the
+  /// assisted target (ADR 0008). `figures` are the members who can be seen, the leader included,
+  /// for scripted shots and for hostiles that can aim at anyone. `mayDisrupt` says whether the
+  /// leader has Disrupt to use: Miki, in a level that has it. Outside an encounter, only the
+  /// leader's weapon acts, and its shots spend no rounds (ADR 0007).
   func step(
-    dt: Float, leader: SIMD2<Float>, facing: SIMD2<Float>, aim: SIMD2<Float>?, fireHeld: Bool,
+    dt: Float, leader: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool, fireHeld: Bool,
     firePressed: Bool, mayDisrupt: Bool, signaturePressed: Bool,
     figures: [PartyMember: SIMD2<Float>], session: GameSession
   ) -> Outcome {
     var outcome = Outcome()
     effects.update(dt: dt)
+    settleBodies(dt: dt)
     // A fresh Fire press, or aiming with the right stick, draws a holstered weapon.
-    if firePressed || aim != nil, !isDrawn {
+    if firePressed || aiming, !isDrawn {
       isDrawn = true
       drawRemaining = weapon.drawTime
       weaponProp.isEnabled = true
     }
     drawRemaining -= dt
     cooldown -= dt
+    let motion = leaderMotion(at: leader, facing: facing, dt: dt)
+    scatter.settle(dt: dt, spread: weapon.spread)
+    pose.step(dt: dt, aiming: isDrawn && (aiming || fireHeld))
+    defer { showWeapon() }
     guard let encounter else {
       fireLeader(
-        leader: leader, aim: aim, facing: facing, fireHeld: fireHeld, inFight: false,
-        session: session, outcome: &outcome)
-      updateTarget(leader: leader, aim: aim, facing: facing)
+        leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: fireHeld,
+        inFight: false, session: session, outcome: &outcome)
+      updateTarget(leader: leader, aiming: aiming, facing: facing)
       return outcome
     }
     for cue in director.step(dt: dt) {
@@ -250,13 +281,12 @@ final class EncounterStage {
       case .stand(let member): outcome.stood.append(member)
       case .shot(let member, let id):
         guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
-        effects.show(
-          ShotPath(start: from, end: state.position, strike: .body(id)), side: .party,
-          height: Self.aimHeight)
+        let path = ShotPath(start: from, end: state.position, strike: .body(id))
+        effects.show(path, side: .party, height: Self.aimHeight)
+        report(path, firedBy: Self.weaponKind(of: member), byLeader: false)
+        rock(member, awayFrom: state.position, at: from)
         session.defeat(id)
-        hostiles[id]?.knockDown()
-        if let down = hostiles[id] { show(id, down, facing: from) }
-        aimLines[id]?.isEnabled = false
+        knockDown(id, from: from)
         let offset = state.position - from
         if simd_length(offset) > 0.001 { outcome.shooter = (member, simd_normalize(offset)) }
         outcome.line = "\(state.spec.name) is down."
@@ -269,7 +299,7 @@ final class EncounterStage {
     // Disrupt comes before the hostiles move on, so a press on the step that a wind-up would
     // end still answers it.
     if mayDisrupt, signaturePressed, let id = disruptable(from: leader, in: encounter) {
-      disrupt(id, from: leader, outcome: &outcome)
+      disrupt(id, from: leader, facing: facing, session: session, outcome: &outcome)
     }
     var threatNow: String?
     for spec in encounter.hostiles {
@@ -281,7 +311,9 @@ final class EncounterStage {
       let canHit =
         inRange && LineOfSight.isClear(from: state.position, to: aimedAt, obstacles: obstacles)
       if let shot = state.step(dt: dt, canHit: canHit, toward: leader) {
-        fire(from: state.position, at: aimedAt, victim: victim, range: spec.range, shot: shot)
+        fire(
+          spec.id, from: state.position, at: aimedAt, victim: victim, range: spec.range,
+          shot: shot, isLeader: victim == session.leader)
         if shot == .miss, let line = spec.missLine { outcome.line = line }
         if shot == .hit, session.takeHit(victim) { outcome.retry = true }
       }
@@ -314,8 +346,8 @@ final class EncounterStage {
     canDisrupt = mayDisrupt && disruptable(from: leader, in: encounter) != nil
     if outcome.retry { return outcome }
     fireLeader(
-      leader: leader, aim: aim, facing: facing, fireHeld: fireHeld, inFight: true,
-      session: session, outcome: &outcome)
+      leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: fireHeld,
+      inFight: true, session: session, outcome: &outcome)
     // Companions fire by themselves once the fight is under way, never before, not while a
     // scene holds the party (ADR 0005), and not while they regroup (ADR 0003, phase S4).
     if fightUnderWay, !encounter.holdsParty, !rules.companionWeapons.isEmpty, !session.regrouping {
@@ -333,22 +365,33 @@ final class EncounterStage {
       if let line = encounter.clearedLine { outcome.line = line }
       endFight()
     }
-    updateTarget(leader: leader, aim: aim, facing: facing)
+    updateTarget(leader: leader, aiming: aiming, facing: facing)
     return outcome
   }
 
-  /// The leader's shot, while Fire is held and the drawn carbine is ready: along the right
-  /// stick's aim, or at the assisted target, or straight ahead (ADR 0007). In a fight it spends
-  /// a round and puts the fight under way; outside one it spends nothing.
+  /// The leader's shot, while Fire is held and the drawn carbine is ready: along her facing,
+  /// with the help near it, or at the assisted target once she faces it; anywhere within her
+  /// spread (ADR 0007, ADR 0008). In a fight it spends a round and puts the fight under way;
+  /// outside one it spends nothing.
   private func fireLeader(
-    leader: SIMD2<Float>, aim: SIMD2<Float>?, facing: SIMD2<Float>, fireHeld: Bool,
-    inFight: Bool, session: GameSession, outcome: inout Outcome
+    leader: SIMD2<Float>, aiming: Bool, facing: SIMD2<Float>,
+    motion: (speed: Float, turning: Float),
+    fireHeld: Bool, inFight: Bool, session: GameSession, outcome: inout Outcome
   ) {
-    guard fireHeld, isDrawn, drawRemaining <= 0, cooldown <= 0,
-      let path = leaderShot(from: leader, aim: aim, facing: facing)
+    guard fireHeld, isDrawn, let aimed = leaderShot(from: leader, aiming: aiming, facing: facing)
     else { return }
+    // Without the stick, Fire turns her towards the assisted target, and she fires once she
+    // faces it within the help's angle.
+    if !aiming, case .body = aimed.strike, simd_distance(aimed.end, leader) > 0.001 {
+      let towards = simd_normalize(aimed.end - leader)
+      outcome.facing = towards
+      guard simd_dot(towards, facing) >= cos(Aim.helpAngle) else { return }
+    }
+    guard drawRemaining <= 0, cooldown <= 0 else { return }
     if inFight {
       guard session.spendRound() else {
+        cooldown = weapon.interval
+        events.append(.empty(at: leader))
         if !reportedEmpty {
           reportedEmpty = true
           outcome.line = "Out of ammunition."
@@ -358,27 +401,38 @@ final class EncounterStage {
       fightUnderWay = true
     }
     cooldown = weapon.interval
-    effects.show(path, side: .party, height: Self.aimHeight)
-    let offset = path.end - leader
-    if simd_length(offset) > 0.001 { outcome.facing = simd_normalize(offset) }
-    if inFight, case .body(let id) = path.strike, let state = hostiles[id],
-      session.hit(id, toughness: state.spec.hits)
-    {
-      knockDown(id, from: leader, outcome: &outcome)
+    let cone = scatter.angle(spread: weapon.spread, speed: motion.speed, turning: motion.turning)
+    let path = Aim.scattered(
+      aimed, by: Scatter.deviation(within: cone, using: &random), range: weapon.range,
+      hostiles: standingHostiles, blockers: blockers)
+    scatter.fired(spread: weapon.spread)
+    pose.fired()
+    jolts[session.leader, default: BodyJolt()].push(towards: -facing, by: BodyJolt.recoil)
+    effects.show(
+      path, side: .party, height: Self.aimHeight,
+      muzzle: WeaponPose.muzzle(from: leader, facing: facing))
+    report(path, firedBy: weapon.kind, byLeader: true)
+    if inFight, case .body(let id) = path.strike {
+      hit(id, from: leader, damage: weapon.damage, session: session, outcome: &outcome)
     }
   }
 
-  /// Where the leader's shot would go now, among the hostiles standing in view; nil while it
-  /// would meet one who is not yet a target.
-  private func leaderShot(from leader: SIMD2<Float>, aim: SIMD2<Float>?, facing: SIMD2<Float>)
+  /// Where the leader's shot would go now, among the hostiles standing in view, before its
+  /// spread: along her facing with the help near it while the stick aims, or else at the
+  /// assisted target or straight ahead; nil while it would meet one who is not yet a target.
+  private func leaderShot(from leader: SIMD2<Float>, aiming: Bool, facing: SIMD2<Float>)
     -> ShotPath?
   {
-    let standing = hostiles.values.filter { $0.isVisible && !$0.isDown }.map {
+    Aim.shot(
+      from: leader, aim: aiming ? facing : nil, facing: facing, range: weapon.range,
+      hostiles: standingHostiles, blockers: blockers)
+  }
+
+  /// The hostiles standing in view, as a shot sees them.
+  private var standingHostiles: [Aim.Hostile] {
+    hostiles.values.filter { $0.isVisible && !$0.isDown }.map {
       Aim.Hostile(id: $0.spec.id, position: $0.position, isTarget: $0.isTargetable)
     }
-    return Aim.shot(
-      from: leader, aim: aim, facing: facing, range: weapon.range, hostiles: standing,
-      blockers: blockers)
   }
 
   /// What stops the leader's shots now.
@@ -388,6 +442,17 @@ final class EncounterStage {
   /// leader's shots as it stops movement (ADR 0006, ADR 0007).
   func setGate(_ footprint: PartyMotion.Box?) {
     gate = footprint
+  }
+
+  /// How fast the leader moves and turns in this step, each as a share of her full speed.
+  private func leaderMotion(at position: SIMD2<Float>, facing: SIMD2<Float>, dt: Float)
+    -> (speed: Float, turning: Float)
+  {
+    defer { lastLeader = (position, facing) }
+    guard let last = lastLeader, dt > 0 else { return (0, 0) }
+    let speed = simd_distance(position, last.position) / (PartyBody.speed * dt)
+    let turned = acos(min(max(simd_dot(facing, last.facing), -1), 1))
+    return (speed, turned / (Movement.leaderTurnRate * dt))
   }
 
   /// Each companion with a weapon fires by themselves at their own assisted target, the nearest
@@ -412,18 +477,31 @@ final class EncounterStage {
       guard let target, let state = hostiles[target] else { continue }
       aims[member] = state.position
       guard fires else { continue }
-      effects.show(
-        ShotPath(start: from, end: state.position, strike: .body(target)), side: .party,
-        height: Self.aimHeight)
+      let path = ShotPath(start: from, end: state.position, strike: .body(target))
+      effects.show(path, side: .party, height: Self.aimHeight)
+      report(path, firedBy: weapon.kind, byLeader: false)
+      rock(member, awayFrom: state.position, at: from)
       companionShots[member, default: 0] += 1
-      // A blast that counts as several hits stops counting once the hostile is down.
-      for _ in 0..<weapon.damage {
-        guard session.hit(target, toughness: state.spec.hits) else { continue }
-        knockDown(target, from: from, outcome: &outcome)
-        break
-      }
+      hit(target, from: from, damage: weapon.damage, session: session, outcome: &outcome)
     }
     self.aims = aims
+  }
+
+  /// A shot from `shooter` hits a hostile, counting `damage` hits: it goes down once it has
+  /// taken its last, and otherwise rocks and flinches, which delays a wind-up (ADR 0008). A
+  /// blast that counts as several hits stops counting once the hostile is down.
+  private func hit(
+    _ id: String, from shooter: SIMD2<Float>, damage: Int, session: GameSession,
+    outcome: inout Outcome
+  ) {
+    guard let state = hostiles[id] else { return }
+    for _ in 0..<damage where session.hit(id, toughness: state.spec.hits) {
+      knockDown(id, from: shooter)
+      outcome.line = "\(state.spec.name) is down."
+      return
+    }
+    hostiles[id]?.flinch()
+    hostileJolts[id, default: BodyJolt()].push(towards: state.position - shooter, by: BodyJolt.hit)
   }
 
   /// Whom a hostile that aims at anyone begins its wind-up at: the nearest member in clear
@@ -448,29 +526,64 @@ final class EncounterStage {
 
   /// Miki's Disrupt (ADR 0005): her precise shot cancels the hostile's wind-up, and it recovers
   /// before it can aim again. It spends no round.
-  private func disrupt(_ id: String, from leader: SIMD2<Float>, outcome: inout Outcome) {
+  private func disrupt(
+    _ id: String, from leader: SIMD2<Float>, facing: SIMD2<Float>, session: GameSession,
+    outcome: inout Outcome
+  ) {
     guard var state = hostiles[id] else { return }
     state.disrupt()
     hostiles[id] = state
     victims[id] = nil
     aimLines[id]?.isEnabled = false
     disrupts += 1
-    effects.show(
-      ShotPath(start: leader, end: state.position, strike: .body(id)), side: .party,
-      height: Self.aimHeight)
+    let path = ShotPath(start: leader, end: state.position, strike: .body(id))
     let offset = state.position - leader
-    if simd_length(offset) > 0.001 { outcome.facing = simd_normalize(offset) }
+    let towards = simd_length(offset) > 0.001 ? simd_normalize(offset) : facing
+    pose.fired()
+    jolts[session.leader, default: BodyJolt()].push(towards: -towards, by: BodyJolt.recoil)
+    hostileJolts[id, default: BodyJolt()].push(towards: towards, by: BodyJolt.hit)
+    effects.show(
+      path, side: .party, height: Self.aimHeight,
+      muzzle: WeaponPose.muzzle(from: leader, facing: towards))
+    report(path, firedBy: weapon.kind, byLeader: true)
+    outcome.facing = towards
     outcome.line = "\(state.spec.name)'s shot is disrupted."
   }
 
-  /// A hostile goes down where it stood, facing whoever shot it; its aim goes, and the HUD says
-  /// so.
-  private func knockDown(_ id: String, from shooter: SIMD2<Float>, outcome: inout Outcome) {
+  /// A hostile goes down where it stood, falling away from whoever shot it; its aim goes.
+  private func knockDown(_ id: String, from shooter: SIMD2<Float>) {
+    guard let state = hostiles[id] else { return }
     hostiles[id]?.knockDown()
-    if let down = hostiles[id] { show(id, down, facing: shooter) }
+    falls[id] = Fall(away: state.position - shooter, yaw: yaws[id] ?? 0)
+    hostileJolts[id] = nil
+    if let down = hostiles[id] { show(id, down) }
     aimLines[id]?.isEnabled = false
     victims[id] = nil
-    if let name = specs[id]?.name { outcome.line = "\(name) is down." }
+  }
+
+  /// A member of the party rocks back from their own shot at `target`.
+  private func rock(_ member: PartyMember, awayFrom target: SIMD2<Float>, at position: SIMD2<Float>)
+  {
+    jolts[member, default: BodyJolt()].push(towards: position - target, by: BodyJolt.recoil)
+  }
+
+  /// What players hear and feel of one shot: the weapon firing, then what it strikes.
+  private func report(_ path: ShotPath, firedBy kind: Weapon.Kind, byLeader: Bool) {
+    events.append(.fired(kind, at: path.start, byLeader: byLeader))
+    switch path.strike {
+    case .body: events.append(.struckBody(at: path.end))
+    case .scenery: events.append(.struckBlock(at: path.end))
+    case .nothing: break
+    }
+  }
+
+  /// Which weapon each member carries, as the story bible has it: how a scripted shot sounds.
+  private static func weaponKind(of member: PartyMember) -> Weapon.Kind {
+    switch member {
+    case .miki: .carbine
+    case .laura: .lightBurst
+    case .tom: .closeScatter
+    }
   }
 
   /// What a search found, for the HUD.
@@ -511,43 +624,74 @@ final class EncounterStage {
 
   // MARK: - Showing it
 
-  /// The marker under the hostile the leader's next shot would hit, and, while the right stick
-  /// aims the drawn carbine, the aim out to where that shot would strike.
-  private func updateTarget(leader: SIMD2<Float>, aim: SIMD2<Float>?, facing: SIMD2<Float>) {
-    let path = isDrawn ? leaderShot(from: leader, aim: aim, facing: facing) : nil
+  /// The marker under the hostile the leader's next shot would hit, before its spread: the
+  /// sign that the help takes over, since no line shows her aim (ADR 0008).
+  private func updateTarget(leader: SIMD2<Float>, aiming: Bool, facing: SIMD2<Float>) {
+    let path = isDrawn ? leaderShot(from: leader, aiming: aiming, facing: facing) : nil
     if case .body(let id) = path?.strike, let state = hostiles[id] {
       targetMarker.isEnabled = true
       targetMarker.position = [state.position.x, 0.012, state.position.y]
     } else {
       targetMarker.isEnabled = false
     }
-    guard isDrawn, let aim,
-      let end = path?.end
-        ?? Aim.ray(from: leader, along: aim, range: weapon.range, hostiles: [], blockers: blockers)?
-        .end
-    else {
-      aimSight.isEnabled = false
-      return
+  }
+
+  /// The leader's weapon as she holds it now.
+  private func showWeapon() {
+    guard isDrawn else { return }
+    let transform = pose.transform
+    weaponProp.position = transform.position
+    weaponProp.orientation = transform.orientation
+  }
+
+  /// Bodies settle from their jolts, and the downed fall on; each hostile still moving shows
+  /// its pose.
+  private func settleBodies(dt: Float) {
+    for member in Array(jolts.keys) {
+      jolts[member]?.settle(dt: dt)
+      if jolts[member]?.isSettled == true { jolts[member] = nil }
     }
-    place(aimSight, from: leader, to: end, thickness: 0.015 * markerScale)
-    aimSight.isEnabled = true
+    var moving = Set(hostileJolts.keys)
+    for id in Array(hostileJolts.keys) {
+      hostileJolts[id]?.settle(dt: dt)
+      if hostileJolts[id]?.isSettled == true { hostileJolts[id] = nil }
+    }
+    for (id, fall) in falls where !fall.isFinished {
+      falls[id]?.advance(dt: dt)
+      moving.insert(id)
+    }
+    for id in moving { showPose(id) }
   }
 
   /// A hostile's body: unseen while it waits out of view, facing whom it aims at while it
   /// fights, or the way the party comes from while it waits in view, and lying on the ground once
   /// down.
   private func show(_ id: String, _ state: HostileState, facing point: SIMD2<Float>? = nil) {
-    guard let body = bodies[id], let visual = visuals[id] else { return }
+    guard let body = bodies[id] else { return }
     body.isEnabled = state.isVisible
     body.position = [state.position.x, PartyBody.height / 2, state.position.y]
     if state.isDown {
-      visual.orientation = simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
-      visual.position = [0, -0.6, 0]
+      if falls[id] == nil { falls[id] = Fall(away: .zero, yaw: yaws[id] ?? 0, finished: true) }
     } else {
       let offset = (point ?? state.position + lookout) - state.position
-      visual.orientation = simd_quatf(angle: Movement.yaw(towards: offset), axis: [0, 1, 0])
-      visual.position = .zero
+      yaws[id] = Movement.yaw(towards: offset)
     }
+    showPose(id)
+  }
+
+  /// A hostile's figure as it stands, rocks or falls.
+  private func showPose(_ id: String) {
+    guard let visual = visuals[id], let state = hostiles[id] else { return }
+    if state.isDown, let fall = falls[id] {
+      let pose = fall.pose
+      visual.orientation = pose.orientation
+      visual.position = pose.position
+      return
+    }
+    let turn = simd_quatf(angle: yaws[id] ?? 0, axis: [0, 1, 0])
+    let jolt = (hostileJolts[id] ?? BodyJolt()).pose(height: PartyBody.height)
+    visual.orientation = jolt.tilt * turn
+    visual.position = jolt.offset
   }
 
   /// The aim line from a hostile winding up its shot to whom it aims at: the warning to take
@@ -564,10 +708,10 @@ final class EncounterStage {
 
   /// A hostile's shot at the leader, or at whom it aims: into the cover, which it chips, or
   /// falling short of someone out of range; otherwise just past them when it misses on purpose,
-  /// or into them.
+  /// or into them, who rock away from it. The shooter rocks back from its rifle.
   private func fire(
-    from start: SIMD2<Float>, at point: SIMD2<Float>, victim: PartyMember, range: Float,
-    shot: HostileState.Shot
+    _ id: String, from start: SIMD2<Float>, at point: SIMD2<Float>, victim: PartyMember,
+    range: Float, shot: HostileState.Shot, isLeader: Bool
   ) {
     let distance = simd_distance(start, point)
     guard distance > 0.001 else { return }
@@ -587,6 +731,12 @@ final class EncounterStage {
         ShotPath(start: start, end: point, strike: .body(victim.rawValue))
       }
     effects.show(path, side: .hostile, height: Self.aimHeight)
+    report(path, firedBy: .rifle, byLeader: false)
+    hostileJolts[id, default: BodyJolt()].push(towards: -direction, by: BodyJolt.recoil)
+    if case .body = path.strike {
+      jolts[victim, default: BodyJolt()].push(towards: direction, by: BodyJolt.hit)
+      if isLeader { events.append(.leaderHit(at: point)) }
+    }
   }
 
   private func place(

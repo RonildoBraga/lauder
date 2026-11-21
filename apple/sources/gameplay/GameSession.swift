@@ -33,6 +33,8 @@ final class GameSession {
     /// While the combat experiment lasts, the other level as a new run: the combat yard from
     /// the bridge, and the bridge from the yard (ADR 0005).
     case otherLevel
+    /// Turns vibration off or on again, staying in the menu (ADR 0008).
+    case vibration
   }
 
   /// How the companions arrange themselves around the leader, in the order the formation

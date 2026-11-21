@@ -1,7 +1,8 @@
 # ADR 0007 — Aiming and shot feedback
 
 **Status:** Accepted\
-**Date:** 21 November 2026
+**Date:** 21 November 2026\
+**Amended:** 22 November 2026, when [ADR 0008](0008-weapon-feel-and-combat-plan.md) removed the aim line, made shots leave the way the leader faces, within a spread, and gave shots sound and vibration
 
 ## Context
 

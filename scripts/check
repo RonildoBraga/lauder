@@ -51,6 +51,11 @@ def main():
             [sys.executable, "-I", "-B", "blender/test_lauder_levels.py"],
             output / "blender-levels.log",
         )
+        print("Checking the generated combat sounds.", flush=True)
+        run(
+            [sys.executable, "-I", "-B", "apple/scripts/make-sounds.py", "--check"],
+            output / "sounds.log",
+        )
         print("Checking Swift formatting.", flush=True)
         run(
             [

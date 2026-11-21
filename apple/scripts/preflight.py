@@ -8,14 +8,21 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-#: The USDZ files the app and its tests need: the Brooklyn Bridge's scene file and the models the
-#: game creates.
+#: The Git LFS files the app and its tests need: the Brooklyn Bridge's scene file, the models the
+#: game creates and its combat sounds (ADR 0008).
 ASSETS = (
     "apple/sources/content/BrooklynBridge.usdz",
     "apple/sources/content/models/hostile.usdz",
     "apple/sources/content/models/laura.usdz",
     "apple/sources/content/models/miki.usdz",
     "apple/sources/content/models/tom.usdz",
+    "apple/sources/content/sounds/carbine.wav",
+    "apple/sources/content/sounds/close-scatter.wav",
+    "apple/sources/content/sounds/empty-click.wav",
+    "apple/sources/content/sounds/light-burst.wav",
+    "apple/sources/content/sounds/rifle.wav",
+    "apple/sources/content/sounds/strike-block.wav",
+    "apple/sources/content/sounds/strike-body.wav",
 )
 PRIVATE_IDENTIFIER = re.compile(
     r"\b(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{16})\b",
@@ -43,7 +50,7 @@ def check_assets():
                 problems.append(f"{name} (Git LFS pointer)")
     if problems:
         raise SystemExit(
-            "USDZ assets are not downloaded:\n"
+            "Git LFS assets are not downloaded:\n"
             + "\n".join(f"- {problem}" for problem in problems)
             + "\nInstall Git LFS, then run 'git lfs install' and 'git lfs pull' from the "
             "repository root.")

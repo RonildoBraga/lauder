@@ -12,6 +12,8 @@ import simd
 final class GameWorld {
   /// Party movement advances in whole steps of this length inside the scene update.
   static let simulationStep: Float = 1 / 120
+  /// How many events a world keeps for the frame to play (ADR 0008): headless runs play none.
+  static let keptEvents = 64
 
   let level: Level
   let root = Entity()
@@ -55,6 +57,9 @@ final class GameWorld {
   private(set) var compass: Compass?
   /// Whether the player has hidden the status panel. It stays hidden or shown across Restart.
   private(set) var panelHidden = false
+  /// Whether the phone or the controller vibrates in play (ADR 0008): the pause menu's choice,
+  /// on until the player turns it off.
+  private(set) var vibrationEnabled = true
   /// Whether the status panel shows: unless the player has hidden it, and always with touch
   /// controls, which have no button to show it again.
   var showsPanel: Bool { !panelHidden || controls.touchControlsEnabled }
@@ -152,6 +157,14 @@ final class GameWorld {
   /// leader is armed to aim (ADR 0007).
   @ObservationIgnored private var aimStick: SIMD2<Float>?
   @ObservationIgnored private var aimDirection: SIMD2<Float>?
+  /// Where the fight last asked the leader to turn, such as towards the assisted target while
+  /// Fire is held, until she faces it (ADR 0008).
+  @ObservationIgnored private var facingGoal: SIMD2<Float>?
+  /// Members still rocking from a shot or a hit in the latest step (ADR 0008).
+  @ObservationIgnored private var joltedMembers: Set<PartyMember> = []
+  /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
+  /// which play nothing, keep only the latest.
+  @ObservationIgnored private var combatEvents: [CombatEvent] = []
   /// The camera's lens now, in degrees: the level's own while exploring, narrowing in a fight or
   /// while the right stick aims (ADR 0007).
   @ObservationIgnored private var lens: Float
@@ -354,10 +367,23 @@ final class GameWorld {
     updateActivity()
   }
 
+  /// The pause menu's Vibration choice (ADR 0008).
+  func toggleVibration() {
+    vibrationEnabled.toggle()
+  }
+
+  /// What players have heard and felt since the last call, which empties the list (ADR 0008).
+  /// The frame plays them; tests read them.
+  func takeCombatEvents() -> [CombatEvent] {
+    defer { combatEvents.removeAll(keepingCapacity: true) }
+    return combatEvents
+  }
+
   /// What the player chose in another level's world carries over to this one: a hidden status
-  /// panel, and touch controls in place of an attached controller.
+  /// panel, the vibration choice, and touch controls in place of an attached controller.
   func takePreferences(from other: GameWorld) {
     panelHidden = other.panelHidden
+    vibrationEnabled = other.vibrationEnabled
     if other.controls.prefersTouch { controls.useTouchControls() }
   }
 
@@ -377,6 +403,24 @@ final class GameWorld {
     update(
       with: input, sampledIn: mode, deltaTime: Float(deltaTime),
       inputReady: controls.status == .ready)
+    playFeedback()
+  }
+
+  /// This frame's sounds and vibrations (ADR 0008): heard from the camera's target, felt on the
+  /// phone when playing by touch or on the controller otherwise, unless the player turned
+  /// vibration off. A DualSense's R2 resists like a trigger while Miki can fire.
+  private func playFeedback() {
+    let events = takeCombatEvents()
+    let device: CombatFeedback.Device =
+      !vibrationEnabled
+      ? .none
+      : controls.touchControlsEnabled
+        ? .phone : controls.activeController.map { .controller($0) } ?? .none
+    let canFire = session.mode == .exploring && showsWeapon && !stage.holdsParty
+    CombatFeedback.shared.play(
+      events, listener: SIMD2(cameraTarget.x, cameraTarget.z),
+      right: Movement.axes(cameraOffset: level.cameraOffset).right, device: device,
+      triggerArmed: canFire)
   }
 
   /// One frame after sampling: the command the input means in the mode it was sampled in, then
@@ -434,6 +478,7 @@ final class GameWorld {
         case .resume: togglePause()
         case .restart: restart()
         case .otherLevel: leave?(otherLevel.level)
+        case .vibration: toggleVibration()
         }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
@@ -570,6 +615,7 @@ final class GameWorld {
     fireHeld = false
     aimStick = nil
     aimDirection = nil
+    facingGoal = nil
     firePressPending = false
     signaturePressPending = false
     signatureCue = nil
@@ -651,14 +697,15 @@ final class GameWorld {
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
     // Only Miki carries the carbine, and not while a scene holds her. While the right stick aims
-    // it, she faces her aim, whichever way she moves (ADR 0007).
+    // it, she turns towards her aim, whichever way she moves (ADR 0007); otherwise towards where
+    // the fight turns her, or where she moves. She never turns faster than her turn rate, and
+    // her shots leave the way she faces (ADR 0008).
     let armed = leader == .miki && !held
     aimDirection =
       armed ? aimStick.map { Movement.aim(for: $0, cameraOffset: level.cameraOffset) } : nil
-    if let aimDirection {
-      setYaw(leader, Movement.yaw(towards: aimDirection))
-    } else if simd_length_squared(leaderDelta) > 0.000001 {
-      setYaw(leader, Movement.yaw(towards: leaderDelta))
+    let moving = simd_length_squared(leaderDelta) > 0.000001 ? leaderDelta : nil
+    if let wanted = aimDirection ?? facingGoal ?? moving {
+      turnLeader(leader, towards: wanted, dt: dt)
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
@@ -1026,14 +1073,25 @@ final class GameWorld {
       })
     let outcome = stage.step(
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
-      aim: aimDirection, fireHeld: armed && fireHeld, firePressed: armed && firePressPending,
+      aiming: aimDirection != nil, fireHeld: armed && fireHeld,
+      firePressed: armed && firePressPending,
       mayDisrupt: leaderHasSignature && !stage.holdsParty,
       signaturePressed: signaturePressPending, figures: figures, session: session)
     firePressPending = false
     signaturePressPending = false
     let cue = stage.canDisrupt ? "\(leader.displayName) can Disrupt" : nil
     if signatureCue != cue { signatureCue = cue }
-    if let facing = outcome.facing { setYaw(leader, Movement.yaw(towards: facing)) }
+    // The leader turns there in the steps to come, at her turn rate (ADR 0008).
+    if let facing = outcome.facing { facingGoal = facing }
+    // Members still rocking from a shot or a hit show it, and those that just settled stand
+    // straight again.
+    let jolted = Set(stage.jolts.keys)
+    for member in jolted.union(joltedMembers) { showPose(member) }
+    joltedMembers = jolted
+    combatEvents.append(contentsOf: stage.takeEvents())
+    if combatEvents.count > Self.keptEvents {
+      combatEvents.removeFirst(combatEvents.count - Self.keptEvents)
+    }
     if let line = outcome.line { observation = line }
     for member in outcome.appeared { appear(member) }
     for member in outcome.stood {
@@ -1129,6 +1187,7 @@ final class GameWorld {
     let previous = squadLeader
     let leader = session.leader
     squadLeader = leader
+    facingGoal = nil
     if let point = position(of: leader) { route.reset(to: point) }
     planner.reset()
     cover.reset()
@@ -1164,9 +1223,23 @@ final class GameWorld {
       return
     }
     let current = yaw[member] ?? wanted
-    let limit = 3 * Float.pi * dt
-    let change = max(-limit, min(limit, (wanted - current).remainder(dividingBy: 2 * .pi)))
-    setYaw(member, current + change)
+    setYaw(
+      member,
+      Movement.turn(from: current, towards: wanted, limit: Movement.companionTurnRate * dt))
+  }
+
+  /// The leader turns towards `direction` at her turn rate (ADR 0008). Once she faces where the
+  /// fight asked her to turn, that request is done.
+  private func turnLeader(_ leader: PartyMember, towards direction: SIMD2<Float>, dt: Float) {
+    let wanted = Movement.yaw(towards: direction)
+    let current = yaw[leader] ?? wanted
+    let turned = Movement.turn(from: current, towards: wanted, limit: Movement.leaderTurnRate * dt)
+    setYaw(leader, turned)
+    if let goal = facingGoal, simd_length_squared(goal) > 0.000001,
+      simd_dot(Movement.facing(yaw: turned), simd_normalize(goal)) > 0.99995
+    {
+      facingGoal = nil
+    }
   }
 
   private func setYaw(_ member: PartyMember, _ angle: Float) {
@@ -1174,13 +1247,18 @@ final class GameWorld {
     showPose(member)
   }
 
-  /// A member's facing, and whether they lie face down on the deck.
+  /// A member's facing, whether they lie face down on the deck, and how they rock for a moment
+  /// after firing or being hit (ADR 0008).
   private func showPose(_ member: PartyMember) {
     let facing = simd_quatf(angle: yaw[member] ?? 0, axis: [0, 1, 0])
-    let isLying = lying.contains(member)
-    visuals[member]?.orientation =
-      isLying ? facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0]) : facing
-    visuals[member]?.position = isLying ? [0, Self.lyingDrop, 0] : .zero
+    if lying.contains(member) {
+      visuals[member]?.orientation = facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
+      visuals[member]?.position = [0, Self.lyingDrop, 0]
+      return
+    }
+    let jolt = (stage.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
+    visuals[member]?.orientation = jolt.tilt * facing
+    visuals[member]?.position = jolt.offset
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.
@@ -1195,6 +1273,8 @@ final class GameWorld {
     controls.setActive(isPresented && isApplicationActive)
     controls.requireNeutralInput()
     skipNextStep = true
+    // Out of the foreground, or replaced by another level's world: quiet, still and slack.
+    if !(isPresented && isApplicationActive) { CombatFeedback.shared.suspend() }
   }
 
   private func updateCamera(deltaTime: Float) {

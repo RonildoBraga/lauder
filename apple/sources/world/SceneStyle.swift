@@ -110,9 +110,16 @@ struct SceneStyle {
     figure("hostile")
   }
 
-  /// A carbine held at the right side, pointing ahead; shown while it is drawn.
-  func carbine() -> ModelEntity {
-    block(size: [0.07, 0.08, 0.55], at: [0.21, 0.08, -0.22], material: gear)
+  /// The leader's carbine, shown while it is drawn: its origin is the grip, which the fight
+  /// poses in her hands (ADR 0008), and the barrel runs ahead along -z to the muzzle.
+  func carbine() -> Entity {
+    let grip = Entity()
+    grip.name = "leader.carbine"
+    let length: Float = 0.55
+    grip.addChild(
+      block(
+        size: [0.07, 0.08, length], at: [0, 0, length / 2 - WeaponPose.barrel], material: gear))
+    return grip
   }
 
   /// Each member's colour, as their model's clothing shows it.
