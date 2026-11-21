@@ -346,9 +346,12 @@ final class CombatHaptics {
     }
   }
 
-  /// The engine stopped: it starts again when next needed, with fresh players.
+  /// The engine stopped, or gave way to another: it starts again when next needed, with fresh
+  /// players. A start still under way is forgotten too; if it finishes, the next cue that fails
+  /// on the stopped engine forgets it again.
   private func forget(_ key: ObjectIdentifier) {
     running.remove(key)
+    starting.remove(key)
     players[key] = nil
   }
 
