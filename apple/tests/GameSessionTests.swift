@@ -93,15 +93,22 @@ struct GameSessionTests {
     #expect(session.currentLine == line)
   }
 
+  /// Resume, Restart and, while the combat experiment lasts, the other level (ADR 0005).
   @Test
-  func thePauseMenuOpensOnResumeAndHasTwoChoices() {
+  func thePauseMenuOpensOnResumeAndHasThreeChoices() {
     let session = GameSession(level: BrooklynBridge.level)
     session.movePauseChoice(by: 1)
     session.togglePause()
     #expect(session.pauseChoice == .resume)
+    session.movePauseChoice(by: -1)
+    #expect(session.pauseChoice == .resume)
     session.movePauseChoice(by: 1)
     #expect(session.pauseChoice == .restart)
     session.movePauseChoice(by: 1)
+    #expect(session.pauseChoice == .otherLevel)
+    session.movePauseChoice(by: 1)
+    #expect(session.pauseChoice == .otherLevel)
+    session.movePauseChoice(by: -1)
     #expect(session.pauseChoice == .restart)
     session.movePauseChoice(by: -1)
     #expect(session.pauseChoice == .resume)

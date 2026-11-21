@@ -56,10 +56,14 @@
       case expectRefused(Int)
       /// Wait until a conversation begins; fails after this many seconds.
       case awaitConversation(seconds: Float)
+      /// The level in play, by its id, such as "combat-yard" after the pause menu's third choice.
+      case expectLevel(String)
     }
 
     /// What the runner can see of the game each frame.
     struct Snapshot {
+      /// The level in play, which the pause menu's third choice can change.
+      let level: Level
       let leader: PartyMember
       let party: [PartyMember]
       let positions: [PartyMember: SIMD2<Float>]
@@ -191,7 +195,7 @@
             continue
           }
           return InputRules.Raw(
-            stick: Movement.stick(towards: offset, cameraOffset: BrooklynBridge.level.cameraOffset))
+            stick: Movement.stick(towards: offset, cameraOffset: snapshot.level.cameraOffset))
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -303,7 +307,7 @@
           // Down on the stick (negative y) moves the choice down the menu.
           return press(InputRules.Raw(stick: [0, direction > 0 ? -1 : 1]))
         case .expectRestarted:
-          let start = BrooklynBridge.level
+          let start = snapshot.level
           if snapshot.leader != start.party[0] || snapshot.party != start.party
             || snapshot.firedTriggers != 0 || snapshot.beat != .alone || snapshot.defeated != 0
             || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
@@ -345,6 +349,8 @@
           expect(
             snapshot.hitsTaken == count,
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
+        case .expectLevel(let id):
+          expect(snapshot.level.id == id, "the level was \(snapshot.level.id) instead of \(id)")
         }
       }
       finish()

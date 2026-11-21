@@ -54,6 +54,8 @@ enum InputRules {
     var touchSwitch = false
     /// The touch layout's Restart button, shown in the action button's place while paused.
     var touchRestart = false
+    /// The touch layout's button for the pause menu's third choice, shown only while paused.
+    var touchOtherLevel = false
     var touchFire = false
     var touchFormation = false
     /// A finger pressing the ground, which may open the order menu.
@@ -95,6 +97,7 @@ enum InputRules {
     /// The vertical direction held in the previous sample: -1 up, 1 down, 0 neither.
     var menuDirection = 0
     var panelWasPressed = false
+    var otherLevelWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -124,6 +127,8 @@ enum InputRules {
     /// A fresh press of the panel button, which hides or shows the status panel, while
     /// exploring or in a conversation.
     var panelPressed = false
+    /// A fresh press of the touch button for the pause menu's third choice while paused.
+    var otherLevelPressed = false
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -136,6 +141,7 @@ enum InputRules {
     let pause = raw.keyboardPause || raw.controllerPause || raw.touchPause
     let cycle = raw.keyboardSwitch || raw.controllerSwitch || raw.touchSwitch
     let restart = raw.touchRestart
+    let otherLevel = raw.touchOtherLevel
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
     let panel = raw.keyboardPanel || raw.controllerPanel
@@ -159,6 +165,7 @@ enum InputRules {
       upWasPressed: up, downWasPressed: down, leftWasPressed: left, rightWasPressed: right,
       menuDirection: direction)
     next.panelWasPressed = panel
+    next.otherLevelWasPressed = otherLevel
     let panelEdge = panel && !state.panelWasPressed
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
@@ -169,7 +176,7 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || panel || raw.hasDpad || raw.touchGround
+        || panel || raw.hasDpad || raw.touchGround || otherLevel
       return (.neutral, next)
     }
     let pauseEdge = pause && !state.pauseWasPressed
@@ -182,13 +189,14 @@ enum InputRules {
     let actionEdge = action && !state.actionWasPressed
     switch mode {
     case .paused:
-      // The pause menu: up/down choose, action confirms. Switch, formation, panel and order
-      // presses are consumed.
+      // The pause menu: up/down choose, action confirms, and the touch buttons choose directly.
+      // Switch, formation, panel and order presses are consumed.
       return (
         Input(
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
           menuMove: direction != state.menuDirection ? direction : 0,
-          restartPressed: restart && !state.restartWasPressed), next
+          restartPressed: restart && !state.restartWasPressed,
+          otherLevelPressed: otherLevel && !state.otherLevelWasPressed), next
       )
     case .dialogue:
       // Action shows the next line, and the panel button hides or shows the status panel;

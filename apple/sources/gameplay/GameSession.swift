@@ -27,9 +27,12 @@ final class GameSession {
     static func < (lhs: Beat, rhs: Beat) -> Bool { lhs.rawValue < rhs.rawValue }
   }
 
-  /// The pause menu's two choices. It opens on Resume.
+  /// The pause menu's choices, in order. It opens on Resume.
   enum PauseChoice: CaseIterable, Sendable {
     case resume, restart
+    /// While the combat experiment lasts, the other level as a new run: the combat yard from
+    /// the bridge, and the bridge from the yard (ADR 0005).
+    case otherLevel
   }
 
   /// How the companions arrange themselves around the leader, in the order the formation
@@ -182,10 +185,13 @@ final class GameSession {
     }
   }
 
-  /// Up (-1) chooses Resume and down (1) chooses Restart.
+  /// Up (-1) and down (1) move the choice one place through Resume, Restart and the other level,
+  /// stopping at either end.
   func movePauseChoice(by step: Int) {
     guard mode == .paused, step != 0 else { return }
-    pauseChoice = step < 0 ? .resume : .restart
+    let all = PauseChoice.allCases
+    let index = all.firstIndex(of: pauseChoice) ?? 0
+    pauseChoice = all[min(max(index + step.signum(), 0), all.count - 1)]
   }
 
   /// Who the right D-pad direction sends: whoever Next would lead as, since R1 is on the right.

@@ -40,7 +40,8 @@ struct HostileState {
 
   init(spec: Level.Hostile) {
     self.spec = spec
-    position = spec.hiddenAt
+    position = spec.inView ? spec.standAt : spec.hiddenAt
+    if spec.inView { phase = .waiting }
   }
 
   var isVisible: Bool { phase != .hidden }

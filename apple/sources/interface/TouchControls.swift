@@ -20,6 +20,8 @@ struct TouchControls: UIViewRepresentable {
   /// The companions the order menu offers on its left and right, as the HUD orders them; nil
   /// until orders are offered, and pressing the ground does nothing (ADR 0003, phase S3).
   let orderNames: (left: String, right: String)?
+  /// The pause menu's third choice, such as "Combat test", a button shown only while paused.
+  let otherLevelTitle: String
   let mode: GameSession.Mode
 
   func makeUIView(context: Context) -> Surface {
@@ -32,7 +34,7 @@ struct TouchControls: UIViewRepresentable {
     uiView.update(
       actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
       showsFormation: showsFormation, formationTitle: formationTitle, orderNames: orderNames,
-      mode: mode, generation: generation)
+      otherLevelTitle: otherLevelTitle, mode: mode, generation: generation)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -47,6 +49,7 @@ struct TouchControls: UIViewRepresentable {
     private let pause = TouchZone(title: "Pause")
     private let fire = TouchZone(title: "Fire")
     private let formation = TouchZone(title: "Formation")
+    private let otherLevel = TouchZone()
     private let menu = OrderMenu()
     private var generation: Int?
     private var mode = GameSession.Mode.exploring
@@ -65,7 +68,7 @@ struct TouchControls: UIViewRepresentable {
       super.init(frame: .zero)
       backgroundColor = .clear
       isMultipleTouchEnabled = true
-      for zone in [stick, action, cycle, pause, fire, formation] {
+      for zone in [stick, action, cycle, pause, fire, formation, otherLevel] {
         addSubview(zone)
       }
       menu.isHidden = true
@@ -74,6 +77,7 @@ struct TouchControls: UIViewRepresentable {
       fire.accessibilityHint = "Draws the weapon, then fires at the marked target while held."
       formation.accessibilityHint =
         "Changes the formation: Close, Spread, then Column. After an order, calls everyone back."
+      otherLevel.accessibilityHint = "Leaves this run for a new run of another level."
       stick.accessibilityLabel = "Move"
       stick.accessibilityHint = "Drag to move the active character. Lift your finger to stop."
       stick.accessibilityTraits = .allowsDirectInteraction
@@ -98,6 +102,7 @@ struct TouchControls: UIViewRepresentable {
       }
       let buttons: [(TouchZone, TouchInput.Button)] = [
         (cycle, .cycle), (pause, .pause), (fire, .fire), (formation, .formation),
+        (otherLevel, .otherLevel),
       ]
       for (zone, button) in buttons {
         zone.changed = { [weak controls] _, isPressed, generation in
@@ -111,7 +116,7 @@ struct TouchControls: UIViewRepresentable {
     func update(
       actionTitle: String, nextLeaderName: String?, showsFire: Bool, showsFormation: Bool,
       formationTitle: String, orderNames: (left: String, right: String)?,
-      mode: GameSession.Mode, generation: Int
+      otherLevelTitle: String, mode: GameSession.Mode, generation: Int
     ) {
       self.mode = mode
       self.orderNames = orderNames
@@ -141,6 +146,10 @@ struct TouchControls: UIViewRepresentable {
       // Formation appears with the second companion; a finger on it keeps it until it lifts.
       formation.isHidden = !showsFormation && !formation.isCaptured
       pause.setTitle(mode == .paused ? "Resume" : "Pause")
+      // The pause menu's third choice shows beside Resume while paused; a finger on it keeps it
+      // until it lifts.
+      otherLevel.setTitle(otherLevelTitle)
+      otherLevel.isHidden = mode != .paused && !otherLevel.isCaptured
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
       for zone in [stick, cycle, fire, formation] {
@@ -151,7 +160,7 @@ struct TouchControls: UIViewRepresentable {
     func reset() {
       let generation = controls.touchGeneration
       self.generation = generation
-      for zone in [stick, action, cycle, pause, fire, formation] {
+      for zone in [stick, action, cycle, pause, fire, formation, otherLevel] {
         zone.reset(generation: generation)
       }
       endPress(sending: false)
@@ -172,6 +181,9 @@ struct TouchControls: UIViewRepresentable {
       fire.frame = CGRect(
         x: bounds.width - 224 - inset - 12, y: bounds.height - 52 - inset, width: 112, height: 52)
       pause.frame = CGRect(x: bounds.width - 112 - inset, y: inset, width: 112, height: 44)
+      // Left of Resume at the top, shown only while paused.
+      otherLevel.frame = CGRect(
+        x: bounds.width - 112 - inset - 12 - 140, y: inset, width: 140, height: 44)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

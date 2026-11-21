@@ -7,6 +7,8 @@ struct TouchInput {
     case action, cycle, pause, restart, fire, formation
     /// A finger pressing the ground, where holding opens the order menu (ADR 0003, phase S3).
     case ground
+    /// The pause menu's third choice, shown only while paused (ADR 0005).
+    case otherLevel
   }
 
   private(set) var generation = 0
@@ -55,6 +57,7 @@ struct TouchInput {
       touchStick: stick, touchIsTouching: isTouching,
       touchAction: pressed.contains(.action), touchPause: pressed.contains(.pause),
       touchSwitch: pressed.contains(.cycle), touchRestart: pressed.contains(.restart),
+      touchOtherLevel: pressed.contains(.otherLevel),
       touchFire: pressed.contains(.fire), touchFormation: pressed.contains(.formation),
       touchGround: pressed.contains(.ground), touchMark: mark, touchOrder: order)
   }

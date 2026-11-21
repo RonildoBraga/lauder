@@ -75,6 +75,9 @@ struct Level {
     var missLine: String?
     /// What searching the body yields once the hostile is down.
     var loot: Loot?
+    /// It waits in view where it fights from the start of a run, instead of unseen until a cue
+    /// reveals it, as the combat yard's shooters do beyond its wall (ADR 0005).
+    var inView = false
   }
 
   /// What happens at a moment after an encounter begins.

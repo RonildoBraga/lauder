@@ -17,6 +17,10 @@ final class GameWorld {
   let root = Entity()
   let controls = GameControls()
   let session: GameSession
+  /// Asks the world's owner for a new run of another level, in a world of its own: the pause
+  /// menu's third choice while the combat experiment lasts (ADR 0005). Without an owner, as in
+  /// most tests, the choice does nothing.
+  @ObservationIgnored var leave: ((Level) -> Void)?
   /// The latest line the HUD shows: a place's words, an action's result, a beat's line. Every
   /// line counts as new, even one that repeats the last, so it shows again in the status panel.
   private(set) var observation: String {
@@ -147,6 +151,10 @@ final class GameWorld {
   var objective: String {
     level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
   }
+  /// The pause menu's third choice: what it reads, what it does and the level it starts.
+  var otherLevel: (name: String, note: String, level: Level) {
+    CombatYard.pauseChoice(leaving: level)
+  }
 
   init(level: Level = BrooklynBridge.level) {
     self.level = level
@@ -169,8 +177,10 @@ final class GameWorld {
     if let scene = level.scene {
       root.addChild(Self.loadScene(named: scene, for: level))
     } else {
+      // A greybox, such as the combat yard or a test's level: snow underfoot, and plain blocks.
       for box in [level.ground] + level.boxes {
-        let entity = style.block(size: box.size, at: box.position, material: style.scenery)
+        let material = box.name == level.ground.name ? style.snow : style.scenery
+        let entity = style.block(size: box.size, at: box.position, material: material)
         entity.name = box.name
         root.addChild(entity)
       }
@@ -212,11 +222,6 @@ final class GameWorld {
     placeParty()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
-    #if DEBUG
-      if let scenario = UserDefaults.standard.string(forKey: "LauderPlaytest") {
-        startPlaytest(scenario, style: style)
-      }
-    #endif
   }
 
   /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
@@ -255,6 +260,13 @@ final class GameWorld {
     subscription?.cancel()
     subscription = nil
     updateActivity()
+  }
+
+  /// What the player chose in another level's world carries over to this one: a hidden status
+  /// panel, and touch controls in place of an attached controller.
+  func takePreferences(from other: GameWorld) {
+    panelHidden = other.panelHidden
+    if other.controls.prefersTouch { controls.useTouchControls() }
   }
 
   /// The scene's update: this frame's input, sampled in the session's mode, then `update`. Each
@@ -322,8 +334,14 @@ final class GameWorld {
         togglePause()
       } else if input.restartPressed {
         restart()
+      } else if input.otherLevelPressed {
+        leave?(otherLevel.level)
       } else if input.actionPressed {
-        if session.pauseChoice == .restart { restart() } else { togglePause() }
+        switch session.pauseChoice {
+        case .resume: togglePause()
+        case .restart: restart()
+        case .otherLevel: leave?(otherLevel.level)
+        }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
       }
@@ -1037,24 +1055,37 @@ final class GameWorld {
     /// What a scripted playtest can see each frame.
     var playtestSnapshot: PlaytestRunner.Snapshot {
       PlaytestRunner.Snapshot(
-        leader: session.leader, party: session.party, positions: positions, mode: session.mode,
-        firedTriggers: session.firedTriggers.count, beat: session.beat,
+        level: level, leader: session.leader, party: session.party, positions: positions,
+        mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
-    func startPlaytest(_ scenario: String, style: SceneStyle = SceneStyle()) {
+    func startPlaytest(_ scenario: String) {
       guard let runner = PlaytestRunner(scenario: scenario) else {
         observation =
           "Unknown playtest \"\(scenario)\". Try: "
           + PlaytestRunner.scenarioNames.joined(separator: ", ") + "."
         return
       }
+      install(runner)
+    }
+
+    /// A playtest that another level's world began carries on here, after the pause menu's
+    /// third choice made this world.
+    func continuePlaytest(from other: GameWorld) {
+      guard let runner = other.playtest else { return }
+      other.playtest = nil
+      install(runner)
+    }
+
+    private func install(_ runner: PlaytestRunner) {
       playtest = runner
       observation = runner.status
       // Small discs at each companion's target, so screenshots show where they are heading.
+      let style = SceneStyle()
       for member in PartyMember.allCases {
         let disc = ModelEntity(
           mesh: .generateCylinder(height: 0.01, radius: 0.12), materials: [style.signal])

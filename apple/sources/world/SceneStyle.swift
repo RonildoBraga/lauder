@@ -8,9 +8,14 @@ struct SceneStyle {
   // The level's look comes from its scene file, and the party's and the hostiles' from their
   // models' scene files, all exported by Blender (ADR 0002). The gameplay signals keep their own
   // colours here.
-  /// A level without a scene file, such as a test's: its ground and boxes as plain blocks.
+  /// A level without a scene file, such as the combat yard or a test's: its boxes as plain
+  /// blocks.
   let scenery = SimpleMaterial(
     color: UIColor(red: 0.55, green: 0.57, blue: 0.56, alpha: 1), roughness: 0.9,
+    isMetallic: false)
+  /// Such a level's ground, in the palette's snow (the visual direction).
+  let snow = SimpleMaterial(
+    color: UIColor(red: 236 / 255, green: 233 / 255, blue: 226 / 255, alpha: 1), roughness: 1,
     isMetallic: false)
   /// The carbine.
   let gear = SimpleMaterial(

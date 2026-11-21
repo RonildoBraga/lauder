@@ -127,10 +127,10 @@ final class EncounterStage {
     for (id, state) in hostiles { show(id, state) }
   }
 
-  /// An encounter begins: its cues start playing.
+  /// An encounter begins: its cues start playing. Its hostiles stay as they are: unseen where
+  /// they wait, or in view where they stand, as Restart and a retry left them.
   func begin(_ encounter: Level.Encounter) {
     self.encounter = encounter
-    for spec in encounter.hostiles { hostiles[spec.id] = HostileState(spec: spec) }
     director.start(encounter.cues)
   }
 

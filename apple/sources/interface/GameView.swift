@@ -107,13 +107,16 @@ struct GameView: View {
         VStack(spacing: 14) {
           Text("Paused").font(.title2.bold())
           if world.controls.touchControlsEnabled {
-            Text("Tap Resume to continue, or Restart to begin a new run.")
+            Text(
+              "Tap Resume to continue, Restart to begin a new run, or \(world.otherLevel.name)."
+            )
+            Text(world.otherLevel.note).font(.caption)
           } else {
             // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
             VStack(spacing: 6) {
               ForEach(GameSession.PauseChoice.allCases, id: \.self) { choice in
                 let chosen = choice == world.session.pauseChoice
-                Text(choice == .resume ? "Resume" : "Restart")
+                Text(pauseChoiceName(choice))
                   .font(.headline)
                   .frame(width: 180, height: 36)
                   .background(
@@ -127,6 +130,7 @@ struct GameView: View {
               }
             }
             Text(world.level.restartNote).font(.caption)
+            Text(world.otherLevel.note).font(.caption)
             HStack(spacing: 12) {
               Text("Up or down to choose").font(.caption)
               Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
@@ -154,17 +158,27 @@ struct GameView: View {
           showsFormation: world.session.formationsAvailable,
           formationTitle: formationAction,
           orderNames: orderNames,
+          otherLevelTitle: world.otherLevel.name,
           mode: world.session.mode)
       }
     }
     .handlesGameControllerEvents(matching: .gamepad)
+    // The app keeps the screen awake while the game is in the foreground; this world only
+    // follows whether it is active.
     .onChange(of: scenePhase, initial: true) { _, phase in
       world.setApplicationActive(phase == .active)
-      UIApplication.shared.isIdleTimerDisabled = phase == .active
     }
     .onDisappear {
       world.stop()
-      UIApplication.shared.isIdleTimerDisabled = false
+    }
+  }
+
+  /// What the pause menu calls each choice: the third names the level it starts.
+  private func pauseChoiceName(_ choice: GameSession.PauseChoice) -> String {
+    switch choice {
+    case .resume: "Resume"
+    case .restart: "Restart"
+    case .otherLevel: world.otherLevel.name
     }
   }
 

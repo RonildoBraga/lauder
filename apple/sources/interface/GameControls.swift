@@ -29,7 +29,8 @@ final class GameControls {
   @ObservationIgnored private var isActive = false
   @ObservationIgnored private var inputState = InputRules.State()
   @ObservationIgnored private var touchInput = TouchInput()
-  @ObservationIgnored private var prefersTouch = false
+  /// Whether the player chose touch controls while a controller is attached.
+  @ObservationIgnored private(set) var prefersTouch = false
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
@@ -140,7 +141,8 @@ final class GameControls {
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
-      touchRestart: touch.touchRestart, touchFire: touch.touchFire,
+      touchRestart: touch.touchRestart, touchOtherLevel: touch.touchOtherLevel,
+      touchFire: touch.touchFire,
       touchFormation: touch.touchFormation, touchGround: touch.touchGround,
       touchMark: touch.touchMark, touchOrder: touch.touchOrder
     )
