@@ -1,6 +1,6 @@
 # ADR 0005 — A first squad combat experiment
 
-**Status:** Accepted\
+**Status:** Accepted; amended after the first session\
 **Date:** 21 November 2026
 
 ## Context
@@ -67,7 +67,7 @@ This follows The Quiet Yard's rule, without the persistence across a saved game 
 
 ### 5. Positioning: slots and orders
 
-Companions fight from their formation slots, or from the points that squad orders send them to (ADR 0003, phase S3). They do not seek cover by themselves: ADR 0003's [combat positioning](0003-squad-movement.md#combat-positioning), phase S4, waits for evidence from this experiment.
+Companions fight from their formation slots, or from the points that squad orders send them to (ADR 0003, phase S3). They do not seek cover by themselves: ADR 0003's [combat positioning](0003-squad-movement.md#combat-positioning), phase S4, waits for evidence from this experiment. The first session gave it: companions now take cover near those places ([after the first session](#after-the-first-session)).
 
 ### 6. Disrupt, Miki's signature
 
@@ -98,6 +98,21 @@ Scripted Simulator playtests come first. Then the maintainer plays it on the bas
 - Does the yard hold 60 fps?
 - Does the maintainer want companions to seek cover by themselves? A yes is the evidence for S4.
 
+## After the first session
+
+On 21 November 2026 the maintainer played the yard on TestFlight build 0.1.0 (12) and reported **“Everything worked as expected”**. Asked whether companions should take cover by themselves next, the maintainer answered **“Yes, try cover next”**: the evidence for S4 that this record asks for.
+
+So the yard now tries the first part of ADR 0003's [combat positioning](0003-squad-movement.md#combat-positioning), cover near the slot:
+- **Where:** once a fight is under way, each companion weighs the spots within about 1.5 m of their place in Close and Column, or 2.5 m in Spread. Their place is their formation slot, or the point an order keeps them to, so orders still win.
+- **What a spot scores for:** being hidden from the shooters, the most dangerous first; a firing position within a metre; being near the place; and a way there that the shooters cannot see. Keeping to the place is weighed too, so that in the open a companion follows as before.
+- **Commitment:** a companion keeps a choice for at least two seconds.
+- **Firing:** from a spot, a companion steps out to its firing position while a target is in sight from there, and back into cover while a shooter's wind-up aims at them. The telegraph counts for companions too.
+- **Left out:** the rest of S4, which is the personality weights, sight-aware routes and Regroup. The opening keeps its rules.
+
+The second session judges it, with the questions above and two more:
+- Do companions in cover look like a coordinated squad?
+- Does cover make the fights too safe?
+
 ## Options considered
 
 - **Venue:**
@@ -120,7 +135,7 @@ Scripted Simulator playtests come first. Then the maintainer plays it on the bas
 ## What this does not settle
 
 - **Not settled here:**
-  - companions seeking cover (S4);
+  - the rest of S4: personality weights, sight-aware routes and Regroup;
   - Reposition and Brace;
   - chargers that strike;
   - patrols, noticing and a perimeter;

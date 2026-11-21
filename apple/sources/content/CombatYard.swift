@@ -14,7 +14,8 @@ import simd
 /// The experiment's rules are the yard's own, and the bridge keeps the opening's: the shooters
 /// aim at anyone in clear sight within reach and are targets from their first wind-up, the
 /// companions fire by themselves once the fight is under way, everyone can take three hits and
-/// the third on anyone falls the party back to the entrance, and Miki can Disrupt.
+/// the third on anyone falls the party back to the entrance, and Miki can Disrupt. Since the
+/// first session the companions also take cover near their places in a fight.
 enum CombatYard {
   /// The entrance: where each member starts, and where the party falls back to.
   static let spawns: [PartyMember: SIMD2<Float>] = [
@@ -43,11 +44,12 @@ enum CombatYard {
     cues: [(0.4, .engage(rightShooter.id)), (1.1, .engage(leftShooter.id))],
     clearedLine: "The yard is clear. Restart to fight again.")
 
-  /// The experiment's rules. Each member fires by themselves while someone else leads: Miki
-  /// with her carbine, Laura with her light burst weapon and Tom with his close scatter weapon.
+  /// The experiment's rules. While someone else leads, each member fires by themselves, Miki
+  /// with her carbine, Laura with her light burst weapon and Tom with his close scatter weapon,
+  /// and takes cover near their place.
   static let combat = Level.Combat(
     companionWeapons: [.miki: .carbine, .laura: .lightBurst, .tom: .closeScatter],
-    fallsBack: true, disrupt: true)
+    fallsBack: true, disrupt: true, takesCover: true)
 
   static let level = Level(
     id: "combat-yard",

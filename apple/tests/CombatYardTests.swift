@@ -49,6 +49,8 @@ struct CombatYardTests {
     }
     #expect(simd_distance(yard.spawn(.laura), entrance + [-0.9, 0.9]) < 0.01)
     #expect(simd_distance(yard.spawn(.tom), entrance + [0.9, 0.9]) < 0.01)
+    // Companions take cover in the yard's fights, and not in the opening's.
+    #expect(yard.combat.takesCover && !BrooklynBridge.level.combat.takesCover)
   }
 
   @Test
@@ -278,6 +280,36 @@ struct CombatYardTests {
     #expect(bridge.session.leader == .tom)
   }
 
+  // MARK: - Cover
+
+  @Test
+  func aCompanionInCoverDucksWhileAimedAtAndStepsOutToFire() {
+    // Laura holds in the open beside the wall's east end; Miki and Tom hold behind the wall.
+    let hold: SIMD2<Float> = [-0.4, 0.6]
+    let world = GameWorld(
+      level: range(
+        spawns: [.miki: [-3.5, 2], .tom: [-4.5, 2.9], .laura: hold],
+        shooters: [Shooter(id: "a", at: [0, -8], hits: 6)], cover: true))
+    func isHidden(_ member: PartyMember) -> Bool {
+      !LineOfSight.isClear(
+        from: [0, -8], to: position(world, member), obstacles: world.level.obstacles)
+    }
+    #expect(!isHidden(.laura))
+    #expect(world.session.holdAll())
+    #expect(run(world, upTo: 1) { world.threat == "Shooter A is aiming at Laura." })
+    // She goes into cover near where she holds, and the shot meets the wall.
+    #expect(run(world, upTo: 2) { world.threat == nil })
+    #expect(isHidden(.laura) && world.session.hits(of: .laura) == 0)
+    #expect(simd_distance(position(world, .laura), hold) < CoverPlanner.reach(in: .close) + 0.3)
+    // While it recovers she steps out and fires, and ducks again at each wind-up. It never hits
+    // her, and her bursts alone put it down.
+    #expect(run(world, upTo: 15) { world.session.defeated.contains("a") })
+    #expect(world.companionShots[.laura, default: 0] >= 6)
+    #expect(world.session.hits(of: .laura) == 0 && world.session.hitsTaken == 0)
+    // The fight over, she goes back to where she holds.
+    #expect(world.companionTargets[.laura] == hold)
+  }
+
   // MARK: - Helpers
 
   /// One of a range's shooters, like the yard's, engaged `engageAt` seconds into the fight.
@@ -291,7 +323,10 @@ struct CombatYardTests {
   /// A small range with the combat yard's rules, for focused checks: open snow 30 m across, a
   /// wall from x = -6 to x = -1 across z = -1, and the given shooters, each named "Shooter" and
   /// its id in capitals. The party is the yard's, and the fight begins at once wherever it is.
-  private func range(spawns: [PartyMember: SIMD2<Float>], shooters: [Shooter]) -> Level {
+  /// Companions take cover only where a check asks, so the others see where orders put them.
+  private func range(
+    spawns: [PartyMember: SIMD2<Float>], shooters: [Shooter], cover: Bool = false
+  ) -> Level {
     let hostiles = shooters.map {
       Level.Hostile(
         id: $0.id, name: "Shooter \($0.id.uppercased())", hiddenAt: $0.at, standAt: $0.at,
@@ -302,6 +337,8 @@ struct CombatYardTests {
       beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -15], maximum: [15, 15])),
       retryAt: spawns[.miki], hostiles: hostiles,
       cues: shooters.map { (at: $0.engageAt, cue: Level.Cue.engage($0.id)) })
+    var rules = CombatYard.combat
+    rules.takesCover = cover
     return Level(
       id: "test-range",
       ground: Level.Box(name: "ground", position: [0, -0.15, 0], size: [30, 0.3, 30]),
@@ -310,7 +347,7 @@ struct CombatYardTests {
       party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
       cameraOffset: CombatYard.level.cameraOffset, fieldOfView: CombatYard.level.fieldOfView,
       opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.",
-      combat: CombatYard.combat)
+      combat: rules)
   }
 
   /// One press, as the controls deliver it through the world's own input rules and release

@@ -65,6 +65,20 @@ final class EncounterStage {
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
 
+  /// The current fight's standing shooters, as companions taking cover see them: where each
+  /// stands, how far it reaches, whom its wind-up aims at, and whether it is a target yet (ADR
+  /// 0003, phase S4).
+  var threats: [CoverPlanner.Threat] {
+    guard let encounter else { return [] }
+    return encounter.hostiles.compactMap { spec in
+      guard spec.attack == .shoot, let state = hostiles[spec.id], state.isVisible, !state.isDown
+      else { return nil }
+      return CoverPlanner.Threat(
+        position: state.position, range: spec.range, aimingAt: victims[spec.id],
+        isTarget: state.isTargetable)
+    }
+  }
+
   private let weapon = Weapon.carbine
   private let specs: [String: Level.Hostile]
   private let obstacles: [PartyMotion.Box]

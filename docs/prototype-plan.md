@@ -1,7 +1,7 @@
 # Lauder — first playable prototype
 
 **Updated:** 21 November 2026\
-**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. The combat design review settled a [first squad combat experiment](decisions/0005-squad-combat-experiment.md), which the maintainer assigned the same day, “Yes, build it”; it is built in a greybox combat yard and awaits the maintainer's playtest. The [later hardening](#later-hardening-after-the-loop-is-worth-keeping) needs its own assignment.\
+**Status:** The first playable is complete. The game opens on a greybox Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built, its formations included, with squad orders ([ADR 0003](decisions/0003-squad-movement.md)'s phase S3) on it. On the baseline iPhone it held 60 fps through the whole walk and passed its phone checkpoint on build 0.1.0 (11); Xbox hardware and walk cadence remain unchecked. On 21 November 2026 the maintainer judged the opening worth building on: “Yes, build on it”. The combat design review settled a [first squad combat experiment](decisions/0005-squad-combat-experiment.md), which the maintainer assigned the same day, “Yes, build it”, and it is built in a greybox combat yard. After its first session, “Everything worked as expected”, the maintainer chose cover next, “Yes, try cover next”: the yard's companions now take cover near their places, for the second session. The [later hardening](#later-hardening-after-the-loop-is-worth-keeping) needs its own assignment.\
 **Technical direction:** Swift + RealityKit, iOS 27, iPhone first.\
 **Architecture:** [Architecture and platform decision](architecture.md)
 
@@ -81,13 +81,13 @@ Then repeat full runs and restarts on the physical phone over roughly **15–20 
 
 ## Outside the first playable
 
-Free jumping and climbing, combat positioning ([ADR 0003](decisions/0003-squad-movement.md)'s phase S4), separate character inventories, skill trees, multiplayer, health and hunger systems, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what ADR 0004 brings into the opening: assisted aim, a placeholder hit rule and one ammunition count. Expand only in response to a concrete playtest need.
+Free jumping and climbing, combat positioning beyond the combat yard's cover near the slot ([ADR 0003](decisions/0003-squad-movement.md)'s phase S4), separate character inventories, skill trees, multiplayer, health and hunger systems, crafting, branching dialogue, voice acting, cinematics, levels beyond the bridge, finished character art, checkpoint saves, persistent Continue, cloud services and App Store submission. Combat is limited to what ADR 0004 brings into the opening: assisted aim, a placeholder hit rule and one ammunition count. Expand only in response to a concrete playtest need.
 
 ## Combat design review gate
 
 Combat stays occasional; exploration and salvage lead. The longer-term goal is a companion movement system in which the characters **behave like a coordinated squad of soldiers rather than just following the player**: squad formations cycled by one button, directional commands to position squad members, companions that keep formation, avoid obstacles and react to their surroundings, and coordinated use of weapons and abilities in encounters. Mobile controls should stay simple while offering meaningful tactical depth.
 
-The characters' [combat identities](story/story-bible.md#combat-identities), the [future squad behaviour](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) record the working design. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation, formations, orders and phases S1 to S4, of which S1 to S3 are built, and [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) settles the opening's fights.
+The characters' [combat identities](story/story-bible.md#combat-identities), the [future squad behaviour](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) record the working design. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation, formations, orders and phases S1 to S4, of which S1 to S3 are built and S4's cover near the slot is tried in the combat yard, and [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) settles the opening's fights.
 
 Before any formation or combat implementation beyond the opening, settle the open design choices with the maintainer and obtain an explicit assignment for a bounded greybox experiment. A reviewer recommendation or a clean review alone is not an implementation assignment.
 
@@ -97,4 +97,4 @@ On 21 November 2026 the maintainer settled the choices for a first experiment, w
 - a third hit on anyone falling the party back while enemies keep their damage;
 - Miki's Disrupt as the only signature.
 
-The maintainer assigned it on 21 November 2026: “Yes, build it”. It is built in a greybox combat yard that the pause menu's **Combat test** opens, and its playtests decide what comes next.
+The maintainer assigned it on 21 November 2026: “Yes, build it”. It is built in a greybox combat yard that the pause menu's **Combat test** opens, and its playtests decide what comes next. After the first session the maintainer reported “Everything worked as expected” and chose cover next, “Yes, try cover next”, so the yard's companions now take cover near their places, as ADR 0005 records [after the first session](decisions/0005-squad-combat-experiment.md#after-the-first-session).

@@ -121,18 +121,10 @@ struct NavigationGrid: Sendable {
     to point: SIMD2<Float>, within radius: Float, region required: Int32? = nil,
     where accept: (SIMD2<Float>) -> Bool = { _ in true }
   ) -> SIMD2<Float>? {
-    guard point.x.isFinite, point.y.isFinite else { return nil }
-    let reach = Int((radius / cellSize).rounded(.up))
-    let centre = cellCoordinates(of: point)
-    // A point far outside the grid has no cells within reach; check before forming ranges.
-    guard centre.row - reach <= rows - 1, centre.column - reach <= columns - 1,
-      centre.row + reach >= 0, centre.column + reach >= 0
-    else { return nil }
-    let rowRange = max(0, centre.row - reach)...min(rows - 1, centre.row + reach)
-    let columnRange = max(0, centre.column - reach)...min(columns - 1, centre.column + reach)
+    guard let cells = cells(around: point, within: radius) else { return nil }
     var best: (distance: Float, point: SIMD2<Float>)?
-    for row in rowRange {
-      for column in columnRange {
+    for row in cells.rows {
+      for column in cells.columns {
         let cell = row * columns + column
         guard walkable[cell], required == nil || region[cell] == required else { continue }
         let candidate = self.centre(of: cell)
@@ -143,6 +135,41 @@ struct NavigationGrid: Sendable {
       }
     }
     return best?.point
+  }
+
+  /// The centres of the roomy cells within `radius` of `point`, taking every `stride`-th row and
+  /// column counted from the grid's corner, so that nearby points share them: the spots where a
+  /// companion may take cover (ADR 0003, phase S4).
+  func roomySpots(within radius: Float, of point: SIMD2<Float>, stride: Int = 1) -> [SIMD2<Float>] {
+    guard stride > 0, let cells = cells(around: point, within: radius) else { return [] }
+    var spots: [SIMD2<Float>] = []
+    for row in cells.rows where row % stride == 0 {
+      for column in cells.columns where column % stride == 0 {
+        let cell = row * columns + column
+        guard walkable[cell], !tight[cell] else { continue }
+        let candidate = centre(of: cell)
+        if simd_distance(candidate, point) <= radius { spots.append(candidate) }
+      }
+    }
+    return spots
+  }
+
+  /// The rows and columns of the cells that can lie within `radius` of `point`, clipped to the
+  /// grid; nil when there are none.
+  private func cells(around point: SIMD2<Float>, within radius: Float)
+    -> (rows: ClosedRange<Int>, columns: ClosedRange<Int>)?
+  {
+    guard point.x.isFinite, point.y.isFinite else { return nil }
+    let reach = Int((radius / cellSize).rounded(.up))
+    let centre = cellCoordinates(of: point)
+    // A point far outside the grid has no cells within reach; check before forming ranges.
+    guard centre.row - reach <= rows - 1, centre.column - reach <= columns - 1,
+      centre.row + reach >= 0, centre.column + reach >= 0
+    else { return nil }
+    return (
+      max(0, centre.row - reach)...min(rows - 1, centre.row + reach),
+      max(0, centre.column - reach)...min(columns - 1, centre.column + reach)
+    )
   }
 
   /// Cell centres from near `start` to near `goal`, or nil when no connected route exists.
