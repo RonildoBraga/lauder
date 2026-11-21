@@ -162,6 +162,7 @@ struct GameView: View {
           formationTitle: formationAction,
           orderNames: orderNames,
           otherLevelTitle: world.otherLevel.name,
+          vibrationTitle: vibrationTitle,
           mode: world.session.mode)
       }
     }
@@ -182,7 +183,13 @@ struct GameView: View {
     case .resume: "Resume"
     case .restart: "Restart"
     case .otherLevel: world.otherLevel.name
+    case .vibration: vibrationTitle
     }
+  }
+
+  /// The pause menu's Vibration choice, as it now stands (ADR 0008).
+  private var vibrationTitle: String {
+    world.vibrationEnabled ? "Vibration: On" : "Vibration: Off"
   }
 
   /// Where to go: an arrow turned towards the story's current goal, its name and how far away

@@ -102,9 +102,11 @@ final class ShotEffects {
   }
 
   /// Shows a shot fired at `height`: a streak along its path, a flash at the muzzle, and what
-  /// it strikes: a flash on a body, or chips, a flash and a mark on a block.
-  func show(_ path: ShotPath, side: Side, height: Float) {
-    let from = SIMD3(path.start.x, height, path.start.y)
+  /// it strikes: a flash on a body, or chips, a flash and a mark on a block. A shot from a weapon
+  /// the figure shows starts at its `muzzle`; others start just ahead of the shooter.
+  func show(_ path: ShotPath, side: Side, height: Float, muzzle: SIMD2<Float>? = nil) {
+    let start = muzzle ?? path.start
+    let from = SIMD3(start.x, height, start.y)
     let to = SIMD3(path.end.x, height, path.end.y)
     let span = to - from
     let distance = simd_length(span)
@@ -117,7 +119,8 @@ final class ShotEffects {
       streaks[side] = list
       place(streak: list[index], pool.entities[index], side: side)
     }
-    flash(at: from + direction * 0.3, side: side, size: flashSize)
+    // The flash shows at the muzzle, or just ahead of a shooter that shows no weapon.
+    flash(at: muzzle == nil ? from + direction * 0.3 : from, side: side, size: flashSize)
     switch path.strike {
     case .body: flash(at: to, side: side, size: flashSize * 1.4)
     case .scenery: strike(at: to, from: direction, side: side)

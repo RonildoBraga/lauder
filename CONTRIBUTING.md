@@ -42,9 +42,9 @@ Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime
 ./scripts/check
 ```
 
-The script first checks that the required USDZ assets exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
+The script first checks that the required Git LFS assets, the USDZ files and the combat sounds, exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
 
-It then runs the Blender extension's tests, then the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
+It then runs the Blender extension's tests, confirms that the [combat sounds](#sounds) match their generator, then runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
 
 The script honours `DEVELOPER_DIR` for a side-by-side Xcode installation. `LAUDER_DESTINATION` can override the Xcode destination; `LAUDER_DEVELOPMENT_TEAM` supplies a signing team for a physical-device test. Configure your Apple account and signing locally in Xcode first; do not commit those values or device identifiers. The default simulator check does not need code signing.
 
@@ -188,8 +188,18 @@ Group each asset's editable source, deliberate delivery export and a short prove
 
 The supported path makes levels and models in Blender, exports each level's look as a USDZ that the game loads directly, and composes the rest in Swift. See the [engine decision](docs/decisions/0001-engine.md) and [ADR 0002](docs/decisions/0002-blender-source-of-truth.md).
 
+### Sounds
+
+The combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 310 KB in all, stored with Git LFS. After changing the script, run it from the repository root and commit the files it writes:
+
+```sh
+python3 apple/scripts/make-sounds.py
+```
+
+`./scripts/check` fails while the committed files differ from what the script makes. A recording can later replace a sound under the same name, with no change to the game's code: record its source, licence and attribution here, and change the script so that it no longer makes or checks that sound.
+
 ### Target membership
 
-`apple/sources/` and `apple/tests/` are Xcode folder-synchronised groups, so Swift files and the runtime USDZ resources join their targets automatically. The app target does not copy `apple/sources/app/Info.plist` as a resource, since the build uses it as the typed input to the bundle's plist. Review target membership when adding other non-runtime files beneath either folder, so authoring files are not copied into the app.
+`apple/sources/` and `apple/tests/` are Xcode folder-synchronised groups, so Swift files and the runtime USDZ and WAV resources join their targets automatically. The app target does not copy `apple/sources/app/Info.plist` as a resource, since the build uses it as the typed input to the bundle's plist. Review target membership when adding other non-runtime files beneath either folder, so authoring files are not copied into the app.
 
 Keep signing credentials, API keys, personal device identifiers, local account information, generated builds and caches out of the repository.
