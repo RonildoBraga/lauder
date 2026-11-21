@@ -5,7 +5,7 @@ import simd
 struct Weapon: Sendable {
   /// Which weapon it is, for how its shots sound and feel (ADR 0008). The hostiles' rifle has
   /// no timing of its own here: their wind-ups time its shots.
-  enum Kind: CaseIterable, Sendable {
+  enum Kind: Sendable {
     case carbine, lightBurst, closeScatter, rifle
   }
 
