@@ -142,6 +142,8 @@ struct GameView: View {
           if world.controls.needsNeutralInput {
             Text(releaseGuidance).font(.caption)
           }
+          // Which build this is, as TestFlight lists it, so a tester knows what they play.
+          Text("Lauder \(AppVersion.current)").font(.caption2).foregroundStyle(HUDStyle.muted)
         }
         .padding(28)
         .frostedPanel(cornerRadius: 18)
