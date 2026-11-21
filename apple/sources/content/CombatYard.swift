@@ -32,7 +32,7 @@ enum CombatYard {
   /// The shooter beyond the wall's west end, the further of the two.
   static let leftShooter = shooter(id: "left-shooter", name: "The left shooter", at: [-3, -8])
   /// The shooter beyond the wall's east end, the nearer of the two.
-  static let rightShooter = shooter(id: "right-shooter", name: "The right shooter", at: [4, -6.5])
+  static let rightShooter = shooter(id: "right-shooter", name: "The right shooter", at: [4, -5.5])
 
   /// The fight begins as the leader comes level with the wall, wherever they cross, and the two
   /// shooters open fire a moment apart, so that their wind-ups alternate. The yard has no story:

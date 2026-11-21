@@ -1128,7 +1128,8 @@ final class GameWorld {
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
-        camera: projection(aspect: PlaytestRunner.screenAspect))
+        camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
+        disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

@@ -21,6 +21,23 @@ struct GameSessionTests {
     }
   }
 
+  /// Previous cycles the other way (ADR 0005); with two in the party it leads as Next does.
+  @Test
+  func previousCyclesBackwardsAndMatchesNextWithTwo() {
+    let session = GameSession(level: TestYard.level)
+    for expected in [PartyMember.tom, .laura, .miki] {
+      session.cycleLeaderBackwards()
+      #expect(session.leader == expected)
+    }
+    session.togglePause()
+    session.cycleLeaderBackwards()
+    #expect(session.leader == .miki)
+    let bridge = GameSession(level: BrooklynBridge.level)
+    #expect(bridge.previousLeader == nil)
+    bridge.recruit(.tom)
+    #expect(bridge.previousLeader == .tom && bridge.nextLeader == .tom)
+  }
+
   @Test
   func pauseKeepsTheLeaderAndRejectsSwitching() {
     let session = GameSession(level: TestYard.level)

@@ -9,22 +9,25 @@
   struct PlaytestTests {
     @Test(arguments: PlaytestRunner.scenarioNames)
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
-      let world = GameWorld()
+      // The app's game, so that the pause menu's third choice can swap in another level's world.
+      let game = Game()
       var runner = try #require(PlaytestRunner(scenario: name))
       var frames = 0
       while !runner.isFinished {
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
+        let world = game.world
         let raw = runner.input(world.playtestSnapshot)
         // The same input rules, release gate and mode handling as the rendered run, without
         // hardware or a scene subscription.
         let mode = world.session.mode
         world.update(
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
+        let after = game.world
         runner.record(
           PlaytestRunner.Frame(
-            dt: dt, leader: world.session.leader, positions: world.playtestSnapshot.positions,
-            targets: world.companionTargets, warning: world.diagnostic,
+            dt: dt, leader: after.session.leader, positions: after.playtestSnapshot.positions,
+            targets: after.companionTargets, warning: after.diagnostic,
             simulationMilliseconds: 0))
         frames += 1
         try #require(frames < 60 * 600, "\(name) did not finish in ten minutes")

@@ -314,6 +314,12 @@ struct InputRulesTests {
     InputRules.Raw(arrowUp: true),
     InputRules.Raw(arrowLeft: true),
     InputRules.Raw(touchGround: true),
+    InputRules.Raw(controllerPrevious: true),
+    InputRules.Raw(keyboardPrevious: true),
+    InputRules.Raw(controllerSignature: true),
+    InputRules.Raw(keyboardSignature: true),
+    InputRules.Raw(touchSignature: true),
+    InputRules.Raw(touchOtherLevel: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()
@@ -525,6 +531,102 @@ struct InputRulesTests {
     #expect(sample(.init(touchOrder: order), state: &state) == .neutral)
     #expect(!state.needsNeutralInput, "an order alone is not a held control")
     #expect(sample(.init(), state: &state).command == nil)
+  }
+
+  // MARK: - Signature, Previous leader and the pause menu's third choice (ADR 0005)
+
+  @Test(arguments: [
+    InputRules.Raw(controllerSignature: true), InputRules.Raw(keyboardSignature: true),
+    InputRules.Raw(touchSignature: true),
+  ])
+  func eachSignaturePressCountsOnceWhileExploring(raw: InputRules.Raw) {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(raw, state: &state).signaturePressed)
+    #expect(!sample(raw, state: &state).signaturePressed, "a held button does not repeat")
+    #expect(!sample(.init(), state: &state).signaturePressed)
+    #expect(sample(raw, state: &state).signaturePressed)
+  }
+
+  @Test(arguments: [
+    InputRules.Raw(controllerPrevious: true), InputRules.Raw(keyboardPrevious: true),
+  ])
+  func eachPreviousPressCountsOnceWhileExploring(raw: InputRules.Raw) {
+    var state = InputRules.State(needsNeutralInput: false)
+    let pressed = sample(raw, state: &state)
+    #expect(pressed.previousPressed && !pressed.switchPressed)
+    #expect(!sample(raw, state: &state).previousPressed, "a held button does not repeat")
+    #expect(!sample(.init(), state: &state).previousPressed)
+    #expect(sample(raw, state: &state).previousPressed)
+  }
+
+  @Test(arguments: [
+    (InputRules.Raw(controllerSignature: true), GameSession.Mode.paused),
+    (InputRules.Raw(controllerSignature: true), .dialogue),
+    (InputRules.Raw(keyboardPrevious: true), .paused),
+    (InputRules.Raw(keyboardPrevious: true), .dialogue),
+  ])
+  func pausedAndTalkingConsumeSignatureAndPreviousPresses(
+    raw: InputRules.Raw, mode: GameSession.Mode
+  ) {
+    var state = InputRules.State(needsNeutralInput: false)
+    let consumed = sample(raw, mode: mode, state: &state)
+    #expect(!consumed.signaturePressed && !consumed.previousPressed)
+    // Still held when play resumes: it was consumed, not queued.
+    let held = sample(raw, state: &state)
+    #expect(!held.signaturePressed && !held.previousPressed)
+    #expect(sample(.init(), state: &state) == .neutral)
+    let fresh = sample(raw, state: &state)
+    #expect(fresh.signaturePressed || fresh.previousPressed)
+  }
+
+  @Test
+  func switchesAndCommandsComeBeforeTheSignatureAndTheSignatureBeforeTheAction() {
+    var state = InputRules.State(needsNeutralInput: false)
+    // Next wins over Previous in the same sample.
+    let both = sample(.init(controllerSwitch: true, controllerPrevious: true), state: &state)
+    #expect(both.switchPressed && !both.previousPressed)
+    _ = sample(.init(), state: &state)
+    // A switch discards a signature and an action pressed with it, until fresh presses.
+    let switched = sample(
+      .init(controllerAction: true, controllerPrevious: true, controllerSignature: true),
+      state: &state)
+    #expect(switched.previousPressed && !switched.signaturePressed && !switched.actionPressed)
+    #expect(!sample(.init(controllerSignature: true), state: &state).signaturePressed)
+    _ = sample(.init(), state: &state)
+    // So do a formation press and an order.
+    let formed = sample(.init(controllerFormation: true, controllerSignature: true), state: &state)
+    #expect(formed.formationPressed && !formed.signaturePressed)
+    _ = sample(.init(), state: &state)
+    let ordered = sample(.init(controllerSignature: true, dpadUp: true), state: &state)
+    #expect(ordered.command == .bothGo && !ordered.signaturePressed)
+    _ = sample(.init(), state: &state)
+    // The signature discards an action pressed with it.
+    let signed = sample(.init(controllerAction: true, controllerSignature: true), state: &state)
+    #expect(signed.signaturePressed && !signed.actionPressed)
+  }
+
+  @Test
+  func signatureAndPreviousAreInputFromTheirOwnSources() {
+    for raw in [InputRules.Raw(keyboardPrevious: true), .init(keyboardSignature: true)] {
+      #expect(raw.hasKeyboardInput && !raw.hasControllerInput)
+    }
+    for raw in [InputRules.Raw(controllerPrevious: true), .init(controllerSignature: true)] {
+      #expect(raw.hasControllerInput && !raw.hasKeyboardInput)
+    }
+    #expect(!InputRules.Raw(touchSignature: true).hasControllerInput)
+  }
+
+  @Test
+  func theTouchButtonForTheThirdChoiceActsOnlyInThePauseMenu() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let choice = InputRules.Raw(touchOtherLevel: true)
+    #expect(sample(choice, state: &state) == .neutral)
+    #expect(sample(.init(), state: &state) == .neutral)
+    #expect(sample(choice, mode: .dialogue, state: &state) == .neutral)
+    #expect(sample(.init(), mode: .paused, state: &state) == .neutral)
+    let chosen = sample(choice, mode: .paused, state: &state)
+    #expect(chosen.otherLevelPressed && !chosen.actionPressed && !chosen.restartPressed)
+    #expect(!sample(choice, mode: .paused, state: &state).otherLevelPressed)
   }
 
   private func sample(

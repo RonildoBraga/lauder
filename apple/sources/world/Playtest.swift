@@ -58,6 +58,21 @@
       case awaitConversation(seconds: Float)
       /// The level in play, by its id, such as "combat-yard" after the pause menu's third choice.
       case expectLevel(String)
+      /// Press Square for one frame: the leader's signature, such as Miki's Disrupt.
+      case signature
+      /// Wait until the HUD says Miki can Disrupt; fails after this many seconds.
+      case awaitDisrupt(seconds: Float)
+      /// How many wind-ups Disrupt has cancelled in this run.
+      case expectDisrupts(Int)
+      /// A member has fired by themselves as a companion in this run.
+      case expectFired(PartyMember)
+      /// Wait until the party has fallen back this many times in this run; fails after this
+      /// many seconds.
+      case awaitFallBacks(Int, seconds: Float)
+      /// How many times the party has fallen back in this run.
+      case expectFallBacks(Int)
+      /// Hold Fire until this many hostiles are down in this run; fails after this many seconds.
+      case fireUntilDefeated(Int, seconds: Float)
     }
 
     /// What the runner can see of the game each frame.
@@ -78,6 +93,11 @@
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
+      /// Whether the HUD says Miki can Disrupt.
+      let canDisrupt: Bool
+      let disrupts: Int
+      let companionShots: [PartyMember: Int]
+      let fallBacks: Int
     }
 
     struct Frame {
@@ -351,6 +371,55 @@
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
         case .expectLevel(let id):
           expect(snapshot.level.id == id, "the level was \(snapshot.level.id) instead of \(id)")
+        case .signature:
+          return press(InputRules.Raw(controllerSignature: true))
+        case .awaitDisrupt(let seconds):
+          if snapshot.canDisrupt {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("Miki could not Disrupt within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .expectDisrupts(let count):
+          expect(
+            snapshot.disrupts == count,
+            "Disrupt had cancelled \(snapshot.disrupts) wind-up(s) instead of \(count)")
+        case .expectFired(let member):
+          expect(
+            snapshot.companionShots[member, default: 0] > 0,
+            "\(member.displayName) had not fired by themselves")
+        case .awaitFallBacks(let count, let seconds):
+          if snapshot.fallBacks >= count {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append(
+              "the party had not fallen back \(count) time(s) within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .expectFallBacks(let count):
+          expect(
+            snapshot.fallBacks == count,
+            "the party had fallen back \(snapshot.fallBacks) time(s) instead of \(count)")
+        case .fireUntilDefeated(let count, let seconds):
+          if snapshot.defeated >= count {
+            advance()
+            return InputRules.Raw()
+          }
+          if stepTime > seconds {
+            failures.append(
+              "\(snapshot.defeated) hostile(s) were down after \(Int(seconds)) s of fire")
+            advance()
+            return InputRules.Raw()
+          }
+          return InputRules.Raw(controllerFire: true)
         }
       }
       finish()
@@ -635,11 +704,40 @@
         .mark("Manhattan, together"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
+    /// The pause menu's third choice: Pause, down twice, confirm.
+    private static let otherLevel: [Step] = [
+      .pause, .wait(seconds: 0.5), .menu(1), .wait(seconds: 0.3), .menu(1), .wait(seconds: 0.3),
+      .mark("third choice"), .wait(seconds: 0.6), .act, .wait(seconds: 1),
+    ]
+
+    /// The combat yard (ADR 0005), entered from the bridge through the pause menu's third
+    /// choice. The companions hold behind the wall while Miki steps out past its east end alone,
+    /// where both shooters can see her, and their third hit falls the party back to the
+    /// entrance. Then all three go round together: Miki disrupts a wind-up, the companions fire
+    /// by themselves, and Miki's carbine and theirs clear the yard. Restart begins the yard
+    /// again, and the third choice returns to the bridge.
+    private static let combatYard: [Step] =
+      [.mark("the bridge")] + otherLevel + [
+        .expectLevel("combat-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
+        .walk([0, 2.5]), .wait(seconds: 1), .order(.hold), .expectOrder(.tom, "holding"),
+        .walk([6.5, 2.5]), .walk([6.5, -1.5]), .expectBeat(.stranger),
+        .mark("alone beyond the wall"), .awaitFallBacks(1, seconds: 20), .mark("falling back"),
+        .wait(seconds: 1.2), .expectHits(0), .expectOrder(.tom, "following"),
+        .expectOrder(.laura, "following"), .expectNear(.miki, [0, 6], within: 0.3),
+        .expectDefeated(0), .mark("fell back"), .walk([6.5, 2.5]), .walk([6.5, -1.5]),
+        .awaitDisrupt(seconds: 6), .signature, .expectDisrupts(1), .mark("Miki disrupts"),
+        .wait(seconds: 1.5), .mark("the companions fire"), .fireUntilDefeated(2, seconds: 30),
+        .expectFired(.laura), .expectFired(.tom), .expectFallBacks(1),
+        .mark("the yard is clear"), .wait(seconds: 1),
+      ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
+        .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
+      ]
+
     /// Every scenario, by the name `apple/scripts/playtest` gives it.
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-      ("orders", orders),
+      ("orders", orders), ("combat-yard", combatYard),
     ]
 
     static func steps(for scenario: String) -> [Step]? {
