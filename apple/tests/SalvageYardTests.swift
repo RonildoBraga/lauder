@@ -50,14 +50,14 @@ struct SalvageYardTests {
 
   @Test
   func onlyLauraOrTomOpensTheGateAndOthersHearWhoCan() {
-    let progress = SalvageProgress()
-    #expect(progress.action(for: .laura, at: .latch, in: task) == .reachLatch)
-    #expect(progress.action(for: .tom, at: .panel, in: task) == .shiftPanel)
+    let progress = SalvageProgress.authored(for: task)
+    #expect(progress.action(for: .laura, at: .latch) == .reachLatch)
+    #expect(progress.action(for: .tom, at: .panel) == .shiftPanel)
     for (member, place) in [
       (PartyMember.miki, SalvageProgress.Place.latch), (.miki, .panel), (.tom, .latch),
       (.laura, .panel),
     ] {
-      #expect(progress.action(for: member, at: place, in: task) == nil)
+      #expect(progress.action(for: member, at: place) == nil)
     }
     #expect(progress.hint(at: .latch) == "Laura could reach the latch.")
     #expect(progress.hint(at: .panel) == "Tom could shift the panel.")
@@ -83,43 +83,43 @@ struct SalvageYardTests {
 
   @Test
   func mikiTellsTheCabinetsApartWhileOthersSearchUnseen() {
-    var progress = SalvageProgress()
+    var progress = SalvageProgress.authored(for: task)
     // Miki inspects each cabinet, and takes only the right regulator.
     #expect(
-      progress.perform(.inspect("cabinet-west"), in: task)
+      progress.perform(.inspect("cabinet-west"))
         == "A regulator of a different model. It won't fit.")
-    #expect(progress.action(for: .miki, at: .cabinet("cabinet-west"), in: task) == nil)
+    #expect(progress.action(for: .miki, at: .cabinet("cabinet-west")) == nil)
     #expect(
-      progress.perform(.inspect("cabinet-middle"), in: task)
+      progress.perform(.inspect("cabinet-middle"))
         == "Live: it still feeds the next shelter. Leave it connected.")
-    #expect(progress.action(for: .miki, at: .cabinet("cabinet-middle"), in: task) == nil)
+    #expect(progress.action(for: .miki, at: .cabinet("cabinet-middle")) == nil)
     #expect(
-      progress.perform(.inspect("cabinet-east"), in: task)
+      progress.perform(.inspect("cabinet-east"))
         == "A compatible regulator, disconnected. Safe to take.")
     #expect(
-      progress.action(for: .miki, at: .cabinet("cabinet-east"), in: task) == .take("cabinet-east"))
-    #expect(progress.perform(.take("cabinet-east"), in: task) == "Miki takes the regulator.")
+      progress.action(for: .miki, at: .cabinet("cabinet-east")) == .take("cabinet-east"))
+    #expect(progress.perform(.take("cabinet-east")) == "Miki takes the regulator.")
     #expect(progress.regulators == [.compatible])
-    #expect(progress.action(for: .tom, at: .cabinet("cabinet-east"), in: task) == nil)
+    #expect(progress.action(for: .tom, at: .cabinet("cabinet-east")) == nil)
     // Anyone else searches without knowing: Tom takes the wrong model, and the live cabinet stays
     // shut, after which he is offered nothing there.
-    var unseen = SalvageProgress()
+    var unseen = SalvageProgress.authored(for: task)
     #expect(
-      unseen.action(for: .tom, at: .cabinet("cabinet-west"), in: task) == .search("cabinet-west"))
-    #expect(unseen.perform(.search("cabinet-west"), in: task) == "Found a regulator.")
+      unseen.action(for: .tom, at: .cabinet("cabinet-west")) == .search("cabinet-west"))
+    #expect(unseen.perform(.search("cabinet-west")) == "Found a regulator.")
     #expect(
-      unseen.perform(.search("cabinet-middle"), in: task)
+      unseen.perform(.search("cabinet-middle"))
         == "Live: it still feeds the next shelter. Leave it connected.")
-    #expect(unseen.action(for: .tom, at: .cabinet("cabinet-middle"), in: task) == nil)
+    #expect(unseen.action(for: .tom, at: .cabinet("cabinet-middle")) == nil)
     #expect(unseen.regulators == [.otherModel])
     // The wrong model does not fit, and stays in the bag; the right one finishes the repair.
-    #expect(unseen.action(for: .laura, at: .transmitter, in: task) == .fit)
-    #expect(unseen.perform(.fit, in: task) == "This regulator is a different model. It won't fit.")
+    #expect(unseen.action(for: .laura, at: .transmitter) == .fit)
+    #expect(unseen.perform(.fit) == "This regulator is a different model. It won't fit.")
     #expect(!unseen.repaired && unseen.regulators == [.otherModel])
-    #expect(unseen.perform(.search("cabinet-east"), in: task) == "Found a regulator.")
-    #expect(unseen.perform(.fit, in: task) == "The regulator fits, and the transmitter answers.")
+    #expect(unseen.perform(.search("cabinet-east")) == "Found a regulator.")
+    #expect(unseen.perform(.fit) == "The regulator fits, and the transmitter answers.")
     #expect(unseen.repaired && unseen.regulators == [.otherModel])
-    #expect(unseen.action(for: .miki, at: .transmitter, in: task) == nil)
+    #expect(unseen.action(for: .miki, at: .transmitter) == nil)
   }
 
   @Test
@@ -132,7 +132,11 @@ struct SalvageYardTests {
     world.performAction()
     #expect(world.session.salvage.gateOpen)
     lead(.miki, in: world)
-    for point: SIMD2<Float> in [[0, -2], [0, -6], [3.5, -9.9]] { walk(world, to: point) }
+    // This run dealt the right regulator to one of the three cabinets.
+    let right = try #require(
+      task.cabinets.first { world.session.salvage.contents[$0.id] == .compatible })
+    let front = (right.approach.minimum + right.approach.maximum) / 2
+    for point in [[0, -2], [0, -6], front] as [SIMD2<Float>] { walk(world, to: point) }
     #expect(world.actionName == "Inspect")
     world.performAction()
     #expect(world.actionName == "Take the regulator")
@@ -148,11 +152,31 @@ struct SalvageYardTests {
     #expect(transmitter.model?.materials.first is UnlitMaterial)
     // Restart shuts the gate again and empties everything.
     world.restart()
-    #expect(world.session.salvage == SalvageProgress() && world.objective == "Fix the transmitter.")
+    let fresh = world.session.salvage
+    #expect(!fresh.gateOpen && !fresh.repaired && fresh.regulators.isEmpty && fresh.known.isEmpty)
+    #expect(world.objective == "Fix the transmitter.")
     #expect(world.root.findEntity(named: "gate")?.isEnabled == true)
     #expect(!(transmitter.model?.materials.first is UnlitMaterial))
     walk(world, to: [0, -6])
     #expect(position(world, .miki).y > -3.8)
+  }
+
+  @Test
+  func eachRunDealsTheCabinetsAfresh() {
+    // Every run deals the same three contents, one to each cabinet, and over many runs the right
+    // regulator turns up in more than one place, so only an inspection tells.
+    let world = GameWorld(level: SalvageYard.level)
+    var places: Set<String> = []
+    for _ in 0..<30 {
+      let contents = world.session.salvage.contents
+      #expect(Set(contents.keys) == Set(task.cabinets.map(\.id)))
+      #expect(contents.values.filter { $0 == .compatible }.count == 1)
+      #expect(contents.values.filter { $0 == .otherModel }.count == 1)
+      #expect(contents.values.filter { $0 == .live }.count == 1)
+      places.formUnion(contents.filter { $0.value == .compatible }.keys)
+      world.restart()
+    }
+    #expect(places.count > 1)
   }
 
   // MARK: - Reaching it

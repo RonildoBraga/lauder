@@ -1,5 +1,6 @@
 /// What the party has done in a salvage task (ADR 0006), and what whoever leads can do next.
-/// The session keeps it, and Restart starts it afresh.
+/// The session keeps it, and each run, Restart included, deals the cabinets' contents afresh, so
+/// that only an inspection tells them apart.
 ///
 /// No step needs one particular member, but each makes some step better:
 /// - Laura reaches the gate's latch, or Tom shifts its loose panel, and either opens it for
@@ -36,6 +37,8 @@ struct SalvageProgress: Equatable, Sendable {
     }
   }
 
+  /// What each cabinet holds in this run.
+  private(set) var contents: [String: Level.Salvage.Contents]
   private(set) var gateOpen = false
   /// Cabinets whose contents the party knows: inspected by Miki, or found live.
   private(set) var known: Set<String> = []
@@ -45,15 +48,36 @@ struct SalvageProgress: Equatable, Sendable {
   private(set) var regulators: [Level.Salvage.Contents] = []
   private(set) var repaired = false
 
+  /// A run's progress with these contents in its cabinets, by id; none for a level without a
+  /// salvage task.
+  init(contents: [String: Level.Salvage.Contents] = [:]) {
+    self.contents = contents
+  }
+
+  /// A new run's progress, with the task's contents dealt to its cabinets in a random order.
+  static func dealt(
+    for task: Level.Salvage, using generator: inout some RandomNumberGenerator
+  ) -> SalvageProgress {
+    let shuffled = task.cabinets.map(\.contents).shuffled(using: &generator)
+    return SalvageProgress(
+      contents: Dictionary(uniqueKeysWithValues: zip(task.cabinets.map(\.id), shuffled)))
+  }
+
+  /// A run's progress with the contents where the task authors them.
+  static func authored(for task: Level.Salvage) -> SalvageProgress {
+    SalvageProgress(
+      contents: Dictionary(uniqueKeysWithValues: task.cabinets.map { ($0.id, $0.contents) }))
+  }
+
   /// The action a member leading at `place` can take now; nil when there is none.
-  func action(for member: PartyMember, at place: Place, in task: Level.Salvage) -> Action? {
+  func action(for member: PartyMember, at place: Place) -> Action? {
     switch place {
     case .latch:
       return member == .laura && !gateOpen ? .reachLatch : nil
     case .panel:
       return member == .tom && !gateOpen ? .shiftPanel : nil
     case .cabinet(let id):
-      guard let contents = task.contents(of: id), !emptied.contains(id) else { return nil }
+      guard let contents = contents[id], !emptied.contains(id) else { return nil }
       if member == .miki {
         guard known.contains(id) else { return .inspect(id) }
         return contents == .compatible ? .take(id) : nil
@@ -75,7 +99,7 @@ struct SalvageProgress: Equatable, Sendable {
   }
 
   /// Take the action, and say what happened, for the HUD.
-  mutating func perform(_ action: Action, in task: Level.Salvage) -> String {
+  mutating func perform(_ action: Action) -> String {
     switch action {
     case .reachLatch:
       gateOpen = true
@@ -85,7 +109,7 @@ struct SalvageProgress: Equatable, Sendable {
       return "Tom shifts the loose panel, and the gate opens."
     case .inspect(let id):
       known.insert(id)
-      switch task.contents(of: id) {
+      switch contents[id] {
       case .compatible: return "A compatible regulator, disconnected. Safe to take."
       case .otherModel: return "A regulator of a different model. It won't fit."
       case .live, nil: return Self.liveLine
@@ -95,7 +119,7 @@ struct SalvageProgress: Equatable, Sendable {
       regulators.append(.compatible)
       return "Miki takes the regulator."
     case .search(let id):
-      guard let contents = task.contents(of: id), contents != .live else {
+      guard let contents = contents[id], contents != .live else {
         known.insert(id)
         return Self.liveLine
       }
@@ -113,11 +137,4 @@ struct SalvageProgress: Equatable, Sendable {
   }
 
   private static let liveLine = "Live: it still feeds the next shelter. Leave it connected."
-}
-
-extension Level.Salvage {
-  /// What the cabinet with this id holds; nil when there is no such cabinet.
-  func contents(of id: String) -> Contents? {
-    cabinets.first { $0.id == id }?.contents
-  }
 }

@@ -149,6 +149,8 @@ final class GameSession {
   private(set) var orders: [PartyMember: Order] = [:]
   /// What the party has done in the level's salvage task (ADR 0006).
   private(set) var salvage = SalvageProgress()
+  /// The level's salvage task, whose cabinets each run deals afresh.
+  private let salvageTask: Level.Salvage?
   /// Whether the companions are regrouping: in a fight they leave cover and firing positions,
   /// hold their fire and come back to the formation, until they are back in it or the fight
   /// ends (ADR 0003, phase S4).
@@ -161,6 +163,8 @@ final class GameSession {
     startingParty = level.party
     startingAmmo = level.startingAmmo
     regroupsInFights = level.combat.combatPositioning
+    salvageTask = level.salvage
+    salvage = Self.newSalvage(for: level.salvage)
     ammo = level.startingAmmo
     beatStarted = Dictionary(
       level.encounters.compactMap { encounter in
@@ -467,10 +471,18 @@ final class GameSession {
   /// Whoever leads acts at a place in the level's salvage task (ADR 0006), and the line for
   /// the HUD comes back; nil when they can do nothing there. The world has checked where they
   /// stand; the session checks the mode and who leads, afresh.
-  func performSalvage(at place: SalvageProgress.Place, in task: Level.Salvage) -> String? {
-    guard mode == .exploring, let action = salvage.action(for: leader, at: place, in: task)
-    else { return nil }
-    return salvage.perform(action, in: task)
+  func performSalvage(at place: SalvageProgress.Place) -> String? {
+    guard mode == .exploring, let action = salvage.action(for: leader, at: place) else {
+      return nil
+    }
+    return salvage.perform(action)
+  }
+
+  /// A new run's salvage progress, with the task's cabinets dealt afresh.
+  private static func newSalvage(for task: Level.Salvage?) -> SalvageProgress {
+    guard let task else { return SalvageProgress() }
+    var generator = SystemRandomNumberGenerator()
+    return .dealt(for: task, using: &generator)
   }
 
   /// Whether the action is offered at its approach now.
@@ -542,7 +554,7 @@ final class GameSession {
     formation = .close
     orders = [:]
     regrouping = false
-    salvage = SalvageProgress()
+    salvage = Self.newSalvage(for: salvageTask)
     firedTriggers = []
     beat = .alone
     hits = [:]

@@ -170,7 +170,7 @@ The session counts each member's hits, and the stage keeps whom each hostile aim
 ### Salvage
 
 A level can hold a salvage task, as the salvage yard of [ADR 0006](decisions/0006-salvage-and-exploration-experiment.md) does: a gate, cabinets, a transmitter and the approach area of each. The session keeps what the party has done in `SalvageProgress`:
-- **The progress:** whether the gate is open, which cabinets the party knows, which are emptied, the regulators in the shared bag, and whether the repair is done.
+- **The progress:** what each cabinet holds in this run, whether the gate is open, which cabinets the party knows, which are emptied, the regulators in the shared bag, and whether the repair is done. Each run, Restart included, deals the cabinets' contents afresh, in a random order.
 - **The rules:** what whoever leads can do at each place, decided afresh on each press.
   - Laura reaches the latch, or Tom shifts the panel.
   - Miki inspects, and then takes only the right regulator.

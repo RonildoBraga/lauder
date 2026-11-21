@@ -461,7 +461,7 @@ final class GameWorld {
     // (ADR 0006).
     if let task = level.salvage, let place = Self.place(at: position, in: task) {
       observation =
-        session.performSalvage(at: place, in: task) ?? session.salvage.hint(at: place)
+        session.performSalvage(at: place) ?? session.salvage.hint(at: place)
         ?? level.lookAround
       showSalvage()
       updatePromptAndCompass()
@@ -1224,7 +1224,7 @@ final class GameWorld {
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
         formation: session.formation, orders: session.orders, squadState: session.squadState,
-        line: gameLine,
+        line: gameLine, salvageContents: session.salvage.contents,
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks)
@@ -1298,7 +1298,7 @@ final class GameWorld {
   private func updatePrompt(at position: SIMD2<Float>) {
     let salvage = level.salvage.flatMap { task in
       Self.place(at: position, in: task).flatMap {
-        session.salvage.action(for: session.leader, at: $0, in: task)
+        session.salvage.action(for: session.leader, at: $0)
       }
     }
     let name =

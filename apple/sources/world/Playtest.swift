@@ -79,6 +79,9 @@
       case fireUntilDefeated(Int, seconds: Float)
       /// The HUD's latest line, exactly, such as what an action just did.
       case expectLine(String)
+      /// Steer the leader to the cabinet that holds these contents in this run, which the run
+      /// dealt in a random order (ADR 0006), as `walk` steers to a point.
+      case walkToCabinet(Level.Salvage.Contents)
     }
 
     /// What the runner can see of the game each frame.
@@ -100,6 +103,8 @@
       let squadState: String
       /// The HUD's latest line.
       let line: String
+      /// What each salvage cabinet holds in this run, by id.
+      let salvageContents: [String: Level.Salvage.Contents]
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
@@ -213,19 +218,19 @@
       while index < steps.count {
         switch steps[index] {
         case .walk(let target):
-          let offset = target - leaderPosition
-          if simd_length(offset) < 0.2 || snapshot.mode == .dialogue {
+          if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
+        case .walkToCabinet(let contents):
+          guard
+            let cabinet = snapshot.level.salvage?.cabinets.first(where: {
+              snapshot.salvageContents[$0.id] == contents
+            })
+          else {
+            failures.append("no cabinet holds \(contents) in this run")
             advance()
             continue
           }
-          if stepTime > Self.walkTimeout {
-            failures.append(
-              "did not reach \(Self.describe(target)) within \(Int(Self.walkTimeout)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw(
-            stick: Movement.stick(towards: offset, cameraOffset: snapshot.level.cameraOffset))
+          let target = (cabinet.approach.minimum + cabinet.approach.maximum) / 2
+          if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -464,6 +469,25 @@
 
     /// Records a failure, saying what was found and when, unless the expectation holds, then
     /// ends the step.
+    /// Steer the leader towards `target`: this frame's input, or nil once they are there, a
+    /// conversation has begun or the walk has timed out, when the step is over.
+    private mutating func steer(
+      towards target: SIMD2<Float>, from leader: SIMD2<Float>, in snapshot: Snapshot
+    ) -> InputRules.Raw? {
+      let offset = target - leader
+      if simd_length(offset) < 0.2 || snapshot.mode == .dialogue {
+        advance()
+        return nil
+      }
+      if stepTime > Self.walkTimeout {
+        failures.append("did not reach \(Self.describe(target)) within \(Int(Self.walkTimeout)) s")
+        advance()
+        return nil
+      }
+      return InputRules.Raw(
+        stick: Movement.stick(towards: offset, cameraOffset: snapshot.level.cameraOffset))
+    }
+
     private mutating func expect(_ holds: Bool, _ found: String) {
       if !holds { failures.append("\(found) at \(Self.seconds(elapsed))") }
       advance()
@@ -767,9 +791,9 @@
 
     /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
     /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
-    /// loose panel and it opens. Miki inspects the three cabinets, the wrong model, the live one
-    /// and the right one, takes the right regulator and fits it at the transmitter. Restart
-    /// begins the yard again, and the third choice returns to the bridge.
+    /// loose panel and it opens. Miki inspects the three cabinets, wherever this run dealt the
+    /// wrong model, the live one and the right one, takes the right regulator and fits it at the
+    /// transmitter. Restart begins the yard again, and the third choice returns to the bridge.
     private static let salvageYard: [Step] =
       [.mark("the bridge")] + otherLevel + [.expectLevel("combat-yard")] + otherLevel + [
         .expectLevel("salvage-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
@@ -777,12 +801,12 @@
         .mark("Miki at the gate"), .switchLeader, .wait(seconds: 0.5), .walk([1.7, -3.2]), .act,
         .expectLine("Tom shifts the loose panel, and the gate opens."), .mark("the gate opens"),
         .switchLeader, .switchLeader, .wait(seconds: 0.5), .walk([0, -2]), .walk([0, -6]),
-        .walk([-3.5, -9.9]), .act, .expectLine("A regulator of a different model. It won't fit."),
-        .walk([0, -9.9]), .act,
-        .expectLine("Live: it still feeds the next shelter. Leave it connected."),
-        .walk([3.5, -9.9]), .act,
-        .expectLine("A compatible regulator, disconnected. Safe to take."),
-        .act, .expectLine("Miki takes the regulator."), .mark("the right regulator"),
+        .walkToCabinet(.otherModel), .act,
+        .expectLine("A regulator of a different model. It won't fit."), .walkToCabinet(.live),
+        .act, .expectLine("Live: it still feeds the next shelter. Leave it connected."),
+        .walkToCabinet(.compatible), .act,
+        .expectLine("A compatible regulator, disconnected. Safe to take."), .act,
+        .expectLine("Miki takes the regulator."), .mark("the right regulator"),
         .walk([0, -6]), .walk([0, -2]), .walk([-2, 5]), .act,
         .expectLine("The regulator fits, and the transmitter answers."),
         .mark("the transmitter works"), .wait(seconds: 1),

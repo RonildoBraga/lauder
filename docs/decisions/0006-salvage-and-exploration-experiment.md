@@ -1,6 +1,6 @@
 # ADR 0006 — A first salvage and exploration experiment
 
-**Status:** Accepted; its first session is done\
+**Status:** Accepted; amended after the first session\
 **Date:** 21 November 2026
 
 ## Context
@@ -95,6 +95,12 @@ Scripted Simulator playtests come first. Then the maintainer plays it on the bas
 ## After the first session
 
 On build 0.1.0 (16), asked how the salvage yard played, the maintainer answered **“Yes it went well”**. It was not instrumented, so the yard's frame rate on the phone has not been measured. Two of the three sessions remain.
+
+Asked what the second session should try, the maintainer chose **“Shuffle the cabinets (Recommended)”**.
+- **What changes:** each run, Restart included, deals the right regulator, the wrong model and the live equipment to the three cabinets in a random order. Miki's inspection matters every time, instead of being memorised after one run.
+- **Playtests:** scripted playtests find each cabinet by what it holds in their run.
+
+The second session judges it with the questions above.
 
 ## Options considered
 
