@@ -5,9 +5,10 @@
 /// No step needs one particular member, but each makes some step better:
 /// - Laura reaches the gate's latch, or Tom shifts its loose panel, and either opens it for
 ///   everyone.
-/// - Miki inspects the cabinets and takes the right regulator.
+/// - Miki inspects the cabinets, and the right regulator is then anyone's to take.
 /// - Anyone else can search a cabinet and take its regulator without knowing which it is.
-/// - Nobody opens the live cabinet, and anyone can fit a regulator at the transmitter.
+/// - Nobody opens the live cabinet or takes a regulator the party knows will not fit.
+/// - Anyone fits a regulator that might fit at the transmitter.
 struct SalvageProgress: Equatable, Sendable {
   /// Where in the task the leader stands.
   enum Place: Equatable, Sendable {
@@ -24,17 +25,26 @@ struct SalvageProgress: Equatable, Sendable {
     case search(String)
     case fit
 
-    /// What the action button reads.
+    /// What the action button reads, short enough to fit the touch button.
     var name: String {
       switch self {
       case .reachLatch: "Reach the latch"
       case .shiftPanel: "Shift the panel"
       case .inspect: "Inspect"
-      case .take: "Take the regulator"
+      case .take: "Take regulator"
       case .search: "Search"
-      case .fit: "Fit the regulator"
+      case .fit: "Fit regulator"
       }
     }
+  }
+
+  /// A regulator in the shared bag: what it truly is, and whether the party knows it.
+  struct Regulator: Equatable, Sendable {
+    let model: Level.Salvage.Contents
+    var known: Bool
+
+    /// Whether it might fit: unless the party knows it is another model.
+    var mightFit: Bool { !known || model == .compatible }
   }
 
   /// What each cabinet holds in this run.
@@ -44,8 +54,8 @@ struct SalvageProgress: Equatable, Sendable {
   private(set) var known: Set<String> = []
   /// Cabinets whose regulator is in the bag.
   private(set) var emptied: Set<String> = []
-  /// The regulators in the shared bag, as they truly are, whether or not anyone knows.
-  private(set) var regulators: [Level.Salvage.Contents] = []
+  /// The regulators in the shared bag, as they truly are, and whether the party knows it.
+  private(set) var regulators: [Regulator] = []
   private(set) var repaired = false
 
   /// A run's progress with these contents in its cabinets, by id; none for a level without a
@@ -78,35 +88,53 @@ struct SalvageProgress: Equatable, Sendable {
       return member == .tom && !gateOpen ? .shiftPanel : nil
     case .cabinet(let id):
       guard let contents = contents[id], !emptied.contains(id) else { return nil }
-      if member == .miki {
-        guard known.contains(id) else { return .inspect(id) }
-        return contents == .compatible ? .take(id) : nil
-      }
-      return known.contains(id) && contents == .live ? nil : .search(id)
+      guard known.contains(id) else { return member == .miki ? .inspect(id) : .search(id) }
+      // Once the party knows a cabinet, anyone takes the right regulator from it, and nobody
+      // takes anything else.
+      return contents == .compatible ? .take(id) : nil
     case .transmitter:
-      return !repaired && !regulators.isEmpty ? .fit : nil
+      return !repaired && regulators.contains(where: \.mightFit) ? .fit : nil
     }
   }
 
-  /// What a member who can do nothing at the gate hears: who could open it.
+  /// What a member who can do nothing at a place hears: at the gate, who could open it; at the
+  /// transmitter, with only a regulator the party knows will not fit, who could tell the models
+  /// apart.
   func hint(at place: Place) -> String? {
-    guard !gateOpen else { return nil }
     switch place {
-    case .latch: return "Laura could reach the latch."
-    case .panel: return "Tom could shift the panel."
-    case .cabinet, .transmitter: return nil
+    case .latch: return gateOpen ? nil : "Laura could reach the latch."
+    case .panel: return gateOpen ? nil : "Tom could shift the panel."
+    case .cabinet: return nil
+    case .transmitter:
+      guard !repaired, !regulators.isEmpty, !regulators.contains(where: \.mightFit) else {
+        return nil
+      }
+      return "This regulator won't fit. Miki could tell the models apart."
     }
   }
 
-  /// Take the action, and say what happened, for the HUD.
-  mutating func perform(_ action: Action) -> String {
+  /// What the HUD's panel lists in the shared bag, naming a regulator the party knows will not
+  /// fit; nil when the bag is empty.
+  var bag: String? {
+    let wrong = regulators.filter { !$0.mightFit }.count
+    switch (regulators.count, wrong) {
+    case (0, _): return nil
+    case (1, 0): return "a regulator"
+    case (1, _): return "a regulator of a different model"
+    case (let count, 0): return "\(count) regulators"
+    case (let count, let wrong): return "\(count) regulators, \(wrong) of a different model"
+    }
+  }
+
+  /// Take the action, with `member` leading, and say what happened, for the HUD.
+  mutating func perform(_ action: Action, by member: PartyMember) -> String {
     switch action {
     case .reachLatch:
       gateOpen = true
       return "Laura reaches the latch, and the gate swings open."
     case .shiftPanel:
       gateOpen = true
-      return "Tom shifts the loose panel, and the gate opens."
+      return "Tom shifts the loose panel, and the gate swings open."
     case .inspect(let id):
       known.insert(id)
       switch contents[id] {
@@ -116,18 +144,20 @@ struct SalvageProgress: Equatable, Sendable {
       }
     case .take(let id):
       emptied.insert(id)
-      regulators.append(.compatible)
-      return "Miki takes the regulator."
+      regulators.append(Regulator(model: .compatible, known: true))
+      return "\(member.displayName) takes the regulator."
     case .search(let id):
       guard let contents = contents[id], contents != .live else {
         known.insert(id)
         return Self.liveLine
       }
       emptied.insert(id)
-      regulators.append(contents)
-      return "Found a regulator."
+      regulators.append(Regulator(model: contents, known: false))
+      return "\(member.displayName) takes a regulator, but only Miki can tell its model."
     case .fit:
-      guard let index = regulators.firstIndex(of: .compatible) else {
+      guard let index = regulators.firstIndex(where: { $0.model == .compatible }) else {
+        // Trying it tells the party what the bag holds.
+        for index in regulators.indices { regulators[index].known = true }
         return "This regulator is a different model. It won't fit."
       }
       regulators.remove(at: index)

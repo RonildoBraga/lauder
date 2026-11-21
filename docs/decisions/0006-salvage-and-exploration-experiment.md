@@ -102,6 +102,28 @@ Asked what the second session should try, the maintainer chose **“Shuffle the 
 
 The second session judges it with the questions above.
 
+## After Claude's Simulator playtest
+
+On 21 November 2026, instead of playing build 0.1.0 (17) on the phone, the maintainer asked Claude to play it: **“instead of asking me, can you test on the simulator and let me know what you think ?”**. Claude played three runs by touch in the Simulator. It opened the gate both ways, searched blind and fitted the wrong model once. The deal differed in each run and the rules held, but the yard did not explain itself from the camera: nearly everything came as a line that left the panel after 6 seconds.
+- **The gate:** the same grey as the fence, so the way in did not show, and opening it made it vanish, although the line said it swings open.
+- **The latch and the panel:** nothing marked them, so their prompts appeared only on an unmarked spot.
+- **The transmitter:** a plain grey block, smaller than the cabinets, which only Look named. A leader coming back from the depot stood behind it, nearly hidden and short of its prompt.
+- **The cabinets:** an inspected cabinet looked as before, so what it held had to be remembered.
+- **The wrong model:** after a failed fit the bag still read “a regulator” and Fit stayed offered, and a blind search's line did not say that only Miki could tell the model.
+- **The touch button:** “Take the regulator” and “Fit the regulator” were cut off.
+
+Asked **“Merge the shuffle and fix these clarity problems next?”**, the maintainer answered **“Yes, do both”**. With plain shapes in the palette's colours:
+- **The gate** is rust, like the world's other barriers, and swings open into the depot over a moment, where it stands as a thin wall.
+- **The latch,** high on the fence beside the gate, and **the loose panel** on its other side show in amber, as things to use, until the gate opens.
+- **The transmitter** is lower, faded teal under ink aerials, and turns amber once repaired. Its approach reaches back towards the depot.
+- **A cabinet the party knows** wears a tag on its top: amber for the right regulator, stone for the wrong model and rust for the live equipment. An emptied cabinet turns ink.
+- **The bag** names a regulator known to be of a different model. Fit is offered only while a regulator in the bag might fit, and otherwise Look at the transmitter says “Miki could tell the models apart.”
+- **Once the party knows a cabinet,** anyone takes the right regulator from it, and nobody takes the wrong model.
+- **A blind search** says so, such as “Tom takes a regulator, but only Miki can tell its model.”
+- **The touch labels** read **Take regulator** and **Fit regulator**.
+
+The second session judges the yard with these changes, on the questions above.
+
 ## Options considered
 
 - **Venue:**

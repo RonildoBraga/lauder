@@ -251,10 +251,9 @@ struct GameView: View {
       if world.showsWeapon {
         Text("Carbine · \(world.session.ammo)").font(.caption)
       }
-      if world.level.salvage != nil, !world.session.salvage.regulators.isEmpty {
-        // The shared bag (ADR 0006): what it holds, not whether it fits.
-        let count = world.session.salvage.regulators.count
-        Text("Bag · \(count == 1 ? "a regulator" : "\(count) regulators")").font(.caption)
+      if world.level.salvage != nil, let bag = world.session.salvage.bag {
+        // The shared bag (ADR 0006): what it holds, and a regulator known not to fit.
+        Text("Bag · \(bag)").font(.caption)
       }
       if let diagnostic = world.diagnostic {
         Text(diagnostic).font(.caption).foregroundStyle(HUDStyle.warning)

@@ -89,17 +89,24 @@ final class GameWorld {
   /// through it met then. The order that follows uses it, though the camera has moved since.
   @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
   @ObservationIgnored private let camera = PerspectiveCamera()
-  /// Movement against the level's blockers, and the salvage gate while it is shut (ADR 0006);
-  /// both are made again when the gate opens or shuts.
+  /// Movement against the level's blockers, and the salvage gate as it stands (ADR 0006).
   @ObservationIgnored private var motion: PartyMotion
   @ObservationIgnored private var grid: NavigationGrid
-  /// The salvage gate as shown, and whether it is open, so the blockers are made again only when
-  /// that changes (ADR 0006).
-  @ObservationIgnored private var gate: Entity?
+  /// Both of those with the salvage gate shut and open, made while loading, so that the gate
+  /// opening or shutting stalls no frame (ADR 0006).
+  @ObservationIgnored private var gateWays:
+    (
+      shut: (motion: PartyMotion, grid: NavigationGrid),
+      open: (motion: PartyMotion, grid: NavigationGrid)
+    )?
+  /// The salvage gate's hinge, which swings it open into the depot; how far open it shows, from
+  /// 0 shut to 1 open; and whether the blockers have it open, so they change only when that
+  /// does (ADR 0006).
+  @ObservationIgnored private var gateHinge: Entity?
+  @ObservationIgnored private var gateSwing: Float = 0
   @ObservationIgnored private var gateShownOpen = false
-  /// The transmitter, and how it looks broken and working (ADR 0006).
-  @ObservationIgnored private var transmitterLook:
-    (entity: ModelEntity, broken: any Material, working: any Material)?
+  /// How a salvage task shows what the party has done (ADR 0006).
+  @ObservationIgnored private var salvageLooks: SalvageLooks?
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
   /// Where companions take cover in a fight, in a level with combat positioning (ADR 0003,
@@ -207,10 +214,17 @@ final class GameWorld {
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
-    let shutGate = level.salvage.map { [$0.gate.footprint] } ?? []
-    motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + shutGate)
-    // Build the route grid while loading, not on the first frame of play.
-    grid = NavigationGrid(level: level, adding: shutGate)
+    // Build the route grid while loading, not on the first frame of play, and in a salvage
+    // task the gate's open one as well.
+    func ways(adding gate: [PartyMotion.Box]) -> (motion: PartyMotion, grid: NavigationGrid) {
+      (
+        PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + gate),
+        NavigationGrid(level: level, adding: gate)
+      )
+    }
+    let start = ways(adding: level.salvage.map { [$0.gate.footprint] } ?? [])
+    (motion, grid) = start
+    gateWays = level.salvage.map { (shut: start, open: ways(adding: [$0.openGate])) }
     squadLeader = level.party[0]
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
@@ -235,15 +249,11 @@ final class GameWorld {
         root.addChild(entity)
       }
     }
-    // A salvage task's gate, shown while it is shut, and its transmitter's looks (ADR 0006).
+    // A salvage task's gate, which swings open, and the looks that show the party's progress
+    // (ADR 0006).
     if let task = level.salvage {
-      let gate = style.block(size: task.gate.size, at: task.gate.position, material: style.scenery)
-      gate.name = task.gate.name
-      root.addChild(gate)
-      self.gate = gate
-      if let entity = root.findEntity(named: task.transmitter.name) as? ModelEntity {
-        transmitterLook = (entity, style.scenery, style.warm)
-      }
+      gateHinge = Self.addGate(task.gate, to: root, style: style)
+      salvageLooks = SalvageLooks(task: task, in: root, style: style)
     }
     landmarkFade = LandmarkFade(look: root)
     // The session refers to each action by its name, so no action is defined twice.
@@ -280,6 +290,7 @@ final class GameWorld {
     // Miki carries the carbine; it shows while drawn.
     visuals[.miki]?.addChild(stage.weaponProp)
     placeParty()
+    showSalvage()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
   }
@@ -588,6 +599,7 @@ final class GameWorld {
       simulateStep(movement: movement, dt: Self.simulationStep)
     }
     updateCamera(deltaTime: elapsed)
+    swingGate(by: elapsed)
     ageLines(by: elapsed)
     updatePromptAndCompass()
     checkTriggers()
@@ -1321,20 +1333,115 @@ final class GameWorld {
     return task.transmitterApproach.contains(point) ? .transmitter : nil
   }
 
-  /// Shows the salvage task as the session has it: the gate shut or open, with movement's
-  /// blockers made again only when that changes, and the transmitter broken or working.
+  /// Shows the salvage task as the session has it. Movement's blockers have the gate shut, or
+  /// open as a thin wall into the depot, and change only when it does; the gate then swings
+  /// open over a moment, or Restart shuts it at once. The rest shows in the looks.
   private func showSalvage() {
-    guard let task = level.salvage else { return }
-    let open = session.salvage.gateOpen
-    if open != gateShownOpen {
-      gateShownOpen = open
-      gate?.isEnabled = !open
-      let shut = open ? [] : [task.gate.footprint]
-      motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + shut)
-      grid = NavigationGrid(level: level, adding: shut)
+    guard let ways = gateWays else { return }
+    let progress = session.salvage
+    if progress.gateOpen != gateShownOpen {
+      gateShownOpen = progress.gateOpen
+      (motion, grid) = progress.gateOpen ? ways.open : ways.shut
+      if !progress.gateOpen {
+        gateSwing = 0
+        gateHinge?.orientation = simd_quatf(angle: 0, axis: [0, 1, 0])
+      }
     }
-    if let look = transmitterLook {
-      look.entity.model?.materials = [session.salvage.repaired ? look.working : look.broken]
+    salvageLooks?.show(progress)
+  }
+
+  /// How long the salvage gate takes to swing open.
+  static let gateSwingTime: Float = 0.8
+
+  /// Swings the salvage gate on towards open while the session has it open, slowing as it goes.
+  private func swingGate(by dt: Float) {
+    guard let hinge = gateHinge, session.salvage.gateOpen, gateSwing < 1 else { return }
+    gateSwing = min(1, gateSwing + dt / Self.gateSwingTime)
+    let eased = 1 - (1 - gateSwing) * (1 - gateSwing)
+    hinge.orientation = simd_quatf(angle: eased * .pi / 2, axis: [0, 1, 0])
+  }
+
+  /// The salvage gate, in rust like the world's other barriers, on a hinge at its west end: a
+  /// quarter turn of the hinge swings it into the depot.
+  private static func addGate(_ gate: Level.Box, to root: Entity, style: SceneStyle) -> Entity {
+    let hinge = Entity()
+    hinge.name = "\(gate.name).hinge"
+    hinge.position = [gate.position.x - gate.size.x / 2, gate.position.y, gate.position.z]
+    let leaf = style.block(size: gate.size, at: [gate.size.x / 2, 0, 0], material: style.rust)
+    leaf.name = gate.name
+    hinge.addChild(leaf)
+    root.addChild(hinge)
+    return hinge
+  }
+
+  /// How a salvage task shows what the party has done (ADR 0006), in the palette's meanings:
+  /// - **The latch and the panel:** amber, as things to use, until the gate opens.
+  /// - **The transmitter:** faded teal under ink aerials, then amber once repaired.
+  /// - **Each cabinet:** a tag on its top once the party knows what it holds, amber for the right
+  ///   regulator, stone for the wrong model and rust for the live equipment; ink once emptied.
+  @MainActor
+  private struct SalvageLooks {
+    let marks: [ModelEntity]
+    let transmitter: ModelEntity?
+    let cabinets: [(id: String, body: ModelEntity, tag: ModelEntity)]
+    let use: any Material
+    let plain: any Material
+    let broken: any Material
+    let otherModel: any Material
+    let live: any Material
+    let empty: any Material
+
+    /// The looks for a task whose blocks are already in `root`, by name, with the marks, the
+    /// aerials and the cabinets' tags added to it.
+    init(task: Level.Salvage, in root: Entity, style: SceneStyle) {
+      func add(_ box: Level.Box, _ material: any Material) -> ModelEntity {
+        let entity = style.block(size: box.size, at: box.position, material: material)
+        entity.name = box.name
+        root.addChild(entity)
+        return entity
+      }
+      marks = [task.latchMark, task.panelMark].map { add($0, style.warm) }
+      for part in task.aerial { _ = add(part, style.ink) }
+      transmitter = root.findEntity(named: task.transmitter.name) as? ModelEntity
+      cabinets = task.cabinets.compactMap { cabinet in
+        guard let body = root.findEntity(named: cabinet.box.name) as? ModelEntity else {
+          return nil
+        }
+        let box = cabinet.box
+        let tag = add(
+          .box(
+            "\(cabinet.id).tag", at: box.position + [0, box.size.y / 2 + 0.04, 0],
+            size: [box.size.x - 0.2, 0.08, box.size.z - 0.2]), style.warm)
+        tag.isEnabled = false
+        return (cabinet.id, body, tag)
+      }
+      use = style.warm
+      plain = style.scenery
+      broken = style.fadedTeal
+      otherModel = style.stone
+      live = style.rust
+      empty = style.ink
+    }
+
+    func show(_ progress: SalvageProgress) {
+      for mark in marks { mark.model?.materials = [progress.gateOpen ? plain : use] }
+      transmitter?.model?.materials = [progress.repaired ? use : broken]
+      for cabinet in cabinets {
+        let emptied = progress.emptied.contains(cabinet.id)
+        cabinet.body.model?.materials = [emptied ? empty : plain]
+        let tag: (any Material)? =
+          if emptied || !progress.known.contains(cabinet.id) {
+            nil
+          } else {
+            switch progress.contents[cabinet.id] {
+            case .compatible: use
+            case .otherModel: otherModel
+            case .live, nil: live
+            }
+          }
+        cabinet.tag.isEnabled = tag != nil
+        if let tag { cabinet.tag.model?.materials = [tag] }
+      }
     }
   }
 

@@ -229,16 +229,32 @@ struct Level {
     }
 
     /// The gate in the depot's fence: it blocks movement until opened. Laura opens it from its
-    /// latch, and Tom by shifting the loose panel beside it.
+    /// latch, and Tom by shifting the loose panel beside it. It lies along the fence, in x, and
+    /// swings open into the depot, towards -z, about a hinge at its west end.
     let gate: Box
     let latch: PartyMotion.Box
     let panel: PartyMotion.Box
+    /// The latch and the loose panel as the fence shows them, so the player sees where each
+    /// opens the gate from. Neither blocks anyone.
+    let latchMark: Box
+    let panelMark: Box
     let cabinets: [Cabinet]
     /// The broken transmitter, where a regulator is fitted.
     let transmitter: Box
+    /// The transmitter's aerials, which mark it as the goal. They block no one.
+    let aerial: [Box]
     let transmitterApproach: PartyMotion.Box
     /// The objective once the repair is done.
     let doneObjective: String
+
+    /// Where the open gate stands: swung into the depot about its hinge, a thin wall along the
+    /// opening's west side, which blocks movement in place of the shut gate.
+    var openGate: PartyMotion.Box {
+      let hinge = SIMD2(gate.position.x - gate.size.x / 2, gate.position.z)
+      let half = gate.size.z / 2
+      return PartyMotion.Box(
+        minimum: [hinge.x - half, hinge.y - gate.size.x], maximum: [hinge.x + half, hinge.y])
+    }
   }
 
   /// The floor's footprint, which the navigation grid covers.

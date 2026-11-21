@@ -38,14 +38,26 @@ enum SalvageYard {
     cabinet("cabinet-east", x: 3.5, holding: .compatible),
   ]
 
-  static let transmitter = Level.Box.box("transmitter", at: [-3, 0.7, 5], size: [1, 1.4, 0.8])
+  /// The transmitter: low enough that a leader standing behind it, come from the depot, still
+  /// shows over it.
+  static let transmitter = Level.Box.box("transmitter", at: [-3, 0.5, 5], size: [1, 1, 0.8])
 
+  /// The gate, rust-red like the world's other barriers, hangs in the fence's gap. The latch, high
+  /// on the fence beside it, and the loose panel on its other side show in amber, as things to
+  /// use. The transmitter's two aerials rise from its back corners, and its approach reaches back
+  /// towards the depot, so a leader who arrives from there can fit a regulator straight away.
   static let salvage = Level.Salvage(
     gate: .box("gate", at: [0, 1.1, -4], size: [2, 2.2, 0.3]),
     latch: PartyMotion.Box(minimum: [-2.4, -3.75], maximum: [-1, -2.6]),
     panel: PartyMotion.Box(minimum: [1, -3.75], maximum: [2.4, -2.6]),
+    latchMark: .box("latch", at: [-1.4, 1.85, -3.8], size: [0.4, 0.3, 0.1]),
+    panelMark: .box("panel", at: [1.7, 0.75, -3.81], size: [1, 1.2, 0.08]),
     cabinets: cabinets, transmitter: transmitter,
-    transmitterApproach: PartyMotion.Box(minimum: [-4.4, 3.7], maximum: [-1.6, 6.3]),
+    aerial: [
+      .box("aerial-long", at: [-3.38, 1.7, 4.72], size: [0.07, 1.4, 0.07]),
+      .box("aerial-short", at: [-2.62, 1.4, 4.72], size: [0.07, 0.8, 0.07]),
+    ],
+    transmitterApproach: PartyMotion.Box(minimum: [-4.4, 3.2], maximum: [-1.6, 6.3]),
     doneObjective: "The transmitter works. Restart to try again.")
 
   static let level = Level(
