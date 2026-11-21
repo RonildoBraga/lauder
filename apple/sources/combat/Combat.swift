@@ -83,10 +83,15 @@ enum Disrupt {
 /// that movement uses, so a tower's pier or legs give cover to whoever stands behind them, on
 /// either side.
 enum LineOfSight {
+  /// Whether nothing is in the way. Cover asks this many times in one step, so it stops at the
+  /// first blocker and builds nothing.
   static func isClear(
     from start: SIMD2<Float>, to end: SIMD2<Float>, obstacles: [PartyMotion.Box]
   ) -> Bool {
-    firstBlock(from: start, to: end, obstacles: obstacles) == nil
+    let delta = end - start
+    return !obstacles.contains {
+      entry(from: start, along: delta, minimum: $0.minimum, maximum: $0.maximum, limit: 1) != nil
+    }
   }
 
   /// How far along the line, from 0 at the start to 1 at the end, it first enters a blocker;

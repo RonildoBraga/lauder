@@ -85,6 +85,8 @@ final class GameWorld {
   @ObservationIgnored private let grid: NavigationGrid
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
+  /// Where companions take cover in a fight, in a level with that rule (ADR 0003, phase S4).
+  @ObservationIgnored private var cover: CoverPlanner
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
@@ -185,6 +187,7 @@ final class GameWorld {
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
+    cover = CoverPlanner(obstacles: level.obstacles)
     motors = Self.freshMotors()
     cameraTarget = Self.cameraTarget(over: level.spawn(level.party[0]))
     let style = SceneStyle(
@@ -488,6 +491,7 @@ final class GameWorld {
     squadLeader = session.leader
     route = RouteMemory(start: spot)
     planner = SquadPlanner(heading: level.heading)
+    cover.reset()
     motors = Self.freshMotors()
     companionTargets = [:]
     unsimulatedTime = 0
@@ -592,23 +596,48 @@ final class GameWorld {
     for member in session.party where member != leader {
       if let point = Self.point(of: session.order(of: member)) { targets[member] = point }
     }
+    // Once a fight is under way, companions take cover near those places, where the level has
+    // that rule (ADR 0003, phase S4).
+    let takingCover = level.combat.takesCover && stage.fightUnderWay
+    if takingCover {
+      targets = cover.targets(
+        for: CoverPlanner.Input(
+          places: targets, positions: current, leaderPosition: leaderEnd,
+          formation: session.formation, threats: stage.threats,
+          weaponRanges: level.combat.companionWeapons.mapValues(\.range), dt: dt),
+        grid: grid)
+    } else {
+      cover.reset()
+    }
+    let previousTargets = companionTargets
     companionTargets = targets
     for member in session.party where member != leader {
       guard let start = current[member], let target = targets[member],
         var motor = motors[member]
       else { continue }
+      // Into cover, or out to fire: a settled companion moves off however short the step.
+      if takingCover, let before = previousTargets[member],
+        simd_distance(before, target) > CompanionMotor.settleDistance
+      {
+        motor.wake()
+      }
       let order = session.order(of: member)
+      // A spot of cover stays where it is; a formation slot moves with the leader.
+      let inCover = takingCover && cover.isTakingCover(member)
       let context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
-        speed: PartyBody.speed, dt: dt, targetMoves: order == .following)
+        speed: PartyBody.speed, dt: dt, targetMoves: order == .following && !inCover)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
       motors[member] = motor
       place(member, at: end)
       turn(member, moved: end - start, dt: dt)
-      if case .going(let point) = order, simd_distance(end, point) <= Self.arrivalDistance {
+      // A going companion arrives at their point, or in cover at their spot near it.
+      if case .going(let point) = order,
+        simd_distance(end, takingCover ? target : point) <= Self.arrivalDistance
+      {
         session.arrived(member)
       }
     }
@@ -991,6 +1020,7 @@ final class GameWorld {
     squadLeader = leader
     if let point = position(of: leader) { route.reset(to: point) }
     planner.reset()
+    cover.reset()
     for member in [previous, leader] { motors[member] = CompanionMotor(for: member) }
     showLeaderMarker()
   }
