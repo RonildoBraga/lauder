@@ -28,10 +28,18 @@ final class GameWorld {
     set {
       shownLine = newValue
       lineCount &+= 1
+      #if DEBUG
+        gameLine = newValue
+      #endif
     }
   }
   private var shownLine: String
   @ObservationIgnored private var lineCount = 0
+  #if DEBUG
+    /// The latest line the game itself showed, which a scripted playtest's status then covers
+    /// on the HUD. Playtests read it.
+    @ObservationIgnored private(set) var gameLine = ""
+  #endif
   private(set) var diagnostic: String?
   /// The leader's contextual action here, such as "Search"; nil when there is none.
   private(set) var actionName: String?
@@ -81,8 +89,17 @@ final class GameWorld {
   /// through it met then. The order that follows uses it, though the camera has moved since.
   @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
   @ObservationIgnored private let camera = PerspectiveCamera()
-  @ObservationIgnored private let motion: PartyMotion
-  @ObservationIgnored private let grid: NavigationGrid
+  /// Movement against the level's blockers, and the salvage gate while it is shut (ADR 0006);
+  /// both are made again when the gate opens or shuts.
+  @ObservationIgnored private var motion: PartyMotion
+  @ObservationIgnored private var grid: NavigationGrid
+  /// The salvage gate as shown, and whether it is open, so the blockers are made again only when
+  /// that changes (ADR 0006).
+  @ObservationIgnored private var gate: Entity?
+  @ObservationIgnored private var gateShownOpen = false
+  /// The transmitter, and how it looks broken and working (ADR 0006).
+  @ObservationIgnored private var transmitterLook:
+    (entity: ModelEntity, broken: any Material, working: any Material)?
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
   /// Where companions take cover in a fight, in a level with combat positioning (ADR 0003,
@@ -175,22 +192,25 @@ final class GameWorld {
   var companionShots: [PartyMember: Int] { stage.companionShots }
   /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
   var disrupts: Int { stage.disrupts }
-  /// The HUD's objective: the level's own, until the story changes it.
+  /// The HUD's objective: the level's own, until the story changes it or a salvage task's
+  /// repair is done.
   var objective: String {
-    level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
+    if let task = level.salvage, session.salvage.repaired { return task.doneObjective }
+    return level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
   }
   /// The pause menu's third choice: what it reads, what it does and the level it starts.
   var otherLevel: (name: String, note: String, level: Level) {
-    CombatYard.pauseChoice(leaving: level)
+    LevelCycle.next(after: level)
   }
 
   init(level: Level = BrooklynBridge.level) {
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
-    motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
+    let shutGate = level.salvage.map { [$0.gate.footprint] } ?? []
+    motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + shutGate)
     // Build the route grid while loading, not on the first frame of play.
-    grid = NavigationGrid(level: level)
+    grid = NavigationGrid(level: level, adding: shutGate)
     squadLeader = level.party[0]
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
@@ -213,6 +233,16 @@ final class GameWorld {
         let entity = style.block(size: box.size, at: box.position, material: material)
         entity.name = box.name
         root.addChild(entity)
+      }
+    }
+    // A salvage task's gate, shown while it is shut, and its transmitter's looks (ADR 0006).
+    if let task = level.salvage {
+      let gate = style.block(size: task.gate.size, at: task.gate.position, material: style.scenery)
+      gate.name = task.gate.name
+      root.addChild(gate)
+      self.gate = gate
+      if let entity = root.findEntity(named: task.transmitter.name) as? ModelEntity {
+        transmitterLook = (entity, style.scenery, style.warm)
       }
     }
     landmarkFade = LandmarkFade(look: root)
@@ -427,6 +457,16 @@ final class GameWorld {
     guard session.mode == .exploring, !stage.holdsParty,
       let position = self.position(of: session.leader)
     else { return }
+    // In a salvage task, the place decides; at the gate, whoever cannot open it hears who can
+    // (ADR 0006).
+    if let task = level.salvage, let place = Self.place(at: position, in: task) {
+      observation =
+        session.performSalvage(at: place, in: task) ?? session.salvage.hint(at: place)
+        ?? level.lookAround
+      showSalvage()
+      updatePromptAndCompass()
+      return
+    }
     let here = level.interactions.filter { $0.approach.contains(position) }
     // Several actions can share an approach; the one offered now comes first.
     if let interaction = here.first(where: { session.offers($0.id) }) ?? here.first {
@@ -457,6 +497,7 @@ final class GameWorld {
   /// beginning of a run. Nothing is rebuilt or reloaded.
   func restart() {
     session.restart()
+    showSalvage()
     retryElapsed = nil
     retrySpot = nil
     fade = 0
@@ -1183,6 +1224,7 @@ final class GameWorld {
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
         formation: session.formation, orders: session.orders, squadState: session.squadState,
+        line: gameLine,
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks)
@@ -1243,16 +1285,57 @@ final class GameWorld {
         disc.isEnabled = target != nil && member != session.leader
         if let target { disc.position = [target.x, 0.012, target.y] }
       }
-      if let status = playtest?.status, observation != status { observation = status }
+      // The playtest's status covers the HUD's line, while the game's own stays in `gameLine`.
+      if let status = playtest?.status, shownLine != status {
+        shownLine = status
+        lineCount &+= 1
+      }
     }
   #endif
 
-  /// The leader's action prompt where they stand.
+  /// The leader's action prompt where they stand: a salvage task's action for whoever leads,
+  /// or an interaction the session offers.
   private func updatePrompt(at position: SIMD2<Float>) {
-    let name = level.interactions.first {
-      $0.approach.contains(position) && session.offers($0.id)
-    }?.name
+    let salvage = level.salvage.flatMap { task in
+      Self.place(at: position, in: task).flatMap {
+        session.salvage.action(for: session.leader, at: $0, in: task)
+      }
+    }
+    let name =
+      salvage?.name
+      ?? level.interactions.first { $0.approach.contains(position) && session.offers($0.id) }?.name
     if actionName != name { actionName = name }
+  }
+
+  // MARK: - Salvage
+
+  /// Where in a salvage task a point lies, if anywhere (ADR 0006).
+  private static func place(at point: SIMD2<Float>, in task: Level.Salvage)
+    -> SalvageProgress.Place?
+  {
+    if task.latch.contains(point) { return .latch }
+    if task.panel.contains(point) { return .panel }
+    if let cabinet = task.cabinets.first(where: { $0.approach.contains(point) }) {
+      return .cabinet(cabinet.id)
+    }
+    return task.transmitterApproach.contains(point) ? .transmitter : nil
+  }
+
+  /// Shows the salvage task as the session has it: the gate shut or open, with movement's
+  /// blockers made again only when that changes, and the transmitter broken or working.
+  private func showSalvage() {
+    guard let task = level.salvage else { return }
+    let open = session.salvage.gateOpen
+    if open != gateShownOpen {
+      gateShownOpen = open
+      gate?.isEnabled = !open
+      let shut = open ? [] : [task.gate.footprint]
+      motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + shut)
+      grid = NavigationGrid(level: level, adding: shut)
+    }
+    if let look = transmitterLook {
+      look.entity.model?.materials = [session.salvage.repaired ? look.working : look.broken]
+    }
   }
 
   private static func freshMotors() -> [PartyMember: CompanionMotor] {

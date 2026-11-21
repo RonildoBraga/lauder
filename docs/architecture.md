@@ -27,7 +27,7 @@ These are responsibilities, not new frameworks or a requirement to create every 
 
 ## Scene and asset authoring
 
-A level's look comes from its scene file; the game builds the rest from typed data. Keep authored positions, collision dimensions and stable IDs in typed levels, rather than adding JSON or a parser to the game. A `Level` value holds a place's floor, blocker boxes, interactions, trigger areas, encounters, starting party, spawn points, starting heading, the camera's offset and field of view, its lights and the name of its scene file. `BrooklynBridge` builds the opening, and `CombatYard` the combat experiment's temporary greybox yard, which has no Blender file or scene file; the world, the session and the navigation grid take the level they are given, so tests can build small levels of their own. The game draws a level without a scene file as plain blocks on snow. The party and the hostiles come from their models' scene files, which Blender exports too; the gameplay signals keep their own colours in code, in `SceneStyle`.
+A level's look comes from its scene file; the game builds the rest from typed data. Keep authored positions, collision dimensions and stable IDs in typed levels, rather than adding JSON or a parser to the game. A `Level` value holds a place's floor, blocker boxes, interactions, trigger areas, encounters, starting party, spawn points, starting heading, the camera's offset and field of view, its lights and the name of its scene file. `BrooklynBridge` builds the opening, and `CombatYard` and `SalvageYard` the two experiments' temporary greybox yards, which have no Blender file or scene file; the world, the session and the navigation grid take the level they are given, so tests can build small levels of their own. The game draws a level without a scene file as plain blocks on snow. The party and the hostiles come from their models' scene files, which Blender exports too; the gameplay signals keep their own colours in code, in `SceneStyle`.
 
 Each level and each model is a Blender file, its source ([ADR 0002](decisions/0002-blender-source-of-truth.md)). Saving the bridge's file through the Lauder extension, which holds a module for each job, checks the game's rules and exports its scene file, `BrooklynBridge.usdz`, and its layout file, `BrooklynBridgeLayout.swift`, as [Editing a level in Blender](../CONTRIBUTING.md#editing-a-level-in-blender) describes. The level's own Swift file adds the words and refers to the layout's entries by name, and Export refuses to drop a name it uses.
 
@@ -88,7 +88,7 @@ The panel button, Circle / B or H, is one more fresh-press intent: it hides or s
 5. Inactivity, input-source changes and Pause/Resume retain the release gate. All gameplay buttons, including switch and Fire, must be released and the stick centred before fresh input. Opposing held movement keys do not count as neutral.
 6. While exploring, Fire is both a fresh press, which draws a holstered carbine, and a hold, which keeps firing at the weapon's own pace. Dialogue and Pause consume it.
 
-**The pause menu** has three choices, **Resume**, **Restart** and, while the combat experiment lasts, **Combat test**, which reads **Bridge** in the combat yard, and opens on Resume. A fresh up or down press, from W/S, the stick, the D-pad or the arrow keys, chooses; the action confirms; Pause resumes directly. Restart takes effect at once, without a second confirmation. The third choice asks `Game` for a new run of the other level: it stops the old world and makes a new one, which the app gives a new view and scene, and the touch preference, a hidden panel and a scripted playtest carry over. On touch, the action button reads **Restart** while paused, **Resume** stays at the top right, and a button beside it offers the third choice. The action button keeps the intent it sent when its finger came down until that finger lifts, so a press that began before Pause cannot release as Restart. In a conversation the action button reads **Continue**, and Pause keeps the current line. Below its choices the pause menu shows the app's version and build as TestFlight lists them, such as **Lauder 0.1.0 (14)**, so a tester can tell which build they are playing.
+**The pause menu** has three choices, **Resume**, **Restart** and, while the experiments last, the next level in a cycle that `LevelCycle` names: **Combat test** on the bridge, **Salvage test** in the combat yard and **Bridge** in the salvage yard. It opens on Resume. A fresh up or down press, from W/S, the stick, the D-pad or the arrow keys, chooses; the action confirms; Pause resumes directly. Restart takes effect at once, without a second confirmation. The third choice asks `Game` for a new run of the other level: it stops the old world and makes a new one, which the app gives a new view and scene, and the touch preference, a hidden panel and a scripted playtest carry over. On touch, the action button reads **Restart** while paused, **Resume** stays at the top right, and a button beside it offers the third choice. The action button keeps the intent it sent when its finger came down until that finger lifts, so a press that began before Pause cannot release as Restart. In a conversation the action button reads **Continue**, and Pause keeps the current line. Below its choices the pause menu shows the app's version and build as TestFlight lists them, such as **Lauder 0.1.0 (14)**, so a tester can tell which build they are playing.
 
 GameSession decides what an allowed intent means for the current mode. World movement/following runs only when exploring, presented, active, ready, supplied with an available input source and past the neutral-input gate. This does not require nonzero movement: companions may settle while the leader stands still. Dialogue, Pause, input loss or a closed release gate freezes the whole party; input sampling needed for dialogue/menu/Pause remains available. Keep the foreground game awake, including Pause, and restore the idle timer on leaving it.
 
@@ -166,6 +166,20 @@ A level's fight rules are data, so the opening keeps the rules above while the c
 - They can give companions combat positioning once a fight is under way: cover near their places, routes off the ground the shooters see, and Regroup, as [Movement and presentation](#movement-and-presentation) describes.
 
 The session counts each member's hits, and the stage keeps whom each hostile aims at and when each companion fires next.
+
+### Salvage
+
+A level can hold a salvage task, as the salvage yard of [ADR 0006](decisions/0006-salvage-and-exploration-experiment.md) does: a gate, cabinets, a transmitter and the approach area of each. The session keeps what the party has done in `SalvageProgress`:
+- **The progress:** whether the gate is open, which cabinets the party knows, which are emptied, the regulators in the shared bag, and whether the repair is done.
+- **The rules:** what whoever leads can do at each place, decided afresh on each press.
+  - Laura reaches the latch, or Tom shifts the panel.
+  - Miki inspects, and then takes only the right regulator.
+  - Anyone else searches blind, and nobody opens the live cabinet.
+  - Anyone fits a regulator at the transmitter.
+
+The world finds which place the leader stands in, names its action in the prompt, and shows the line that comes back. Where someone can do nothing at the gate, the line says who could.
+
+The gate blocks movement while it is shut. When it opens or shuts, the world makes the movement blockers and the navigation grid again, with or without it, and shows or hides the gate. The repaired transmitter shows lit. Restart starts the task afresh.
 
 ### Scenes
 

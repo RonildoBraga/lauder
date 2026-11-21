@@ -77,6 +77,8 @@
       case expectFallBacks(Int)
       /// Hold Fire until this many hostiles are down in this run; fails after this many seconds.
       case fireUntilDefeated(Int, seconds: Float)
+      /// The HUD's latest line, exactly, such as what an action just did.
+      case expectLine(String)
     }
 
     /// What the runner can see of the game each frame.
@@ -96,6 +98,8 @@
       let orders: [PartyMember: GameSession.Order]
       /// What the squad is doing, as the HUD says it.
       let squadState: String
+      /// The HUD's latest line.
+      let line: String
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
@@ -270,6 +274,8 @@
         case .expectOrder(let member, let word):
           let actual = snapshot.orders[member]?.word ?? "following"
           expect(actual == word, "\(member.displayName) was \(actual) instead of \(word)")
+        case .expectLine(let line):
+          expect(snapshot.line == line, "the line was \"\(snapshot.line)\" instead of \"\(line)\"")
         case .expectSquad(let state):
           expect(
             snapshot.squadState == state,
@@ -754,6 +760,33 @@
         .expectFired(.laura), .expectFired(.tom), .expectFallBacks(1),
         .mark("the yard is clear"), .formation, .expectFormation(.spread), .wait(seconds: 1),
       ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
+        .expectLevel("salvage-yard"), .mark("on to the salvage yard"),
+      ] + otherLevel + [
+        .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
+      ]
+
+    /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
+    /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
+    /// loose panel and it opens. Miki inspects the three cabinets, the wrong model, the live one
+    /// and the right one, takes the right regulator and fits it at the transmitter. Restart
+    /// begins the yard again, and the third choice returns to the bridge.
+    private static let salvageYard: [Step] =
+      [.mark("the bridge")] + otherLevel + [.expectLevel("combat-yard")] + otherLevel + [
+        .expectLevel("salvage-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
+        .walk([-1.7, -3.2]), .act, .expectLine("Laura could reach the latch."),
+        .mark("Miki at the gate"), .switchLeader, .wait(seconds: 0.5), .walk([1.7, -3.2]), .act,
+        .expectLine("Tom shifts the loose panel, and the gate opens."), .mark("the gate opens"),
+        .switchLeader, .switchLeader, .wait(seconds: 0.5), .walk([0, -2]), .walk([0, -6]),
+        .walk([-3.5, -9.9]), .act, .expectLine("A regulator of a different model. It won't fit."),
+        .walk([0, -9.9]), .act,
+        .expectLine("Live: it still feeds the next shelter. Leave it connected."),
+        .walk([3.5, -9.9]), .act,
+        .expectLine("A compatible regulator, disconnected. Safe to take."),
+        .act, .expectLine("Miki takes the regulator."), .mark("the right regulator"),
+        .walk([0, -6]), .walk([0, -2]), .walk([-2, 5]), .act,
+        .expectLine("The regulator fits, and the transmitter answers."),
+        .mark("the transmitter works"), .wait(seconds: 1),
+      ] + restartRun + [.expectLevel("salvage-yard")] + otherLevel + [
         .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
       ]
 
@@ -761,7 +794,7 @@
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-      ("orders", orders), ("combat-yard", combatYard),
+      ("orders", orders), ("combat-yard", combatYard), ("salvage-yard", salvageYard),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

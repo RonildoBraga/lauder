@@ -14,8 +14,9 @@ struct NavigationGrid: Sendable {
   /// Connected walkable areas; -1 marks a blocked cell.
   private let region: [Int32]
 
-  /// The level's floor and blockers, in 20 cm cells.
-  init(level: Level) {
+  /// The level's floor and blockers, and any `extra` blockers, such as a shut gate, in 20 cm
+  /// cells.
+  init(level: Level, adding extra: [PartyMotion.Box] = []) {
     let minimum = level.bounds.minimum
     let maximum = level.bounds.maximum
     precondition(minimum.x < maximum.x && minimum.y < maximum.y)
@@ -33,7 +34,7 @@ struct NavigationGrid: Sendable {
     // checks just those: the same result as testing every cell against every obstacle, at a
     // cost that suits a long level such as the bridge.
     var walkable = [Bool](repeating: true, count: columns * rows)
-    for box in level.obstacles {
+    for box in level.obstacles + extra {
       let low = (box.minimum - clearance - origin) / cellSize
       let high = (box.maximum + clearance - origin) / cellSize
       let firstColumn = max(0, Int(low.x.rounded(.up)))

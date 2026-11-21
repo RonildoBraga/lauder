@@ -203,6 +203,43 @@ struct Level {
   let restartNote: String
   /// How its fights go; the opening's rules unless the level says otherwise.
   var combat = Combat()
+  /// A salvage task, as in the salvage yard (ADR 0006); nil where there is none.
+  var salvage: Salvage?
+
+  /// A salvage task (ADR 0006): a part to find for a repair, behind a gate that more than one
+  /// member can open. The session keeps what the party has done (`SalvageProgress`); the world
+  /// shows it.
+  struct Salvage {
+    /// What a cabinet holds.
+    enum Contents: Sendable {
+      /// A regulator that fits, in disconnected equipment.
+      case compatible
+      /// A regulator of a different model, which will not fit.
+      case otherModel
+      /// Equipment that still feeds a neighbouring shelter: it stays connected.
+      case live
+    }
+
+    /// A cabinet of equipment, with the area its approach covers.
+    struct Cabinet {
+      let id: String
+      let box: Box
+      let approach: PartyMotion.Box
+      let contents: Contents
+    }
+
+    /// The gate in the depot's fence: it blocks movement until opened. Laura opens it from its
+    /// latch, and Tom by shifting the loose panel beside it.
+    let gate: Box
+    let latch: PartyMotion.Box
+    let panel: PartyMotion.Box
+    let cabinets: [Cabinet]
+    /// The broken transmitter, where a regulator is fitted.
+    let transmitter: Box
+    let transmitterApproach: PartyMotion.Box
+    /// The objective once the repair is done.
+    let doneObjective: String
+  }
 
   /// The floor's footprint, which the navigation grid covers.
   var bounds: PartyMotion.Box { ground.footprint }
