@@ -155,6 +155,7 @@ struct GameView: View {
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
+          showsSignature: world.showsSignature,
           showsFormation: world.session.formationsAvailable,
           formationTitle: formationAction,
           orderNames: orderNames,
@@ -241,6 +242,10 @@ struct GameView: View {
       if let threat = world.threat {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
       }
+      if let cue = world.signatureCue {
+        // Who can answer the wind-up (ADR 0005).
+        Text(cue).font(.caption.bold())
+      }
       if world.showsWeapon {
         Text("Carbine · \(world.session.ammo)").font(.caption)
       }
@@ -268,8 +273,15 @@ struct GameView: View {
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
     }
+    if world.showsSignature {
+      others.append("\(world.controls.signatureButtonName) · Disrupt")
+    }
     if let next = world.session.nextLeader {
       others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
+    }
+    if let previous = world.session.previousLeader, previous != world.session.nextLeader {
+      // With two in the party, Previous leads as the same member as Next.
+      others.append("\(world.controls.previousButtonName) · Lead as \(previous.displayName)")
     }
     if world.session.formationsAvailable {
       others.append("\(world.controls.formationButtonName) · \(formationAction)")

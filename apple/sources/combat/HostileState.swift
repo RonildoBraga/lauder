@@ -76,6 +76,13 @@ struct HostileState {
     phase = .down
   }
 
+  /// Disrupt (ADR 0005): a wind-up is cancelled before its shot, and the hostile recovers
+  /// before it can aim again.
+  mutating func disrupt() {
+    guard case .aiming = phase else { return }
+    phase = .recovering(remaining: spec.recovery)
+  }
+
   /// The party fell back (ADR 0005): a hostile still standing stops fighting and waits where it
   /// stands until it is engaged again. It remembers having aimed, so it stays a target; the
   /// session keeps the damage dealt to it.

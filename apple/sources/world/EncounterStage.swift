@@ -57,6 +57,10 @@ final class EncounterStage {
   /// How many shots each companion has fired by themselves in this run. Tests and playtests
   /// read it.
   private(set) var companionShots: [PartyMember: Int] = [:]
+  /// Whether the leader can Disrupt a wind-up now, for the HUD (ADR 0005).
+  private(set) var canDisrupt = false
+  /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
+  private(set) var disrupts = 0
 
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
@@ -133,6 +137,7 @@ final class EncounterStage {
   func reset() {
     hostiles = specs.mapValues { HostileState(spec: $0) }
     companionShots = [:]
+    disrupts = 0
     stopFighting()
   }
 
@@ -164,12 +169,14 @@ final class EncounterStage {
     for (id, state) in hostiles { show(id, state) }
   }
 
-  /// The fight is over: nobody is aimed at, and the companions hold their fire.
+  /// The fight is over: nobody is aimed at, nothing can be disrupted, and the companions hold
+  /// their fire.
   private func endFight() {
     fightUnderWay = false
     victims = [:]
     companionFire = [:]
     aims = [:]
+    canDisrupt = false
   }
 
   /// An encounter begins: its cues start playing. Its hostiles stay as they are: unseen where
@@ -179,11 +186,13 @@ final class EncounterStage {
     director.start(encounter.cues)
   }
 
-  /// One simulation step: cues, hostiles, the leader's weapon, then the companions'. `figures`
-  /// are the members who can be seen, the leader included, for scripted shots and for hostiles
-  /// that can aim at anyone.
+  /// One simulation step: cues, the leader's Disrupt, hostiles, the leader's weapon, then the
+  /// companions'. `figures` are the members who can be seen, the leader included, for scripted
+  /// shots and for hostiles that can aim at anyone. `mayDisrupt` says whether the leader has
+  /// Disrupt to use: Miki, in a level that has it.
   func step(
     dt: Float, leader: SIMD2<Float>, facing: SIMD2<Float>, fireHeld: Bool, firePressed: Bool,
+    mayDisrupt: Bool, signaturePressed: Bool,
     figures: [PartyMember: SIMD2<Float>], session: GameSession
   ) -> Outcome {
     var outcome = Outcome()
@@ -224,6 +233,11 @@ final class EncounterStage {
     }
     // The party, where they can be seen: who a hostile can hit, and who fires by themselves.
     let party = figures.filter { session.party.contains($0.key) }
+    // Disrupt comes before the hostiles move on, so a press on the step that a wind-up would
+    // end still answers it.
+    if mayDisrupt, signaturePressed, let id = disruptable(from: leader, in: encounter) {
+      disrupt(id, from: leader, outcome: &outcome)
+    }
     var threatNow: String?
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
@@ -262,6 +276,7 @@ final class EncounterStage {
       showAim(spec.id, state, at: aimPosition)
     }
     threat = threatNow
+    canDisrupt = mayDisrupt && disruptable(from: leader, in: encounter) != nil
     if outcome.retry { return outcome }
     updateTarget(leader: leader, facing: facing)
     drawRemaining -= dt
@@ -349,6 +364,28 @@ final class EncounterStage {
       from: state.position, candidates: candidates, range: state.spec.range,
       isClear: { LineOfSight.isClear(from: $0, to: $1, obstacles: self.obstacles) }
     ).flatMap(PartyMember.init(rawValue:))
+  }
+
+  /// The wind-up that Disrupt from the leader would cancel now, if any.
+  private func disruptable(from leader: SIMD2<Float>, in encounter: Level.Encounter) -> String? {
+    Disrupt.target(
+      from: leader, hostiles: encounter.hostiles.compactMap { hostiles[$0.id] },
+      isClear: { LineOfSight.isClear(from: $0, to: $1, obstacles: self.obstacles) })
+  }
+
+  /// Miki's Disrupt (ADR 0005): her precise shot cancels the hostile's wind-up, and it recovers
+  /// before it can aim again. It spends no round.
+  private func disrupt(_ id: String, from leader: SIMD2<Float>, outcome: inout Outcome) {
+    guard var state = hostiles[id] else { return }
+    state.disrupt()
+    hostiles[id] = state
+    victims[id] = nil
+    aimLines[id]?.isEnabled = false
+    disrupts += 1
+    showTracer(leaderTracerID, from: leader, to: state.position)
+    let offset = state.position - leader
+    if simd_length(offset) > 0.001 { outcome.facing = simd_normalize(offset) }
+    outcome.line = "\(state.spec.name)'s shot is disrupted."
   }
 
   /// A hostile goes down where it stood, facing whoever shot it; its aim goes, and the HUD says

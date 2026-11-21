@@ -183,6 +183,13 @@ final class GameSession {
     return party[(index + 1) % party.count]
   }
 
+  /// Who Previous would switch to: the member before the leader in switching order, the same as
+  /// Next while there are two, or nil while the leader travels alone (ADR 0005).
+  var previousLeader: PartyMember? {
+    guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
+    return party[(index + party.count - 1) % party.count]
+  }
+
   func togglePause() {
     if mode == .paused {
       mode = resumeMode
@@ -207,10 +214,7 @@ final class GameSession {
 
   /// Who the left D-pad direction sends: the member before the leader in the switching order.
   /// The two sides keep this order for whoever leads, as the HUD's "◀ Laura · Tom ▶" shows.
-  var leftCompanion: PartyMember? {
-    guard party.count > 2, let index = party.firstIndex(of: leader) else { return nil }
-    return party[(index + party.count - 1) % party.count]
-  }
+  var leftCompanion: PartyMember? { party.count > 2 ? previousLeader : nil }
 
   /// The leader's companions, in switching order from the leader.
   var companions: [PartyMember] {
@@ -218,13 +222,25 @@ final class GameSession {
     return (1..<party.count).map { party[(index + $0) % party.count] }
   }
 
+  /// Next: lead as the member after the leader, only while exploring.
+  func cycleLeader() {
+    guard let next = nextLeader else { return }
+    lead(as: next)
+  }
+
+  /// Previous: lead as the member before the leader, on the same terms as Next (ADR 0005).
+  func cycleLeaderBackwards() {
+    guard let previous = previousLeader else { return }
+    lead(as: previous)
+  }
+
   /// A switch clears the new leader's order. The previous leader takes the squad's state: if
   /// the others are going or holding, they hold where they stand; otherwise they follow.
-  func cycleLeader() {
-    guard mode == .exploring, let next = nextLeader else { return }
+  private func lead(as member: PartyMember) {
+    guard mode == .exploring else { return }
     let previous = leader
-    leader = next
-    orders[next] = nil
+    leader = member
+    orders[member] = nil
     if !orders.isEmpty { orders[previous] = .holding(nil) }
   }
 

@@ -58,6 +58,27 @@ struct AutoFire {
   }
 }
 
+/// Miki's signature (ADR 0005): a precise shot that cancels one hostile's wind-up within her
+/// reach and in her clear sight, after which the hostile recovers before it can aim again.
+enum Disrupt {
+  /// How far it reaches: the carbine's range. A starting value for playtests.
+  static let reach = Weapon.carbine.range
+
+  /// The wind-up a Disrupt from `position` cancels: of the hostiles aiming within reach and in
+  /// sight, the one nearest its shot; nil when there is none.
+  static func target(
+    from position: SIMD2<Float>, hostiles: [HostileState],
+    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
+  ) -> String? {
+    hostiles.compactMap { hostile -> (id: String, remaining: Float)? in
+      guard case .aiming(let remaining) = hostile.phase,
+        simd_distance(hostile.position, position) <= reach, isClear(position, hostile.position)
+      else { return nil }
+      return (hostile.spec.id, remaining)
+    }.min { $0.remaining < $1.remaining }?.id
+  }
+}
+
 /// Sight lines on the flat floor: a shot is a straight line against the same blocker footprints
 /// that movement uses, so a tower's pier or legs give cover to whoever stands behind them, on
 /// either side.
