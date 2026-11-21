@@ -10,7 +10,8 @@ import simd
 /// fenced depot is shut except for a service gate, which Laura opens from its latch or Tom by
 /// shifting its loose panel. Inside, three cabinets look alike: one holds the regulator the
 /// transmitter needs, one a regulator of a different model, and one still feeds a neighbouring
-/// shelter, so it stays connected. There are no hostiles.
+/// shelter, so it stays connected. Each run deals those contents to the cabinets afresh, so only
+/// an inspection tells them apart. There are no hostiles.
 enum SalvageYard {
   /// The entrance: where each member starts.
   static let spawns: [PartyMember: SIMD2<Float>] = [
@@ -29,8 +30,8 @@ enum SalvageYard {
       .box("fence-north", at: [0, 1.1, -12], size: [12.3, 2.2, 0.3]),
     ] + cabinets.map(\.box) + [transmitter]
 
-  /// The cabinets along the depot's back fence: from west to east, the wrong model, the live
-  /// one and the right one.
+  /// The cabinets along the depot's back fence. As authored, from west to east, they hold the
+  /// wrong model, the live equipment and the right one; each run deals these afresh.
   static let cabinets: [Level.Salvage.Cabinet] = [
     cabinet("cabinet-west", x: -3.5, holding: .otherModel),
     cabinet("cabinet-middle", x: 0, holding: .live),
