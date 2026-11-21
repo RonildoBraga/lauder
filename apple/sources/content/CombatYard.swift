@@ -66,15 +66,6 @@ enum CombatYard {
     objective: "Clear the yard.", lookAround: "A wall, two blocks, and two shooters beyond.",
     restartNote: "Restart begins the yard again.", combat: combat)
 
-  /// The pause menu's third choice while the experiment lasts: from any other level it reads
-  /// Combat test and starts the yard, and in the yard it reads Bridge and returns to a new run of
-  /// the opening.
-  static func pauseChoice(leaving level: Level) -> (name: String, note: String, level: Level) {
-    level.id == Self.level.id
-      ? ("Bridge", "Bridge returns to a new run of the opening.", BrooklynBridge.level)
-      : ("Combat test", "Combat test opens the combat yard, outside the story.", Self.level)
-  }
-
   /// A shooter of the stranger's type, waiting in view where it fights, that aims at anyone and
   /// is a target from its first wind-up. Starting values for playtests: the stranger's wind-up,
   /// recovery and reach, and six hits to take down, since three members can fire at it.

@@ -70,7 +70,7 @@ struct CombatYardTests {
   // MARK: - The pause menu's third choice
 
   @Test
-  func thePauseMenusThirdChoiceSwitchesLevelsBothWays() throws {
+  func thePauseMenusThirdChoiceCyclesThroughTheLevels() throws {
     let game = Game()
     let bridge = game.world
     #expect(bridge.level.id == BrooklynBridge.level.id && bridge.otherLevel.name == "Combat test")
@@ -84,7 +84,7 @@ struct CombatYardTests {
     choose(.otherLevel, in: bridge)
     let yard = game.world
     #expect(yard !== bridge && yard.level.id == CombatYard.level.id)
-    #expect(yard.otherLevel.name == "Bridge" && yard.panelHidden)
+    #expect(yard.otherLevel.name == "Salvage test" && yard.panelHidden)
     #if DEBUG
       #expect(yard.playtest != nil && bridge.playtest == nil)
     #endif
@@ -95,15 +95,21 @@ struct CombatYardTests {
     choose(.restart, in: yard)
     #expect(game.world === yard)
     #expect(position(yard, .miki) == CombatYard.level.spawn(.miki))
-    // The touch button for the third choice returns to a new run of the opening.
-    pressPause(yard)
-    yard.update(
+    // The third choice goes on to the salvage yard (ADR 0006), and from there the touch button
+    // for it returns to a new run of the opening.
+    choose(.otherLevel, in: yard)
+    let salvage = game.world
+    #expect(salvage !== yard && salvage.level.id == SalvageYard.level.id)
+    #expect(salvage.otherLevel.name == "Bridge")
+    pressPause(salvage)
+    salvage.update(
       with: InputRules.Input(
         movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
         otherLevelPressed: true),
       sampledIn: .paused, deltaTime: 1 / 60)
     let opening = game.world
-    #expect(opening !== yard && opening !== bridge && opening.level.id == BrooklynBridge.level.id)
+    #expect(
+      opening !== salvage && opening !== bridge && opening.level.id == BrooklynBridge.level.id)
     #expect(opening.session.beat == .alone && opening.session.party == [.miki])
     #expect(position(opening, .miki) == BrooklynBridge.level.spawn(.miki))
   }

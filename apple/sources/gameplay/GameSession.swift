@@ -147,6 +147,8 @@ final class GameSession {
   private(set) var formation = Formation.close
   /// Companions going to or holding a point; everyone else follows (ADR 0003, phase S3).
   private(set) var orders: [PartyMember: Order] = [:]
+  /// What the party has done in the level's salvage task (ADR 0006).
+  private(set) var salvage = SalvageProgress()
   /// Whether the companions are regrouping: in a fight they leave cover and firing positions,
   /// hold their fire and come back to the formation, until they are back in it or the fight
   /// ends (ADR 0003, phase S4).
@@ -462,6 +464,15 @@ final class GameSession {
     regrouping = false
   }
 
+  /// Whoever leads acts at a place in the level's salvage task (ADR 0006), and the line for
+  /// the HUD comes back; nil when they can do nothing there. The world has checked where they
+  /// stand; the session checks the mode and who leads, afresh.
+  func performSalvage(at place: SalvageProgress.Place, in task: Level.Salvage) -> String? {
+    guard mode == .exploring, let action = salvage.action(for: leader, at: place, in: task)
+    else { return nil }
+    return salvage.perform(action, in: task)
+  }
+
   /// Whether the action is offered at its approach now.
   func offers(_ action: Level.ActionID) -> Bool {
     switch action {
@@ -531,6 +542,7 @@ final class GameSession {
     formation = .close
     orders = [:]
     regrouping = false
+    salvage = SalvageProgress()
     firedTriggers = []
     beat = .alone
     hits = [:]
