@@ -151,7 +151,7 @@ A model follows the same rules as the rest of a level's look, and Export refuses
 
 ## TestFlight builds
 
-TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid team, which is passed at archive time with `DEVELOPMENT_TEAM` and kept out of the repository. Archive the Release configuration for `generic/platform=iOS` with automatic signing and `-allowProvisioningUpdates`, then upload with `xcodebuild -exportArchive` and an export-options file whose method is `app-store-connect` and destination `upload`. Each upload needs a build number not used before for its version. The committed `CURRENT_PROJECT_VERSION` is the last build uploaded, so raise it before the next upload. Internal testers receive each build automatically. Upload only with the maintainer's go-ahead.
+TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid team, which is passed at archive time with `DEVELOPMENT_TEAM` and kept out of the repository. Archive the Release configuration for `generic/platform=iOS` with automatic signing and `-allowProvisioningUpdates`, then upload with `xcodebuild -exportArchive` and an export-options file whose method is `app-store-connect` and destination `upload`. Each upload needs a build number not used before for its version. The committed `CURRENT_PROJECT_VERSION` is the last build uploaded, so raise it before the next upload. Internal testers receive each build automatically, and the pause menu shows which one they are playing, such as **Lauder 0.1.0 (14)**. Upload only with the maintainer's go-ahead.
 
 ## Git LFS and cloning
 
