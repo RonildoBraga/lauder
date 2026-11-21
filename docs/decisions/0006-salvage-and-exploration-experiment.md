@@ -128,6 +128,8 @@ The second session judges the yard with these changes, on the questions above.
 
 On build 0.1.0 (18), with those changes, asked **“How did the salvage yard play on build 18?”**, the maintainer answered **“It reads well”**. That answers the first question, whether it is clear from the camera where to go and who can do what. Switching, the search, the trip's purpose and the frame rate were not asked about, and the session was not instrumented, so the yard's frame rate on the phone is still unmeasured. One of the three sessions remains.
 
+Asked what that last session should cover, the maintainer chose **“The other questions”**: build 18 again, judged on switching, the search and the trip's purpose. Measuring its frame rate needs the phone connected to the Mac.
+
 ## Options considered
 
 - **Venue:**
