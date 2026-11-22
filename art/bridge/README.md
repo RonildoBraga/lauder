@@ -4,6 +4,8 @@
 
 **Created:** 23 November 2026.
 
+The maintainer preferred the gameplay-view image as the style reference for the subsequent [robot concept studies](../robot/README.md). This preference does not approve exact camera settings, geometry or a scene implementation.
+
 The maintainer requested low-poly bridge concept images before revising gameplay or designing the robot enemy. These studies use the existing [frozen-world direction](../../docs/visual-direction.md): a snow plain up to the old deck level, two recognisable stone towers, a clear buried route, sparse flag poles, matte forms and long blue-grey shadows.
 
 ## Gameplay view
@@ -23,7 +25,7 @@ A wider view for atmosphere, scale and the half-buried city. Its horizon-facing 
 - Preserve the quiet, sparse low-poly look and readable character accents.
 - The towers remain the only cover in this baseline study; the poles are route markers.
 - Snow facets, cables, skyline and shadow treatment are illustrative. These images do not settle exact geometry, collision, lighting settings or scene budgets.
-- The robot, attack rules, new obstacles and gameplay changes remain later design work.
+- The [robot concepts](../robot/README.md) are a separate visual proposal. Attack rules, new obstacles and gameplay changes remain later design work.
 - Neither image establishes achievable frame pacing or performance on an iPhone. Production models and measurements would be a separate task.
 
 ## Provenance

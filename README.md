@@ -20,7 +20,7 @@ The bridge-only prototype's structural preparation is delivered in **TestFlight 
 - [Prototype plan](docs/prototype-plan.md): retained scope, controls, checks and the design gate.
 - [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
 - [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
-- [Art studies](art/README.md): proposed bridge concept images for review before scene changes.
+- [Art studies](art/README.md): proposed bridge and robot concept images for review before scene or enemy implementation.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): an unimplemented encounter proposal, retained for narrative reference, not an active level or assignment.
 
 The player controls one character at a time, switching leadership while the other recruited characters follow. Miki, Laura and Tom meet as strangers; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.

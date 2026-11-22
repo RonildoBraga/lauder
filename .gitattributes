@@ -29,3 +29,7 @@
 # Bridge concept PNGs exceed 1 MiB; keep their deliberate exports in LFS.
 art/bridge/bridge-establishing-v1.png filter=lfs diff=lfs merge=lfs -text
 art/bridge/bridge-gameplay-v1.png filter=lfs diff=lfs merge=lfs -text
+
+# Robot concept PNGs exceed 1 MiB.
+art/robot/robot-bridge-scale-v1.png filter=lfs diff=lfs merge=lfs -text
+art/robot/robot-design-v1.png filter=lfs diff=lfs merge=lfs -text
