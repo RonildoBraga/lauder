@@ -1,40 +1,33 @@
-# Frozen bridge — concept proposal
+# Frozen bridge — selected visual reference
 
-**Status:** For maintainer review; not an approved scene change.
+**Status:** Gameplay-view look selected by the maintainer; no scene implementation or exact camera settings approved by this image.
 
 **Created:** 23 November 2026.
 
-The maintainer preferred the gameplay-view image as the style reference for the subsequent [robot concept studies](../robot/README.md). This preference does not approve exact camera settings, geometry or a scene implementation.
+The maintainer preferred the gameplay-view image as the style reference for the subsequent [robot concept studies](../robot/README.md). The other establishing view was removed at the maintainer's request.
 
-The maintainer requested low-poly bridge concept images before revising gameplay or designing the robot enemy. These studies use the existing [frozen-world direction](../../docs/visual-direction.md): a snow plain up to the old deck level, two recognisable stone towers, a clear buried route, sparse flag poles, matte forms and long blue-grey shadows.
+This study uses the existing [frozen-world direction](../../docs/visual-direction.md): a snow plain up to the old deck level, two recognisable stone towers, a clear buried route, sparse flag poles, matte forms and long blue-grey shadows.
 
 ## Gameplay view
 
 ![High gameplay-view concept of the snow-buried Brooklyn Bridge](bridge-gameplay-v1.png)
 
-A high view to discuss route readability, tower silhouettes, negative space and the visibility of small characters. This is an illustrative camera study, not a projection-accurate screenshot or a proposed camera-settings change.
-
-## Establishing view
-
-![Wide establishing concept of the frozen bridge and distant Manhattan](bridge-establishing-v1.png)
-
-A wider view for atmosphere, scale and the half-buried city. Its horizon-facing angle is for concept presentation. Both images depict the later crossing with all three travellers recruited, not Miki's arrival alone.
+A high view to discuss route readability, tower silhouettes, negative space and the visibility of small characters. This is an illustrative camera study, not a projection-accurate screenshot or a proposed camera-settings change. It depicts the later crossing with all three travellers recruited, not Miki's arrival alone.
 
 ## Review boundaries
 
 - Preserve the quiet, sparse low-poly look and readable character accents.
 - The towers remain the only cover in this baseline study; the poles are route markers.
 - Snow facets, cables, skyline and shadow treatment are illustrative. These images do not settle exact geometry, collision, lighting settings or scene budgets.
-- The [robot concepts](../robot/README.md) are a separate visual proposal. Attack rules, new obstacles and gameplay changes remain later design work.
-- Neither image establishes achievable frame pacing or performance on an iPhone. Production models and measurements would be a separate task.
+- The [robot look](../robot/README.md) is selected; its [behaviour proposal](../../docs/encounters/bridge-spider-bot.md) remains under review before implementation.
+- This image does not establish achievable frame pacing or performance on an iPhone. Production models and measurements would be a separate task.
 
 ## Provenance
 
-Generated with the built-in image-generation tool from original project-based prompts. No third-party game art or assets were supplied. The establishing view was generated from text; the gameplay view uses that generated image as its sole image reference. The initial camera request and the corrective edit are preserved verbatim in [prompts.md](prompts.md).
+Generated with the built-in image-generation tool from original project-based prompts. No third-party game art or assets were supplied. A retired establishing image was the intermediate reference for the gameplay view. Its historical source and both exact prompts remain recorded in [prompts.md](prompts.md); the old image is no longer retained in the current tree.
 
 | File | Dimensions | Size in bytes |
 |---|---|---:|
 | `bridge-gameplay-v1.png` | 1672 × 941 | 1,455,529 |
-| `bridge-establishing-v1.png` | 1672 × 941 | 1,568,866 |
 
-These are AI-generated PNG concept studies. There is no editable Blender scene, mesh, texture set or runtime asset represented by these files. See the project [licence](../../LICENSE) and [asset contribution guidance](../../CONTRIBUTING.md#assets-and-attribution). Both images exceed 1 MiB and have explicit Git LFS rules under the repository's [storage policy](../../CONTRIBUTING.md#git-lfs-and-cloning).
+This is an AI-generated PNG concept study. It does not represent an editable Blender scene, mesh, texture set or runtime asset. See the project [licence](../../LICENSE) and [asset contribution guidance](../../CONTRIBUTING.md#assets-and-attribution). The selected image exceeds 1 MiB and has an explicit Git LFS rule under the repository's [storage policy](../../CONTRIBUTING.md#git-lfs-and-cloning).

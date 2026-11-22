@@ -1,7 +1,9 @@
 # Lauder — story bible, draft 0.7
 
-**Date:** 20 November 2026\
+**Date:** 23 November 2026\
 **Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
+
+**First-encounter revision, 23 November 2026:** The maintainer selected the dark armed spider-bot look and chose it to replace the first human shooter. The [first-tower proposal](../encounters/bridge-spider-bot.md) is designing the replacement before implementation, including a proposed supply case that retains Tom's intervention and Laura's medical kit. The stranger/body-search passages below record the built version pending agreement on that handoff; they are not instructions to restore the human encounter in a future robot implementation.
 
 ## Agreed direction
 
@@ -216,6 +218,8 @@ Handsets retain offline functions and limited short-range radio. Maintained rela
 The repaired set serves others as well as the party. It establishes contact and a meeting plan; it does not restore the old network or make the roads safe.
 
 ## Chapter One — Across the bridge
+
+The first-tower and search beats below describe the current built opening. Their planned robot replacement is defined in the [behaviour proposal](../encounters/bridge-spider-bot.md), with exact progression and replacement wording still under review.
 
 **Immediate goal:** Cross the Brooklyn Bridge into Manhattan.\
 **Emotional movement:** Strangers brought together by circumstance begin to rely on one another.\

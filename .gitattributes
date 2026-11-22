@@ -26,12 +26,7 @@
 # PNG/JPEG files at or below that size stay in ordinary Git. This is not a GitHub limit.
 # Inspect mixed-format .usd files separately; binary .usd needs a path rule at any size.
 
-# Bridge concept PNGs exceed 1 MiB; keep their deliberate exports in LFS.
-art/bridge/bridge-establishing-v1.png filter=lfs diff=lfs merge=lfs -text
+# Selected concept PNGs exceed 1 MiB.
 art/bridge/bridge-gameplay-v1.png filter=lfs diff=lfs merge=lfs -text
-
-# Robot concept PNGs exceed 1 MiB.
-art/robot/robot-bridge-scale-v1.png filter=lfs diff=lfs merge=lfs -text
-art/robot/robot-design-v1.png filter=lfs diff=lfs merge=lfs -text
 art/robot/robot-bridge-scale-v3.png filter=lfs diff=lfs merge=lfs -text
 art/robot/robot-design-v3.png filter=lfs diff=lfs merge=lfs -text

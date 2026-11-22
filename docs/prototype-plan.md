@@ -1,8 +1,10 @@
 # Lauder — bridge-only prototype
 
-**Updated:** 22 November 2026
+**Updated:** 23 November 2026
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
+
+The high bridge concept and dark armed v3 robot look are now selected. The maintainer chose the robot to **replace the first human shooter**, with Miki alone. The [first-tower behaviour proposal](encounters/bridge-spider-bot.md) is the current design discussion; its rules and tuning are not approved or implemented.
 
 ## Structural preparation
 
@@ -93,9 +95,11 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
+Review the [first-tower robot proposal](encounters/bridge-spider-bot.md) before assigning modelling or gameplay work. It proposes a readable brace/commit/burst/recovery pattern using existing tower cover, and a supply-case handoff that preserves Tom's introduction and Laura's medical kit. The bypass route, handoff, hit allowance and tuning still require agreement and geometry validation. The existing app, source checks and TestFlight build 28 continue to describe the human encounter.
+
 The requested coordinated-squad direction and the trio's [combat identities](story/story-bible.md#combat-identities) remain design context. The bridge keeps formations and orders from [ADR 0003](decisions/0003-squad-movement.md), phases S1–S3. Its removed S4 experiments are not a current assignment. [The Quiet Yard](encounters/the-quiet-yard.md) and the Relay House screenplay remain unimplemented story proposals.
 
-Next, agree on one small, enjoyable loop and concrete playtest questions using the bridge. Then assign a bounded prototype. A plan, historical assignment or review recommendation does not independently authorise bringing retired systems back.
+Next, agree on that small tower loop and its concrete playtest questions, then assign a bounded prototype. A plan, historical assignment or review recommendation does not independently authorise implementation or bringing retired systems back.
 
 ## Outside the first playable
 

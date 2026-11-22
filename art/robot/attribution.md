@@ -7,7 +7,7 @@ The following reference-derived AI-generated concept images are shared under [Cr
 - [robot-design-v3.png](robot-design-v3.png)
 - [robot-bridge-scale-v3.png](robot-bridge-scale-v3.png)
 
-This file-level notice does not change the licences of project code, documentation, bridge studies or earlier v1 robot art.
+This file-level notice does not change the licences of project code, documentation or the bridge study.
 
 ## Source and changes
 

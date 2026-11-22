@@ -1,6 +1,6 @@
 # Robot enemy — concept proposal
 
-**Status:** Visual design for maintainer review; no enemy implementation is assigned by these images.
+**Status:** Dark armed v3 look selected by the maintainer. [Movement and combat](../../docs/encounters/bridge-spider-bot.md) are being designed before implementation.
 
 **Updated:** 23 November 2026.
 
@@ -20,6 +20,8 @@ The upper row shows three-quarter, side and overhead views. The lower row explor
 
 This composite explores silhouette, facing, contrast and gun-pod readability. Relative size and placement are illustrative; the image is not a pixel-exact scene edit, metric specification, playable encounter or approved spawn.
 
+The three travellers are shown for visual scale. The selected first-encounter replacement happens earlier with Miki alone; the picture does not set story staging.
+
 ## Review boundaries
 
 - Preserve the sparse, matte, untextured, faceted look and clear separation from the party.
@@ -30,7 +32,7 @@ This composite explores silhouette, facing, contrast and gun-pod readability. Re
 
 ## Current provenance and licensing
 
-Generated with the built-in image-generation tool. The shape study used the creator's public preview and our v1 sheet; the darker armed edit then added gun pods, and the final composite used the bridge view and armed sheet. Only the selected v3 outputs are published; the unarmed shape study remains an intermediate. Exact prompts and input roles are in [prompts-v3.md](prompts-v3.md).
+Generated with the built-in image-generation tool. The shape study used the creator's public preview and our historical v1 sheet; the darker armed edit then added gun pods, and the final composite used the bridge view and armed sheet. Superseded comparison art and the unarmed intermediate were removed at the maintainer's request. Exact prompts, input roles and historical source links remain in [prompts-v3.md](prompts-v3.md).
 
 These two reference-derived PNGs carry the source attribution and **CC BY 4.0** file-level notice in [attribution.md](attribution.md). They must not be described as wholly original, third-party-free MIT artwork. No Blender or FBX file was downloaded or imported, and no creator endorsement is implied.
 
@@ -40,13 +42,3 @@ These two reference-derived PNGs carry the source attribution and **CC BY 4.0** 
 | `robot-bridge-scale-v3.png` | 1672 × 941 | 1,559,198 |
 
 Both exceed 1 MiB and have explicit Git LFS rules under the [storage policy](../../CONTRIBUTING.md#git-lfs-and-cloning).
-
-## Earlier v1 exploration
-
-The earlier broad, low maintenance-robot shape is retained for comparison and is not the current direction:
-
-- [Original design sheet](robot-design-v1.png)
-- [Original bridge-scale study](robot-bridge-scale-v1.png)
-- [Original prompts and input roles](prompts.md)
-
-V1 was generated from original project-based text and our generated bridge image, without third-party image input. Its files are 1672 × 941 pixels: 1,695,981 bytes for the sheet and 1,551,930 bytes for the bridge study. The later reference-derived v3 notice does not change v1's project [licence](../../LICENSE).

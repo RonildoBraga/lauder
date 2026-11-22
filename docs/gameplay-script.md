@@ -1,11 +1,13 @@
 # Lauder — gameplay walkthrough
 
-**Updated:** 22 November 2026\
+**Updated:** 23 November 2026\
 **Status:** The game opens on the Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines the checks.
 
 Combat stays occasional. The [future squad and combat design](#future-squad-and-combat-design) passes a design gate before any combat or formation work beyond the opening.
 
-The bridge is the only playable scene after the maintainer's [bridge-only reset](decisions/0017-bridge-only-reset.md). Other prototype venues and their dedicated systems are retired. The next gameplay direction awaits discussion.
+The bridge is the only playable scene after the maintainer's [bridge-only reset](decisions/0017-bridge-only-reset.md). Other prototype venues and their dedicated systems are retired.
+
+**Planned revision:** The maintainer selected the armed spider robot to replace the first human shooter while Miki is alone. Its [movement/combat and supply-case handoff](encounters/bridge-spider-bot.md) are proposals for review before implementation. The built sequence below still describes the current human shooter, body search and Tom's introduction; none of the robot rules are working app behaviour yet.
 
 ## The game we are building
 

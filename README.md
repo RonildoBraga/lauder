@@ -12,6 +12,8 @@ Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/de
 
 The bridge-only prototype's structural preparation is delivered in **TestFlight 0.1.0 (28)**, app/archive source `7158f29`. The standard check and rendered Simulator checks passed; source review has no outstanding findings. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records exact sources, checks and delivery proof. Physical-phone behaviour, performance and enjoyment remain unverified for this build.
 
+**Design in progress, 23 November 2026:** The maintainer selected the high bridge view and dark armed spider-bot look, and chose to replace the first human shooter while Miki is alone. The [first-tower proposal](docs/encounters/bridge-spider-bot.md) describes movement, shooting, reactions and the supply/search handoff for review before implementation. The current app still has the human encounter.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.
@@ -20,7 +22,8 @@ The bridge-only prototype's structural preparation is delivered in **TestFlight 
 - [Prototype plan](docs/prototype-plan.md): retained scope, controls, checks and the design gate.
 - [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
 - [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
-- [Art studies](art/README.md): proposed bridge and robot concept images for review before scene or enemy implementation.
+- [Art studies](art/README.md): selected bridge and robot visual references, with prompts and source credits.
+- [First-tower robot proposal](docs/encounters/bridge-spider-bot.md): behaviour and encounter progression under discussion before implementation.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): an unimplemented encounter proposal, retained for narrative reference, not an active level or assignment.
 
 The player controls one character at a time, switching leadership while the other recruited characters follow. Miki, Laura and Tom meet as strangers; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.
@@ -56,7 +59,7 @@ blender/
 art/                             Concept proposals, previews and generation provenance
 docs/                            Current design, architecture and prototype plan
   story/                         Story bible
-  encounters/                    Unimplemented narrative proposals
+  encounters/                    Unimplemented encounter and narrative proposals
   decisions/                     Accepted decisions and clearly marked historical experiments
 scripts/check                    Contract, Blender, asset, formatting, app-build and Swift checks
 .github/                         Pull request template and standard-check workflow
