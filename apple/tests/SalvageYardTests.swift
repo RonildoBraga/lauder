@@ -299,7 +299,9 @@ struct SalvageYardTests {
     #expect(LevelCycle.next(after: BrooklynBridge.level).name == "Combat test")
     #expect(LevelCycle.next(after: CombatYard.level).name == "Salvage test")
     #expect(LevelCycle.next(after: CombatYard.level).level.id == SalvageYard.level.id)
-    #expect(LevelCycle.next(after: SalvageYard.level).name == "Bridge")
+    #expect(LevelCycle.next(after: SalvageYard.level).name == "Relay mission")
+    #expect(LevelCycle.next(after: SalvageYard.level).level.id == RelayRun.level.id)
+    #expect(LevelCycle.next(after: RelayRun.level).name == "Bridge")
     #expect(LevelCycle.next(after: TestYard.level).name == "Combat test")
   }
 

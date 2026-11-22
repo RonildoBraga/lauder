@@ -42,6 +42,8 @@ final class FightSimulation {
     /// Someone took the last allowed hit: the encounter must start again, or the party falls
     /// back where the level has that rule.
     var retry = false
+    /// Everyone left a guarded shortcut; progress stays, and no body is teleported.
+    var withdrew = false
     /// Members who appeared in this step, such as Tom before his shot.
     var appeared: [PartyMember] = []
     /// Members who stood up in this step, such as Laura once she is helped.
@@ -224,6 +226,17 @@ final class FightSimulation {
     stopFighting()
   }
 
+  /// Voluntary withdrawal retains weapon readiness as well as session-owned salvage/ammo and
+  /// hostile damage. It abandons queued bursts; the normal automatic reload keeps its timing.
+  func withdraw() {
+    var readiness = handling
+    for member in readiness.keys { readiness[member]?.holster() }
+    let spread = scatters
+    fallBack()
+    handling = readiness
+    scatters = spread
+  }
+
   /// No encounter under way, nothing aimed or in flight, the weapon holstered, and every
   /// hostile shown as it now is.
   private func stopFighting() {
@@ -278,6 +291,28 @@ final class FightSimulation {
     director.start(encounter.cues)
   }
 
+  /// Detection shares incoming-shot cover geometry, including a freshly evaluated shelter
+  /// and any current firing exposure. This adds no separate stealth state.
+  func notices(_ encounter: Level.Encounter, party: [PartyMember: SIMD2<Float>]) -> Bool {
+    guard let area = encounter.guardArea else { return false }
+    return party.contains { member, point in
+      guard area.contains(point) else { return false }
+      return encounter.hostiles.contains { spec in
+        guard let state = hostiles[spec.id], state.isVisible, !state.isDown else { return false }
+        var destination = point
+        var blockers = obstacles
+        if let coverRules {
+          var stance = stances[member] ?? CoverStance()
+          stance.advance(at: point, facing: state.position - point, dt: 0, using: coverRules)
+          destination = stance.incomingPoint(using: coverRules)
+          blockers = stance.incomingBlockers(using: coverRules)
+        }
+        return simd_distance(state.position, destination) <= spec.range
+          && LineOfSight.isClear(from: state.position, to: destination, obstacles: blockers)
+      }
+    }
+  }
+
   /// What players hear and feel since the last call, which empties the list (ADR 0008).
   func takeEvents() -> [CombatEvent] {
     defer { events.removeAll(keepingCapacity: true) }
@@ -329,6 +364,16 @@ final class FightSimulation {
       showCover(at: leader, facing: facing)
       return outcome
     }
+    let party = figures.filter { session.party.contains($0.key) }
+    if let area = encounter.guardArea, !party.isEmpty,
+      party.values.allSatisfy({ !area.contains($0) })
+    {
+      session.fallBack()
+      withdraw()
+      outcome.withdrew = true
+      outcome.line = "The party breaks contact. The safe route is still open."
+      return outcome
+    }
     for cue in director.step(dt: dt) {
       switch cue {
       case .reveal(let id): hostiles[id]?.reveal()
@@ -358,7 +403,9 @@ final class FightSimulation {
       }
     }
     // The party, where they can be seen: who a hostile can hit, and who fires by themselves.
-    let party = figures.filter { session.party.contains($0.key) }
+    let eligible =
+      encounter.guardArea.map { area in party.filter { area.contains($0.value) } }
+      ?? party
     let tactical = tactics.step(hostiles: hostiles, party: party, dt: dt)
     for (id, point) in tactical.positions { hostiles[id]?.reposition(to: point) }
     movedEnemies.formUnion(tactical.moving)
@@ -380,14 +427,27 @@ final class FightSimulation {
     var threatNow: String?
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
+      let targetsParty = spec.targetsAnyone || encounter.guardArea != nil
+      if encounter.guardArea != nil {
+        if let victim = victims[spec.id], eligible[victim] == nil {
+          state.disrupt()
+          victims[spec.id] = nil
+        }
+        if victims[spec.id] == nil {
+          victims[spec.id] =
+            nearestInSight(of: state, among: eligible)
+            ?? session.party.first { eligible[$0] != nil }
+        }
+      }
       // The leader, or whoever a hostile that aims at anyone began its wind-up at.
-      let victim = spec.targetsAnyone ? victims[spec.id] ?? session.leader : session.leader
+      let victim = targetsParty ? victims[spec.id] ?? session.leader : session.leader
       let aimedAt = incomingPoint(for: victim, at: party[victim] ?? leader)
       let incoming = incomingBlockers(for: victim)
       let origin = hostileFiringPoint(spec.id, toward: aimedAt)
       let inRange = simd_distance(origin, aimedAt) <= spec.range
       let canHit =
         inRange
+        && (encounter.guardArea == nil || eligible[victim] != nil)
         && LineOfSight.isClear(
           from: origin, to: aimedAt,
           obstacles: spec.attack == .throwGrenade ? shotBlockers : incoming)
@@ -413,21 +473,21 @@ final class FightSimulation {
       }
       if case .aiming = state.phase {
         fightUnderWay = true
-        if spec.targetsAnyone, victims[spec.id] == nil {
-          victims[spec.id] = nearestInSight(of: state, among: party) ?? session.leader
+        if targetsParty, victims[spec.id] == nil {
+          victims[spec.id] = nearestInSight(of: state, among: eligible) ?? session.leader
         }
       } else {
         victims[spec.id] = nil
       }
       // Whom it aims at now, for its aim line, its facing and the HUD.
-      let aim = spec.targetsAnyone ? victims[spec.id] ?? session.leader : session.leader
+      let aim = targetsParty ? victims[spec.id] ?? session.leader : session.leader
       let aimPosition = incomingPoint(for: aim, at: party[aim] ?? leader)
       switch state.phase {
       case .aiming where spec.attack == .throwGrenade:
         threatNow = "\(spec.name) is preparing a grenade."
       case .aiming:
         threatNow =
-          spec.targetsAnyone
+          targetsParty
           ? "\(spec.name) is aiming at \(aim.displayName)." : "\(spec.name) is aiming."
       case .charging: threatNow = "\(spec.name) is running at you."
       default: break

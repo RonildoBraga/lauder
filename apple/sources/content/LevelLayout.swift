@@ -149,7 +149,9 @@ extension Level {
 
 extension Level.Box {
   /// A box in a level's layout file, written briefly.
-  static func box(_ name: String, at position: SIMD3<Float>, size: SIMD3<Float>) -> Self {
-    Self(name: name, position: position, size: size)
+  static func box(
+    _ name: String, at position: SIMD3<Float>, size: SIMD3<Float>, look: Look = .scenery
+  ) -> Self {
+    Self(name: name, position: position, size: size, look: look)
   }
 }

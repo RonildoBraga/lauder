@@ -7,9 +7,12 @@ struct Level {
   /// A box that blocks movement and sight with its footprint; the ground is separate. How it
   /// looks is up to the level's scene file (ADR 0002).
   struct Box {
+    enum Look: Sendable { case scenery, signal, rust, teal, ink }
     let name: String
     let position: SIMD3<Float>
     let size: SIMD3<Float>
+    /// Semantic greybox accents from the existing palette; exported scenes own their look.
+    var look = Look.scenery
 
     var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
   }
@@ -122,7 +125,7 @@ struct Level {
     /// and the formation button regroups them instead of changing the formation.
     var combatPositioning = false
     /// Shared party proximity cover, low-cover firing exposure and tall-edge peeking
-    /// (ADR 0009/0011), tried only in the combat yard.
+    /// (ADR 0009/0011), reused by Relay Run after the combat-yard experiment.
     var leaderCover = false
   }
 
@@ -175,6 +178,9 @@ struct Level {
     var gathersParty = false
     /// A line shown once every hostile is down, such as the combat yard's.
     var clearedLine: String?
+    /// A guarded shortcut: visible party members inside can start it, and leaving with the
+    /// whole party breaks contact. Nil preserves the opening and combat-yard rules.
+    var guardArea: PartyMotion.Box?
   }
 
   /// A short name, such as "brooklyn-bridge", for the scene and messages.
@@ -263,6 +269,12 @@ struct Level {
     let transmitterApproach: PartyMotion.Box
     /// The objective once the repair is done.
     let doneObjective: String
+    /// A journey's outward and return guidance; absent in the original compact salvage yard.
+    var depotGoal: Goal?
+    var returnGoal: Goal?
+    var returnObjective: String?
+    /// A provisional exchange after a successful repair with the party gathered.
+    var completion: MissionScript.Conversation?
 
     /// Where the open gate stands: swung into the depot about its hinge, a thin wall along the
     /// opening's west side, which blocks movement in place of the shut gate.

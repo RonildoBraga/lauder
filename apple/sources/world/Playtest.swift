@@ -75,6 +75,8 @@
       case awaitConversation(seconds: Float)
       /// The level in play, by its id, such as "combat-yard" after the pause menu's third choice.
       case expectLevel(String)
+      case expectFighting(Bool)
+      case expectRepaired(Bool)
       /// The active member's cover and whether firing has exposed them (ADR 0009). Nil means
       /// no nearby cover; the stance and visibility checks then do not apply.
       case expectCover(String?, firing: Bool?, exposed: Bool)
@@ -135,6 +137,7 @@
       let line: String
       /// What each salvage cabinet holds in this run, by id.
       let salvageContents: [String: Level.Salvage.Contents]
+      let salvageRepaired: Bool
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
@@ -551,6 +554,14 @@
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
         case .expectLevel(let id):
           expect(snapshot.level.id == id, "the level was \(snapshot.level.id) instead of \(id)")
+        case .expectFighting(let expected):
+          expect(
+            snapshot.isFighting == expected,
+            "fighting was \(snapshot.isFighting) instead of \(expected)")
+        case .expectRepaired(let expected):
+          expect(
+            snapshot.salvageRepaired == expected,
+            "repair was \(snapshot.salvageRepaired) instead of \(expected)")
         case .expectCover(let box, let firing, let exposed):
           let cover = snapshot.leaderCover
           expect(
@@ -958,7 +969,7 @@
         .mark("the yard is clear"), .formation, .expectFormation(.column), .wait(seconds: 1),
       ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
         .expectLevel("salvage-yard"), .mark("on to the salvage yard"),
-      ] + otherLevel + [
+      ] + otherLevel + [.expectLevel("relay-run")] + otherLevel + [
         .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
       ]
 
@@ -1063,19 +1074,21 @@
         .walk([0, -6]), .walk([0, -2]), .walk([-2, 5]), .act,
         .expectLine("The regulator fits, and the transmitter answers."),
         .mark("the transmitter works"), .wait(seconds: 1),
-      ] + restartRun + [.expectLevel("salvage-yard")] + otherLevel + [
+      ] + restartRun + [.expectLevel("salvage-yard")] + otherLevel + [.expectLevel("relay-run")]
+      + otherLevel + [
         .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
       ]
 
     /// Every scenario, by the name `apple/scripts/playtest` gives it.
-    private static let scenarios: [(name: String, steps: [Step])] = [
-      ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
-      ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-      ("orders", orders), ("combat-yard", combatYard), ("leader-cover", leaderCover),
-      ("salvage-yard", salvageYard),
-      ("squad-weapons", squadWeapons),
-      ("tactical-enemies", tacticalEnemies),
-    ]
+    private static let scenarios: [(name: String, steps: [Step])] =
+      [
+        ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
+        ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
+        ("orders", orders), ("combat-yard", combatYard), ("leader-cover", leaderCover),
+        ("salvage-yard", salvageYard),
+        ("squad-weapons", squadWeapons),
+        ("tactical-enemies", tacticalEnemies),
+      ] + RelayRunPlaytest.scenarios
 
     static func steps(for scenario: String) -> [Step]? {
       scenarios.first { $0.name == scenario }?.steps
