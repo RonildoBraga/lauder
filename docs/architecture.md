@@ -34,6 +34,8 @@ Each level and each model is a Blender file, its source ([ADR 0002](decisions/00
 
 `GameWorld` loads the scene file synchronously while it is made, with `Entity.load(named:in:)`, so start-up has no asynchronous step, and Restart keeps it. `SceneStyle` loads each model's scene file the same way, once, and gives every figure a copy. The game compiles the layout file as typed data, with no parser.
 
+Debug builds measure elapsed time in the world's initializer body with a monotonic clock. Scripted playtests retain each world's load timing across level changes, reporting navigation, fight entities, scene, party and remaining setup separately. These timings exclude earlier stored-property initialisation and the new view's presentation and renderer start-up; they help diagnose the level-switch hitch without changing loading or adding a cache. Release builds omit them.
+
 The party uses three named, differently coloured primitive stand-ins, each a Blender model with a scene file of its own. No character art or animation is required. Add no per-frame visual work beyond what gameplay needs, such as fading a landmark or sizing a marker; do not publish character transforms to SwiftUI or require art production before evaluating play.
 
 ## Swift conventions

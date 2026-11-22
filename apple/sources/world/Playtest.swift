@@ -156,6 +156,9 @@
       let steps: Int
       let frameMilliseconds: Timing
       let simulationMilliseconds: Timing
+      /// Initial construction and each level replacement, in order. Renderer start-up is
+      /// outside these elapsed timings; compare them with frame times rather than adding them.
+      let worldLoads: [WorldLoadTiming]
       let warningFrames: Int
       let overlapFraction: Double
       let withinSlotWhileMoving: Double
@@ -188,6 +191,7 @@
       + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning\n"
     private var frameTimes: [Double] = []
     private var simulationTimes: [Double] = []
+    private var worldLoads: [WorldLoadTiming] = []
     private var warningFrames = 0
     private var overlapFrames = 0
     private var movingSamples = 0
@@ -197,6 +201,13 @@
     private(set) var summary: Summary?
     /// Set by the world from the window scene; recorded in the summary.
     var orientation = "unknown"
+
+    /// Construction happens between worlds' frames. Keep its timing with the runner as it
+    /// carries on in the new world, without treating a load as a gameplay update.
+    mutating func recordLoad(_ timing: WorldLoadTiming) {
+      guard summary == nil else { return }
+      worldLoads.append(timing)
+    }
 
     init?(scenario: String) {
       guard let steps = Self.steps(for: scenario) else { return nil }
@@ -605,7 +616,8 @@
         marks: marks, startedAt: startedAt?.timeIntervalSince1970 ?? 0,
         seconds: Double(elapsed), frames: simulationTimes.count, stepsCompleted: index,
         steps: steps.count, frameMilliseconds: Self.timing(frameTimes),
-        simulationMilliseconds: Self.timing(simulationTimes), warningFrames: warningFrames,
+        simulationMilliseconds: Self.timing(simulationTimes), worldLoads: worldLoads,
+        warningFrames: warningFrames,
         overlapFraction: Double(overlapFrames) / Double(max(1, simulationTimes.count)),
         withinSlotWhileMoving: Double(withinSlot) / Double(max(1, movingSamples)),
         worstLeaderGap: Double(worstGap))
