@@ -107,6 +107,9 @@ struct Level {
     /// them (`CoverPlanner`); they keep off open ground where another way exists (`OpenGround`);
     /// and the formation button regroups them instead of changing the formation.
     var combatPositioning = false
+    /// Active-character proximity cover, low-cover firing exposure and tall-edge peeking
+    /// (ADR 0009), tried only in the combat yard.
+    var leaderCover = false
   }
 
   /// What happens at a moment after an encounter begins.

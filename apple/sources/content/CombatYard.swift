@@ -51,7 +51,7 @@ enum CombatYard {
   /// and positions themselves as ADR 0003's combat positioning has it.
   static let combat = Level.Combat(
     companionWeapons: [.miki: .carbine, .laura: .lightBurst, .tom: .closeScatter],
-    fallsBack: true, disrupt: true, combatPositioning: true)
+    fallsBack: true, disrupt: true, combatPositioning: true, leaderCover: true)
 
   static let level = Level(
     id: "combat-yard",

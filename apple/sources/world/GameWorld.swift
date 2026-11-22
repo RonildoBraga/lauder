@@ -167,6 +167,7 @@ final class GameWorld {
   @ObservationIgnored private var facingGoal: SIMD2<Float>?
   /// Members still rocking from a shot or a hit in the latest step (ADR 0008).
   @ObservationIgnored private var joltedMembers: Set<PartyMember> = []
+  @ObservationIgnored private var posedCoverLeader: PartyMember?
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -636,6 +637,9 @@ final class GameWorld {
   private func resetPlay(around spot: SIMD2<Float>) {
     fight.reset()
     stage.reset(fight)
+    for member in PartyMember.allCases { showPose(member) }
+    joltedMembers = []
+    posedCoverLeader = nil
     resetSquad(around: spot)
   }
 
@@ -1120,6 +1124,9 @@ final class GameWorld {
     // straight again.
     let jolted = Set(fight.jolts.keys)
     for member in jolted.union(joltedMembers) { showPose(member) }
+    if let posedCoverLeader { showPose(posedCoverLeader) }
+    if fight.coverState != nil { showPose(leader) }
+    posedCoverLeader = fight.coverState == nil ? nil : leader
     joltedMembers = jolted
     combatEvents.append(contentsOf: fight.takeEvents())
     if combatEvents.count > Self.keptEvents {
@@ -1221,6 +1228,8 @@ final class GameWorld {
     let previous = squadLeader
     let leader = session.leader
     squadLeader = leader
+    fight.clearCover()
+    showPose(previous)
     facingGoal = nil
     if let point = position(of: leader) { route.reset(to: point) }
     planner.reset()
@@ -1286,13 +1295,19 @@ final class GameWorld {
   private func showPose(_ member: PartyMember) {
     let facing = simd_quatf(angle: yaw[member] ?? 0, axis: [0, 1, 0])
     if lying.contains(member) {
+      visuals[member]?.scale = [1, 1, 1]
       visuals[member]?.orientation = facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
       visuals[member]?.position = [0, Self.lyingDrop, 0]
       return
     }
-    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
+    let cover = member == session.leader ? fight.coverState : nil
+    let scale: Float = cover != nil && cover?.firing == false ? 0.68 : 1
+    let offset = cover?.offset ?? .zero
+    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height * scale)
+    visuals[member]?.scale = [1, scale, 1]
     visuals[member]?.orientation = jolt.tilt * facing
-    visuals[member]?.position = jolt.offset
+    visuals[member]?.position =
+      jolt.offset + [offset.x, -PartyBody.height * (1 - scale) / 2, offset.y]
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.
@@ -1394,7 +1409,7 @@ final class GameWorld {
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks,
-        shotMarks: shotMarks)
+        shotMarks: shotMarks, leaderCover: fight.coverState)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
