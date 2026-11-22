@@ -36,8 +36,11 @@ verify that drift fails with a useful diagnostic; sources remain ordinary declar
 
 The standard check runs in GitHub Actions on a compatible hosted Xcode image as well as locally.
 A workflow definition is not proof of a successful run: record its actual result on the PR.
-Reproducible TestFlight tooling is a separate focused change under the same assignment; keys,
-team configuration and release evidence stay private.
+The separate focused TestFlight tooling change under this assignment provides a versioned
+`apple/scripts/testflight` command. It binds checks and signed archives to the reviewed source,
+reserves accepted/processing numbers and verifies existing testers' actual access. Offline
+regressions cover release boundaries without keys or network access. Team configuration,
+credentials and release evidence stay private.
 
 ## Verification
 

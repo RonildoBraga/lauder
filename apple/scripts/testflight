@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""Discover, archive, upload and verify Lauder's internal TestFlight delivery."""
+import sys
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from testflight_release import main
+
+raise SystemExit(main())

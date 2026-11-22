@@ -47,7 +47,7 @@ apple/
       sounds/                    Generated combat sounds
   tests/                         Bridge and shared input/movement/weapon regressions
     support/                     Test-only navigation/range geometry and headless helpers
-  scripts/                       Simulator play/playtest and generated assets
+  scripts/                       Simulator tools, contract checks, assets and TestFlight CLI
 blender/
   levels/                        Bridge Blender source
   assets/                        Character model sources

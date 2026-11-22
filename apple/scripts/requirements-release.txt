@@ -1,0 +1,2 @@
+# Optional command-line release tooling only; not an app dependency.
+cryptography==50.0.2

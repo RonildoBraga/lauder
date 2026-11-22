@@ -16,7 +16,7 @@ An explicit maintainer assignment or instruction authorises that task. Avoid ask
 
 ## Naming conventions
 
-Keep each platform's and tool's files in its own top-level folder, as the [project structure](README.md#project-structure) shows: `apple/` for the iPhone app and `blender/` for the level editor. A later platform gets a folder of its own beside `apple/`. Use lowercase names for manually maintained folders, with hyphens between words when needed. Swift source filenames use PascalCase, such as `GameWorld.swift`. Other documentation and script filenames use lowercase kebab-case, such as `visual-direction.md` and `export-level.py`.
+Keep each platform's and tool's files in its own top-level folder, as the [project structure](README.md#project-structure) shows: `apple/` for the iPhone app and `blender/` for the level editor. A later platform gets a folder of its own beside `apple/`. Use lowercase names for manually maintained folders, with hyphens between words when needed. Swift source filenames use PascalCase, such as `GameWorld.swift`. Other documentation and script filenames use lowercase kebab-case, such as `visual-direction.md` and `export-level.py`. Importable Python helper modules use snake_case to match Python imports.
 
 Preserve conventional names: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `LICENSE`, `Info.plist` and `Lauder.xcodeproj`. Leave Xcode/tool-owned internal folder names unchanged. Targets, modules and products remain `Lauder` and `LauderTests`. Asset resource names and USD prim paths retain their intentional case.
 
@@ -44,7 +44,7 @@ Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime
 
 The script first checks that the required Git LFS assets, the USDZ files and the combat sounds, exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
 
-It checks that the scenario and asset declarations shared by Swift, Python and Blender agree, with mutation tests that detect drift. It then runs the Blender extension's tests, confirms that the [combat sounds](#sounds) match their generator, runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
+It checks that the scenario and asset declarations shared by Swift, Python and Blender agree, with mutation tests that detect drift. It then checks shared source declarations and their drift regressions, runs offline release-contract tests without credentials, runs the Blender extension's tests, confirms that the [combat sounds](#sounds) match their generator, runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
 
 The [Check workflow](.github/workflows/check.yml) runs the same command for pull requests and pushes to `main`, with a manual trigger available. It selects Xcode 27.2 on GitHub's [`xcode-27` runner](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), downloads LFS payloads and requires no signing credentials. A configured workflow is not a successful run; inspect its result for the current commit. Runner/toolchain failures fail the check and must be investigated rather than reported as a passing app test.
 
@@ -162,11 +162,47 @@ A model follows the same rules as the rest of a level's look, and Export refuses
 
 ## TestFlight builds
 
-TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid team, which is passed at archive time with `DEVELOPMENT_TEAM` and kept out of the repository. Archive the Release configuration for `generic/platform=iOS` with automatic signing and `-allowProvisioningUpdates`, then upload with `xcodebuild -exportArchive` and an export-options file whose method is `app-store-connect` and destination `upload`. Each upload needs a build number not used before for its version. The committed `CURRENT_PROJECT_VERSION` is the last build uploaded, so raise it before the next upload. Internal testers receive each build automatically, and the pause menu shows which one they are playing, such as **Lauder 0.1.0 (14)**. Upload only with the maintainer's go-ahead.
+TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid team, which is passed at archive time with `DEVELOPMENT_TEAM` and kept out of the repository. Archive the Release configuration for `generic/platform=iOS` with automatic signing and `-allowProvisioningUpdates`, then upload with `xcodebuild -exportArchive` and an export-options file whose method is `app-store-connect` and destination `upload`. Each upload needs a build number not used before for its version. The committed `CURRENT_PROJECT_VERSION` selects the intended build; discover and choose an unused number before its review and upload. Internal testers receive each build automatically, and the pause menu shows which one they are playing, such as **Lauder 0.1.0 (14)**. Upload only with the maintainer's go-ahead.
 
 An existing App Store Connect API upload key can authenticate both archive and export/upload. Pass `-authenticationKeyPath "$LAUDER_ASC_KEY_PATH"`, `-authenticationKeyID "$LAUDER_ASC_KEY_ID"`, `-authenticationKeyIssuerID "$LAUDER_ASC_ISSUER_ID"` and `-allowProvisioningUpdates`; these variables refer to private local values, never committed credentials. Identify the existing authorised key rather than choosing arbitrarily if several exist. API authentication does not depend on Xcode's saved Apple-account session or a connected phone; signing material must still match the selected team. Keep keys, JWTs and full signing logs private.
 
 Discover Lauder's own App Store Connect record by bundle ID, and inspect both build records and accepted/processing build uploads before selecting and committing a number. Record the source commit and verify the signed archive's bundle ID, version/build, team and symbols. A previous archive is reusable only when its source is correct and its number remains unused. Upload for internal TestFlight testing using Lauder's distribution settings; preserve existing tester membership. Completion requires successful Apple processing and verified availability to the existing intended groups, not only a successful upload command. An explicit assignment may authorise a sequence of reviewed merges and TestFlight deliveries; do not request the same approval at every milestone or treat Simulator delivery as physical-playtest evidence. The [current prototype plan](docs/prototype-plan.md) and [bridge-only reset](docs/decisions/0017-bridge-only-reset.md) define the active scope.
+
+### Reproducible release command
+
+`apple/scripts/testflight` provides the same Lauder-only discovery, archive, upload and verification path to every maintainer or agent. Its Python dependency is release tooling only; it does not join the app or normal checks. Use a local virtual environment if needed:
+
+```sh
+python3 -m venv .local/release-tools
+. .local/release-tools/bin/activate
+python3 -m pip install -r apple/scripts/requirements-release.txt
+```
+
+Configure `LAUDER_DEVELOPMENT_TEAM`, `LAUDER_ASC_KEY_PATH` and `LAUDER_ASC_ISSUER_ID` privately before release commands. `LAUDER_ASC_KEY_ID` may be supplied explicitly; otherwise it is read from the selected `AuthKey_<KEY_ID>.p8` filename. An explicit ID must match that filename. The command selects no key arbitrarily, and `--help` plus offline tests need no credentials. Keep these environment values and keys out of Git and chat.
+
+Choose a fresh delivery directory below `.local/`, then discover Lauder's own record and unused build numbers:
+
+```sh
+python3 apple/scripts/testflight discover --output .local/testflight/delivery
+```
+
+Commit the chosen build number, finish review and merge the intended source. Replace `REVIEWED_COMMIT_SHA` below with the completed-review commit. Archive requires clean `main` with that exact reviewed tree; it runs `./scripts/check` and binds a successful check receipt and log digest to the frozen source. It then creates a signed Release archive, verifies its bundle/version/build/team and matching dSYM, and records its fingerprint:
+
+```sh
+python3 apple/scripts/testflight archive --output .local/testflight/delivery --reviewed-commit REVIEWED_COMMIT_SHA
+python3 apple/scripts/testflight upload --output .local/testflight/delivery
+python3 apple/scripts/testflight wait --output .local/testflight/delivery --timeout 600
+```
+
+The command refreshes accepted/processing reservations before archive and upload. Upload rechecks the source, check receipt, archive fingerprint and fixed internal-only export settings. It records the attempt before invoking Xcode and uses exclusive operation locks. An attempted or interrupted upload is never replayed automatically: inspect `status` and private logs before deciding how to recover. Do not remove an attempt receipt merely to retry.
+
+`status` makes one read-only check; `wait` polls for at most the requested interval. Both return **0 only when the existing internal testers can access the processed, unexpired Lauder build**, **2 while pending or after a wait timeout**, and **1 on an error**. Verification requires unchanged existing group/tester membership. These commands do not invite testers, change group membership, alter distribution settings or submit an App Store review. Upload-command success alone is not completion.
+
+Private records, full Xcode logs, archives and symbols stay in the selected directory with restricted permissions. The directory has an ownership receipt; source paths, symlinked output directories and nonempty unrelated directories are refused. A status error is saved separately so an earlier successful processing proof is preserved. Run the offline release-contract tests without keys or network:
+
+```sh
+python3 -I -B apple/scripts/test-testflight-release.py
+```
 
 ## Git LFS and cloning
 
