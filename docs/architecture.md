@@ -101,7 +101,7 @@ Persistence remains unimplemented later hardening. Define versioned value snapsh
 
 Tests cover bridge beats/interactions/recruitment/retry, session authority and input priority/release, camera mapping, native weapon timing and feedback, actual long rays/neutral safety, collision and squad motion. A test-only yard with a narrow doorway exercises clearance the bridge cannot provide; a flat range exercises weapon rules without changing app content.
 
-Portable contract checks compare scenario and resource declarations across Swift, Python and Blender. The same standard check runs in CI on the selected compatible Xcode image; the PR records the actual result.
+Portable contract checks compare scenario and resource declarations across Swift, Python and Blender. Offline TestFlight contract tests also run without credentials or network access. The versioned `apple/scripts/testflight` command owns release discovery, source-bound checks, signing/archive verification, upload and read-only processing/tester verification; its team/credentials and receipts/archives stay private. The same standard check runs in CI on the selected compatible Xcode image; the PR records the actual result.
 
 Eight DEBUG scripted routes use ordinary input in headless and rendered Simulator runs. See [verification](prototype-plan.md#verification-and-performance). Pointer-driven touch is not physical multi-touch, and Simulator controller enumeration does not prove live input forwarding. Physical behaviour, performance and enjoyment require separately recorded evidence.
 
