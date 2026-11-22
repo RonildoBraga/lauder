@@ -34,15 +34,17 @@ struct NavigationCacheTests {
   }
 
   @Test
-  func onlyThreeRecentlyUsedGeometriesStayPrepared() {
+  func onlyFourRecentlyUsedGeometriesStayPrepared() {
     let cache = NavigationCache()
     let first = cache.prepare(for: yard(width: 8))
     let second = cache.prepare(for: yard(width: 10))
     let third = cache.prepare(for: yard(width: 12))
+    let fourth = cache.prepare(for: yard(width: 14))
     #expect(cache.prepare(for: yard(width: 8)) === first)
-    _ = cache.prepare(for: yard(width: 14))
+    _ = cache.prepare(for: yard(width: 16))
     #expect(cache.prepare(for: yard(width: 8)) === first)
     #expect(cache.prepare(for: yard(width: 12)) === third)
+    #expect(cache.prepare(for: yard(width: 14)) === fourth)
     // The second, not the recently visited first or third, was the least recent.
     #expect(cache.prepare(for: yard(width: 10)) !== second)
   }

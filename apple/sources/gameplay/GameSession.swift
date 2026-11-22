@@ -477,7 +477,12 @@ final class GameSession {
     guard mode == .exploring, let action = salvage.action(for: leader, at: place) else {
       return nil
     }
-    return salvage.perform(action, by: leader)
+    let repaired = salvage.repaired
+    let line = salvage.perform(action, by: leader)
+    if !repaired, salvage.repaired, let completion = salvageTask?.completion {
+      _ = converse(completion)
+    }
+    return line
   }
 
   /// A new run's salvage progress, with the task's cabinets dealt afresh.
@@ -537,7 +542,7 @@ final class GameSession {
         // And the one after Laura stands ends with her joining (M4).
         recruit(.laura)
         if beat == .helpingLaura { beat = .withLaura }
-      case .arrival:
+      case .arrival, .relayRestored:
         break
       }
       self.conversation = nil

@@ -18,10 +18,13 @@ The maintainer assigned completion, Simulator testing, reviewed integration and 
 
 The technical direction is Swift, RealityKit and SwiftUI, with iPhone first ([ADR 0001](docs/decisions/0001-engine.md)). The game plays with a PS5 or Xbox controller, with touch, or with the keyboard in the Simulator; the [input contract](docs/prototype-plan.md#input-and-interaction-contract) lists the controls, and [Touch controls](docs/touch-controls.md) describes the touch layout.
 
+The maintainer has assigned **Relay Run**, a continuous shelter–depot–return mission that joins exploration, useful salvage and an optional guarded shortcut ([ADR 0013](docs/decisions/0013-relay-run.md)). Its [walkthrough](docs/relay-run-walkthrough.md) and bounded plan are prepared; the implementation is under Simulator validation. The safe detour requires no combat, either gate specialist opens access for everyone, and the compatible part restores the shelter's transmitter. Story placement and dialogue remain provisional. Build 22 predates this mission.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
 - [Gameplay walkthrough](docs/gameplay-script.md): the Brooklyn Bridge opening as the player meets it, and the future squad and combat design.
+- [Relay Run walkthrough](docs/relay-run-walkthrough.md): the assigned standalone exploration-and-salvage mission, with a safe route and optional guarded shortcut.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, a proposal, not assigned for implementation.
 - [Architecture](docs/architecture.md): ownership, input, movement, fights, scenes, Restart and later saving.
 - [Decision records](docs/decisions): the engine, Blender as the source of levels and models, squad movement, the Brooklyn Bridge opening, squad combat and salvage experiments, aiming and shot feedback, weapon feel with a plan for combat, active-character cover, squad weapons, coordinated companions and tactical enemies.
@@ -47,6 +50,7 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
       CombatYard.swift          The combat experiment's temporary greybox yard, defined in Swift, and its fight rules
       SalvageYard.swift         The salvage experiment's temporary greybox yard, defined in Swift, and its salvage task
+      RelayRun.swift            One continuous greybox salvage journey with an optional guarded shortcut
       LevelCycle.swift          The pause menu's cycle through the bridge and the two test yards
       BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender
       BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender

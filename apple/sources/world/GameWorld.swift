@@ -272,6 +272,11 @@ final class GameWorld {
   /// repair is done.
   var objective: String {
     if let task = level.salvage, session.salvage.repaired { return task.doneObjective }
+    if let task = level.salvage, session.salvage.regulators.contains(where: \.mightFit),
+      let text = task.returnObjective
+    {
+      return text
+    }
     return level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
   }
   /// The pause menu's third choice: what it reads, what it does and the level it starts.
@@ -328,7 +333,8 @@ final class GameWorld {
     } else {
       // A greybox, such as the combat yard or a test's level: snow underfoot, and plain blocks.
       for box in [level.ground] + level.boxes {
-        let material = box.name == level.ground.name ? style.snow : style.scenery
+        let material: any Material =
+          box.name == level.ground.name ? style.snow : style.material(for: box.look)
         let entity = style.block(size: box.size, at: box.position, material: material)
         entity.name = box.name
         root.addChild(entity)
@@ -600,6 +606,17 @@ final class GameWorld {
     // In a salvage task, the place decides; at the gate, whoever cannot open it hears who can
     // (ADR 0006).
     if let task = level.salvage, let place = Self.place(at: position, in: task) {
+      if task.completion != nil, session.salvage.action(for: session.leader, at: place) == .fit {
+        guard !session.inEncounter else {
+          observation = "Bring everyone out of the guarded lane first."
+          return
+        }
+        guard positions.values.allSatisfy({ simd_distance($0, position) <= Self.gatherRadius })
+        else {
+          observation = "Bring everyone back to the transmitter."
+          return
+        }
+      }
       observation =
         session.performSalvage(at: place) ?? session.salvage.hint(at: place)
         ?? level.lookAround
@@ -1150,7 +1167,12 @@ final class GameWorld {
     }
     var inGatheringArea = false
     for encounter in level.encounters {
-      guard case .area(let area) = encounter.start, area.contains(position) else { continue }
+      guard case .area(let area) = encounter.start else { continue }
+      if encounter.guardArea != nil {
+        guard fight.notices(encounter, party: positions) else { continue }
+      } else {
+        guard area.contains(position) else { continue }
+      }
       // A scene for the whole party, such as the end of the opening, waits until everyone is
       // close; companions holding elsewhere must be called back first.
       if encounter.gathersParty, encounter.beat == session.nextBeat {
@@ -1230,6 +1252,11 @@ final class GameWorld {
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if outcome.retry { retryElapsed = 0 }
+    if outcome.withdrew {
+      cover.reset()
+      evasions = [:]
+      showOrders()
+    }
   }
 
   /// A member who has not joined appears where they wait, turned towards the nearest hostile
@@ -1466,7 +1493,16 @@ final class GameWorld {
   /// The compass to the goal for the story's beat: its name, the distance from the leader, and
   /// its direction on screen, turned from up the screen towards its right.
   private func updateCompass() {
-    guard let goal = level.goals.last(where: { $0.beat <= session.beat })?.goal,
+    let goal: Level.Goal?
+    if let task = level.salvage, task.depotGoal != nil {
+      goal =
+        session.salvage.repaired
+        ? nil
+        : session.salvage.regulators.contains(where: \.mightFit) ? task.returnGoal : task.depotGoal
+    } else {
+      goal = level.goals.last(where: { $0.beat <= session.beat })?.goal
+    }
+    guard let goal,
       let leader = position(of: session.leader)
     else {
       if compass != nil { compass = nil }
@@ -1497,6 +1533,7 @@ final class GameWorld {
         isFighting: session.inEncounter, ammo: session.ammo,
         formation: session.formation, orders: session.orders, squadState: session.squadState,
         line: gameLine, salvageContents: session.salvage.contents,
+        salvageRepaired: session.salvage.repaired,
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks,

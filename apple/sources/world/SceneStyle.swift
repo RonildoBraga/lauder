@@ -32,6 +32,16 @@ struct SceneStyle {
   /// Threats: a hostile's aim and shots, and the assisted target's marker.
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
+
+  func material(for look: Level.Box.Look) -> any Material {
+    switch look {
+    case .scenery: scenery
+    case .signal: signal
+    case .rust: rust
+    case .teal: fadedTeal
+    case .ink: ink
+    }
+  }
   /// How much larger than their authored sizes the world markers show: the leader's disc, order
   /// rings, the refusal cross, the aim marker and the aim and shot lines.
   let markerScale: Float

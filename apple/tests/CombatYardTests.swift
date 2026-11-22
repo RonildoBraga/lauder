@@ -100,13 +100,16 @@ struct CombatYardTests {
     choose(.otherLevel, in: yard)
     let salvage = game.world
     #expect(salvage !== yard && salvage.level.id == SalvageYard.level.id)
-    #expect(salvage.otherLevel.name == "Bridge")
+    #expect(salvage.otherLevel.name == "Relay mission")
     pressPause(salvage)
     salvage.update(
       with: InputRules.Input(
         movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false,
         otherLevelPressed: true),
       sampledIn: .paused, deltaTime: 1 / 60)
+    let relay = game.world
+    #expect(relay.level.id == RelayRun.level.id && relay.otherLevel.name == "Bridge")
+    choose(.otherLevel, in: relay)
     let opening = game.world
     #expect(
       opening !== salvage && opening !== bridge && opening.level.id == BrooklynBridge.level.id)

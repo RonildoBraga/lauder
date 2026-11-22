@@ -1,9 +1,11 @@
 # Lauder — gameplay walkthrough
 
-**Updated:** 21 November 2026\
+**Updated:** 22 November 2026\
 **Status:** The game opens on the Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines the checks.
 
 Combat stays occasional. The [future squad and combat design](#future-squad-and-combat-design) passes a design gate before any combat or formation work beyond the opening.
+
+The assigned [Relay Run walkthrough](relay-run-walkthrough.md) brings exploration, the existing salvage rules and an optional guarded shortcut into one standalone journey. [ADR 0013](decisions/0013-relay-run.md) owns that prototype's scope. It preserves a no-combat completion path; its dialogue and place in the story remain provisional.
 
 ## The game we are building
 

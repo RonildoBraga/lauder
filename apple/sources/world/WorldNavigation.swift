@@ -48,11 +48,11 @@ final class WorldNavigation {
   }
 }
 
-/// The game's three current venues fit here. Least-recently-used geometry is discarded if a
-/// fourth arrives, so arbitrary levels cannot retain an unbounded collection of large grids.
+/// The game's four current venues fit here. Least-recently-used geometry is discarded if a
+/// fifth arrives, so arbitrary levels cannot retain an unbounded collection of large grids.
 @MainActor
 final class NavigationCache {
-  static let capacity = 3
+  static let capacity = 4
   private var entries: [WorldNavigation] = []
 
   func prepare(for level: Level) -> WorldNavigation {

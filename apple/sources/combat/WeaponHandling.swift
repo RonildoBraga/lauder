@@ -51,6 +51,14 @@ struct WeaponHandling: Sendable {
     cooldown = max(cooldown, weapon.interval)
   }
 
+  /// Breaking contact cancels a burst and lowers the weapon without refilling or finishing a
+  /// reload. Drawing it again uses the ordinary draw time.
+  mutating func holster() {
+    releaseTrigger()
+    isDrawn = false
+    drawRemaining = 0
+  }
+
   /// Commit one actual discharge after the caller has checked readiness, aim and ammunition.
   /// An empty magazine starts reloading immediately, regardless of the shared pool; the
   /// caller's ammunition check still prevents a later shot when that pool is empty.

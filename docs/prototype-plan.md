@@ -52,7 +52,7 @@ Levels and models come from Blender ([ADR 0002](decisions/0002-blender-source-of
 | Aim the current leader's weapon apart from movement, which also draws it ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md), [ADR 0010](decisions/0010-squad-weapons.md)) | Right stick | None: assisted aim | I, K, J, L |
 | The leader's signature: Miki's Disrupt, in the combat yard ([ADR 0005](decisions/0005-squad-combat-experiment.md)) | Square / X | Signature, during a yard fight while Miki leads | X |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
-| Choose Resume, Restart, while the experiments last the next level in a cycle, or Vibration, in the pause menu: Combat test on the bridge, Salvage test in the combat yard, Bridge in the salvage yard | Left stick or D-pad, up or down | Resume, Look reading Restart, a button beside Resume naming the next level, and a Vibration button beside it | W / S or the up and down arrow keys |
+| Choose Resume, Restart, the next venue (Combat test → Salvage test → Relay mission → Bridge), or Vibration in the pause menu | Left stick or D-pad, up or down | Resume, Look reading Restart, a button beside Resume naming the next level, and a Vibration button beside it | W / S or the up and down arrow keys |
 | Hide or show the status panel | Circle / B | None: the panel always shows with touch controls | H |
 
 Xbox RB, LB, RT and X use the same input path as PS5, but hardware delivery remains unverified. [Touch controls](touch-controls.md) are automatic without an extended controller; a connected controller is preferred unless **Use touch controls** is chosen, and **Use controller** returns to it. This in-memory selection changes the input source, not gameplay rules.
@@ -95,6 +95,18 @@ After build 21's delivery, the maintainer instructed: **“I will test later, pl
 - [ ] **Phone performance (#89/#92/#95/#96):** measure representative combat-yard frame pacing against **60 fps**, and time a level switch in a Release build with Instruments. If a switch still holds a frame for more than about **100 ms**, adjust the work or transition and measure again. Salvage-yard frame pacing is an optional additional measurement.
 
 For each result, record the actual build, phone, input source, conditions, measurement or observation and the exact question answered. Preserve failed or unsupported results as such; TestFlight availability and Simulator success do not answer this checklist.
+
+Relay Run's route choice, meaningful switching, purposeful return and optional threat also need a later maintainer playtest. Its phone controls and performance remain unverified until that session; the implementation assignment continues with Simulator testing.
+
+## Relay Run — a complete salvage journey
+
+The maintainer answered **“Proceed with your recommendation”** to the continuous exploration-and-salvage mission. [ADR 0013](decisions/0013-relay-run.md) records the scope and implementation sequence; the [walkthrough](relay-run-walkthrough.md) describes what the player does. These are prepared and the implementation is under verification. This remains a standalone greybox, with provisional dialogue and story placement.
+
+The party leaves a shelter to recover a regulator from a depot, then returns to repair its transmitter. A protected west detour avoids combat; a shorter marked route has one stationary guard. Existing gate alternatives, cabinet inspection, shuffled contents, the live supply and the shared bag remain. Optional guarded encounters detect any visible party member inside, wait for all members to leave before breaking contact, and retain salvage, ammunition and guard damage. Withdrawal cancels bursts while preserving magazines and reload timing. The completed repair gathers the trio and begins a short provisional exchange once.
+
+The pause menu cycles **Combat test → Salvage test → Relay mission → Bridge**. The navigation cache now retains four geometry entries for these four venues, preserving warm returns to the bridge. No new patrol framework, signatures, art, crafting or persistence is included.
+
+Verification covers both safe gate approaches with no firing or damage, knowledge-based return guidance, companion-triggered contact, whole-party retreat/re-entry, weapon readiness, completion, Pause and Restart. New `relay-run-safe` and `relay-run-retreat` scenarios join the standard headless checks and rendered Simulator routes. Reviewed integration and a verified TestFlight delivery follow; physical results are recorded separately in the deferred checklist.
 
 ## Later hardening, after the loop is worth keeping
 

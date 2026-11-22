@@ -61,7 +61,7 @@ Use plain Swift session state and rules on the main actor, exposing only coarse 
 
 **GameWorld owns spatial state:** a body reference for each stable member ID, out of movement until that member joins and hidden until then unless the level has them lying hurt where they wait, their actual positions, companion routes and formation state, one camera, scene bindings and one owned scene-update subscription. It reads the active leader from the session. It owns a plain-Swift `FightSimulation` for the fight's moment-to-moment values and an `EncounterStage` for their entities, with no second copy of the session's hits, rounds or defeated IDs. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
 
-`Game` reuses immutable navigation data across level visits, keyed by the exact floor bounds, obstacle footprints and open/shut gate geometry rather than a level's name. The cache retains at most three geometry entries for the current three venues; eviction only means rebuilding that data on the next visit. Each visit still creates a fresh session, entities, controls, planners and combat simulation, stops the previous world, transfers preferences and requires neutral input. Restart keeps its existing world. Standalone worlds can build their own navigation without an app-wide or persistent cache.
+`Game` reuses immutable navigation data across level visits, keyed by the exact floor bounds, obstacle footprints and open/shut gate geometry rather than a level's name. The cache retains at most four geometry entries for the current four venues; eviction only means rebuilding that data on the next visit. Each visit still creates a fresh session, entities, controls, planners and combat simulation, stops the previous world, transfers preferences and requires neutral input. Restart keeps its existing world. Standalone worlds can build their own navigation without an app-wide or persistent cache.
 
 As with the figures' model templates, `SceneStyle` retains one pristine level-scene template and returns a recursive clone for each world. The template stays unparented and never receives live transforms, fading or gameplay state. A different resource name replaces it. First visits and evicted geometry still need preparation; resource reuse reduces repeat construction without establishing renderer or physical-phone performance.
 
@@ -187,6 +187,8 @@ In the combat yard, [ADR 0009](decisions/0009-leader-cover.md)'s `LeaderCover` e
 
 `Grenade` holds a fixed landing point, a 2.5-second fuse including flight, a 2.2 m inclusive blast radius and a one-time detonation. Tall scenery blocks blast damage; low cover does not. The simulation retains a thrown grenade even if its owner goes down, applies at most one hit per party member per detonation and emits explosion values for the stage. `GrenadeMarker` presents the flight and fixed warning ring. `GameWorld` temporarily steers companions to reachable safe ground while preserving their orders; normal positioning resumes after the danger passes. Pause freezes fuses, and Restart, fallback and level replacement clear live grenades.
 
+[Relay Run](decisions/0013-relay-run.md) reuses the party's weapons and cover with one stationary rifle guard. An optional encounter `guardArea` bounds detection and eligible targets: `FightSimulation.notices` checks each recruited member with fresh incoming-shot cover geometry, and the world begins the encounter when someone is visible inside. Leaving with the whole party rewinds that optional encounter's checkpoint while retaining session-owned salvage, ammunition and hostile damage. `withdraw` cancels bursts and holsters without refilling magazines or finishing reloads. It moves no body. Default encounters retain their existing leader-triggered behaviour; the mission adds no patrol or stealth framework.
+
 ### Salvage
 
 A level can hold a salvage task, as the salvage yard of [ADR 0006](decisions/0006-salvage-and-exploration-experiment.md) does: a gate, cabinets, a transmitter and the approach area of each. The session keeps what the party has done in `SalvageProgress`:
@@ -205,6 +207,8 @@ The gate blocks movement while it is shut; once open, it stands as a thin wall i
 - the transmitter in faded teal under ink aerials, then amber once repaired.
 
 Restart starts the task afresh.
+
+A salvage task can supply depot/return goals, a return objective and a provisional completion conversation. Guidance follows what the bag might contain, so an unidentified wrong model points home until a failed fit reveals it. For a task with a completion exchange, the world requires no active encounter and the party within 5 m of the leader before fitting; the session starts the exchange only on the first successful repair. The original salvage yard has none of these optional additions and retains its earlier behaviour.
 
 ### Scenes
 
