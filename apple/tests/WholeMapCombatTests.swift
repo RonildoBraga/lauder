@@ -11,6 +11,7 @@ struct WholeMapCombatTests {
     let enemy = hostile(id: "far", at: [0, 42], hits: 1, windUp: 60)
     let level = range(hostiles: [enemy], engaged: [enemy.id])
     let (session, fight) = try begin(level)
+    _ = try #require(enemyShot(fight, session: session, at: enemy.standAt - [0, 8], seconds: 62))
     for _ in 0..<60 { _ = step(fight, session: session, at: .zero, aiming: true) }
     #expect(fight.hostiles[enemy.id]?.isTargetable == true)
     #expect(fight.isDrawn && fight.target == nil)
@@ -27,6 +28,7 @@ struct WholeMapCombatTests {
     let wall = Level.Box.box("nearer", at: [0, 1.5, 28], size: [8, 3, 1])
     let level = range(hostiles: [enemy], engaged: [enemy.id], boxes: [wall])
     let (session, fight) = try begin(level)
+    _ = try #require(enemyShot(fight, session: session, at: enemy.standAt - [0, 8], seconds: 62))
     let shot = try #require(partyShot(fight, session: session, at: .zero))
     #expect(shot.path.strike == .scenery)
     #expect(abs(shot.path.end.y - 27.5) < 0.001)
@@ -35,8 +37,8 @@ struct WholeMapCombatTests {
   }
 
   @Test
-  func aRifleCannotStartMapWideBurstsOutsideItsAcquisitionRange() throws {
-    let enemy = hostile(id: "rifle", at: .zero, windUp: 0.05, recovery: 0.05, burst: 3)
+  func aRifleCannotStartMapWideShotsOutsideItsAcquisitionRange() throws {
+    let enemy = hostile(id: "rifle", at: .zero, windUp: 0.05, recovery: 0.05)
     let level = range(hostiles: [enemy], engaged: [enemy.id], player: [0, 42])
     let (session, fight) = try begin(level)
     // Many complete wind-up/recovery cycles would have occurred under the old `.blocked`
@@ -52,44 +54,27 @@ struct WholeMapCombatTests {
   }
 
   @Test
-  func aConcealedPartyMemberDoesNotBecomeAnAcquiredTargetThroughTheWall() throws {
-    let enemy = hostile(id: "rifle", at: .zero, windUp: 0.05, recovery: 0.05, burst: 3)
+  func aWallStopsTheNativeRiflesShotsAtAHiddenLeader() throws {
+    let enemy = hostile(id: "rifle", at: .zero, windUp: 0.05, recovery: 0.05)
     let wall = Level.Box.box("screen", at: [0, 1.5, 4], size: [4, 3, 1])
     let level = range(hostiles: [enemy], engaged: [enemy.id], boxes: [wall], player: [0, 8])
     let (session, fight) = try begin(level)
+    var shotsStopped = 0
     for _ in 0..<600 {
       _ = step(fight, session: session, at: [0, 8])
-      #expect(hostileShots(fight).isEmpty)
+      for shot in hostileShots(fight) {
+        #expect(shot.path.strike == .scenery)
+        shotsStopped += 1
+      }
     }
-    #expect(session.hitsTaken == 0)
+    #expect(shotsStopped > 0 && session.hitsTaken == 0)
     #expect(enemyShot(fight, session: session, at: [6, 6]) != nil)
-  }
-
-  @Test
-  func aCommittedBurstCanStillHitSomeoneWhoMovesBeyondAcquisition() throws {
-    let enemy = hostile(
-      id: "rifle", at: .zero, weapon: .marksman, windUp: 0.1, recovery: 5,
-      burst: 2, gap: 0.2)
-    let level = range(hostiles: [enemy], engaged: [enemy.id], player: [0, 8])
-    let (session, fight) = try begin(level)
-    let first = try #require(enemyShot(fight, session: session, at: [0, 8]))
-    #expect(first.path.strike == .body(PartyMember.miki.rawValue))
-    let hits = session.hitsTaken
-    let beyond = try #require(enemyShot(fight, session: session, at: [0, 12]))
-    #expect(beyond.path.strike == .body(PartyMember.miki.rawValue))
-    #expect(simd_distance(beyond.path.start, beyond.path.end) > enemy.range)
-    #expect(session.hitsTaken > hits)
-    // Completing an existing burst is not permission to begin another outside awareness.
-    for _ in 0..<600 {
-      _ = step(fight, session: session, at: [0, 12])
-      #expect(hostileShots(fight).isEmpty)
-    }
   }
 
   @Test
   func theAuthoredWarningTravelsToDistantSceneryWithoutHittingAnyPartyMember() throws {
     let enemy = hostile(
-      id: "warning", at: .zero, windUp: 0.1, recovery: 5, burst: 3, firstMiss: true)
+      id: "warning", at: .zero, windUp: 0.1, recovery: 5, firstMiss: true)
     let wall = Level.Box.box("far-screen", at: [0, 1.5, 50], size: [30, 3, 1])
     let members: [PartyMember: SIMD2<Float>] = [.miki: [0, 8], .tom: [-0.98, 8]]
     let level = range(
@@ -120,6 +105,7 @@ struct WholeMapCombatTests {
     let enemy = hostile(id: "known", at: [0, 58], hits: 1, windUp: 60)
     let level = range(hostiles: [neutral, enemy], engaged: [enemy.id])
     let (session, fight) = try begin(level)
+    _ = try #require(enemyShot(fight, session: session, at: enemy.standAt - [0, 8], seconds: 62))
     for _ in 0..<240 {
       _ = step(fight, session: session, at: .zero, aiming: true, fire: true)
       #expect(fight.shots.isEmpty)
@@ -146,7 +132,7 @@ struct WholeMapCombatTests {
   ) -> FightSimulation.Outcome {
     fight.step(
       dt: 1 / 120, leader: point, facing: [0, 1], aiming: aiming,
-      fireHeld: fire, firePressed: false, mayDisrupt: false, signaturePressed: false,
+      fireHeld: fire, firePressed: false,
       figures: figures ?? [.miki: point], session: session)
   }
 
@@ -162,10 +148,12 @@ struct WholeMapCombatTests {
     return nil
   }
 
-  private func enemyShot(_ fight: FightSimulation, session: GameSession, at point: SIMD2<Float>)
+  private func enemyShot(
+    _ fight: FightSimulation, session: GameSession, at point: SIMD2<Float>, seconds: Float = 3
+  )
     -> FightSimulation.Shot?
   {
-    for _ in 0..<300 {
+    for _ in 0..<Int(seconds * 120) {
       _ = step(fight, session: session, at: point)
       if let shot = hostileShots(fight).first { return shot }
     }
@@ -177,14 +165,14 @@ struct WholeMapCombatTests {
   }
 
   private func hostile(
-    id: String, at point: SIMD2<Float>, hits: Int = 100, weapon: Weapon.Kind = .rifle,
-    windUp: Float = 1, recovery: Float = 1, burst: Int = 1, gap: Float = 0.16,
+    id: String, at point: SIMD2<Float>, hits: Int = 100,
+    windUp: Float = 1, recovery: Float = 1,
     firstMiss: Bool = false
   ) -> Level.Hostile {
     Level.Hostile(
-      id: id, name: id, hiddenAt: point, standAt: point, hits: hits, weapon: weapon,
-      burst: burst, burstGap: gap, windUp: windUp, recovery: recovery, range: 10,
-      firstShotMisses: firstMiss, inView: true, targetsAnyone: true, targetFromWindUp: true)
+      id: id, name: id, hiddenAt: point, standAt: point, hits: hits,
+      windUp: windUp, recovery: recovery, range: 10,
+      firstShotMisses: firstMiss)
   }
 
   private func range(
@@ -198,7 +186,8 @@ struct WholeMapCombatTests {
       encounters: [
         .init(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 70])),
-          retryAt: nil, hostiles: hostiles, cues: engaged.map { (0, .engage($0)) })
+          retryAt: nil, hostiles: hostiles,
+          cues: hostiles.map { (0, .reveal($0.id)) } + engaged.map { (0, .engage($0)) })
       ], startingAmmo: 60, party: party, spawns: spawns ?? [.miki: player], heading: [0, -1],
       cameraOffset: [0, 10, 10], fieldOfView: 42,
       opening: "Range.", objective: "Range.", lookAround: "Range.", restartNote: "Restart.")

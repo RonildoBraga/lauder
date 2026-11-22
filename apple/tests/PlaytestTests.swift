@@ -9,7 +9,7 @@
   struct PlaytestTests {
     @Test(arguments: PlaytestRunner.scenarioNames)
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
-      // The app's game, so that the pause menu's third choice can swap in another level's world.
+      // Use the app's world and ordinary input rules, including Pause and Restart.
       let game = Game()
       var runner = try #require(PlaytestRunner(scenario: name))
       var frames = 0
@@ -36,31 +36,7 @@
       #expect(summary.passed, "\(name): \(summary.failures)")
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
-      if name == "combat-yard" {
-        #expect(summary.highestArenaWave >= 3, "the real-control route did not clear two packs")
-        #expect(summary.peakArrivalWarnings > 0, "the route observed no arrival warnings")
-      }
-      if name == "arena-elevation" {
-        #expect(summary.highestFloor >= 2.35, "the bodies never reached the upper deck")
-        #expect(summary.lowestFloor <= -1.75, "the bodies never reached the lower trench")
-      }
-      if name == "arsenal-bench" {
-        #expect(
-          summary.longestPartySceneryTrace >= 40, "native weapon never struck the distant wall")
-        #expect(Set(summary.partyWeaponsFired).isSuperset(of: Set(Weapon.testKinds.map(\.name))))
-      }
-      if name == "enemy-arsenal" {
-        #expect(summary.highestArenaWave >= 3)
-        #expect(
-          Set(summary.hostileWeaponsFired).isSuperset(of: [
-            Weapon.Kind.marksman.name, Weapon.Kind.supportGun.name,
-          ]))
-        #expect(
-          Set(summary.hostileWeaponsRecovered).isSuperset(of: [
-            Weapon.Kind.marksman.name, Weapon.Kind.supportGun.name,
-          ]))
-        #expect(summary.marksmanRetreated)
-      }
+
     }
 
     @Test

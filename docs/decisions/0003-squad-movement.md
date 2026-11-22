@@ -3,6 +3,9 @@
 **Status:** Accepted\
 **Date:** 17 November 2026
 
+
+**Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context
 
 The companions should behave **like a coordinated squad rather than just following the player**: one button cycles formations, directional commands position squad members, and companions keep formation, avoid obstacles and react to their surroundings instead of following the leader's exact path. On a phone the controls stay simple while still offering real tactical choices.

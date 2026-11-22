@@ -14,9 +14,8 @@ struct NavigationGrid: Sendable {
   /// Connected walkable areas; -1 marks a blocked cell.
   private let region: [Int32]
 
-  /// The level's floor and blockers, and any `extra` blockers, such as a shut gate, in 20 cm
-  /// cells.
-  init(level: Level, adding extra: [PartyMotion.Box] = []) {
+  /// The level's floor and blockers, in 20 cm cells.
+  init(level: Level) {
     let minimum = level.bounds.minimum
     let maximum = level.bounds.maximum
     precondition(minimum.x < maximum.x && minimum.y < maximum.y)
@@ -34,7 +33,7 @@ struct NavigationGrid: Sendable {
     // checks just those: the same result as testing every cell against every obstacle, at a
     // cost that suits a long level such as the bridge.
     var walkable = [Bool](repeating: true, count: columns * rows)
-    for box in level.obstacles + extra {
+    for box in level.obstacles {
       let low = (box.minimum - clearance - origin) / cellSize
       let high = (box.maximum + clearance - origin) / cellSize
       let firstColumn = max(0, Int(low.x.rounded(.up)))
@@ -138,23 +137,6 @@ struct NavigationGrid: Sendable {
     return best?.point
   }
 
-  /// The centres of the roomy cells within `radius` of `point`, taking every `stride`-th row and
-  /// column counted from the grid's corner, so that nearby points share them: the spots where a
-  /// companion may take cover (ADR 0003, phase S4).
-  func roomySpots(within radius: Float, of point: SIMD2<Float>, stride: Int = 1) -> [SIMD2<Float>] {
-    guard stride > 0, let cells = cells(around: point, within: radius) else { return [] }
-    var spots: [SIMD2<Float>] = []
-    for row in cells.rows where row % stride == 0 {
-      for column in cells.columns where column % stride == 0 {
-        let cell = row * columns + column
-        guard walkable[cell], !tight[cell] else { continue }
-        let candidate = centre(of: cell)
-        if simd_distance(candidate, point) <= radius { spots.append(candidate) }
-      }
-    }
-    return spots
-  }
-
   /// The rows and columns of the cells that can lie within `radius` of `point`, clipped to the
   /// grid; nil when there are none.
   private func cells(around point: SIMD2<Float>, within radius: Float)
@@ -174,25 +156,13 @@ struct NavigationGrid: Sendable {
   }
 
   /// Cell centres from near `start` to near `goal`, or nil when no connected route exists.
-  /// `extraCost` adds to each metre of crossing a cell, given its centre: in a fight, ground a
-  /// shooter sees costs more (ADR 0003, phase S4). The result is not straightened; see
-  /// `straightened(_:isClear:)`.
-  func route(
-    from start: SIMD2<Float>, to goal: SIMD2<Float>,
-    extraCost: ((SIMD2<Float>) -> Float)? = nil
-  ) -> [SIMD2<Float>]? {
+  /// The result is not straightened; see `straightened(_:isClear:)`.
+  func route(from start: SIMD2<Float>, to goal: SIMD2<Float>) -> [SIMD2<Float>]? {
     guard let first = nearestWalkable(to: start, within: 0.6).flatMap(index(of:)),
       let last = nearestWalkable(to: goal, within: 1, region: region[first]).flatMap(index(of:))
     else { return nil }
     if first == last { return [centre(of: last)] }
 
-    // Each cell's extra cost is worked out once in a search, when it is first reached.
-    var extra = [Float](repeating: -1, count: extraCost == nil ? 0 : walkable.count)
-    func weight(of cell: Int) -> Float {
-      guard let extraCost else { return 1 }
-      if extra[cell] < 0 { extra[cell] = max(0, extraCost(centre(of: cell))) }
-      return 1 + extra[cell]
-    }
     var cost = [Float](repeating: .infinity, count: walkable.count)
     var previous = [Int32](repeating: -1, count: walkable.count)
     var closed = [Bool](repeating: false, count: walkable.count)
@@ -206,7 +176,7 @@ struct NavigationGrid: Sendable {
       Self.forEachNeighbour(of: current, columns: columns, rows: rows, walkable) {
         neighbour, step in
         guard !closed[neighbour] else { return }
-        let candidate = cost[current] + step * cellSize * weight(of: neighbour)
+        let candidate = cost[current] + step * cellSize
         guard candidate < cost[neighbour] else { return }
         cost[neighbour] = candidate
         previous[neighbour] = Int32(current)

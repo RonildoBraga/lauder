@@ -30,13 +30,8 @@ final class GameSession {
   /// The pause menu's choices, in order. It opens on Resume.
   enum PauseChoice: CaseIterable, Sendable {
     case resume, restart
-    /// While the combat experiment lasts, the other level as a new run: the combat yard from
-    /// the bridge, and the bridge from the yard (ADR 0005).
-    case otherLevel
     /// Turns vibration off or on again, staying in the menu (ADR 0008).
     case vibration
-    /// Arena-only bench: cycles the current member's test gun while remaining paused.
-    case testWeapon
   }
 
   /// How the companions arrange themselves around the leader, in the order the formation
@@ -88,8 +83,7 @@ final class GameSession {
     case hold
   }
 
-  /// Hits a member can take in an encounter; the last one starts it again, or falls the party
-  /// back where the level has that rule (the placeholder hit rule of The Quiet Yard).
+  /// Hits the leader can take in an encounter; the last one starts it again.
   static let hitsAllowed = 3
 
   /// What an encounter's retry returns to: the state when it began.
@@ -116,10 +110,6 @@ final class GameSession {
 
   private let startingParty: [PartyMember]
   private let startingAmmo: Int
-  private let isArena: Bool
-  /// Whether the formation button regroups the companions in a fight: in a level with combat
-  /// positioning (ADR 0003, phase S4), such as the combat yard.
-  private let regroupsInFights: Bool
   /// The beat each encounter-starting action begins, from the level's encounters.
   private let beatStarted: [Level.ActionID: Beat]
   /// The story's progress on the bridge.
@@ -148,19 +138,10 @@ final class GameSession {
   private(set) var conversation: MissionScript.Conversation?
   private(set) var lineIndex = 0
   private(set) var pauseChoice = PauseChoice.resume
-  private var testWeapons: [PartyMember: Weapon.Kind] = [:]
   /// The squad's formation. It stays Close until there are two companions.
   private(set) var formation = Formation.close
   /// Companions going to or holding a point; everyone else follows (ADR 0003, phase S3).
   private(set) var orders: [PartyMember: Order] = [:]
-  /// What the party has done in the level's salvage task (ADR 0006).
-  private(set) var salvage = SalvageProgress()
-  /// The level's salvage task, whose cabinets each run deals afresh.
-  private let salvageTask: Level.Salvage?
-  /// Whether the companions are regrouping: in a fight they leave cover and firing positions,
-  /// hold their fire and come back to the formation, until they are back in it or the fight
-  /// ends (ADR 0003, phase S4).
-  private(set) var regrouping = false
   /// Where Resume returns: exploring, or the conversation at its current line.
   private var resumeMode = Mode.exploring
 
@@ -168,10 +149,6 @@ final class GameSession {
     precondition(!level.party.isEmpty, "\(level.id) must start with someone.")
     startingParty = level.party
     startingAmmo = level.startingAmmo
-    isArena = level.arena != nil
-    regroupsInFights = level.combat.combatPositioning
-    salvageTask = level.salvage
-    salvage = Self.newSalvage(for: level.salvage)
     ammo = level.startingAmmo
     beatStarted = Dictionary(
       level.encounters.compactMap { encounter in
@@ -194,28 +171,7 @@ final class GameSession {
   }
 
   var isPaused: Bool { mode == .paused }
-  var availablePauseChoices: [PauseChoice] {
-    isArena ? PauseChoice.allCases : PauseChoice.allCases.filter { $0 != .testWeapon }
-  }
-  var testWeaponTitle: String? {
-    isArena ? "Test weapon: \(weapon(for: leader).kind.name)" : nil
-  }
-
-  func weapon(for member: PartyMember) -> Weapon {
-    guard isArena, let kind = testWeapons[member] else { return .forMember(member) }
-    return .forKind(kind)
-  }
-
-  /// A deliberate pause-menu selection starts that test gun's magazine afresh. It never
-  /// adds shared rounds, and merely changing leader does not change a selected weapon.
-  @discardableResult
-  func cycleTestWeapon() -> Bool {
-    guard isArena, mode == .paused else { return false }
-    let kinds = Weapon.testKinds
-    let index = kinds.firstIndex(of: weapon(for: leader).kind) ?? 0
-    testWeapons[leader] = kinds[(index + 1) % kinds.count]
-    return true
-  }
+  var availablePauseChoices: [PauseChoice] { PauseChoice.allCases }
   var currentLine: MissionScript.Line? {
     conversation.map { MissionScript.lines($0)[lineIndex] }
   }
@@ -243,8 +199,7 @@ final class GameSession {
     }
   }
 
-  /// Up (-1) and down (1) move the choice one place through Resume, Restart and the other level,
-  /// stopping at either end.
+  /// Up (-1) and down (1) move through Resume, Restart and Vibration, stopping at either end.
   func movePauseChoice(by step: Int) {
     guard mode == .paused, step != 0 else { return }
     let all = availablePauseChoices
@@ -303,7 +258,6 @@ final class GameSession {
       return false
     }
     orders[member] = .going(point)
-    regrouping = false
     return true
   }
 
@@ -312,7 +266,6 @@ final class GameSession {
   func holdAll() -> Bool {
     guard mode == .exploring, ordersAvailable else { return false }
     for member in companions { orders[member] = .holding(nil) }
-    regrouping = false
     return true
   }
 
@@ -328,35 +281,18 @@ final class GameSession {
     orders[member] = .holding(point)
   }
 
-  /// The formation button (ADR 0003): in a fight where the level has combat positioning it
-  /// regroups the companions; otherwise, with anyone going or holding, it calls everyone back to
-  /// follow in the current formation, and else it cycles the formation.
+  /// After an order, call everyone back; otherwise cycle the formation (ADR 0003).
   func pressFormation() {
     guard mode == .exploring, formationsAvailable else { return }
-    if formationPressRegroups {
-      orders = [:]
-      regrouping = true
-    } else if orders.isEmpty {
+    if orders.isEmpty {
       cycleFormation()
     } else {
       orders = [:]
     }
   }
 
-  /// Whether the formation button regroups the companions now, rather than changing the
-  /// formation or calling them back: in a fight, in a level with combat positioning (ADR 0003,
-  /// phase S4).
-  var formationPressRegroups: Bool { regroupsInFights && inEncounter }
-
-  /// The companions are back in the formation, and their regrouping ends.
-  func endRegroup() {
-    regrouping = false
-  }
-
-  /// What the squad is doing, for the HUD: "regrouping"; or "following", "going" or "holding"
-  /// when the companions agree, otherwise who is not following, such as "Laura holding".
+  /// What the squad is doing, for the HUD: following, going or holding.
   var squadState: String {
-    if regrouping { return "regrouping" }
     let words = companions.map { order(of: $0).word }
     if let first = words.first, words.allSatisfy({ $0 == first }) { return first }
     return companions.filter { orders[$0] != nil }
@@ -411,20 +347,6 @@ final class GameSession {
     return true
   }
 
-  /// The combat test reuses a fixed actor pool. Remove its previous-life records before a
-  /// respawn, and recover the trio and ammunition during the warned inter-wave break.
-  func prepareArena(hostiles ids: Set<String>, resupply: Bool = false) {
-    guard isArena, mode == .exploring else { return }
-    defeated.subtract(ids)
-    searched.subtract(ids)
-    for id in ids { hitsDealt[id] = nil }
-    if resupply {
-      ammo = startingAmmo
-      hits = [:]
-      regrouping = false
-    }
-  }
-
   /// A hit on a hostile; true when it takes the hostile down.
   func hit(_ hostile: String, toughness: Int) -> Bool {
     guard mode == .exploring, !defeated.contains(hostile) else { return false }
@@ -467,8 +389,7 @@ final class GameSession {
     takeHit(leader)
   }
 
-  /// A member is hit; true on their last allowed hit, when the encounter must start again or,
-  /// where the level has that rule, the party falls back.
+  /// A member is hit; true on their last allowed hit, when the encounter must start again.
   func takeHit(_ member: PartyMember) -> Bool {
     guard mode == .exploring, inEncounter else { return false }
     let taken = hits(of: member) + 1
@@ -487,50 +408,13 @@ final class GameSession {
     searched = checkpoint.searched
     hitsDealt = checkpoint.hitsDealt
     hits = [:]
-    regrouping = false
     self.checkpoint = nil
   }
 
-  /// The party falls back after the last allowed hit on anyone (ADR 0005). The encounter is no
-  /// longer under way and can begin again, everyone's hits recover and every companion follows
-  /// again; the hostiles keep the damage dealt, whoever is down stays down, and nothing else
-  /// is undone.
-  func fallBack() {
-    guard let checkpoint else { return }
-    beat = checkpoint.beat
-    hits = [:]
-    orders = [:]
-    regrouping = false
-    self.checkpoint = nil
-  }
-
-  /// The encounter is won; everyone's hits recover, and a regroup ends.
+  /// The encounter is won; everyone's hits recover.
   func endEncounter() {
     checkpoint = nil
     hits = [:]
-    regrouping = false
-  }
-
-  /// Whoever leads acts at a place in the level's salvage task (ADR 0006), and the line for
-  /// the HUD comes back; nil when they can do nothing there. The world has checked where they
-  /// stand; the session checks the mode and who leads, afresh.
-  func performSalvage(at place: SalvageProgress.Place) -> String? {
-    guard mode == .exploring, let action = salvage.action(for: leader, at: place) else {
-      return nil
-    }
-    let repaired = salvage.repaired
-    let line = salvage.perform(action, by: leader)
-    if !repaired, salvage.repaired, let completion = salvageTask?.completion {
-      _ = converse(completion)
-    }
-    return line
-  }
-
-  /// A new run's salvage progress, with the task's cabinets dealt afresh.
-  private static func newSalvage(for task: Level.Salvage?) -> SalvageProgress {
-    guard let task else { return SalvageProgress() }
-    var generator = SystemRandomNumberGenerator()
-    return .dealt(for: task, using: &generator)
   }
 
   /// Whether the action is offered at its approach now.
@@ -583,7 +467,7 @@ final class GameSession {
         // And the one after Laura stands ends with her joining (M4).
         recruit(.laura)
         if beat == .helpingLaura { beat = .withLaura }
-      case .arrival, .relayRestored:
+      case .arrival:
         break
       }
       self.conversation = nil
@@ -597,13 +481,10 @@ final class GameSession {
     mode = .exploring
     resumeMode = .exploring
     pauseChoice = .resume
-    testWeapons = [:]
     party = startingParty
     leader = startingParty[0]
     formation = .close
     orders = [:]
-    regrouping = false
-    salvage = Self.newSalvage(for: salvageTask)
     firedTriggers = []
     beat = .alone
     hits = [:]

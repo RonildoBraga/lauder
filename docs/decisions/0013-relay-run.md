@@ -3,11 +3,14 @@
 **Status:** Implemented and delivered in TestFlight 0.1.0 (23)\
 **Date:** 22 November 2026
 
+
+**Retired implementation:** The bridge-only reset removed this experiment and its dedicated runtime. This record preserves the assignment, decisions and historical delivery evidence; it is not current playable scope. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Assignment and boundary
 
 After build 22, Codex recommended one coherent exploration-and-salvage mission: reach a shelter with a broken transmitter, explore a small frozen district with a safe detour and optional guarded shortcut, recover a compatible part using the trio's existing strengths, then return and repair the transmitter. Codex proposed a short walkthrough and bounded implementation plan first, followed by Simulator implementation and TestFlight delivery. The maintainer answered **“Proceed with your recommendation”**.
 
-This assigns **Relay Run**, level `relay-run`, as a standalone greybox prototype. The [walkthrough](../relay-run-walkthrough.md) describes its player experience. Its location in the journey, dialogue and character implications remain provisional. It does not place [Relay House](../story/story-bible.md#later-scene--relay-house) on the map, change the bridge opening or assign the full [Quiet Yard](../encounters/the-quiet-yard.md) screenplay.
+This assigns **Relay Run**, level `relay-run`, as a standalone greybox prototype. The walkthrough (historical walkthrough, retained in Git history) describes its player experience. Its location in the journey, dialogue and character implications remain provisional. It does not place [Relay House](../story/story-bible.md#later-scene--relay-house) on the map, change the bridge opening or assign the full [Quiet Yard](../encounters/the-quiet-yard.md) screenplay.
 
 The mission details below are engineering defaults within that assignment, not additional quotations or permanent character canon. Existing Simulator-first development and TestFlight delivery continue; physical results and subjective judgement remain in the [deferred checklist](../prototype-plan.md#deferred-phone-and-playtest-checks).
 

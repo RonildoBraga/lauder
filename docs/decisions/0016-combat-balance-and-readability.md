@@ -3,6 +3,9 @@
 **Status:** Implemented, checked, reviewed, merged and delivered in TestFlight 0.1.0 (26)\
 **Date:** 22 November 2026
 
+
+**Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Assignment
 
 The maintainer replied **“Proceed”** to a focused pass on weapon strengths, readable enemy counterplay and useful companions in the existing arena. [Issue #118](https://github.com/RonildoBraga/lauder/issues/118) records that assignment. Simulator iteration, reviewed integration and internal TestFlight delivery continue; physical and subjective checks remain deferred. This adds no story encounter, ability, inventory, art production or control button.
@@ -11,7 +14,7 @@ The following are provisional implementation choices under that assignment, not 
 
 ## Measure before changing the profiles
 
-[CombatBalanceTests](../../apple/tests/CombatBalanceTests.swift) uses production `WeaponHandling`, `Scatter`, `SeededRandom` and three-dimensional `Ballistics` against a stationary body. Each of six weapons runs for 20 seconds with 16 fixed seeds, at 5, 10, 20 and 40 metres, both settled and with the full-speed dispersion penalty. The latter is a spread experiment, not moving navigation or a model of player skill. Rays are explicitly directed without target assistance. Passive target selection is measured separately through `FightSimulation`.
+`CombatBalanceTests` (retired; retained in Git history) uses production `WeaponHandling`, `Scatter`, `SeededRandom` and three-dimensional `Ballistics` against a stationary body. Each of six weapons runs for 20 seconds with 16 fixed seeds, at 5, 10, 20 and 40 metres, both settled and with the full-speed dispersion penalty. The latter is a spread experiment, not moving navigation or a model of player skill. Rays are explicitly directed without target assistance. Passive target selection is measured separately through `FightSimulation`.
 
 Accuracy keeps sampling after the first six hits. Times and rounds describe the first six-hit defeat, including draw/reload waits. Medians include **completed trials only**; completion counts accompany censored cases, and incomplete rows do not imply a population median. Every trial in the following 5 m settled comparison completed:
 

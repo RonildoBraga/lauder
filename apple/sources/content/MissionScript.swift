@@ -15,8 +15,6 @@ enum MissionScript {
     case metLaura
     /// At the Manhattan end, the three together: the end of the opening (M4).
     case arrival
-    /// Relay Run's prototype ending; it establishes no new history or story placement.
-    case relayRestored
   }
 
   static func lines(_ conversation: Conversation) -> [Line] {
@@ -40,12 +38,6 @@ enum MissionScript {
         Line(speaker: "Laura", text: "Manhattan."),
         Line(speaker: "Tom", text: "We made it across."),
         Line(speaker: "Miki", text: "Together. Let's keep going."),
-      ]
-    case .relayRestored:
-      [
-        Line(speaker: "Miki", text: "The transmitter answers."),
-        Line(speaker: "Laura", text: "Someone will hear it."),
-        Line(speaker: "Tom", text: "Then we leave it working."),
       ]
     }
   }

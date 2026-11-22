@@ -3,6 +3,9 @@
 **Status:** Accepted; amended after the first and second sessions; its three sessions are done\
 **Date:** 21 November 2026
 
+
+**Retired implementation:** The bridge-only reset removed this experiment and its dedicated runtime. This record preserves the assignment, decisions and historical delivery evidence; it is not current playable scope. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context
 
 The first playable is complete. Its fights are deliberately small ([ADR 0004](0004-brooklyn-bridge-opening.md)):

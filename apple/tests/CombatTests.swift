@@ -14,8 +14,6 @@ struct CombatTests {
     #expect(!LineOfSight.isClear(from: [-3, 0], to: [3, 0], obstacles: [box]))
     #expect(LineOfSight.isClear(from: [-3, 2], to: [3, 2], obstacles: [box]))
     #expect(LineOfSight.isClear(from: [-3, 0], to: [-1.5, 0], obstacles: [box]))
-    let entry = LineOfSight.firstBlock(from: [-3, 0], to: [3, 0], obstacles: [box])
-    #expect(abs((entry ?? 0) - 2 / 6) < 0.0001)
     // Along an axis, parallel to a face.
     #expect(!LineOfSight.isClear(from: [0, -3], to: [0, 3], obstacles: [box]))
     #expect(LineOfSight.isClear(from: [1.5, -3], to: [1.5, 3], obstacles: [box]))

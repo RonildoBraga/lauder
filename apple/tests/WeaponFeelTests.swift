@@ -85,10 +85,12 @@ struct WeaponFeelTests {
 
   @Test
   func aHitDuringAWindUpDelaysTheShotUpToALimit() throws {
-    var state = HostileState(spec: CombatYard.rightShooter)
+    let spec = BrooklynBridge.stranger
+    var state = HostileState(spec: spec)
+    state.reveal()
+    _ = state.step(dt: HostileState.stepOutTime, canHit: true, toward: .zero)
     state.engage()
-    _ = state.step(dt: CombatYard.rightShooter.reactionDelay + 0.001, canHit: true, toward: .zero)
-    let windUp = CombatYard.rightShooter.windUp
+    let windUp = spec.windUp
     #expect(state.phase == .aiming(remaining: windUp))
     state.flinch()
     #expect(state.phase == .aiming(remaining: windUp + HostileState.flinchDelay))
@@ -107,7 +109,7 @@ struct WeaponFeelTests {
     for _ in 0..<400 where shot == nil {
       shot = state.step(dt: 1 / 120, canHit: true, toward: .zero)
     }
-    #expect(shot == .hit)
+    #expect(shot == .miss)
     let recovering = state.phase
     state.flinch()
     #expect(state.phase == recovering)
@@ -190,7 +192,7 @@ struct WeaponFeelTests {
 
   @Test
   func noLineShowsTheLeadersAim() {
-    let world = GameWorld(level: SalvageYard.level)
+    let world = GameWorld(level: TestRange.practice)
     run(world, upTo: 0.5, aim: stick(world, towards: [1, 0]))
     #expect(world.weaponDrawn)
     #expect(world.root.findEntity(named: "leader.aim") == nil)
@@ -200,7 +202,7 @@ struct WeaponFeelTests {
 
   @Test
   func theLeaderTurnsTowardsHerAimAtALimitedRate() {
-    let world = GameWorld(level: SalvageYard.level)
+    let world = GameWorld(level: TestRange.practice)
     let start = world.facing(of: .miki)
     let behind = stick(world, towards: -start)
     // Two full turns a second: a half turn takes a quarter of a second, never a frame.
@@ -215,7 +217,7 @@ struct WeaponFeelTests {
     // One shooter in the open ahead of Miki; the companions hold where they stand.
     let world = GameWorld(level: range(shooterAt: [0, -6], hits: 50))
     #expect(world.session.holdAll())
-    #expect(run(world, upTo: 1) { world.threat != nil })
+    #expect(run(world, upTo: 4) { world.session.hitsTaken > 0 })
     // The stick draws her carbine while she faces away from the shooter, then lets go.
     run(world, upTo: 0.6, aim: stick(world, towards: [0, 1]))
     #expect(world.weaponDrawn && simd_dot(world.facing(of: .miki), [0, 1]) > 0.99)
@@ -230,8 +232,8 @@ struct WeaponFeelTests {
   // MARK: - Events: what is heard and felt
 
   @Test
-  func aShotOutsideAFightIsHeardAndStrikesTheGate() {
-    let world = GameWorld(level: SalvageYard.level)
+  func aShotOutsideAFightIsHeardAndStrikesTheWall() {
+    let world = GameWorld(level: TestRange.practice)
     var events: [CombatEvent] = []
     run(world, upTo: 1.2, fire: true, aim: stick(world, towards: [0, -1])) {
       events += world.takeCombatEvents()
@@ -240,21 +242,6 @@ struct WeaponFeelTests {
     #expect(events.contains { if case .fired(.carbine, _, true) = $0 { true } else { false } })
     #expect(events.contains { if case .struckBlock = $0 { true } else { false } })
     #expect(!events.contains { if case .leaderHit = $0 { true } else { false } })
-  }
-
-  @Test
-  func aFightIsHeardFromEveryWeapon() {
-    // A shooter close enough for Tom's scatter weapon, with the companions beside Miki.
-    let world = GameWorld(level: range(shooterAt: [0, -2.5], hits: 50))
-    var events: [CombatEvent] = []
-    run(world, upTo: 4) {
-      events += world.takeCombatEvents()
-      return false
-    }
-    for kind in [Weapon.Kind.rifle, .lightBurst, .closeScatter] {
-      #expect(events.contains { $0 == .fired(kind, at: $0.position, byLeader: false) }, "\(kind)")
-    }
-    #expect(events.contains { if case .struckBody = $0 { true } else { false } })
   }
 
   @Test
@@ -343,19 +330,16 @@ struct WeaponFeelTests {
   // MARK: - The switch
 
   @Test
-  func thePauseMenusVibrationChoiceTurnsItOffAndOnAndCarriesOver() {
+  func thePauseMenusVibrationChoiceTurnsItOffAndOn() {
     let world = GameWorld(level: BrooklynBridge.level)
     #expect(world.vibrationEnabled)
     pressPause(world)
-    for _ in 0..<3 { world.session.movePauseChoice(by: 1) }
+    for _ in 0..<2 { world.session.movePauseChoice(by: 1) }
     #expect(world.session.pauseChoice == .vibration)
     let confirm = InputRules.Input(
       movement: .zero, actionPressed: true, pausePressed: false, switchPressed: false)
     world.update(with: confirm, sampledIn: .paused, deltaTime: 1 / 60)
     #expect(!world.vibrationEnabled && world.isPaused)
-    let other = GameWorld(level: CombatYard.level)
-    other.takePreferences(from: world)
-    #expect(!other.vibrationEnabled)
     world.update(with: confirm, sampledIn: .paused, deltaTime: 1 / 60)
     #expect(world.vibrationEnabled)
     // With touch, its button sends the same command through the input rules.
@@ -366,22 +350,21 @@ struct WeaponFeelTests {
     #expect(!world.vibrationEnabled && world.isPaused)
   }
 
-  /// A small open range with the combat yard's rules: Miki in the open with the companions just
-  /// behind her, and one shooter, "a", in the open, which fights at once.
+  /// A test-only flat range with one native shooter; no companion auto-fire.
   private func range(shooterAt point: SIMD2<Float>, hits: Int, boxes: [Level.Box] = []) -> Level {
     let shooter = Level.Hostile(
       id: "a", name: "Shooter A", hiddenAt: point, standAt: point, hits: hits, windUp: 1.5,
-      recovery: 1.4, range: 14, inView: true, targetsAnyone: true, targetFromWindUp: true)
+      recovery: 1.4, range: 14)
     let fight = Level.Encounter(
       beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -15], maximum: [15, 15])),
-      retryAt: [0, 2], hostiles: [shooter], cues: [(at: 0, cue: .engage("a"))])
+      retryAt: [0, 2], hostiles: [shooter], cues: [(0, .reveal("a")), (0, .engage("a"))])
     return Level(
       id: "test-range",
       ground: Level.Box(name: "ground", position: [0, -0.15, 0], size: [40, 0.3, 40]),
       boxes: boxes, interactions: [], triggers: [], encounters: [fight], startingAmmo: 60,
       party: [.miki, .tom, .laura], spawns: [.miki: [0, 2], .tom: [-1, 3], .laura: [1, 3]],
-      heading: [0, -1], cameraOffset: CombatYard.level.cameraOffset,
-      fieldOfView: CombatYard.level.fieldOfView, opening: "A range.", objective: "Test.",
-      lookAround: "Snow.", restartNote: "Restart.", combat: CombatYard.combat)
+      heading: [0, -1], cameraOffset: TestYard.cameraOffset,
+      fieldOfView: 42, opening: "A range.", objective: "Test.",
+      lookAround: "Snow.", restartNote: "Restart.")
   }
 }

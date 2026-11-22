@@ -6,7 +6,7 @@ struct Weapon: Sendable {
   /// Which weapon it is, for how its shots sound and feel (ADR 0008). The hostiles' rifle has
   /// no timing of its own here: their wind-ups time its shots.
   enum Kind: Hashable, Sendable {
-    case carbine, lightBurst, closeScatter, rifle, submachineGun, marksman, supportGun
+    case carbine, lightBurst, closeScatter, rifle
 
     var name: String {
       switch self {
@@ -14,37 +14,23 @@ struct Weapon: Sendable {
       case .lightBurst: "Burst weapon"
       case .closeScatter: "Scatter weapon"
       case .rifle: "Rifle"
-      case .submachineGun: "SMG"
-      case .marksman: "Marksman rifle"
-      case .supportGun: "Support gun"
       }
     }
   }
 
-  /// The combat bench's small fixed selection. Story weapons still come from forMember.
-  static let testKinds: [Kind] = [
-    .carbine, .lightBurst, .closeScatter, .submachineGun, .marksman, .supportGun,
-  ]
-
   let kind: Kind
   /// Effective stopping reach, in metres. Fired rounds still travel across the whole level.
   let range: Float
-  /// A smaller passive/companion targeting reach where a long round would otherwise grant
-  /// automatic map-wide knowledge. Explicit aim retains the narrow cone's height-aware help
-  /// through effective reach. Nil keeps the ordinary targeting distance.
-  var assistanceLimit: Float? = nil
-  var assistanceRange: Float { assistanceLimit ?? range }
-  /// Seconds between shots while Fire is held, or between a companion's bursts.
+  /// Seconds between shots while Fire is held, or between bursts.
   let interval: Float
-  /// Seconds from the first Fire press until a holstered weapon can shoot; for a companion's,
-  /// from the moment a fight is under way until they first fire.
+  /// Seconds from the first Fire press until a holstered weapon can shoot.
   let drawTime: Float
   /// Consecutive discharges before the automatic reload. This is a handling limit, not
   /// another inventory: the session still counts the party's remaining player-fired rounds.
   var capacity = 12
   /// Seconds to ready a fresh magazine, overlapping the normal interval after its last shot.
   var reloadTime: Float = 1.2
-  /// Shots in each of a companion's bursts, `burstGap` seconds apart; one for single shots.
+  /// Shots in each burst, `burstGap` seconds apart; one for single shots.
   var burst = 1
   var burstGap: Float = 0
   /// Hits each shot deals: a scatter weapon's blast counts for more than one.
@@ -77,30 +63,6 @@ struct Weapon: Sendable {
       rest: Spread.degrees(6), perShot: Spread.degrees(2), widest: Spread.degrees(10),
       recovery: Spread.degrees(4), moving: Spread.degrees(2), turning: Spread.degrees(1)))
 
-  /// Fast, light fire trades precision for a compact magazine and frequent reloads.
-  static let submachineGun = Weapon(
-    kind: .submachineGun, range: 12, interval: 0.11, drawTime: 0.25, capacity: 24,
-    reloadTime: 1.5,
-    spread: Spread(
-      rest: Spread.degrees(2), perShot: Spread.degrees(0.8), widest: Spread.degrees(10),
-      recovery: Spread.degrees(4), moving: Spread.degrees(3), turning: Spread.degrees(3)))
-
-  /// A measured long shot is powerful while settled, with a slow shot/reload cadence.
-  static let marksman = Weapon(
-    kind: .marksman, range: 64, assistanceLimit: 22, interval: 1.35, drawTime: 0.65, capacity: 5,
-    reloadTime: 2.1, damage: 2,
-    spread: Spread(
-      rest: Spread.degrees(0.15), perShot: Spread.degrees(1.4), widest: Spread.degrees(6),
-      recovery: Spread.degrees(1.7), moving: Spread.degrees(4), turning: Spread.degrees(3)))
-
-  /// A longer magazine holds a lane; recoil bloom and a slow reload create an opening.
-  static let supportGun = Weapon(
-    kind: .supportGun, range: 22, interval: 0.14, drawTime: 0.75, capacity: 36,
-    reloadTime: 2.8,
-    spread: Spread(
-      rest: Spread.degrees(1.3), perShot: Spread.degrees(0.7), widest: Spread.degrees(9),
-      recovery: Spread.degrees(2.2), moving: Spread.degrees(4), turning: Spread.degrees(3)))
-
   /// The original enemy rifle keeps its prior accuracy profile; encounter specs time it.
   static let rifle = Weapon(
     kind: .rifle, range: 18, interval: 0.4, drawTime: 0.35,
@@ -108,25 +70,12 @@ struct Weapon: Sendable {
       rest: Spread.degrees(2.5), perShot: Spread.degrees(1), widest: Spread.degrees(8),
       recovery: Spread.degrees(3), moving: Spread.degrees(2), turning: Spread.degrees(4)))
 
-  static func forKind(_ kind: Kind) -> Weapon {
-    switch kind {
-    case .carbine: .carbine
-    case .lightBurst: .lightBurst
-    case .closeScatter: .closeScatter
-    case .rifle: .rifle
-    case .submachineGun: .submachineGun
-    case .marksman: .marksman
-    case .supportGun: .supportGun
-    }
-  }
-
-  /// Long-travelling bullets remain dangerous; scatter and marksman rounds lose their
-  /// stopping bonus beyond effective reach. Accuracy and cadence distinguish the others.
+  /// A long-travelling scatter round loses its stopping bonus beyond its effective reach.
   func damage(at distance: Float) -> Int {
     distance.isFinite && distance > range ? min(1, damage) : damage
   }
 
-  /// Each traveller's default weapon, retained throughout the story and Relay Run.
+  /// Each traveller's weapon.
   static func forMember(_ member: PartyMember) -> Weapon {
     switch member {
     case .miki: .carbine
@@ -210,34 +159,11 @@ struct SeededRandom: RandomNumberGenerator, Sendable {
   }
 }
 
-/// Miki's signature (ADR 0005): a precise shot that cancels one hostile's wind-up within her
-/// reach and in her clear sight, after which the hostile recovers before it can aim again.
-enum Disrupt {
-  /// How far it reaches: the carbine's range. A starting value for playtests.
-  static let reach = Weapon.carbine.range
-
-  /// The wind-up a Disrupt from `position` cancels: of the hostiles aiming within reach and in
-  /// sight, the one nearest its shot; nil when there is none.
-  static func target(
-    from position: SIMD2<Float>, hostiles: [HostileState],
-    point: (HostileState) -> SIMD2<Float> = { $0.position },
-    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
-  ) -> String? {
-    hostiles.compactMap { hostile -> (id: String, remaining: Float)? in
-      guard case .aiming(let remaining) = hostile.phase,
-        simd_distance(point(hostile), position) <= reach, isClear(position, point(hostile))
-      else { return nil }
-      return (hostile.spec.id, remaining)
-    }.min { $0.remaining < $1.remaining }?.id
-  }
-}
-
 /// Sight lines on the flat floor: a shot is a straight line against the same blocker footprints
 /// that movement uses, so a tower's pier or legs give cover to whoever stands behind them, on
 /// either side.
 enum LineOfSight {
-  /// Whether nothing is in the way. Cover asks this many times in one step, so it stops at the
-  /// first blocker and builds nothing.
+  /// Whether nothing is in the way, stopping at the first blocker without building a list.
   static func isClear(
     from start: SIMD2<Float>, to end: SIMD2<Float>, obstacles: [PartyMotion.Box]
   ) -> Bool {
@@ -245,16 +171,6 @@ enum LineOfSight {
     return !obstacles.contains {
       entry(from: start, along: delta, minimum: $0.minimum, maximum: $0.maximum, limit: 1) != nil
     }
-  }
-
-  /// How far along the line, from 0 at the start to 1 at the end, it first enters a blocker;
-  /// nil when nothing is in the way.
-  static func firstBlock(
-    from start: SIMD2<Float>, to end: SIMD2<Float>, obstacles: [PartyMotion.Box]
-  ) -> Float? {
-    obstacles.compactMap {
-      entry(from: start, along: end - start, minimum: $0.minimum, maximum: $0.maximum, limit: 1)
-    }.min()
   }
 
   /// How far along `delta` from `start`, in multiples of it, a line first enters the box from
@@ -316,10 +232,6 @@ enum Aim {
     let id: String
     let position: SIMD2<Float>
     let isTarget: Bool
-    /// Cover that conceals this body's height, such as its selected low block while crouched.
-    /// It belongs to this target: a standing body elsewhere still receives shots above low
-    /// scenery. Global blockers continue to stop every shot before any body.
-    var blockers: [PartyMotion.Box] = []
   }
 
   /// The leader's shot from `start`, along the stick's `aim` when there is one, or else at the
@@ -331,7 +243,7 @@ enum Aim {
   ) -> ShotPath? {
     let isClear = { LineOfSight.isClear(from: $0, to: $1, obstacles: blockers) }
     let targets = hostiles.filter {
-      $0.isTarget && LineOfSight.isClear(from: start, to: $0.position, obstacles: $0.blockers)
+      $0.isTarget
     }.map {
       Targeting.Candidate(id: $0.id, position: $0.position)
     }
@@ -375,14 +287,6 @@ enum Aim {
       return (hostile, along)
     }.min { $0.distance < $1.distance }
     if let met {
-      let shelter = met.hostile.blockers.compactMap {
-        LineOfSight.entry(
-          from: start, along: unit, minimum: $0.minimum, maximum: $0.maximum,
-          limit: met.distance)
-      }.min()
-      if let shelter {
-        return ShotPath(start: start, end: start + unit * shelter, strike: .scenery)
-      }
       guard met.hostile.isTarget else { return nil }
       return ShotPath(start: start, end: met.hostile.position, strike: .body(met.hostile.id))
     }
@@ -442,16 +346,4 @@ enum Targeting {
     }.max { $0.cosine < $1.cosine }?.id
   }
 
-  /// The nearest candidate within range and in sight, whichever way the shooter faces: a
-  /// companion's own target, and whom a hostile that can aim at anyone aims at (ADR 0005).
-  static func nearest(
-    from position: SIMD2<Float>, candidates: [Candidate], range: Float,
-    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
-  ) -> String? {
-    candidates.filter {
-      simd_distance($0.position, position) <= range && isClear(position, $0.position)
-    }.min {
-      simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
-    }?.id
-  }
 }

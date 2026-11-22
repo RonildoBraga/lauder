@@ -113,7 +113,7 @@ struct ShootingTests {
 
   @Test
   func aimingTurnsMikiAndDrawsHerCarbineWhileSheWalksAnotherWay() {
-    let world = GameWorld(level: SalvageYard.level)
+    let world = GameWorld(level: TestRange.practice)
     #expect(world.session.leader == .miki && world.showsWeapon && !world.weaponDrawn)
     let start = position(world, .miki)
     let up = stick(world, towards: [0, -1])
@@ -130,7 +130,7 @@ struct ShootingTests {
 
   @Test(arguments: PartyMember.allCases)
   func everyLeaderAimsAndFiresTheirOwnWeapon(member: PartyMember) {
-    let world = GameWorld(level: SalvageYard.level)
+    let world = GameWorld(level: TestRange.practice)
     while world.session.leader != member { world.session.cycleLeader() }
     world.advanceParty(movement: .zero, deltaTime: 1 / 60)
     #expect(world.session.leader == member && world.showsWeapon)
@@ -152,8 +152,8 @@ struct ShootingTests {
 
   @Test
   func shotsOutsideAFightStrikeWallsAndSpendNoRounds() {
-    // The salvage yard has no fights and gives no rounds; Miki aims up at its shut gate.
-    let world = GameWorld(level: SalvageYard.level)
+    // The fixture has no fights and no rounds; Miki aims at its wall.
+    let world = GameWorld(level: TestRange.practice)
     let up = stick(world, towards: [0, -1])
     run(world, upTo: 1.2, fire: true, aim: up)
     #expect(world.weaponDrawn && world.session.ammo == 0)
@@ -162,19 +162,12 @@ struct ShootingTests {
 
   @Test
   func aShotInAFightSpendsARound() {
-    // Miki aims up the combat yard at its wall.
-    let world = GameWorld(level: CombatYard.level)
+    let world = GameWorld(level: BrooklynBridge.level)
     let ammo = world.session.ammo
-    let up = stick(world, towards: [0, -1])
-    // Before the yard's fight, practice is free.
-    run(world, upTo: 1.2, fire: true, aim: up)
-    #expect(world.session.ammo == ammo && world.shotMarks > 0)
-    // Go around the entrance wall and cross into the expanded yard. Inside its encounter,
-    // every shot spends a round, even one that hits nobody.
-    walk(world, to: [6, 3])
-    walk(world, to: [6, -2])
+    walk(world, to: [6.5, 15])
     #expect(world.session.inEncounter)
-    run(world, upTo: 1, fire: true, aim: up)
+    let up = stick(world, towards: [0, -1])
+    run(world, upTo: 5, fire: true, aim: up)
     #expect(world.session.ammo < ammo)
   }
 
@@ -182,17 +175,14 @@ struct ShootingTests {
 
   @Test
   func theLensNarrowsWhileAimingAndInAFightThenWidensAgain() {
-    let world = GameWorld(level: CombatYard.level)
-    let wide = CombatYard.level.fieldOfView
+    let world = GameWorld(level: BrooklynBridge.level)
+    let wide = world.level.fieldOfView
     #expect(world.cameraLens == wide)
     run(world, upTo: 1.5, aim: stick(world, towards: [1, 0]))
     #expect(abs(world.cameraLens - wide * GameWorld.fightLens) < 0.05)
     run(world, upTo: 1.5)
     #expect(abs(world.cameraLens - wide) < 0.05)
-    // Beyond the entrance wall the yard's fight keeps the lens narrow without the stick,
-    // and the touch order's ground follows it.
-    walk(world, to: [6, 3])
-    walk(world, to: [6, -2])
+    walk(world, to: [6.5, 15])
     run(world, upTo: 1.5)
     #expect(world.session.inEncounter)
     #expect(abs(world.cameraLens - wide * GameWorld.fightLens) < 0.05)

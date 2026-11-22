@@ -30,8 +30,6 @@ enum InputRules {
     var controllerFormation = false
     /// Circle / B: hides or shows the status panel.
     var controllerPanel = false
-    /// Square / X: the leader's signature, such as Miki's Disrupt (ADR 0005).
-    var controllerSignature = false
     /// The D-pad's directions: squad orders while exploring, and up or down in the pause menu.
     var dpadUp = false
     var dpadDown = false
@@ -50,8 +48,6 @@ enum InputRules {
     var keyboardFormation = false
     /// H: hides or shows the status panel.
     var keyboardPanel = false
-    /// X: the leader's signature.
-    var keyboardSignature = false
     /// The arrow keys, the Simulator keyboard's D-pad.
     var arrowUp = false
     var arrowDown = false
@@ -69,15 +65,10 @@ enum InputRules {
     var touchSwitch = false
     /// The touch layout's Restart button, shown in the action button's place while paused.
     var touchRestart = false
-    /// The touch layout's button for the pause menu's third choice, shown only while paused.
-    var touchOtherLevel = false
     /// The touch layout's Vibration button, shown only while paused (ADR 0008).
     var touchVibration = false
-    var touchTestWeapon = false
     var touchFire = false
     var touchFormation = false
-    /// The touch layout's Signature button, shown in a fight while the leader has one.
-    var touchSignature = false
     /// A finger pressing the ground, which may open the order menu.
     var touchGround = false
     /// Where the touch menu opened since the last sample: the press's point, which the world
@@ -92,7 +83,7 @@ enum InputRules {
     var hasAimKey: Bool { aimUp || aimDown || aimLeft || aimRight }
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardPrevious
-        || keyboardFire || keyboardFormation || keyboardPanel || keyboardSignature || hasArrowKey
+        || keyboardFire || keyboardFormation || keyboardPanel || hasArrowKey
         || hasAimKey
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
@@ -100,7 +91,7 @@ enum InputRules {
       let deadZone = Movement.deadZone * Movement.deadZone
       return simd_length_squared(stick) > deadZone || simd_length_squared(aimStick) > deadZone
         || controllerAction || controllerPause || controllerSwitch || controllerPrevious
-        || controllerFire || controllerFormation || controllerPanel || controllerSignature
+        || controllerFire || controllerFormation || controllerPanel
         || hasDpad
     }
   }
@@ -121,11 +112,8 @@ enum InputRules {
     /// The vertical direction held in the previous sample: -1 up, 1 down, 0 neither.
     var menuDirection = 0
     var panelWasPressed = false
-    var otherLevelWasPressed = false
     var vibrationWasPressed = false
-    var testWeaponWasPressed = false
     var previousWasPressed = false
-    var signatureWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -155,15 +143,10 @@ enum InputRules {
     /// A fresh press of the panel button, which hides or shows the status panel, while
     /// exploring or in a conversation.
     var panelPressed = false
-    /// A fresh press of the touch button for the pause menu's third choice while paused.
-    var otherLevelPressed = false
     /// A fresh press of the touch Vibration button while paused (ADR 0008).
     var vibrationPressed = false
-    var testWeaponPressed = false
     /// A fresh Previous press while exploring, which leads as the member before the leader.
     var previousPressed = false
-    /// A fresh Signature press while exploring: the leader's signature, such as Disrupt.
-    var signaturePressed = false
     /// Where the right stick, or I, K, J and L, aims while exploring, in the stick's terms: up
     /// and right on the screen. Nil inside the dead zone (ADR 0007).
     var aim: SIMD2<Float>?
@@ -179,11 +162,8 @@ enum InputRules {
     let pause = raw.keyboardPause || raw.controllerPause || raw.touchPause
     let cycle = raw.keyboardSwitch || raw.controllerSwitch || raw.touchSwitch
     let previous = raw.keyboardPrevious || raw.controllerPrevious
-    let signature = raw.keyboardSignature || raw.controllerSignature || raw.touchSignature
     let restart = raw.touchRestart
-    let otherLevel = raw.touchOtherLevel
     let vibration = raw.touchVibration
-    let testWeapon = raw.touchTestWeapon
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
     let panel = raw.keyboardPanel || raw.controllerPanel
@@ -215,11 +195,8 @@ enum InputRules {
       upWasPressed: up, downWasPressed: down, leftWasPressed: left, rightWasPressed: right,
       menuDirection: direction)
     next.panelWasPressed = panel
-    next.otherLevelWasPressed = otherLevel
     next.vibrationWasPressed = vibration
-    next.testWeaponWasPressed = testWeapon
     next.previousWasPressed = previous
-    next.signatureWasPressed = signature
     let panelEdge = panel && !state.panelWasPressed
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
@@ -232,9 +209,8 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || panel || raw.hasDpad || raw.touchGround || otherLevel || vibration || testWeapon
+        || panel || raw.hasDpad || raw.touchGround || vibration
         || previous
-        || signature
       return (.neutral, next)
     }
     let pauseEdge = pause && !state.pauseWasPressed
@@ -248,19 +224,17 @@ enum InputRules {
     switch mode {
     case .paused:
       // The pause menu: up/down choose, action confirms, and the touch buttons choose directly.
-      // Switch, Previous, formation, signature, panel and order presses are consumed.
+      // Switch, Previous, formation, panel and order presses are consumed.
       return (
         Input(
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
           menuMove: direction != state.menuDirection ? direction : 0,
           restartPressed: restart && !state.restartWasPressed,
-          otherLevelPressed: otherLevel && !state.otherLevelWasPressed,
-          vibrationPressed: vibration && !state.vibrationWasPressed,
-          testWeaponPressed: testWeapon && !state.testWeaponWasPressed), next
+          vibrationPressed: vibration && !state.vibrationWasPressed), next
       )
     case .dialogue:
       // Action shows the next line, and the panel button hides or shows the status panel;
-      // movement, switch, Previous, formation, signature and order presses are consumed.
+      // Movement, switch, Previous, formation and order presses are consumed.
       return (
         Input(
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
@@ -288,14 +262,12 @@ enum InputRules {
       } else if right && !state.rightWasPressed {
         command = .rightGoes
       }
-      // A switch or a squad command in the same sample discards the signature and the action,
-      // each the leader's, and the signature discards the action.
+      // A switch or a squad command in the same sample discards the leader's action.
       let commanded = switchEdge || previousEdge || formationEdge || command != nil
-      let signatureEdge = signature && !state.signatureWasPressed && !commanded
       return (
         Input(
           movement: movement,
-          actionPressed: actionEdge && !commanded && !signatureEdge,
+          actionPressed: actionEdge && !commanded,
           pausePressed: false,
           switchPressed: switchEdge,
           fireHeld: fire,
@@ -306,7 +278,6 @@ enum InputRules {
           markPoint: raw.touchMark,
           panelPressed: panelEdge,
           previousPressed: previousEdge,
-          signaturePressed: signatureEdge,
           aim: aim
         ), next
       )

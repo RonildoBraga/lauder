@@ -3,6 +3,9 @@
 **Status:** Implemented and delivered; phone session deferred\
 **Date:** 22 November 2026
 
+
+**Retired implementation:** The bridge-only reset removed this experiment and its dedicated runtime. This record preserves the assignment, decisions and historical delivery evidence; it is not current playable scope. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context and assignment
 
 Phase 2 of [ADR 0008](0008-weapon-feel-and-combat-plan.md) gives the active character cover. [Issue #92](https://github.com/RonildoBraga/lauder/issues/92) asks for the control style, firing exposure and shield scope before implementation.

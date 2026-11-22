@@ -5,6 +5,9 @@
 
 **Later change:** [ADR 0014](0014-continuous-combat-arena.md) supersedes the retained hostile red aiming line and the combat yard's finite encounter/fallback policy. This record preserves the earlier phase's assignment and delivery evidence.
 
+
+**Retired implementation:** The bridge-only reset removed this experiment and its dedicated runtime. This record preserves the assignment, decisions and historical delivery evidence; it is not current playable scope. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Assignment and scope
 
 The maintainer's continuous implementation and TestFlight assignment is recorded in [ADR 0011](0011-companion-combat.md). This record covers phase 5 of the [combat plan](0008-weapon-feel-and-combat-plan.md), [issue #95](https://github.com/RonildoBraga/lauder/issues/95). The following settings are implementer-selected, tunable defaults. They do not change the story foundations or add encounters to the bridge.

@@ -3,6 +3,9 @@
 **Status:** Built and checked in Simulator; physical checkpoint pending\
 **Date:** 22 November 2026
 
+
+**Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context and assignment
 
 Phase 3 of [ADR 0008](0008-weapon-feel-and-combat-plan.md), tracked in [issue #93](https://github.com/RonildoBraga/lauder/issues/93), lets every member fire their own weapon as leader. The [story bible](../story/story-bible.md#combat-identities) supplies Miki's precision carbine, Laura's light burst weapon and Tom's close scatter weapon.

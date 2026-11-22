@@ -15,7 +15,7 @@ final class CombatFeedback {
     case controller(GCController)
   }
 
-  /// The app's one player of sounds and vibrations, whichever level's world is in play.
+  /// The app's one player of sounds and vibrations.
   static let shared = CombatFeedback()
 
   private let audio = CombatAudio()
@@ -46,7 +46,7 @@ final class CombatFeedback {
     }
   }
 
-  /// Out of the foreground, or between worlds: sounds stop, vibration stops, R2 goes slack.
+  /// Out of the foreground: sounds stop, vibration stops, R2 goes slack.
   func suspend() {
     audioStarted = false
     audio.suspend()
@@ -61,9 +61,6 @@ enum CombatSound: String, CaseIterable, Sendable {
   case lightBurst = "light-burst"
   case closeScatter = "close-scatter"
   case rifle
-  case submachineGun = "submachine-gun"
-  case marksman
-  case supportGun = "support-gun"
   case strikeBody = "strike-body"
   case strikeBlock = "strike-block"
   case emptyClick = "empty-click"
@@ -78,9 +75,6 @@ enum CombatSound: String, CaseIterable, Sendable {
       case .lightBurst: .lightBurst
       case .closeScatter: .closeScatter
       case .rifle: .rifle
-      case .submachineGun: .submachineGun
-      case .marksman: .marksman
-      case .supportGun: .supportGun
       }
     case .struckBody: .strikeBody
     case .struckBlock: .strikeBlock
@@ -215,7 +209,6 @@ enum HapticCue: CaseIterable, Sendable {
   case lightBurstShot
   /// A heavier, longer pulse for Tom's close blast.
   case closeScatterShot
-  case submachineGunShot, marksmanShot, supportGunShot
   /// A sharp, heavier jolt when a hostile's shot hits the leader.
   case leaderHit
   /// A light tick for Fire with no rounds.
@@ -227,9 +220,6 @@ enum HapticCue: CaseIterable, Sendable {
     case .fired(.carbine, _, true): .carbineShot
     case .fired(.lightBurst, _, true): .lightBurstShot
     case .fired(.closeScatter, _, true): .closeScatterShot
-    case .fired(.submachineGun, _, true): .submachineGunShot
-    case .fired(.marksman, _, true): .marksmanShot
-    case .fired(.supportGun, _, true): .supportGunShot
     case .leaderHit: .leaderHit
     case .empty: .emptyClick
     default: nil
@@ -261,9 +251,6 @@ enum HapticCue: CaseIterable, Sendable {
       case .carbineShot: [tap(0.8, 0.65), rumble(0.35, 0.2, for: 0.05)]
       case .lightBurstShot: [tap(0.45, 0.8)]
       case .closeScatterShot: [tap(1, 0.5), rumble(0.65, 0.2, for: 0.09)]
-      case .submachineGunShot: [tap(0.3, 0.85)]
-      case .marksmanShot: [tap(0.95, 0.8), rumble(0.5, 0.3, for: 0.075)]
-      case .supportGunShot: [tap(0.6, 0.5), rumble(0.2, 0.15, for: 0.04)]
       case .leaderHit: [tap(1, 0.9), tap(0.6, 0.4, at: 0.06), rumble(0.5, 0.3, for: 0.12)]
       case .emptyClick: [tap(0.35, 1)]
       }
@@ -289,9 +276,6 @@ final class CombatHaptics {
     case .carbine, .rifle: TriggerProfile(start: 0.3, end: 0.55, strength: 0.6)
     case .lightBurst: TriggerProfile(start: 0.18, end: 0.38, strength: 0.3)
     case .closeScatter: TriggerProfile(start: 0.4, end: 0.7, strength: 0.85)
-    case .submachineGun: TriggerProfile(start: 0.15, end: 0.32, strength: 0.22)
-    case .marksman: TriggerProfile(start: 0.42, end: 0.62, strength: 0.8)
-    case .supportGun: TriggerProfile(start: 0.25, end: 0.5, strength: 0.5)
     }
   }
 

@@ -19,14 +19,6 @@ final class GameWorld {
   let root = Entity()
   let controls = GameControls()
   let session: GameSession
-  #if DEBUG
-    /// Elapsed initializer-body time, recorded once for scripted Simulator playtests.
-    @ObservationIgnored private(set) var loadTiming: WorldLoadTiming?
-  #endif
-  /// Asks the world's owner for a new run of another level, in a world of its own: the pause
-  /// menu's third choice while the combat experiment lasts (ADR 0005). Without an owner, as in
-  /// most tests, the choice does nothing.
-  @ObservationIgnored var leave: ((Level) -> Void)?
   /// The latest line the HUD shows: a place's words, an action's result, a beat's line. Every
   /// line counts as new, even one that repeats the last, so it shows again in the status panel.
   private(set) var observation: String {
@@ -34,25 +26,15 @@ final class GameWorld {
     set {
       shownLine = newValue
       lineCount &+= 1
-      #if DEBUG
-        gameLine = newValue
-      #endif
     }
   }
   private var shownLine: String
   @ObservationIgnored private var lineCount = 0
-  #if DEBUG
-    /// The latest line the game itself showed, which a scripted playtest's status then covers
-    /// on the HUD. Playtests read it.
-    @ObservationIgnored private(set) var gameLine = ""
-  #endif
   private(set) var diagnostic: String?
   /// The leader's contextual action here, such as "Search"; nil when there is none.
   private(set) var actionName: String?
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
-  /// Who can answer a wind-up, such as "Miki can Disrupt" (ADR 0005); nil when nobody can.
-  private(set) var signatureCue: String?
   /// Whether the leader's weapon is drawn.
   private(set) var weaponDrawn = false
   /// How dark the screen is while an encounter starts again, from 0 to 1.
@@ -90,44 +72,17 @@ final class GameWorld {
   @ObservationIgnored private var crossRemaining: Float = 0
   /// Orders refused in this run because nobody could reach their point. Tests read it.
   @ObservationIgnored private(set) var refusedOrders = 0
-  /// How often the party has fallen back in this run (ADR 0005). Tests and playtests read it.
-  @ObservationIgnored private(set) var fallBacks = 0
   /// Whether the leader has been told, on this visit to a gathering area, who is missing.
   @ObservationIgnored private var toldWhoIsMissing = false
   /// What the touch order menu marked as it opened: its point on the screen, and what the ray
   /// through it met then. The order that follows uses it, though the camera has moved since.
   @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
   @ObservationIgnored private let camera = PerspectiveCamera()
-  /// Movement against the level's blockers, and the salvage gate as it stands (ADR 0006).
-  @ObservationIgnored private var motion: PartyMotion
-  @ObservationIgnored private var grid: NavigationGrid
-  /// Both of those with the salvage gate shut and open, prepared while loading and reusable
-  /// across visits, so that the gate opening or shutting stalls no frame (ADR 0006).
-  @ObservationIgnored private var gateWays:
-    (
-      shut: (motion: PartyMotion, grid: NavigationGrid),
-      open: (motion: PartyMotion, grid: NavigationGrid)
-    )?
-  /// The salvage gate's hinge, which swings it open into the depot; how far open it shows, from
-  /// 0 shut to 1 open; and whether the blockers have it open, so they change only when that
-  /// does (ADR 0006).
-  @ObservationIgnored private var gateHinge: Entity?
-  @ObservationIgnored private var gateSwing: Float = 0
-  @ObservationIgnored private var gateShownOpen = false
-  /// How a salvage task shows what the party has done (ADR 0006).
-  @ObservationIgnored private var salvageLooks: SalvageLooks?
+  /// Movement against the bridge's blockers.
+  @ObservationIgnored private let motion: PartyMotion
+  @ObservationIgnored private let grid: NavigationGrid
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
-  /// Where companions take cover in a fight, in a level with combat positioning (ADR 0003,
-  /// phase S4).
-  @ObservationIgnored private var cover: CoverPlanner
-  @ObservationIgnored private var evasions: [PartyMember: (ids: Set<Int>, point: SIMD2<Float>)] =
-    [:]
-  /// What blocks sight, for what the shooters can see: the level's blockers, worked out once.
-  @ObservationIgnored private let sightBlockers: [PartyMotion.Box]
-  /// What the shooters see, remembered across the routes planned in a fight.
-  @ObservationIgnored private let sightMemo = SightMemo()
-  @ObservationIgnored private let terrainSight: Ballistics?
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
@@ -140,8 +95,6 @@ final class GameWorld {
     /// `-LauderPlaytest <scenario>`. Debug builds only.
     @ObservationIgnored private(set) var playtest: PlaytestRunner?
     @ObservationIgnored private var targetMarkers: [PartyMember: Entity] = [:]
-    /// Maxima and counters only: one entry per authored actor or finite weapon kind.
-    @ObservationIgnored private var playtestShotMetrics = ArsenalPlaytest.ShotMetrics()
   #endif
   @ObservationIgnored private var subscription: EventSubscription?
   @ObservationIgnored private var isPresented = false
@@ -172,7 +125,6 @@ final class GameWorld {
   @ObservationIgnored private var facingGoal: SIMD2<Float>?
   /// Members still rocking from a shot or a hit in the latest step (ADR 0008).
   @ObservationIgnored private var joltedMembers: Set<PartyMember> = []
-  @ObservationIgnored private var posedCoverMembers: Set<PartyMember> = []
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -180,7 +132,6 @@ final class GameWorld {
   /// while the right stick aims (ADR 0007).
   @ObservationIgnored private var lens: Float
   @ObservationIgnored private var firePressPending = false
-  @ObservationIgnored private var signaturePressPending = false
   /// Where the current encounter's retry places the leader.
   @ObservationIgnored private var retrySpot: SIMD2<Float>?
   /// Time into an encounter's retry: the fade out, the reset, the fade back in.
@@ -202,9 +153,6 @@ final class GameWorld {
   static let spotSpacing: Float = 1
   /// How close a going companion comes to their point before they hold there.
   static let arrivalDistance: Float = 0.35
-  /// How close every companion must be to their place in the formation for a regroup to end
-  /// (ADR 0003, phase S4).
-  static let regroupDistance: Float = 1
   /// How long the cross shows where an order could not go.
   static let crossTime: Float = 1
   /// How close every companion must be before a scene that gathers the party begins.
@@ -241,120 +189,54 @@ final class GameWorld {
     if weaponStatus != text { weaponStatus = text }
   }
 
-  var weaponKind: Weapon.Kind? { canFire ? fight.equippedWeapon(for: session.leader).kind : nil }
+  var weaponKind: Weapon.Kind? { canFire ? Weapon.forMember(session.leader).kind : nil }
   /// Whether weapon readiness and shared rounds show: during a fight, or while drawn.
   var showsAmmo: Bool { session.inEncounter || weaponDrawn }
-  /// Whether an encounter's retry, or the party's fall back, is under way.
+  /// Whether an encounter's retry is under way.
   var isRetrying: Bool { retryElapsed != nil }
-  /// Whether the HUD shows everyone's hits during a fight, as the combat yard does, rather than
-  /// only the leader's.
-  var showsEveryonesHits: Bool { session.inEncounter && level.combat.fallsBack }
-  /// Whether the leader has a signature to use: Miki's Disrupt, in a level that has it (ADR
-  /// 0005). The others' signatures are left out of the experiment.
-  var leaderHasSignature: Bool { level.combat.disrupt && session.leader == .miki }
-  /// Whether the signature's controls show: during a fight, while the leader has one.
-  var showsSignature: Bool { session.inEncounter && leaderHasSignature }
-  /// How many shots each companion has fired by themselves in this run. Tests and playtests
-  /// read it.
-  var companionShots: [PartyMember: Int] { fight.companionShots }
   /// How many shots' marks show on blocks now (ADR 0007). Tests and playtests read it.
   var shotMarks: Int { stage.effects.marksShown }
   /// The camera's lens now, in degrees (ADR 0007). Tests read it.
   var cameraLens: Float { lens }
   /// The direction on the ground a member faces. Tests read it.
   func facing(of member: PartyMember) -> SIMD2<Float> { Movement.facing(yaw: yaw[member] ?? 0) }
-  /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
-  var disrupts: Int { fight.disrupts }
-  /// The HUD's objective: the level's own, until the story changes it or a salvage task's
-  /// repair is done.
+  /// The HUD's objective changes with the story's current beat.
   var objective: String {
-    if let task = level.salvage, session.salvage.repaired { return task.doneObjective }
-    if let task = level.salvage, session.salvage.regulators.contains(where: \.mightFit),
-      let text = task.returnObjective
-    {
-      return text
-    }
-    return level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
-  }
-  /// The pause menu's third choice: what it reads, what it does and the level it starts.
-  var otherLevel: (name: String, note: String, level: Level) {
-    LevelCycle.next(after: level)
+    level.objectiveChanges.last { $0.beat <= session.beat }?.text ?? level.objective
   }
 
-  init(level: Level = BrooklynBridge.level, navigationCache: NavigationCache? = nil) {
-    #if DEBUG
-      let loadStarted = ContinuousClock.now
-    #endif
+  init(level: Level = BrooklynBridge.level) {
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
     lens = level.fieldOfView
-    // Reuse immutable geometry across visits, not live worlds. A standalone world still
-    // prepares its own grid while loading, including the salvage gate's open position.
-    #if DEBUG
-      let navigationStarted = ContinuousClock.now
-    #endif
-    let navigation = navigationCache?.prepare(for: level) ?? WorldNavigation(level: level)
-    (motion, grid) = navigation.start
-    gateWays = navigation.gateOpen.map { (shut: navigation.start, open: $0) }
-    #if DEBUG
-      let navigationFinished = ContinuousClock.now
-    #endif
+    motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
+    grid = NavigationGrid(level: level)
     squadLeader = level.party[0]
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
-    sightBlockers = level.obstacles
-    let terrainSight = level.terrain.patches.isEmpty ? nil : Ballistics(level: level)
-    self.terrainSight = terrainSight
-    cover = CoverPlanner(
-      obstacles: sightBlockers,
-      coverRules: level.combat.leaderCover
-        ? LeaderCover(boxes: level.boxes, ground: level.ground.footprint, terrain: level.terrain)
-        : nil,
-      ballistics: terrainSight)
     motors = Self.freshMotors()
     let spawn = level.spawn(level.party[0])
-    cameraTarget = Self.cameraTarget(over: spawn, floor: level.terrain.height(at: spawn))
+    cameraTarget = Self.cameraTarget(over: spawn)
     let style = SceneStyle(
       markerScale: SceneStyle.markerScale(
         cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
-    #if DEBUG
-      let fightStarted = ContinuousClock.now
-    #endif
-    fight = FightSimulation(level: level, grid: grid)
+    fight = FightSimulation(level: level)
     stage = EncounterStage(level: level, style: style)
     stage.reset(fight)
-    #if DEBUG
-      let fightFinished = ContinuousClock.now
-      let sceneStarted = fightFinished
-    #endif
     root.name = level.id
     if let scene = level.scene {
       root.addChild(Self.loadScene(named: scene, for: level))
     } else {
-      // A greybox, such as the combat yard or a test's level: snow underfoot, and plain blocks.
-      if !level.terrain.patches.isEmpty {
-        root.addChild(
-          TerrainMesh.entity(terrain: level.terrain, ground: level.ground, style: style))
-      }
-      let blocks = level.terrain.patches.isEmpty ? [level.ground] + level.boxes : level.boxes
-      for box in blocks {
+      // Plain test geometry; the playable bridge loads its authored scene.
+      for box in [level.ground] + level.boxes {
         let material: any Material =
-          box.name == level.ground.name ? style.snow : style.material(for: box.look)
+          box.name == level.ground.name ? style.snow : style.scenery
         let entity = style.block(size: box.size, at: box.position, material: material)
         entity.name = box.name
         root.addChild(entity)
       }
-    }
-    #if DEBUG
-      let sceneFinished = ContinuousClock.now
-    #endif
-    // A salvage task's gate, which swings open, and the looks that show the party's progress
-    // (ADR 0006).
-    if let task = level.salvage {
-      gateHinge = Self.addGate(task.gate, to: root, style: style)
-      salvageLooks = SalvageLooks(task: task, in: root, style: style)
     }
     landmarkFade = LandmarkFade(look: root)
     // The session refers to each action by its name, so no action is defined twice.
@@ -366,9 +248,6 @@ final class GameWorld {
     camera.name = "camera"
     root.addChild(camera)
     landmarkFade.prepare(before: camera)
-    #if DEBUG
-      let partyStarted = ContinuousClock.now
-    #endif
     for member in PartyMember.allCases {
       let body = Entity()
       body.name = "party.\(member.rawValue)"
@@ -392,26 +271,14 @@ final class GameWorld {
     refusalCross.isEnabled = false
     root.addChild(refusalCross)
     for (member, weapon) in stage.weaponProps { visuals[member]?.addChild(weapon) }
-    #if DEBUG
-      let partyFinished = ContinuousClock.now
-    #endif
     placeParty()
-    showSalvage()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
     updateWeaponStatus()
-    #if DEBUG
-      loadTiming = WorldLoadTiming(
-        level: level.id, total: loadStarted.duration(to: .now),
-        navigation: navigationStarted.duration(to: navigationFinished),
-        fight: fightStarted.duration(to: fightFinished),
-        scene: sceneStarted.duration(to: sceneFinished),
-        party: partyStarted.duration(to: partyFinished))
-    #endif
   }
 
   /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
-  /// 0002). Each world gets a fresh clone of the cached pristine scene; Restart keeps it.
+  /// 0002). Restart retains the loaded scene.
   private static func loadScene(named name: String, for level: Level) -> Entity {
     do {
       let scene = try SceneStyle.scene(named: name)
@@ -424,8 +291,8 @@ final class GameWorld {
 
   /// Where the camera looks while it is settled behind a leader standing at this point: just
   /// above the body's centre.
-  private static func cameraTarget(over point: SIMD2<Float>, floor: Float) -> SIMD3<Float> {
-    [point.x, floor + PartyBody.height / 2 + 0.1, point.y]
+  private static func cameraTarget(over point: SIMD2<Float>) -> SIMD3<Float> {
+    [point.x, PartyBody.height / 2 + 0.1, point.y]
   }
 
   func attach(_ subscription: EventSubscription) {
@@ -469,14 +336,6 @@ final class GameWorld {
       && fight.status(for: session.leader).reloadRemaining <= 0
   }
   var isActive: Bool { isPresented && isApplicationActive }
-
-  /// What the player chose in another level's world carries over to this one: a hidden status
-  /// panel, the vibration choice, and touch controls in place of an attached controller.
-  func takePreferences(from other: GameWorld) {
-    panelHidden = other.panelHidden
-    vibrationEnabled = other.vibrationEnabled
-    if other.controls.prefersTouch { controls.useTouchControls() }
-  }
 
   /// The scene's update: this frame's input, sampled in the session's mode, then `update`. Each
   /// active step starts from the body positions that the one before checked against collisions.
@@ -525,7 +384,7 @@ final class GameWorld {
     #endif
     advanceParty(
       movement: input.movement, aim: input.aim, fireHeld: input.fireHeld,
-      firePressed: input.firePressed, signaturePressed: input.signaturePressed,
+      firePressed: input.firePressed,
       deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
@@ -544,19 +403,13 @@ final class GameWorld {
         togglePause()
       } else if input.restartPressed {
         restart()
-      } else if input.otherLevelPressed {
-        leave?(otherLevel.level)
       } else if input.vibrationPressed {
         toggleVibration()
-      } else if input.testWeaponPressed {
-        cycleTestWeapon()
       } else if input.actionPressed {
         switch session.pauseChoice {
         case .resume: togglePause()
         case .restart: restart()
-        case .otherLevel: leave?(otherLevel.level)
         case .vibration: toggleVibration()
-        case .testWeapon: cycleTestWeapon()
         }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
@@ -592,22 +445,6 @@ final class GameWorld {
     }
   }
 
-  /// Changing a test weapon is a paused session action. It drops queued fire/signature
-  /// commands, keeps held fingers mounted, and waits for fresh neutral input before play.
-  private func cycleTestWeapon() {
-    guard session.cycleTestWeapon() else { return }
-    fireHeld = false
-    firePressPending = false
-    signaturePressPending = false
-    aimStick = nil
-    aimDirection = nil
-    facingGoal = nil
-    fight.syncEquipment(session: session)
-    stage.reset(fight)
-    updateWeaponStatus()
-    controls.requireNeutralInput()
-  }
-
   private func togglePause() {
     session.togglePause()
     controls.requireNeutralInput()
@@ -629,27 +466,6 @@ final class GameWorld {
     guard session.mode == .exploring, !fight.holdsParty,
       let position = self.position(of: session.leader)
     else { return }
-    // In a salvage task, the place decides; at the gate, whoever cannot open it hears who can
-    // (ADR 0006).
-    if let task = level.salvage, let place = Self.place(at: position, in: task) {
-      if task.completion != nil, session.salvage.action(for: session.leader, at: place) == .fit {
-        guard !session.inEncounter else {
-          observation = "Bring everyone out of the guarded lane first."
-          return
-        }
-        guard positions.values.allSatisfy({ simd_distance($0, position) <= Self.gatherRadius })
-        else {
-          observation = "Bring everyone back to the transmitter."
-          return
-        }
-      }
-      observation =
-        session.performSalvage(at: place) ?? session.salvage.hint(at: place)
-        ?? level.lookAround
-      showSalvage()
-      updatePromptAndCompass()
-      return
-    }
     let here = level.interactions.filter { $0.approach.contains(position) }
     // Several actions can share an approach; the one offered now comes first.
     if let interaction = here.first(where: { session.offers($0.id) }) ?? here.first {
@@ -680,17 +496,12 @@ final class GameWorld {
   /// beginning of a run. Nothing is rebuilt or reloaded.
   func restart() {
     session.restart()
-    showSalvage()
     retryElapsed = nil
     retrySpot = nil
     fade = 0
     placeParty()
     diagnostic = nil
     refusedOrders = 0
-    fallBacks = 0
-    #if DEBUG
-      playtestShotMetrics = ArsenalPlaytest.ShotMetrics()
-    #endif
     touchMark = nil
     crossRemaining = 0
     refusalCross.isEnabled = false
@@ -715,13 +526,11 @@ final class GameWorld {
     stage.reset(fight)
     for member in PartyMember.allCases { showPose(member) }
     joltedMembers = []
-    posedCoverMembers = []
     updateWeaponStatus()
     resetSquad(around: spot)
   }
 
-  /// What a fall back puts back too, once the leader stands at `spot`: the squad's movement
-  /// around the leader and the camera settled behind them, with the weapon holstered.
+  /// Reset squad movement and the camera around `spot`, with the weapon holstered.
   private func resetSquad(around spot: SIMD2<Float>) {
     threat = nil
     weaponDrawn = false
@@ -730,20 +539,16 @@ final class GameWorld {
     aimDirection = nil
     facingGoal = nil
     firePressPending = false
-    signaturePressPending = false
-    signatureCue = nil
     squadLeader = session.leader
     route = RouteMemory(start: spot)
     planner = SquadPlanner(heading: level.heading)
-    cover.reset()
-    evasions = [:]
     motors = Self.freshMotors()
     companionTargets = [:]
     unsimulatedTime = 0
     cameraStart = nil
     cameraElapsed = 0
     cameraLean = .zero
-    cameraTarget = Self.cameraTarget(over: spot, floor: level.terrain.height(at: spot))
+    cameraTarget = Self.cameraTarget(over: spot)
     lens = level.fieldOfView
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
@@ -768,13 +573,12 @@ final class GameWorld {
   /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
     movement: SIMD2<Float>, aim: SIMD2<Float>? = nil, fireHeld: Bool = false,
-    firePressed: Bool = false, signaturePressed: Bool = false, deltaTime: Float
+    firePressed: Bool = false, deltaTime: Float
   ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     self.fireHeld = fireHeld
     aimStick = aim
     if firePressed { firePressPending = true }
-    if signaturePressed { signaturePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
     // remainder, always under one step, carries to the next frame. A retry, or a conversation a
@@ -785,7 +589,6 @@ final class GameWorld {
       simulateStep(movement: movement, dt: Self.simulationStep)
     }
     updateCamera(deltaTime: elapsed)
-    swingGate(by: elapsed)
     ageLines(by: elapsed)
     updatePromptAndCompass()
     checkTriggers()
@@ -848,76 +651,26 @@ final class GameWorld {
     for member in session.party where member != leader {
       if let point = Self.point(of: session.order(of: member)) { targets[member] = point }
     }
-    // Once a fight is under way in a level with combat positioning (ADR 0003, phase S4),
-    // companions keep off the ground the shooters see, and take cover near those places unless
-    // they are regrouping, which ends once everyone is back in the formation.
-    let positioning = level.combat.combatPositioning && fight.fightUnderWay
-    let threats = positioning ? fight.threats : []
-    sightMemo.prepare(for: threats)
-    let openGround =
-      threats.isEmpty
-      ? nil
-      : OpenGround(
-        threats: threats, obstacles: sightBlockers, ballistics: terrainSight, memo: sightMemo)
-    if session.regrouping,
-      session.companions.allSatisfy({ member in
-        guard let here = current[member], let place = targets[member] else { return true }
-        return simd_distance(here, place) <= Self.regroupDistance
-      })
-    {
-      session.endRegroup()
-    }
-    let takingCover = positioning && !session.regrouping
-    if takingCover {
-      targets = cover.targets(
-        for: CoverPlanner.Input(
-          places: targets, positions: current, leaderPosition: leaderEnd,
-          formation: session.formation, threats: threats,
-          weaponRanges: Dictionary(
-            uniqueKeysWithValues: level.combat.companionWeapons.map { member, authored in
-              (
-                member,
-                level.arena != nil
-                  ? session.weapon(for: member).assistanceRange : authored.assistanceRange
-              )
-            }), dt: dt),
-        grid: grid)
-    } else {
-      cover.reset()
-    }
-    let previouslyEvading = Set(evasions.keys)
-    targets = avoidGrenades(targets: targets, positions: current)
-    let previousTargets = companionTargets
     companionTargets = targets
     for member in session.party where member != leader {
       guard let start = current[member], let target = targets[member],
         var motor = motors[member]
       else { continue }
-      // Into cover, or out to fire: a settled companion moves off however short the step.
-      if takingCover || evasions[member] != nil || previouslyEvading.contains(member),
-        let before = previousTargets[member],
-        simd_distance(before, target) > CompanionMotor.settleDistance
-      {
-        motor.wake()
-      }
       let order = session.order(of: member)
-      // A spot of cover stays where it is; a formation slot moves with the leader.
-      let inCover = takingCover && cover.isTakingCover(member)
       let context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
         speed: PartyBody.speed, dt: dt,
-        targetMoves: order == .following && !inCover && evasions[member] == nil,
-        openGround: openGround)
+        targetMoves: order == .following)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
       motors[member] = motor
       place(member, at: end)
       turn(member, moved: end - start, dt: dt)
-      // A going companion arrives at their point, or in cover at their spot near it.
-      if case .going(let point) = order, evasions[member] == nil,
-        simd_distance(end, takingCover ? target : point) <= Self.arrivalDistance
+      // A going companion holds once they reach their ordered point.
+      if case .going(let point) = order,
+        simd_distance(end, point) <= Self.arrivalDistance
       {
         session.arrived(member)
       }
@@ -929,66 +682,6 @@ final class GameWorld {
         ? "\($0.displayName) can't reach you" : "\($0.displayName) can't get there"
     }
     if diagnostic != message { diagnostic = message }
-  }
-
-  /// Immediate danger temporarily displaces a companion without changing their order. A
-  /// cached destination avoids a navigation scan on every fixed step or returning too soon.
-  private func avoidGrenades(
-    targets: [PartyMember: SIMD2<Float>], positions: [PartyMember: SIMD2<Float>]
-  ) -> [PartyMember: SIMD2<Float>] {
-    let grenades = fight.grenades
-    guard !grenades.isEmpty else {
-      evasions = [:]
-      return targets
-    }
-    let ids = Set(grenades.map(\.id))
-    var result = targets
-    func safe(_ point: SIMD2<Float>) -> Bool {
-      grenades.allSatisfy { grenade in
-        let radius = Grenade.radius + PartyBody.radius + 0.1
-        guard let terrainSight else {
-          return simd_distance(point, grenade.position) > radius
-        }
-        // A warning belongs to its actual floor. Do not abandon a held point on a separate
-        // tier when the blast is too far away in 3D or the terrace itself stops it.
-        return simd_distance(
-          terrainSight.point(point, above: 0),
-          terrainSight.point(grenade.position, above: 0)) > radius
-          || !terrainSight.isClear(
-            from: terrainSight.point(grenade.position, above: 0.15),
-            to: terrainSight.point(point, above: FightSimulation.aimHeight * 0.68),
-            ignoringLowCover: true)
-      }
-    }
-    for member in session.companions {
-      guard let point = positions[member], let target = targets[member] else { continue }
-      if let kept = evasions[member], kept.ids == ids {
-        result[member] = kept.point
-        continue
-      }
-      evasions[member] = nil
-      guard !safe(point) || !safe(target) else { continue }
-      if safe(point) {
-        evasions[member] = (ids, point)
-        result[member] = point
-        continue
-      }
-      let region = grid.region(at: point)
-      let candidates = grid.roomySpots(within: Grenade.radius * 2, of: point, stride: 2).filter {
-        candidate in
-        safe(candidate) && grid.region(at: candidate) == region
-          && positions.allSatisfy { other, place in
-            other == member || simd_distance(place, candidate) >= 0.7
-          }
-      }.sorted { simd_distance_squared($0, point) < simd_distance_squared($1, point) }
-      if let escape = candidates.prefix(16).first(where: {
-        motion.canTraverse(from: point, to: $0) || grid.route(from: point, to: $0) != nil
-      }) {
-        evasions[member] = (ids, escape)
-        result[member] = escape
-      }
-    }
-    return result
   }
 
   // MARK: - Squad orders
@@ -1025,7 +718,7 @@ final class GameWorld {
       touchMark = nil
     } else {
       let ahead = pointAhead(of: leader)
-      pressed = SIMD3(ahead.x, level.terrain.height(at: ahead), ahead.y)
+      pressed = SIMD3(ahead.x, 0, ahead.y)
     }
     guard let pressed else { return }
     let marked = SIMD2(pressed.x, pressed.z)
@@ -1187,7 +880,7 @@ final class GameWorld {
   private func showOrders() {
     for (member, ring) in orderMarkers {
       if member != session.leader, case .going(let point) = session.order(of: member) {
-        ring.position = [point.x, level.terrain.height(at: point) + 0.02, point.y]
+        ring.position = [point.x, 0.02, point.y]
         ring.isEnabled = true
       } else {
         ring.isEnabled = false
@@ -1198,12 +891,9 @@ final class GameWorld {
   /// The camera's mapping between the screen and the ground, for a screen of this shape, through
   /// its lens as it is now.
   func projection(aspect: Float) -> CameraProjection {
-    // Flat levels retain off-road marking: the order is then refused visibly. Terraced
-    // levels must instead intersect their bounded actual floor, including lowered courts.
-    let terrain = level.terrain.patches.isEmpty ? nil : level.terrain
     return CameraProjection(
       eye: cameraTarget + level.cameraOffset, target: cameraTarget, fieldOfView: lens,
-      aspect: aspect, terrain: terrain, bounds: terrain == nil ? nil : level.bounds)
+      aspect: aspect)
   }
 
   /// Where a member's body stands on the ground.
@@ -1221,11 +911,7 @@ final class GameWorld {
     var inGatheringArea = false
     for encounter in level.encounters {
       guard case .area(let area) = encounter.start else { continue }
-      if encounter.guardArea != nil {
-        guard fight.notices(encounter, party: positions) else { continue }
-      } else {
-        guard area.contains(position) else { continue }
-      }
+      guard area.contains(position) else { continue }
       // A scene for the whole party, such as the end of the opening, waits until everyone is
       // close; companions holding elsewhere must be called back first.
       if encounter.gathersParty, encounter.beat == session.nextBeat {
@@ -1253,10 +939,7 @@ final class GameWorld {
 
   // MARK: - Fights
 
-  /// One step of the fight rules, then their stage presentation; the world turns the leader,
-  /// shows lines, the threat and who can answer it, and starts a retry
-  /// or a fall back after the last hit. Every leader carries their weapon; only Miki has
-  /// Disrupt, and not while a scene holds her. Outside an encounter, shots are practice.
+  /// Advance the bridge fight, its cues, feedback and retry.
   private func stepStage(
     leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
   ) {
@@ -1267,29 +950,18 @@ final class GameWorld {
     let outcome = fight.step(
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
       aiming: aimDirection != nil, fireHeld: armed && fireHeld,
-      firePressed: armed && firePressPending,
-      mayDisrupt: leaderHasSignature && !fight.holdsParty,
-      signaturePressed: signaturePressPending, figures: figures, session: session)
+      firePressed: armed && firePressPending, figures: figures, session: session)
     stage.update(fight, dt: dt)
-    #if DEBUG
-      // Capture every fixed substep, before the next one clears its emitted shots.
-      for shot in fight.shots { playtestShotMetrics.record(shot) }
-    #endif
     updateWeaponStatus()
     firePressPending = false
-    signaturePressPending = false
-    let cue = fight.canDisrupt ? "\(leader.displayName) can Disrupt" : nil
-    if signatureCue != cue { signatureCue = cue }
     // The leader turns there in the steps to come, at her turn rate (ADR 0008).
     if let facing = outcome.facing { facingGoal = facing }
     // Members still rocking from a shot or a hit show it, and those that just settled stand
     // straight again.
     let jolted = Set(fight.jolts.keys)
-    let covered = Set(fight.coverStates.keys)
-    for member in jolted.union(joltedMembers).union(covered).union(posedCoverMembers) {
+    for member in jolted.union(joltedMembers) {
       showPose(member)
     }
-    posedCoverMembers = covered
     joltedMembers = jolted
     combatEvents.append(contentsOf: fight.takeEvents())
     if combatEvents.count > Self.keptEvents {
@@ -1309,11 +981,6 @@ final class GameWorld {
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if outcome.retry { retryElapsed = 0 }
-    if outcome.withdrew {
-      cover.reset()
-      evasions = [:]
-      showOrders()
-    }
   }
 
   /// A member who has not joined appears where they wait, turned towards the nearest hostile
@@ -1362,10 +1029,6 @@ final class GameWorld {
   }
 
   private func performRetry() {
-    if level.combat.fallsBack {
-      fallBack()
-      return
-    }
     session.retryEncounter()
     let spot = retrySpot ?? level.spawn(session.leader)
     place(session.leader, at: spot)
@@ -1374,40 +1037,14 @@ final class GameWorld {
     observation = "Try again."
   }
 
-  /// The whole party falls back to the level's spawn points after the last allowed hit on
-  /// anyone (ADR 0005): everyone's hits recover and every companion follows again, while the
-  /// hostiles keep the damage dealt and wait where they stand, and whoever is down stays down.
-  private func fallBack() {
-    session.fallBack()
-    fight.fallBack()
-    stage.reset(fight)
-    let facing = Movement.yaw(towards: level.heading)
-    for member in session.party {
-      place(member, at: level.spawn(member))
-      setYaw(member, facing)
-    }
-    posedCoverMembers = []
-    fallBacks += 1
-    resetSquad(around: level.spawn(session.leader))
-    showOrders()
-    observation = "The party falls back to the entrance."
-  }
-
   private func changeLeader() {
     let previous = squadLeader
     let leader = session.leader
     squadLeader = leader
     updateWeaponStatus()
-    fight.clearCover()
-    for member in posedCoverMembers.union(fight.coverStates.keys).union([previous, leader]) {
-      showPose(member)
-    }
-    posedCoverMembers = Set(fight.coverStates.keys)
     facingGoal = nil
     if let point = position(of: leader) { route.reset(to: point) }
     planner.reset()
-    cover.reset()
-    evasions = [:]
     for member in [previous, leader] { motors[member] = CompanionMotor(for: member) }
     showLeaderMarker()
   }
@@ -1420,22 +1057,15 @@ final class GameWorld {
 
   private func place(_ member: PartyMember, at point: SIMD2<Float>) {
     bodies[member]?.position = [
-      point.x, level.terrain.height(at: point) + PartyBody.height / 2, point.y,
+      point.x, PartyBody.height / 2, point.y,
     ]
   }
 
-  /// Companions turn towards their movement, or towards their target while they fire by
-  /// themselves, or to the formation's heading once settled, at a limited rate so they never
-  /// snap round.
+  /// Companions turn towards their movement or the formation heading, at a limited rate.
   private func turn(_ member: PartyMember, moved delta: SIMD2<Float>, dt: Float) {
     let wanted: Float
     if simd_length(delta) > 0.2 * dt {
       wanted = Movement.yaw(towards: delta)
-    } else if let aim = fight.aims[member], let here = position(of: member),
-      simd_distance(aim, here) > 0.01
-    {
-      // A companion firing by themselves faces their target (ADR 0005).
-      wanted = Movement.yaw(towards: aim - here)
     } else if motors[member]?.isSettled == true {
       wanted = Movement.yaw(towards: planner.heading)
     } else {
@@ -1476,14 +1106,10 @@ final class GameWorld {
       visuals[member]?.position = [0, Self.lyingDrop, 0]
       return
     }
-    let cover = fight.coverStates[member]
-    let scale: Float = cover != nil && cover?.firing == false ? 0.68 : 1
-    let offset = cover?.offset ?? .zero
-    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height * scale)
-    visuals[member]?.scale = [1, scale, 1]
+    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
+    visuals[member]?.scale = [1, 1, 1]
     visuals[member]?.orientation = jolt.tilt * facing
-    visuals[member]?.position =
-      jolt.offset + [offset.x, -PartyBody.height * (1 - scale) / 2, offset.y]
+    visuals[member]?.position = jolt.offset
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.
@@ -1505,8 +1131,7 @@ final class GameWorld {
     // During a fight the target leans towards the threat, so both stay on screen.
     let wanted = fight.cameraLean(leader: leader)
     cameraLean += (wanted - cameraLean) * min(1, deltaTime * Self.cameraLeanRate)
-    let target = Self.cameraTarget(
-      over: leader + cameraLean, floor: level.terrain.height(at: leader))
+    let target = Self.cameraTarget(over: leader + cameraLean)
     if let start = cameraStart {
       cameraElapsed = min(0.25, cameraElapsed + deltaTime)
       let amount = cameraElapsed / 0.25
@@ -1553,34 +1178,7 @@ final class GameWorld {
   /// The compass to the goal for the story's beat: its name, the distance from the leader, and
   /// its direction on screen, turned from up the screen towards its right.
   private func updateCompass() {
-    let goal: Level.Goal?
-    if level.arena != nil, let leader = position(of: session.leader) {
-      let living = fight.hostiles.values.filter { $0.isVisible && !$0.isDown }
-        .sorted { $0.spec.id < $1.spec.id }
-      // The most imminent attack needs a bearing even when its actor is outside the camera.
-      // This points to the actor, not to its aim line or the shot's destination.
-      if let preparing = fight.preparingHostile {
-        goal = Level.Goal(name: "Preparing: \(preparing.spec.name)", point: preparing.position)
-      } else if let nearest = living.min(by: {
-        simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
-      }) {
-        goal = Level.Goal(name: nearest.spec.name, point: nearest.position)
-      } else {
-        let arrivals = level.encounters.flatMap(\.hostiles).filter {
-          fight.arenaWarnings[$0.id] != nil
-        }.sorted { $0.id < $1.id }
-        goal = arrivals.min(by: {
-          simd_distance_squared($0.standAt, leader) < simd_distance_squared($1.standAt, leader)
-        }).map { Level.Goal(name: "Arrival: \($0.name)", point: $0.standAt) }
-      }
-    } else if let task = level.salvage, task.depotGoal != nil {
-      goal =
-        session.salvage.repaired
-        ? nil
-        : session.salvage.regulators.contains(where: \.mightFit) ? task.returnGoal : task.depotGoal
-    } else {
-      goal = level.goals.last(where: { $0.beat <= session.beat })?.goal
-    }
+    let goal = level.goals.last(where: { $0.beat <= session.beat })?.goal
     guard let goal,
       let leader = position(of: session.leader)
     else {
@@ -1609,21 +1207,10 @@ final class GameWorld {
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count,
-        isFighting: session.inEncounter, ammo: session.ammo,
-        formation: session.formation, orders: session.orders, squadState: session.squadState,
-        line: gameLine, salvageContents: session.salvage.contents,
-        salvageRepaired: session.salvage.repaired,
-        refusedOrders: refusedOrders,
-        camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
-        disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks,
-        shotMarks: shotMarks, leaderCover: fight.coverState,
-        weapon: fight.status(for: session.leader),
-        grenades: fight.grenades, grenadesThrown: fight.grenadesThrown,
-        grenadesExploded: fight.grenadesExploded, movedEnemies: fight.movedEnemies,
-        arenaWave: fight.arenaWave, arenaWarnings: fight.arenaWarnings, hostiles: fight.hostiles,
-        enemyCover: fight.enemyCoverStates,
-        heights: bodies.mapValues { $0.position.y - PartyBody.height / 2 },
-        shotMetrics: playtestShotMetrics)
+        ammo: session.ammo,
+        formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
+        camera: projection(aspect: PlaytestRunner.screenAspect),
+        weapon: fight.status(for: session.leader))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
@@ -1637,17 +1224,8 @@ final class GameWorld {
       install(runner)
     }
 
-    /// A playtest that another level's world began carries on here, after the pause menu's
-    /// third choice made this world.
-    func continuePlaytest(from other: GameWorld) {
-      guard let runner = other.playtest else { return }
-      other.playtest = nil
-      install(runner)
-    }
-
     private func install(_ runner: PlaytestRunner) {
       playtest = runner
-      if let loadTiming { playtest?.recordLoad(loadTiming) }
       observation = runner.status
       // Small discs at each companion's target, so screenshots show where they are heading.
       let style = SceneStyle()
@@ -1681,10 +1259,10 @@ final class GameWorld {
         let target = companionTargets[member]
         disc.isEnabled = target != nil && member != session.leader
         if let target {
-          disc.position = [target.x, level.terrain.height(at: target) + 0.012, target.y]
+          disc.position = [target.x, 0.012, target.y]
         }
       }
-      // The playtest's status covers the HUD's line, while the game's own stays in `gameLine`.
+      // The playtest's progress takes the status line while a scripted run is active.
       if let status = playtest?.status, shownLine != status {
         shownLine = status
         lineCount &+= 1
@@ -1692,145 +1270,12 @@ final class GameWorld {
     }
   #endif
 
-  /// The leader's action prompt where they stand: a salvage task's action for whoever leads,
-  /// or an interaction the session offers.
+  /// The leader's currently available bridge interaction.
   private func updatePrompt(at position: SIMD2<Float>) {
-    let salvage = level.salvage.flatMap { task in
-      Self.place(at: position, in: task).flatMap {
-        session.salvage.action(for: session.leader, at: $0)
-      }
-    }
-    let name =
-      salvage?.name
-      ?? level.interactions.first { $0.approach.contains(position) && session.offers($0.id) }?.name
+    let name = level.interactions.first {
+      $0.approach.contains(position) && session.offers($0.id)
+    }?.name
     if actionName != name { actionName = name }
-  }
-
-  // MARK: - Salvage
-
-  /// Where in a salvage task a point lies, if anywhere (ADR 0006).
-  private static func place(at point: SIMD2<Float>, in task: Level.Salvage)
-    -> SalvageProgress.Place?
-  {
-    if task.latch.contains(point) { return .latch }
-    if task.panel.contains(point) { return .panel }
-    if let cabinet = task.cabinets.first(where: { $0.approach.contains(point) }) {
-      return .cabinet(cabinet.id)
-    }
-    return task.transmitterApproach.contains(point) ? .transmitter : nil
-  }
-
-  /// Shows the salvage task as the session has it. Movement's blockers have the gate shut, or
-  /// open as a thin wall into the depot, and change only when it does; the gate then swings
-  /// open over a moment, or Restart shuts it at once. The rest shows in the looks.
-  private func showSalvage() {
-    guard let task = level.salvage, let ways = gateWays else { return }
-    let progress = session.salvage
-    if progress.gateOpen != gateShownOpen {
-      gateShownOpen = progress.gateOpen
-      (motion, grid) = progress.gateOpen ? ways.open : ways.shut
-      if !progress.gateOpen {
-        gateSwing = 0
-        gateHinge?.orientation = simd_quatf(angle: 0, axis: [0, 1, 0])
-      }
-    }
-    fight.setGate(progress.gateOpen ? task.openGate : task.gate.footprint)
-    salvageLooks?.show(progress)
-  }
-
-  /// How long the salvage gate takes to swing open.
-  static let gateSwingTime: Float = 0.8
-
-  /// Swings the salvage gate on towards open while the session has it open, slowing as it goes.
-  private func swingGate(by dt: Float) {
-    guard let hinge = gateHinge, session.salvage.gateOpen, gateSwing < 1 else { return }
-    gateSwing = min(1, gateSwing + dt / Self.gateSwingTime)
-    let eased = 1 - (1 - gateSwing) * (1 - gateSwing)
-    hinge.orientation = simd_quatf(angle: eased * .pi / 2, axis: [0, 1, 0])
-  }
-
-  /// The salvage gate, in rust like the world's other barriers, on a hinge at its west end: a
-  /// quarter turn of the hinge swings it into the depot.
-  private static func addGate(_ gate: Level.Box, to root: Entity, style: SceneStyle) -> Entity {
-    let hinge = Entity()
-    hinge.name = "\(gate.name).hinge"
-    hinge.position = [gate.position.x - gate.size.x / 2, gate.position.y, gate.position.z]
-    let leaf = style.block(size: gate.size, at: [gate.size.x / 2, 0, 0], material: style.rust)
-    leaf.name = gate.name
-    hinge.addChild(leaf)
-    root.addChild(hinge)
-    return hinge
-  }
-
-  /// How a salvage task shows what the party has done (ADR 0006), in the palette's meanings:
-  /// - **The latch and the panel:** amber, as things to use, until the gate opens.
-  /// - **The transmitter:** faded teal under ink aerials, then amber once repaired.
-  /// - **Each cabinet:** a tag on its top once the party knows what it holds, amber for the right
-  ///   regulator, stone for the wrong model and rust for the live equipment; ink once emptied.
-  @MainActor
-  private struct SalvageLooks {
-    let marks: [ModelEntity]
-    let transmitter: ModelEntity?
-    let cabinets: [(id: String, body: ModelEntity, tag: ModelEntity)]
-    let use: any Material
-    let plain: any Material
-    let broken: any Material
-    let otherModel: any Material
-    let live: any Material
-    let empty: any Material
-
-    /// The looks for a task whose blocks are already in `root`, by name, with the marks, the
-    /// aerials and the cabinets' tags added to it.
-    init(task: Level.Salvage, in root: Entity, style: SceneStyle) {
-      func add(_ box: Level.Box, _ material: any Material) -> ModelEntity {
-        let entity = style.block(size: box.size, at: box.position, material: material)
-        entity.name = box.name
-        root.addChild(entity)
-        return entity
-      }
-      marks = [task.latchMark, task.panelMark].map { add($0, style.warm) }
-      for part in task.aerial { _ = add(part, style.ink) }
-      transmitter = root.findEntity(named: task.transmitter.name) as? ModelEntity
-      cabinets = task.cabinets.compactMap { cabinet in
-        guard let body = root.findEntity(named: cabinet.box.name) as? ModelEntity else {
-          return nil
-        }
-        let box = cabinet.box
-        let tag = add(
-          .box(
-            "\(cabinet.id).tag", at: box.position + [0, box.size.y / 2 + 0.04, 0],
-            size: [box.size.x - 0.2, 0.08, box.size.z - 0.2]), style.warm)
-        tag.isEnabled = false
-        return (cabinet.id, body, tag)
-      }
-      use = style.warm
-      plain = style.scenery
-      broken = style.fadedTeal
-      otherModel = style.stone
-      live = style.rust
-      empty = style.ink
-    }
-
-    func show(_ progress: SalvageProgress) {
-      for mark in marks { mark.model?.materials = [progress.gateOpen ? plain : use] }
-      transmitter?.model?.materials = [progress.repaired ? use : broken]
-      for cabinet in cabinets {
-        let emptied = progress.emptied.contains(cabinet.id)
-        cabinet.body.model?.materials = [emptied ? empty : plain]
-        let tag: (any Material)? =
-          if emptied || !progress.known.contains(cabinet.id) {
-            nil
-          } else {
-            switch progress.contents[cabinet.id] {
-            case .compatible: use
-            case .otherModel: otherModel
-            case .live, nil: live
-            }
-          }
-        cabinet.tag.isEnabled = tag != nil
-        if let tag { cabinet.tag.model?.materials = [tag] }
-      }
-    }
   }
 
   private static func freshMotors() -> [PartyMember: CompanionMotor] {

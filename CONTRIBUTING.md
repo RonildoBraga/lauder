@@ -72,18 +72,12 @@ Use `./apple/scripts/playtest --list` for the current scenario names. The scenar
 
 - The bridge opening, fights, recruitment and Restart.
 - Formations, squad orders and refused destinations.
-- Combat-test waves, low/tall cover, weapons, tactical enemies and upper/lower routes.
-- Salvage, and Relay Run's protected route, contact, withdrawal and return repair.
 
-Scenarios are defined in `apple/sources/world/Playtest.swift` and its world-folder helpers. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-and-performance), rather than maintaining a second scenario list here.
+Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-and-performance), rather than maintaining a second scenario list here.
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the step/result and small discs mark companion destinations. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The pause menu cycles **Combat test → Salvage test → Relay mission → Bridge**. Each venue starts a fresh session; standalone tests are not campaign progression. The active [weapon/range assignment](docs/decisions/0015-weapon-variety-and-map-range.md) adds arena-only loadout and new enemy coverage; its implementation and verification status belong in the prototype plan, not this procedural guide.
-
-Playtest reports also list elapsed construction times for the initial world and each level change, in order: navigation, fight entities, scene, party and remaining setup. These timings are saved in `summary.json` under `worldLoads`. They cover the initializer body, excluding earlier stored-property initialisation and later SwiftUI/RealityView presentation and renderer start-up, so compare them with frame times to investigate a level-switch hitch. They are Debug Simulator measurements, not phone performance or evidence that a hitch is fixed. Release builds contain no load-timing instrumentation.
-
-Record whether a measurement is a first visit or a return. The game's bounded navigation cache and pristine scene template can make repeat preparation very short; first or evicted geometry and a different scene resource still load normally. Low construction time does not establish renderer frame pacing or physical-phone performance.
+The bridge is the only playable level. Its pause menu offers **Resume**, **Restart** and **Vibration**. There is no level selector or weapon bench. Small test-only levels in `apple/tests/support` exercise collision and weapons; they are not app content.
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.
 
