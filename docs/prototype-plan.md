@@ -46,7 +46,19 @@ Search and Help are revalidated on press against the leader's position and curre
 
 ## Verification and performance
 
-The bridge-only reset must pass `./scripts/check` and the eight retained scenarios: `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening`, `formations` and `orders`. The implementation PR records the actual source, results and rendered Simulator evidence. Do not inherit the retired scenes' checks as proof for this reset.
+[PR #122](https://github.com/RonildoBraga/lauder/pull/122) merged the reset as app/archive source `de4d0db566a546217f3c3ca095cdf1b3944a21e3`, with the exact tree of final checked/reviewed `feabb43f10f3708bc6fef4f940f26c2d8b7b462d`. The final `./scripts/check` passed formatting, the shared app build, **255 Swift tests** including all eight retained headless scenarios, **51 Blender tests** and **seven generated sounds**.
+
+The retained headless routes are `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening`, `formations` and `orders`. Rendered Simulator checks passed with no route failures or companion warnings:
+
+| Source | Route | Result |
+|---|---|---:|
+| `8f0230c` | `opening` | 56/56 |
+| `8f0230c` | `orders` | 130/130 |
+| Final checked head `feabb43` | `first-fight` | 23/23 |
+
+The final-head change after the first two recordings removed unread DEBUG fields only; those recordings are not described as exact-head captures. Automatic source review completed on `feabb43` without findings. Claude was requested through GitHub and had not replied at integration; the request is not a completed Claude review.
+
+The signed **0.1.0 (27)** Release archive passed bundle, signing-team, signature and matching-dSYM verification. At **2026-11-22 07:14:36 UTC**, Apple's read-only verification confirmed Lauder's identity, upload **COMPLETE** with **zero errors**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, an unexpired build and availability to the existing internal testers. Existing internal groups and tester membership are unchanged. Private archives, symbols and full processing evidence are preserved. Availability does not establish phone installation, physical behaviour, performance or enjoyment; no new phone result is claimed.
 
 Simulator is the everyday validation environment. The script drives ordinary input through shared rules, saves screenshots/video and reports frame time, simulation cost, companion spacing and route failures. DEBUG instrumentation and route helpers are absent from Release builds. Test-only flat ranges and a narrow doorway fixture remain outside the app target because they exercise bridge weapons and navigation boundaries.
 
@@ -60,9 +72,7 @@ The target remains 60 fps on the baseline iPhone 13 Pro Max. Simulator measureme
 
 ### Historical delivery
 
-The last verified pre-reset release is **0.1.0 (26)**, app/archive source `25195e8e21efabccf76008f1b4306a622c6adf67`, tree-identical to checked/reviewed `c80a7ac77a09ab2a754673016cad9dce37ea6b34`. The standard check passed 51 Blender tests, ten generated sounds, formatting, app build, Swift Testing, eighteen headless scenarios and thirty-wave integration. Four exact-source rendered routes passed: arsenal-bench 167/167, combat-yard 101/101, enemy-arsenal 35/35 and relay-run-retreat 104/104.
-
-At **2026-11-22 06:19:36 UTC**, Apple confirmed upload COMPLETE with zero errors, processing VALID, IN_BETA_TESTING, INTERNAL_ONLY and availability to existing internal testers, with group/tester membership unchanged. Private archives, symbols and full evidence are preserved. This historical release includes the removed scenes and is not delivery evidence for the reset. Earlier delivery records remain in Git history and the decision records.
+Build **0.1.0 (26)**, source `25195e8`, was verified as processed and available before the reset. It contains the removed scenes; [ADR 0016](decisions/0016-combat-balance-and-readability.md) and Git history preserve its historical decisions and delivery evidence. Private archives, symbols and full processing evidence remain preserved.
 
 ## Combat balance and readability
 
