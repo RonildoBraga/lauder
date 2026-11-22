@@ -27,6 +27,7 @@ final class EncounterStage {
   private var throwerMarks: [String: Entity] = [:]
   private var roleMarks: [String: Entity] = [:]
   private var windUpCues: [String: Entity] = [:]
+  private var windUpFills: [String: Entity] = [:]
   private let terrain: Terrain
 
   init(level: Level, style: SceneStyle) {
@@ -102,17 +103,23 @@ final class EncounterStage {
           visual.addChild(mark)
           roleMarks[spec.id] = mark
         }
-        if spec.weapon == .marksman || spec.weapon == .supportGun {
-          // A compact, non-directional charge cue survives the distant camera. It conveys
-          // readiness without drawing a laser, cone or endpoint onto the intended victim.
-          let cue = style.block(
-            size: [0.13, 0.13, 0.13], at: [0, PartyBody.height / 2 + 0.32, 0],
-            material: style.warm)
-          cue.name = "hostile.\(spec.id).windup"
-          cue.isEnabled = false
-          visual.addChild(cue)
-          windUpCues[spec.id] = cue
-        }
+      }
+      if (spec.attack == .shoot || spec.attack == .throwGrenade)
+        && (level.arena != nil || spec.weapon == .marksman || spec.weapon == .supportGun)
+      {
+        // Reuse the simple countdown language above a preparing actor, in world space so
+        // turning cannot hide it edge-on. It gives no aim direction or future impact point.
+        let cue = Entity()
+        cue.name = "hostile.\(spec.id).windup"
+        cue.isEnabled = false
+        cue.addChild(
+          style.block(size: [1, 0.1, 0.1], at: .zero, material: style.gear))
+        let fill = style.block(size: [0.92, 0.06, 0.12], at: [0, 0.035, 0], material: style.warm)
+        fill.name = "hostile.\(spec.id).windup.remaining"
+        cue.addChild(fill)
+        container.addChild(cue)
+        windUpCues[spec.id] = cue
+        windUpFills[spec.id] = fill
       }
       if spec.attack == .throwGrenade {
         // A simple overhead shape distinguishes the thrower without requiring character art.
@@ -201,8 +208,13 @@ final class EncounterStage {
       if let cue = windUpCues[id] {
         if case .aiming(let remaining) = state.phase, fight.preparingShots.contains(id) {
           cue.isEnabled = true
-          let charged = 1 - min(1, remaining / max(0.001, state.spec.windUp))
-          cue.scale = SIMD3(repeating: 0.7 + 0.6 * charged)
+          cue.position = [
+            state.position.x, terrain.height(at: state.position) + PartyBody.height + 0.35,
+            state.position.y,
+          ]
+          let fraction = max(0.02, min(1, remaining / max(0.001, state.spec.windUp)))
+          windUpFills[id]?.scale.x = 0.92 * fraction
+          windUpFills[id]?.position.x = -0.46 * (1 - fraction)
         } else {
           cue.isEnabled = false
         }

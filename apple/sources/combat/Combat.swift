@@ -27,8 +27,13 @@ struct Weapon: Sendable {
   ]
 
   let kind: Kind
-  /// The farthest an assisted shot reaches, in metres.
+  /// Effective stopping reach, in metres. Fired rounds still travel across the whole level.
   let range: Float
+  /// A smaller passive/companion targeting reach where a long round would otherwise grant
+  /// automatic map-wide knowledge. Explicit aim retains the narrow cone's height-aware help
+  /// through effective reach. Nil keeps the ordinary targeting distance.
+  var assistanceLimit: Float? = nil
+  var assistanceRange: Float { assistanceLimit ?? range }
   /// Seconds between shots while Fire is held, or between a companion's bursts.
   let interval: Float
   /// Seconds from the first Fire press until a holstered weapon can shoot; for a companion's,
@@ -66,7 +71,7 @@ struct Weapon: Sendable {
   /// Tom's close scatter weapon (ADR 0005): a slow blast that counts as two hits, only at close
   /// range. Starting values, to tune in play.
   static let closeScatter = Weapon(
-    kind: .closeScatter, range: 7, interval: 1.5, drawTime: 0.7, capacity: 4, reloadTime: 1.8,
+    kind: .closeScatter, range: 7, interval: 0.8, drawTime: 0.55, capacity: 4, reloadTime: 1.8,
     damage: 2,
     spread: Spread(
       rest: Spread.degrees(6), perShot: Spread.degrees(2), widest: Spread.degrees(10),
@@ -82,7 +87,7 @@ struct Weapon: Sendable {
 
   /// A measured long shot is powerful while settled, with a slow shot/reload cadence.
   static let marksman = Weapon(
-    kind: .marksman, range: 64, interval: 1.35, drawTime: 0.65, capacity: 5,
+    kind: .marksman, range: 64, assistanceLimit: 22, interval: 1.35, drawTime: 0.65, capacity: 5,
     reloadTime: 2.1, damage: 2,
     spread: Spread(
       rest: Spread.degrees(0.15), perShot: Spread.degrees(1.4), widest: Spread.degrees(6),

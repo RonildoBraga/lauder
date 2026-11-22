@@ -1,10 +1,14 @@
 # Combat plan coverage
 
 **Updated:** 22 November 2026\
-**Current work:** [ADR 0015](decisions/0015-weapon-variety-and-map-range.md), implemented, checked, reviewed, merged and delivered in build 25.\
+**Current work:** [ADR 0016](decisions/0016-combat-balance-and-readability.md), standard check passed; rendered validation, review and delivery pending.\
 **Latest verified delivery:** **0.1.0 (25)**, source `8128368`, as recorded in the [prototype plan](prototype-plan.md#weapon-variety-and-map-wide-fire).
 
 The original five combat phases are implemented and delivered. That is an implementation result, not a finding that combat already feels finished. This audit distinguishes the delivered prototype, the current arena extension and deliberately deferred features. Exploration and salvage still lead the game; the combat yard is a separate place to repeat and tune encounters.
+
+## Current balance/readability pass
+
+[Issue #118](https://github.com/RonildoBraga/lauder/issues/118) assigns tuning the existing arena. [ADR 0016](decisions/0016-combat-balance-and-readability.md) records the repeated production-path measurements, close scatter cadence adjustment, bounded passive/companion precision targeting, preserved explicit height-aware aim, readable preparation and settled-companion yielding. The standard check and all eighteen headless scenarios passed; rendered checks, review and the next release remain pending. These are provisional mechanical improvements, with physical and subjective checks still deferred. The build 25 evidence below remains historical for this pass.
 
 ## Weapon/range extension
 

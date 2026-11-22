@@ -164,6 +164,22 @@ final class FightSimulation {
   private(set) var hostileWeaponPoses: [String: WeaponPose] = [:]
   /// Acquired stationary wind-ups; a raised-gun hold animation alone is not a new attack.
   private(set) var preparingShots: Set<String> = []
+  /// Both arena warnings use the nearest actual discharge, with a stable order for ties.
+  /// Current phase/visibility also removes actors downed by the party later in this step.
+  var preparingHostile: HostileState? {
+    guard arena != nil else { return nil }
+    return hostiles.values.filter { state in
+      guard state.isVisible, !state.isDown, preparingShots.contains(state.spec.id),
+        case .aiming = state.phase
+      else { return false }
+      return true
+    }.min { first, second in
+      if case .aiming(let a) = first.phase, case .aiming(let b) = second.phase, a != b {
+        return a < b
+      }
+      return first.spec.id < second.spec.id
+    }
+  }
   private var ballistics: Ballistics
   private var arena: ArenaWaves?
   var arenaWave: Int? { arena?.wave }
@@ -621,7 +637,7 @@ final class FightSimulation {
       if !inRange, !bursting, case .aiming = state.phase { state.restartWindUp() }
       let moving = tactical.moving.contains(spec.id)
       var rifle = enemyHandling[spec.id] ?? HostileHandling(facing: lookout, weapon: spec.weapon)
-      if moving, spec.behavior == .keepDistance {
+      if moving, arena != nil || spec.behavior == .keepDistance {
         state.restartWindUp()
         rifle.cancel()
       }
@@ -698,8 +714,11 @@ final class FightSimulation {
       if simd_length(direction) > 0.001 { facings[spec.id] = simd_normalize(direction) }
       faceHostile(spec.id, state, facing: state.position + direction)
     }
-    threat = [arenaStatus, threatNow].compactMap { $0 }.joined(separator: " · ")
-    if threat?.isEmpty == true { threat = nil }
+    if arena != nil {
+      updateArenaThreat(leader: session.leader)
+    } else {
+      threat = threatNow
+    }
     canDisrupt =
       mayDisrupt
       && disruptable(
@@ -722,6 +741,7 @@ final class FightSimulation {
         lastMotion[member] = nil
       }
     }
+    if arena != nil { updateArenaThreat(leader: session.leader) }
     // A fight ends once everyone in it is down; a scene also plays its timeline to the end.
     if arena == nil, !director.isPlaying, grenades.isEmpty,
       encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) })
@@ -736,6 +756,23 @@ final class FightSimulation {
     updateTarget(leader: leader, aiming: aiming, facing: facing)
     showCover(at: leader, facing: facing)
     return outcome
+  }
+
+  /// Array order cannot hide a more imminent grenade/rusher preparation behind a long gun.
+  /// Refresh after party fire too, so the HUD and the world's bearing see the same survivors.
+  private func updateArenaThreat(leader: PartyMember) {
+    let warning = preparingHostile.map { state in
+      if state.spec.attack == .throwGrenade {
+        return "\(state.spec.name) is preparing a grenade."
+      }
+      if state.spec.targetsAnyone || encounter?.guardArea != nil {
+        let victim = victims[state.spec.id] ?? leader
+        return "\(state.spec.name) is aiming at \(victim.displayName)."
+      }
+      return "\(state.spec.name) is aiming."
+    }
+    threat = [arenaStatus, warning].compactMap { $0 }.joined(separator: " · ")
+    if threat?.isEmpty == true { threat = nil }
   }
 
   /// The leader's shot, while Fire is held and the drawn carbine is ready: along her facing,
@@ -795,15 +832,18 @@ final class FightSimulation {
   private func leaderShot(from leader: SIMD2<Float>, aiming: Bool, facing: SIMD2<Float>)
     -> ShotPath?
   {
+    // A deliberate stick/touch direction keeps the narrow cone's height-aware help. Passive
+    // Fire uses the local limit, so a long round never grants map-wide automatic knowledge.
+    let targetReach = aiming ? weapon.range : weapon.assistanceRange
     let candidates = standingHostiles.filter {
-      simd_distance(ballistics.point(leader), hostileTarget($0.id).centre) <= weapon.range
+      simd_distance(ballistics.point(leader), hostileTarget($0.id).centre) <= targetReach
         && ballistics.isClear(from: ballistics.point(leader), to: hostileTarget($0.id).centre)
     }.map { candidate in
       Aim.Hostile(id: candidate.id, position: candidate.position, isTarget: candidate.isTarget)
     }
     guard
       let aimed = Aim.shot(
-        from: leader, aim: aiming ? facing : nil, facing: facing, range: weapon.range,
+        from: leader, aim: aiming ? facing : nil, facing: facing, range: targetReach,
         hostiles: candidates, blockers: ballistics.terrain.patches.isEmpty ? blockers : [])
     else { return nil }
     // The first-fire safety rule also applies beyond the short assistance radius. A manual
@@ -992,7 +1032,8 @@ final class FightSimulation {
         coverRules.flatMap { rules in
           stances[member]?.firingPoint(facing: direction, using: rules)
         } ?? point
-      guard simd_distance(ballistics.point(origin), hostileTarget(id).centre) <= weapon.range,
+      guard
+        simd_distance(ballistics.point(origin), hostileTarget(id).centre) <= weapon.assistanceRange,
         ballistics.isClear(from: ballistics.point(origin), to: hostileTarget(id).centre)
       else { return nil }
       return (id, origin, direction)

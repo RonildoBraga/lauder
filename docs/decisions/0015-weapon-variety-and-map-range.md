@@ -11,6 +11,8 @@ The arena's small paused weapon selector is an implementation choice under the r
 
 Ubisoft's AI designers describe varied pressure through positioning, flanks, aggression and differently exposed bursts in [their Division 2 interview](https://news.ubisoft.com/en-us/article/5wu3eterDz21wNKiAcDJlJ/the-division-2-making-enemies-tougher-and-friendlies-smarter). This experiment uses those design principles with its own small deterministic rules; it does not reproduce proprietary algorithms, factions or assets.
 
+[ADR 0016](0016-combat-balance-and-readability.md) records the subsequent assigned tuning pass. The starting values below describe build 25; the later record supersedes scatter timing and passive precision acquisition while retaining map-wide physical travel.
+
 ## Separate the three meanings of range
 
 The original firearm distances served several purposes at once: player target help, AI acquisition and the actual bullet trace. The carbine stopped at 14 m, the burst weapon at 12 m, the scatter weapon at 7 m and the arena rifle at 18 m. These camera-sized limits became conspicuous in the larger 52 × 60 m arena.
