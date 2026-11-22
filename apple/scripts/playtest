@@ -34,7 +34,7 @@ BUNDLE = "com.ronildo.lauder"
 SCENARIOS = [
     "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
     "orders", "combat-yard", "salvage-yard", "leader-cover", "squad-weapons", "tactical-enemies",
-    "arena-elevation", "relay-run-safe", "relay-run-retreat",
+    "arena-elevation", "relay-run-safe", "relay-run-retreat", "arsenal-bench", "enemy-arsenal",
 ]
 
 
@@ -187,6 +187,11 @@ def report(summary, images):
         say(f"    arena wave {summary['highestArenaWave']}; "
             f"peak arrival warnings {summary['peakArrivalWarnings']}; "
             f"actual body floor {summary['lowestFloor']:.2f} to {summary['highestFloor']:.2f} m")
+    if summary["longestPartyTrace"]:
+        say(f"    actual shot travel {summary['longestPartyTrace']:.2f} m; "
+            f"longest scenery strike {summary['longestPartySceneryTrace']:.2f} m")
+        say(f"    party guns fired: {', '.join(summary['partyWeaponsFired'])}; "
+            f"hostile guns fired: {', '.join(summary['hostileWeaponsFired'])}")
     for image in images:
         say(f"    still: {image.relative_to(ROOT) if image.is_relative_to(ROOT) else image}")
 

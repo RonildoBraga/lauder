@@ -19,6 +19,8 @@ struct HostileHandling: Sendable {
 
   private let burst: Int
   private let burstGap: Float
+  private let weaponSpread: Spread
+  private let turnRate: Float
   private var yaw: Float
   private var scatter = Scatter()
   private var remaining = 0
@@ -27,12 +29,19 @@ struct HostileHandling: Sendable {
   private var moving = false
   private var turning: Float = 0
   private var targetDistance: Float = 1
-  private(set) var pose = WeaponPose(kind: .rifle)
+  private(set) var pose: WeaponPose
 
-  init(facing: SIMD2<Float>, burst: Int = 1, burstGap: Float = 0.16) {
+  init(facing: SIMD2<Float>, weapon: Weapon.Kind = .rifle, burst: Int = 1, burstGap: Float = 0.16) {
     precondition(burst > 0 && burstGap.isFinite && burstGap > 0)
     self.burst = burst
     self.burstGap = burstGap
+    weaponSpread = weapon == .rifle ? Self.spread : Weapon.forKind(weapon).spread
+    switch weapon {
+    case .marksman: turnRate = .pi
+    case .supportGun: turnRate = 1.2 * .pi
+    default: turnRate = Self.turnRate
+    }
+    pose = WeaponPose(kind: weapon)
     yaw = Self.isDirection(facing) ? Movement.yaw(towards: facing) : 0
   }
 
@@ -48,14 +57,14 @@ struct HostileHandling: Sendable {
     guard dt.isFinite, dt > 0 else { return }
     self.moving = moving
     if !moving { cooldown = max(0, cooldown - dt) }
-    scatter.settle(dt: dt, spread: Self.spread)
+    scatter.settle(dt: dt, spread: weaponSpread)
     turning = 0
     if Self.isDirection(direction) {
       targetDistance = simd_length(direction)
       let before = yaw
       yaw = Movement.turn(
-        from: yaw, towards: Movement.yaw(towards: direction), limit: Self.turnRate * dt)
-      turning = min(1, abs(yaw - before) / (Self.turnRate * dt))
+        from: yaw, towards: Movement.yaw(towards: direction), limit: turnRate * dt)
+      turning = min(1, abs(yaw - before) / (turnRate * dt))
     }
     pose.step(dt: dt, aiming: !moving && (aiming || isBursting))
   }
@@ -78,7 +87,7 @@ struct HostileHandling: Sendable {
       angle = max(Spread.degrees(7), atan2(Aim.bodyRadius + 0.6, targetDistance))
     } else {
       let cone = scatter.angle(
-        spread: Self.spread, speed: moving ? 1 : 0, turning: turning)
+        spread: weaponSpread, speed: moving ? 1 : 0, turning: turning)
       angle = Scatter.deviation(within: cone, using: &generator)
     }
     let direction = facing
@@ -89,7 +98,7 @@ struct HostileHandling: Sendable {
       ], deliberateMiss: deliberateMiss)
     remaining -= 1
     cooldown = remaining > 0 ? burstGap : 0
-    scatter.fired(spread: Self.spread)
+    scatter.fired(spread: weaponSpread)
     pose.fired()
     return result
   }

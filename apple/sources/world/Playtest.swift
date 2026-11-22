@@ -41,6 +41,18 @@
       case awaitReloaded(seconds: Float)
       /// The active weapon and its mechanical magazine; nil accepts any loaded count.
       case expectWeapon(Weapon.Kind, loaded: ClosedRange<Int>?, reloading: Bool)
+      case rememberWeapon
+      case expectRememberedWeapon
+      case expectPartyWeaponFired(Weapon.Kind)
+      case expectEnemyWeaponFired(Weapon.Kind)
+      case expectShotTravel(atLeast: Float, scenery: Bool)
+      case rememberShotMetrics
+      case expectShotMetricsHeld
+      case expectNoShotMetrics
+      /// Let new weapons complete their real wind-ups; no forced damage or spawn changes.
+      case observeEnemyWeapons(Set<Weapon.Kind>, seconds: Float)
+      case expectEnemyRecovery(Weapon.Kind)
+      case expectMarksmanRetreated
       /// How many player-fired rounds the party has left.
       case expectAmmo(Int)
       /// At least this many shots' marks show on blocks (ADR 0007).
@@ -173,6 +185,7 @@
       let hostiles: [String: HostileState]
       let enemyCover: [String: FightSimulation.CoverState]
       let heights: [PartyMember: Float]
+      let shotMetrics: ArsenalPlaytest.ShotMetrics
     }
 
     struct Frame {
@@ -218,6 +231,12 @@
       let peakArrivalWarnings: Int
       let lowestFloor: Float
       let highestFloor: Float
+      let longestPartyTrace: Float
+      let longestPartySceneryTrace: Float
+      let partyWeaponsFired: [String]
+      let hostileWeaponsFired: [String]
+      let hostileWeaponsRecovered: [String]
+      let marksmanRetreated: Bool
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -262,6 +281,15 @@
     private var peakArrivalWarnings = 0
     private var lowestFloor: Float = 0
     private var highestFloor: Float = 0
+    private var arsenalObserver = ArsenalPlaytest.Observer()
+    private var rememberedWeapon: FightSimulation.WeaponStatus?
+    private var rememberedShotMetrics: ArsenalPlaytest.ShotMetrics?
+    private var longestPartyTrace: Float = 0
+    private var longestPartySceneryTrace: Float = 0
+    private var partyWeaponsFired: Set<String> = []
+    private var hostileWeaponsFired: Set<String> = []
+    private var hostileWeaponsRecovered: Set<String> = []
+    private var marksmanRetreated = false
     private(set) var summary: Summary?
     /// Set by the world from the window scene; recorded in the summary.
     var orientation = "unknown"
@@ -312,6 +340,21 @@
       if let height = snapshot.heights[leader] {
         lowestFloor = min(lowestFloor, height)
         highestFloor = max(highestFloor, height)
+      }
+      longestPartyTrace = max(longestPartyTrace, snapshot.shotMetrics.longestPartyTrace)
+      longestPartySceneryTrace = max(
+        longestPartySceneryTrace, snapshot.shotMetrics.longestPartySceneryTrace)
+      partyWeaponsFired.formUnion(snapshot.shotMetrics.partyWeapons.keys.map(\.name))
+      hostileWeaponsFired.formUnion(snapshot.shotMetrics.hostileWeapons.keys.map(\.name))
+      for state in snapshot.hostiles.values {
+        if case .recovering = state.phase,
+          snapshot.shotMetrics.hostileActors[state.spec.id, default: 0] > 0
+        {
+          hostileWeaponsRecovered.insert(state.spec.weapon.name)
+        }
+        if state.spec.weapon == .marksman, snapshot.movedEnemies.contains(state.spec.id) {
+          marksmanRetreated = true
+        }
       }
       while index < steps.count {
         switch steps[index] {
@@ -634,6 +677,65 @@
               && (weapon.reloadRemaining > 0) == reloading,
             "weapon was \(weapon.kind), loaded \(weapon.loaded), reload \(weapon.reloadRemaining); "
               + "expected \(kind), loaded \(String(describing: loaded)), reloading \(reloading)")
+        case .rememberWeapon:
+          rememberedWeapon = snapshot.weapon
+          advance()
+        case .expectRememberedWeapon:
+          expect(
+            rememberedWeapon.map {
+              $0.kind == snapshot.weapon.kind && $0.loaded == snapshot.weapon.loaded
+                && $0.isDrawn == snapshot.weapon.isDrawn
+            } ?? false, "leadership changed or refilled the remembered weapon")
+        case .expectPartyWeaponFired(let kind):
+          expect(
+            snapshot.shotMetrics.partyWeapons[kind, default: 0] > 0,
+            "no actual party discharge used \(kind.name)")
+        case .expectEnemyWeaponFired(let kind):
+          expect(
+            hostileWeaponsFired.contains(kind.name), "no actual hostile discharge used \(kind.name)"
+          )
+        case .expectEnemyRecovery(let kind):
+          expect(
+            hostileWeaponsRecovered.contains(kind.name),
+            "\(kind.name) never entered recovery after firing")
+        case .expectMarksmanRetreated:
+          expect(marksmanRetreated, "the marksman never actually yielded ground")
+        case .expectShotTravel(let minimum, let scenery):
+          let distance =
+            scenery
+            ? snapshot.shotMetrics.longestPartySceneryTrace : snapshot.shotMetrics.longestPartyTrace
+          expect(
+            distance >= minimum,
+            "the longest actual \(scenery ? "wall strike" : "shot") was \(distance) m, below \(minimum) m"
+          )
+        case .rememberShotMetrics:
+          rememberedShotMetrics = snapshot.shotMetrics
+          advance()
+        case .expectShotMetricsHeld:
+          expect(
+            snapshot.mode == .paused && rememberedShotMetrics == snapshot.shotMetrics,
+            "Pause advanced a discharge or its recorded range")
+        case .expectNoShotMetrics:
+          expect(
+            snapshot.shotMetrics == ArsenalPlaytest.ShotMetrics(),
+            "Restart retained discharge counters")
+        case .observeEnemyWeapons(let kinds, let seconds):
+          if kinds.allSatisfy({
+            hostileWeaponsFired.contains($0.name) && hostileWeaponsRecovered.contains($0.name)
+          }), marksmanRetreated {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append(
+              "new hostile weapon/recovery/retreat observations did not finish within \(Int(seconds)) s"
+            )
+            advance()
+            continue
+          }
+          return arsenalObserver.input(
+            needing: kinds, marksmanRetreated: marksmanRetreated,
+            snapshot: snapshot, seconds: elapsed)
         case .expectAmmo(let count):
           expect(snapshot.ammo == count, "the party had \(snapshot.ammo) round(s), not \(count)")
         case .expectMarks(let count):
@@ -879,7 +981,12 @@
         withinSlotWhileMoving: Double(withinSlot) / Double(max(1, movingSamples)),
         worstLeaderGap: Double(worstGap), highestArenaWave: highestArenaWave,
         peakArrivalWarnings: peakArrivalWarnings, lowestFloor: lowestFloor,
-        highestFloor: highestFloor)
+        highestFloor: highestFloor, longestPartyTrace: longestPartyTrace,
+        longestPartySceneryTrace: longestPartySceneryTrace,
+        partyWeaponsFired: partyWeaponsFired.sorted(),
+        hostileWeaponsFired: hostileWeaponsFired.sorted(),
+        hostileWeaponsRecovered: hostileWeaponsRecovered.sorted(),
+        marksmanRetreated: marksmanRetreated)
       summary = result
       write(result)
     }
@@ -1222,7 +1329,7 @@
         ("squad-weapons", squadWeapons),
         ("tactical-enemies", tacticalEnemies),
         ("arena-elevation", arenaElevation),
-      ] + RelayRunPlaytest.scenarios
+      ] + RelayRunPlaytest.scenarios + ArsenalPlaytest.scenarios
 
     static func steps(for scenario: String) -> [Step]? {
       scenarios.first { $0.name == scenario }?.steps

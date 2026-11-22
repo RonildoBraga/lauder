@@ -12,8 +12,10 @@ final class ShotEffects {
     case party, hostile
   }
 
-  /// How fast a streak flies, in metres a second, and its longest length.
-  static let streakSpeed: Float = 80
+  /// Hits resolve immediately. A short moving tracer makes that path readable without an
+  /// aim beam; even a long bridge shot reaches its endpoint within this presentation time.
+  static let streakSpeed: Float = 500
+  static let maximumFlightTime: Float = 0.15
   static let streakLength: Float = 2.5
   /// How long a flash shows, chips fly and a mark stays, in seconds.
   static let flashTime: Float = 0.06
@@ -41,6 +43,7 @@ final class ShotEffects {
     var from: SIMD3<Float> = .zero
     var direction: SIMD3<Float> = [0, 0, 1]
     var distance: Float = 0
+    var speed: Float = 0
     var travelled: Float = 0
     var active = false
   }
@@ -88,8 +91,9 @@ final class ShotEffects {
       let party = side == .party
       let material = party ? style.warm : style.threat
       let name = party ? "party" : "hostile"
-      // Four short-burst rifles can overlap three volleys before an 18 m streak expires.
-      streakPools[side] = Pool(party ? 6 : 12) { block("\(name).streak", material) }
+      // At ten discharges/second, four hostiles overlap at most two volleys during a
+      // 0.15-second flight. Fixed headroom also covers the leader and supporting companions.
+      streakPools[side] = Pool(party ? 8 : 16) { block("\(name).streak", material) }
       flashPools[side] = Pool(party ? 6 : 8) { block("\(name).flash", material) }
     }
     self.streakPools = streakPools
@@ -135,7 +139,9 @@ final class ShotEffects {
     if var pool = streakPools[side], var list = streaks[side] {
       let index = pool.take()
       list[index] = Streak(
-        from: from, direction: direction, distance: distance, travelled: 0, active: true)
+        from: from, direction: direction, distance: distance,
+        speed: max(Self.streakSpeed, distance / Self.maximumFlightTime),
+        travelled: 0, active: true)
       streakPools[side] = pool
       streaks[side] = list
       place(streak: list[index], pool.entities[index], side: side)
@@ -175,7 +181,7 @@ final class ShotEffects {
     for side in [Side.party, .hostile] {
       guard let pool = streakPools[side], var list = streaks[side] else { continue }
       for index in list.indices where list[index].active {
-        list[index].travelled += Self.streakSpeed * dt
+        list[index].travelled += list[index].speed * dt
         if list[index].travelled - Self.streakLength >= list[index].distance {
           list[index].active = false
           pool.entities[index].isEnabled = false

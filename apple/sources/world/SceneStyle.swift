@@ -123,6 +123,9 @@ struct SceneStyle {
       case .carbine, .rifle: [0.07, 0.08, 0.55]
       case .lightBurst: [0.065, 0.07, 0.4]
       case .closeScatter: [0.13, 0.11, 0.65]
+      case .submachineGun: [0.065, 0.075, 0.32]
+      case .marksman: [0.065, 0.08, 0.86]
+      case .supportGun: [0.12, 0.13, 0.72]
       }
     grip.name =
       switch kind {
@@ -130,11 +133,23 @@ struct SceneStyle {
       case .lightBurst: "weapon.light-burst"
       case .closeScatter: "weapon.close-scatter"
       case .rifle: "weapon.rifle"
+      case .submachineGun: "weapon.submachine-gun"
+      case .marksman: "weapon.marksman"
+      case .supportGun: "weapon.support-gun"
       }
     let barrel = WeaponPose.profile(for: kind).barrel
     grip.addChild(
       block(
         size: size, at: [0, 0, size.z / 2 - barrel], material: gear))
+    if kind == .marksman {
+      let scope = block(size: [0.075, 0.07, 0.2], at: [0, 0.075, -0.29], material: ink)
+      scope.name = "weapon.scope"
+      grip.addChild(scope)
+    } else if kind == .supportGun {
+      let magazine = block(size: [0.18, 0.16, 0.2], at: [0, -0.11, -0.22], material: ink)
+      magazine.name = "weapon.box-magazine"
+      grip.addChild(magazine)
+    }
     return grip
   }
 

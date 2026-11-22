@@ -44,6 +44,31 @@ struct Ballistics {
       ?? true
   }
 
+  /// Fired rounds cross this level until they meet a real solid/body or leave its ground
+  /// bounds. Target assistance and an actor's decision to fire keep their own shorter reach.
+  /// The nonphysical map edge produces no impact, and no fixed distance truncates a long map.
+  func traceAcrossLevel(
+    from start: SIMD3<Float>, direction: SIMD3<Float>, targets: [Target]
+  ) -> Trace {
+    guard start.indices.allSatisfy({ start[$0].isFinite }),
+      direction.indices.allSatisfy({ direction[$0].isFinite }),
+      simd_length_squared(direction).isFinite, simd_length_squared(direction) > 0.000001,
+      bounds.contains([start.x, start.z])
+    else { return trace(from: start, direction: direction, range: 0, targets: []) }
+    let unit = simd_normalize(direction)
+    var reach = Float.infinity
+    for (axis, floorAxis) in [(0, 0), (2, 1)] where abs(unit[axis]) > 0.000001 {
+      let edge = unit[axis] > 0 ? bounds.maximum[floorAxis] : bounds.minimum[floorAxis]
+      reach = min(reach, (edge - start[axis]) / unit[axis])
+    }
+    // Every supported weapon has a ground-plane heading. A purely vertical ray has no
+    // finite x/z exit; explicit vertical geometry queries use trace(range:) instead.
+    guard reach.isFinite else {
+      return trace(from: start, direction: direction, range: 0, targets: [])
+    }
+    return trace(from: start, direction: unit, range: reach, targets: targets)
+  }
+
   func trace(
     from start: SIMD3<Float>, direction: SIMD3<Float>, range: Float, targets: [Target]
   ) -> Trace {

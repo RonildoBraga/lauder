@@ -18,7 +18,8 @@ struct ArenaIntegrationTests {
     stage.reset(fight)
     let pool = Set(CombatYard.hostiles.map(\.id))
     let entities = count(stage.container)
-    #expect(fight.hostiles.count == 8 && fight.hostiles.values.allSatisfy { !$0.isVisible })
+    #expect(
+      fight.hostiles.count == pool.count && fight.hostiles.values.allSatisfy { !$0.isVisible })
     try begin(fight, session: session)
 
     for wave in 1...30 {

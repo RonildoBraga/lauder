@@ -134,8 +134,10 @@ struct CombatPositioningTests {
     func trip(positioning: Bool) -> (end: SIMD2<Float>, highest: Float, seen: Int) {
       let world = GameWorld(level: Self.gap(positioning: positioning))
       #expect(world.session.holdAll())
-      // The fight is under way once the shooter aims.
-      #expect(run(world, upTo: 1) { world.threat != nil })
+      // The engaged shooter makes the gap dangerous, even while everybody is hidden. Wait
+      // for its actual combat readiness; a HUD warning requires a visible acquired teammate.
+      #expect(run(world, upTo: 1) { world.playtestSnapshot.hostiles["a"]?.isTargetable == true })
+      #expect(world.session.inEncounter && world.threat == nil)
       #expect(world.session.send(.laura, to: Self.goal))
       var highest = -Float.infinity
       var seen = 0

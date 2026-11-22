@@ -21,6 +21,9 @@ ASSETS = (
     "apple/sources/content/sounds/empty-click.wav",
     "apple/sources/content/sounds/light-burst.wav",
     "apple/sources/content/sounds/rifle.wav",
+    "apple/sources/content/sounds/submachine-gun.wav",
+    "apple/sources/content/sounds/marksman.wav",
+    "apple/sources/content/sounds/support-gun.wav",
     "apple/sources/content/sounds/strike-block.wav",
     "apple/sources/content/sounds/strike-body.wav",
 )

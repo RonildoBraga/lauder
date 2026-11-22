@@ -140,6 +140,8 @@ final class GameWorld {
     /// `-LauderPlaytest <scenario>`. Debug builds only.
     @ObservationIgnored private(set) var playtest: PlaytestRunner?
     @ObservationIgnored private var targetMarkers: [PartyMember: Entity] = [:]
+    /// Maxima and counters only: one entry per authored actor or finite weapon kind.
+    @ObservationIgnored private var playtestShotMetrics = ArsenalPlaytest.ShotMetrics()
   #endif
   @ObservationIgnored private var subscription: EventSubscription?
   @ObservationIgnored private var isPresented = false
@@ -223,13 +225,7 @@ final class GameWorld {
 
   private func updateWeaponStatus() {
     let state = fight.status(for: session.leader)
-    let name: String =
-      switch state.kind {
-      case .carbine: "Carbine"
-      case .lightBurst: "Burst weapon"
-      case .closeScatter: "Scatter weapon"
-      case .rifle: "Rifle"
-      }
+    let name = state.kind.name
     let text: String
     let suffix = session.inEncounter ? "\(session.ammo) total" : "Practice"
     if session.inEncounter && session.ammo == 0 {
@@ -245,7 +241,7 @@ final class GameWorld {
     if weaponStatus != text { weaponStatus = text }
   }
 
-  var weaponKind: Weapon.Kind? { canFire ? Weapon.forMember(session.leader).kind : nil }
+  var weaponKind: Weapon.Kind? { canFire ? fight.equippedWeapon(for: session.leader).kind : nil }
   /// Whether weapon readiness and shared rounds show: during a fight, or while drawn.
   var showsAmmo: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry, or the party's fall back, is under way.
@@ -552,12 +548,15 @@ final class GameWorld {
         leave?(otherLevel.level)
       } else if input.vibrationPressed {
         toggleVibration()
+      } else if input.testWeaponPressed {
+        cycleTestWeapon()
       } else if input.actionPressed {
         switch session.pauseChoice {
         case .resume: togglePause()
         case .restart: restart()
         case .otherLevel: leave?(otherLevel.level)
         case .vibration: toggleVibration()
+        case .testWeapon: cycleTestWeapon()
         }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
@@ -591,6 +590,22 @@ final class GameWorld {
       if let mark = input.markPoint { touchMark = (mark, firstHit(at: mark)) }
       if let command = input.command { give(command, at: input.commandPoint) }
     }
+  }
+
+  /// Changing a test weapon is a paused session action. It drops queued fire/signature
+  /// commands, keeps held fingers mounted, and waits for fresh neutral input before play.
+  private func cycleTestWeapon() {
+    guard session.cycleTestWeapon() else { return }
+    fireHeld = false
+    firePressPending = false
+    signaturePressPending = false
+    aimStick = nil
+    aimDirection = nil
+    facingGoal = nil
+    fight.syncEquipment(session: session)
+    stage.reset(fight)
+    updateWeaponStatus()
+    controls.requireNeutralInput()
   }
 
   private func togglePause() {
@@ -673,6 +688,9 @@ final class GameWorld {
     diagnostic = nil
     refusedOrders = 0
     fallBacks = 0
+    #if DEBUG
+      playtestShotMetrics = ArsenalPlaytest.ShotMetrics()
+    #endif
     touchMark = nil
     crossRemaining = 0
     refusalCross.isEnabled = false
@@ -855,7 +873,10 @@ final class GameWorld {
         for: CoverPlanner.Input(
           places: targets, positions: current, leaderPosition: leaderEnd,
           formation: session.formation, threats: threats,
-          weaponRanges: level.combat.companionWeapons.mapValues(\.range), dt: dt),
+          weaponRanges: Dictionary(
+            uniqueKeysWithValues: level.combat.companionWeapons.map { member, authored in
+              (member, level.arena != nil ? session.weapon(for: member).range : authored.range)
+            }), dt: dt),
         grid: grid)
     } else {
       cover.reset()
@@ -1246,6 +1267,10 @@ final class GameWorld {
       mayDisrupt: leaderHasSignature && !fight.holdsParty,
       signaturePressed: signaturePressPending, figures: figures, session: session)
     stage.update(fight, dt: dt)
+    #if DEBUG
+      // Capture every fixed substep, before the next one clears its emitted shots.
+      for shot in fight.shots { playtestShotMetrics.record(shot) }
+    #endif
     updateWeaponStatus()
     firePressPending = false
     signaturePressPending = false
@@ -1528,7 +1553,21 @@ final class GameWorld {
     if level.arena != nil, let leader = position(of: session.leader) {
       let living = fight.hostiles.values.filter { $0.isVisible && !$0.isDown }
         .sorted { $0.spec.id < $1.spec.id }
-      if let nearest = living.min(by: {
+      // A long-range attack needs a bearing even when its shooter is outside the camera.
+      // This points to the actor, not to its aim line or the shot's destination.
+      let preparing = living.filter {
+        ($0.spec.weapon == .marksman || $0.spec.weapon == .supportGun)
+          && fight.preparingShots.contains($0.spec.id)
+      }.min { first, second in
+        if case .aiming(let a) = first.phase, case .aiming(let b) = second.phase, a != b {
+          return a < b
+        }
+        return simd_distance_squared(first.position, leader)
+          < simd_distance_squared(second.position, leader)
+      }
+      if let preparing {
+        goal = Level.Goal(name: "Preparing: \(preparing.spec.name)", point: preparing.position)
+      } else if let nearest = living.min(by: {
         simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
       }) {
         goal = Level.Goal(name: nearest.spec.name, point: nearest.position)
@@ -1589,7 +1628,8 @@ final class GameWorld {
         grenadesExploded: fight.grenadesExploded, movedEnemies: fight.movedEnemies,
         arenaWave: fight.arenaWave, arenaWarnings: fight.arenaWarnings, hostiles: fight.hostiles,
         enemyCover: fight.enemyCoverStates,
-        heights: bodies.mapValues { $0.position.y - PartyBody.height / 2 })
+        heights: bodies.mapValues { $0.position.y - PartyBody.height / 2 },
+        shotMetrics: playtestShotMetrics)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

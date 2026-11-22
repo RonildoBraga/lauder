@@ -27,6 +27,7 @@ struct TouchControls: UIViewRepresentable {
   /// The pause menu's Vibration choice as it stands, "Vibration: On" or "Vibration: Off", a
   /// button shown only while paused (ADR 0008).
   let vibrationTitle: String
+  var testWeaponTitle: String? = nil
   let mode: GameSession.Mode
 
   func makeUIView(context: Context) -> Surface {
@@ -40,7 +41,8 @@ struct TouchControls: UIViewRepresentable {
       actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
       showsSignature: showsSignature, showsFormation: showsFormation,
       formationTitle: formationTitle, orderNames: orderNames, otherLevelTitle: otherLevelTitle,
-      vibrationTitle: vibrationTitle, mode: mode, generation: generation)
+      vibrationTitle: vibrationTitle, mode: mode, generation: generation,
+      testWeaponTitle: testWeaponTitle)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -58,6 +60,7 @@ struct TouchControls: UIViewRepresentable {
     private let signature = TouchZone(title: "Signature")
     private let otherLevel = TouchZone()
     private let vibration = TouchZone()
+    private let testWeapon = TouchZone()
     private let menu = OrderMenu()
     private var generation: Int?
     private var mode = GameSession.Mode.exploring
@@ -76,7 +79,9 @@ struct TouchControls: UIViewRepresentable {
       super.init(frame: .zero)
       backgroundColor = .clear
       isMultipleTouchEnabled = true
-      for zone in [stick, action, cycle, pause, fire, formation, signature, otherLevel, vibration] {
+      for zone in [
+        stick, action, cycle, pause, fire, formation, signature, otherLevel, vibration, testWeapon,
+      ] {
         addSubview(zone)
       }
       menu.isHidden = true
@@ -89,6 +94,8 @@ struct TouchControls: UIViewRepresentable {
       signature.accessibilityHint = "Uses the leader's signature: Miki's Disrupt cancels a shot."
       otherLevel.accessibilityHint = "Leaves this run for a new run of another level."
       vibration.accessibilityHint = "Turns vibration off, or on again."
+      testWeapon.accessibilityHint =
+        "Cycles the active member's Combat test weapon. Shared ammunition is unchanged."
       stick.accessibilityLabel = "Move"
       stick.accessibilityHint = "Drag to move the active character. Lift your finger to stop."
       stick.accessibilityTraits = .allowsDirectInteraction
@@ -114,6 +121,7 @@ struct TouchControls: UIViewRepresentable {
       let buttons: [(TouchZone, TouchInput.Button)] = [
         (cycle, .cycle), (pause, .pause), (fire, .fire), (formation, .formation),
         (signature, .signature), (otherLevel, .otherLevel), (vibration, .vibration),
+        (testWeapon, .testWeapon),
       ]
       for (zone, button) in buttons {
         zone.changed = { [weak controls] _, isPressed, generation in
@@ -127,7 +135,8 @@ struct TouchControls: UIViewRepresentable {
     func update(
       actionTitle: String, nextLeaderName: String?, showsFire: Bool, showsSignature: Bool,
       showsFormation: Bool, formationTitle: String, orderNames: (left: String, right: String)?,
-      otherLevelTitle: String, vibrationTitle: String, mode: GameSession.Mode, generation: Int
+      otherLevelTitle: String, vibrationTitle: String, mode: GameSession.Mode, generation: Int,
+      testWeaponTitle: String? = nil
     ) {
       self.mode = mode
       self.orderNames = orderNames
@@ -166,6 +175,8 @@ struct TouchControls: UIViewRepresentable {
       // So does the Vibration choice, left of the third choice (ADR 0008).
       vibration.setTitle(vibrationTitle)
       vibration.isHidden = mode != .paused && !vibration.isCaptured
+      testWeapon.setTitle(testWeaponTitle ?? "Test weapon")
+      testWeapon.isHidden = (mode != .paused || testWeaponTitle == nil) && !testWeapon.isCaptured
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
       for zone in [stick, cycle, fire, formation, signature] {
@@ -176,7 +187,9 @@ struct TouchControls: UIViewRepresentable {
     func reset() {
       let generation = controls.touchGeneration
       self.generation = generation
-      for zone in [stick, action, cycle, pause, fire, formation, signature, otherLevel, vibration] {
+      for zone in [
+        stick, action, cycle, pause, fire, formation, signature, otherLevel, vibration, testWeapon,
+      ] {
         zone.reset(generation: generation)
       }
       endPress(sending: false)
@@ -207,6 +220,13 @@ struct TouchControls: UIViewRepresentable {
       // Left of that, the Vibration choice, also only while paused (ADR 0008).
       vibration.frame = CGRect(
         x: otherLevel.frame.minX - 12 - 150, y: inset, width: 150, height: 44)
+      // The source chooser owns the upper-right 200 points. Use the free top row on
+      // larger landscapes, or a compact second row on the left of that reserved corner.
+      let weaponWidth = min(230, max(160, bounds.width * 0.34))
+      let firstRowX = vibration.frame.minX - 12 - weaponWidth
+      testWeapon.frame = CGRect(
+        x: firstRowX >= inset ? firstRowX : inset,
+        y: firstRowX >= inset ? inset : inset + 56, width: weaponWidth, height: 44)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

@@ -161,6 +161,7 @@ final class GameControls {
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
       touchRestart: touch.touchRestart, touchOtherLevel: touch.touchOtherLevel,
       touchVibration: touch.touchVibration,
+      touchTestWeapon: touch.touchTestWeapon,
       touchFire: touch.touchFire,
       touchFormation: touch.touchFormation, touchSignature: touch.touchSignature,
       touchGround: touch.touchGround,

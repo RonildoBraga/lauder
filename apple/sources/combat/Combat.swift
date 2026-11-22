@@ -5,9 +5,26 @@ import simd
 struct Weapon: Sendable {
   /// Which weapon it is, for how its shots sound and feel (ADR 0008). The hostiles' rifle has
   /// no timing of its own here: their wind-ups time its shots.
-  enum Kind: Sendable {
-    case carbine, lightBurst, closeScatter, rifle
+  enum Kind: Hashable, Sendable {
+    case carbine, lightBurst, closeScatter, rifle, submachineGun, marksman, supportGun
+
+    var name: String {
+      switch self {
+      case .carbine: "Carbine"
+      case .lightBurst: "Burst weapon"
+      case .closeScatter: "Scatter weapon"
+      case .rifle: "Rifle"
+      case .submachineGun: "SMG"
+      case .marksman: "Marksman rifle"
+      case .supportGun: "Support gun"
+      }
+    }
   }
+
+  /// The combat bench's small fixed selection. Story weapons still come from forMember.
+  static let testKinds: [Kind] = [
+    .carbine, .lightBurst, .closeScatter, .submachineGun, .marksman, .supportGun,
+  ]
 
   let kind: Kind
   /// The farthest an assisted shot reaches, in metres.
@@ -30,9 +47,8 @@ struct Weapon: Sendable {
   /// How far its shots scatter when the player fires it (ADR 0008).
   var spread = Spread.none
 
-  /// Miki's precision carbine. Starting values for playtests; the range is less than the 19 m
-  /// or so that the camera shows ahead of her, so she never shoots at something off screen
-  /// ahead. Standing still, its first shot lands within 10 cm at full reach; a long burst, or
+  /// Miki's precision carbine. The range limits assistance, not the fired bullet's travel.
+  /// Standing still, its first shot lands within 10 cm at assisted reach; a long burst, or
   /// firing on the move, scatters (ADR 0008).
   static let carbine = Weapon(
     kind: .carbine, range: 14, interval: 0.4, drawTime: 0.35, capacity: 12, reloadTime: 1.2,
@@ -56,7 +72,56 @@ struct Weapon: Sendable {
       rest: Spread.degrees(6), perShot: Spread.degrees(2), widest: Spread.degrees(10),
       recovery: Spread.degrees(4), moving: Spread.degrees(2), turning: Spread.degrees(1)))
 
-  /// Each traveller keeps the same weapon whether leading or supporting the others.
+  /// Fast, light fire trades precision for a compact magazine and frequent reloads.
+  static let submachineGun = Weapon(
+    kind: .submachineGun, range: 12, interval: 0.11, drawTime: 0.25, capacity: 24,
+    reloadTime: 1.5,
+    spread: Spread(
+      rest: Spread.degrees(2), perShot: Spread.degrees(0.8), widest: Spread.degrees(10),
+      recovery: Spread.degrees(4), moving: Spread.degrees(3), turning: Spread.degrees(3)))
+
+  /// A measured long shot is powerful while settled, with a slow shot/reload cadence.
+  static let marksman = Weapon(
+    kind: .marksman, range: 64, interval: 1.35, drawTime: 0.65, capacity: 5,
+    reloadTime: 2.1, damage: 2,
+    spread: Spread(
+      rest: Spread.degrees(0.15), perShot: Spread.degrees(1.4), widest: Spread.degrees(6),
+      recovery: Spread.degrees(1.7), moving: Spread.degrees(4), turning: Spread.degrees(3)))
+
+  /// A longer magazine holds a lane; recoil bloom and a slow reload create an opening.
+  static let supportGun = Weapon(
+    kind: .supportGun, range: 22, interval: 0.14, drawTime: 0.75, capacity: 36,
+    reloadTime: 2.8,
+    spread: Spread(
+      rest: Spread.degrees(1.3), perShot: Spread.degrees(0.7), widest: Spread.degrees(9),
+      recovery: Spread.degrees(2.2), moving: Spread.degrees(4), turning: Spread.degrees(3)))
+
+  /// The original enemy rifle keeps its prior accuracy profile; encounter specs time it.
+  static let rifle = Weapon(
+    kind: .rifle, range: 18, interval: 0.4, drawTime: 0.35,
+    spread: Spread(
+      rest: Spread.degrees(2.5), perShot: Spread.degrees(1), widest: Spread.degrees(8),
+      recovery: Spread.degrees(3), moving: Spread.degrees(2), turning: Spread.degrees(4)))
+
+  static func forKind(_ kind: Kind) -> Weapon {
+    switch kind {
+    case .carbine: .carbine
+    case .lightBurst: .lightBurst
+    case .closeScatter: .closeScatter
+    case .rifle: .rifle
+    case .submachineGun: .submachineGun
+    case .marksman: .marksman
+    case .supportGun: .supportGun
+    }
+  }
+
+  /// Long-travelling bullets remain dangerous; scatter and marksman rounds lose their
+  /// stopping bonus beyond effective reach. Accuracy and cadence distinguish the others.
+  func damage(at distance: Float) -> Int {
+    distance.isFinite && distance > range ? min(1, damage) : damage
+  }
+
+  /// Each traveller's default weapon, retained throughout the story and Relay Run.
   static func forMember(_ member: PartyMember) -> Weapon {
     switch member {
     case .miki: .carbine

@@ -53,9 +53,23 @@ enum CombatYard {
   static let northRusher = rusher(id: "north-rusher", name: "The north rusher", at: [4, -36])
   static let northThrower = grenadier(
     id: "north-thrower", name: "The north grenadier", at: [0, -42])
+  /// A long lane from the upper deck; the ramp remains the squad's route to its position.
+  static let marksman = Level.Hostile(
+    id: "marksman", name: "The deck marksman", hiddenAt: [-17, -20], standAt: [-17, -20], hits: 4,
+    weapon: .marksman, behavior: .keepDistance, reactionDelay: 1.1,
+    burst: 1, windUp: 2.4, recovery: 2.5, range: 45,
+    inView: true, targetsAnyone: true, targetFromWindUp: true)
+  /// Volume and an exposed recovery window distinguish this role from an armoured sponge.
+  static let supportGunner = Level.Hostile(
+    id: "support-gunner", name: "The support gunner", hiddenAt: [7.1, -26], standAt: [7.1, -26],
+    hits: 5,
+    weapon: .supportGun, behavior: .takeCover, reactionDelay: 0.9,
+    burst: 6, burstGap: 0.14, windUp: 1.8, recovery: 3, range: 22,
+    inView: true, targetsAnyone: true, targetFromWindUp: true)
 
   static let hostiles = [
     leftShooter, rightShooter, rusher, thrower, northRifle, northFlanker, northRusher, northThrower,
+    marksman, supportGunner,
   ]
   static let waves = ArenaWaves.Configuration(
     slots: hostiles.map { ArenaWaves.Slot(id: $0.id, point: $0.standAt) })
@@ -82,7 +96,7 @@ enum CombatYard {
     opening: "Combat test: marked arrivals, mixed waves, and fresh resources after each clear.",
     objective: "Test the squad; survive repeated waves.",
     lookAround:
-      "Upper west deck, lower east trench, and cover between crossings. Watch arrival markers.",
+      "Upper deck, lower trench, and covered crossings. Watch arrivals, scoped rifles and support guns.",
     restartNote: "Restart begins the combat test at wave one.", combat: combat, arena: waves)
 
   private static func shooter(
@@ -91,8 +105,9 @@ enum CombatYard {
     let flanker = behavior == .flank
     return Level.Hostile(
       id: id, name: name, hiddenAt: point, standAt: point, hits: flanker ? 4 : 6,
+      weapon: flanker ? .submachineGun : .rifle,
       behavior: behavior, reactionDelay: flanker ? 0.5 : 0.7,
-      burst: flanker ? 2 : 3, burstGap: flanker ? 0.14 : 0.16,
+      burst: flanker ? 4 : 3, burstGap: flanker ? 0.1 : 0.16,
       windUp: flanker ? 1.2 : 1.7, recovery: flanker ? 1.7 : 2.4, range: 18,
       inView: true, targetsAnyone: true, targetFromWindUp: true)
   }
@@ -100,7 +115,7 @@ enum CombatYard {
   private static func rusher(id: String, name: String, at point: SIMD2<Float>) -> Level.Hostile {
     Level.Hostile(
       id: id, name: name, hiddenAt: point, standAt: point, hits: 4,
-      behavior: .advance, reactionDelay: 0.6, burst: 2, burstGap: 0.12,
+      weapon: .closeScatter, behavior: .advance, reactionDelay: 0.6, burst: 1,
       windUp: 0.8, recovery: 1.2, range: 7,
       inView: true, targetsAnyone: true, targetFromWindUp: true)
   }
