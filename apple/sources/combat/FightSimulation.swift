@@ -584,12 +584,20 @@ final class FightSimulation {
         }
       }
       if targetsParty, state.isVisible, !state.isDown, !bursting {
-        if let old = victims[spec.id], let oldPoint = eligible[old],
-          simd_distance(ballistics.point(state.position), partyTarget(old, at: oldPoint).centre)
+        if let old = victims[spec.id], let oldPoint = eligible[old] {
+          let target = incomingPoint(for: old, at: oldPoint)
+          let origin = hostileFiringPoint(spec.id, toward: target)
+          let beyondReach =
+            simd_distance(ballistics.point(origin), partyTarget(old, at: target).centre)
             > spec.range
-        {
-          victims[spec.id] = nil
-          state.restartWindUp()
+          let lostPrecisionSight =
+            spec.behavior == .keepDistance
+            && !ballistics.isClear(
+              from: ballistics.point(origin), to: partyTarget(old, at: target).centre)
+          if beyondReach || lostPrecisionSight {
+            victims[spec.id] = nil
+            state.restartWindUp()
+          }
         }
         if victims[spec.id] == nil {
           victims[spec.id] = nearestInSight(of: state, among: eligible)
@@ -1226,6 +1234,12 @@ final class FightSimulation {
       guard let point = party[victim] else { return false }
       let target = incomingPoint(for: victim, at: point)
       let origin = hostileFiringPoint(state.spec.id, toward: target)
+      if state.spec.behavior == .keepDistance,
+        !ballistics.isClear(
+          from: ballistics.point(origin), to: partyTarget(victim, at: target).centre)
+      {
+        return false
+      }
       return simd_distance(ballistics.point(origin), partyTarget(victim, at: target).centre)
         <= state.spec.range
         && simd_distance(ballistics.point(position), hostileTarget(state.spec.id).centre)
