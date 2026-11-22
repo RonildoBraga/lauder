@@ -1,6 +1,6 @@
 # ADR 0014 — A repeatable combat arena with real elevation
 
-**Status:** Implemented; integrated validation, review and delivery pending\
+**Status:** Implemented, checked in Simulator, reviewed, merged and delivered in TestFlight 0.1.0 (24)\
 **Date:** 22 November 2026
 
 ## Assignment and reference
@@ -58,6 +58,8 @@ A rifle wind-up now permits discharges rather than awarding a hit. `HostileHandl
 
 ## Verification and remaining limits
 
-The [combat plan audit](../combat-plan-audit.md) maps all five phases and the six original goals to implementation, existing evidence and remaining limitations. Current changes require the full standard check, focused elevation/aim/wave integration tests, long-loop bounded-state checks, rendered combat/terrain routes, source review and signed Release/TestFlight verification before delivery is reported. The [prototype plan](../prototype-plan.md#verification-and-performance) owns actual results and the latest verified build.
+The [combat plan audit](../combat-plan-audit.md) maps all five phases and the six original goals to implementation, existing evidence and remaining limitations. Source `e031233` passed the full standard check, all sixteen headless scenarios and focused elevation/aim/wave tests, including thirty waves through the real session, simulation and preallocated stage without actor/entity growth. Rendered routes passed: `combat-yard` 101/101 through wave 3, `arena-elevation` 43/43 across floors −1.8 m to +2.4 m, `tactical-enemies` 48/48, `first-fight` 23/23 and `relay-run-retreat` 104/104. Automatic review reported no findings, independent findings were addressed, and [PR #113](https://github.com/RonildoBraga/lauder/pull/113) merged as `887963b` with the identical tree. Claude was requested to review but had not responded at integration; no Claude approval is claimed.
+
+The signed **0.1.0 (24)** archive from `887963b` passed bundle, version/build, team, signature and matching-dSYM verification. API-authenticated upload completed with zero errors. Apple's read-only verification confirmed the correct identity, processing **VALID**, an unexpired **INTERNAL_ONLY** build and **IN_BETA_TESTING**. The existing internal group contains build 24, available to its existing testers with tester and group membership unchanged. **0.1.0 (24)** is the latest verified TestFlight delivery. The [prototype plan](../prototype-plan.md#verification-and-performance) owns detailed measurements, actual release results and the latest verified build.
 
 Baseline-phone frame pacing, sustained thermals, physical touch/controller combinations, haptics and the maintainer's judgement of enemy readability and enjoyment remain unverified. Simulator evidence cannot establish them. Deferred armour, weak points, rigs, voice work, Laura's Reposition and Tom's Brace remain outside this assignment rather than unfinished parts of this arena implementation.
