@@ -56,6 +56,16 @@ struct Level {
       case shoot
       /// Runs at the leader at this speed, in metres per second.
       case charge(speed: Float)
+      /// A visible wind-up launches a delayed, marked grenade instead of a rifle shot.
+      case throwGrenade
+    }
+
+    /// Optional tactical movement in the combat yard. Stationary preserves the opening's
+    /// authored encounters; the fight chooses safe destinations for the other behaviours.
+    enum Behavior: Equatable, Sendable {
+      case stationary
+      case takeCover
+      case flank
     }
 
     let id: String
@@ -64,6 +74,10 @@ struct Level {
     let standAt: SIMD2<Float>
     let hits: Int
     var attack = Attack.shoot
+    var behavior = Behavior.stationary
+    /// A short pause after engagement before the first wind-up. Zero keeps older encounters
+    /// unchanged; the combat yard supplies its prototype reaction delay explicitly.
+    var reactionDelay: Float = 0
     /// The visible aim before each shot, long enough to take cover or answer.
     var windUp: Float = 0
     /// The pause after each shot before the next aim begins.
@@ -92,7 +106,7 @@ struct Level {
   struct Combat: Sendable {
     /// The members' weapons as companions. Once a fight is under way, a companion with one
     /// fires by themselves at their own assisted target, in clear sight and within reach. It
-    /// spends no rounds: only the leader's carbine uses the count.
+    /// spends no rounds: only actual leader shots during encounters use the shared count.
     var companionWeapons: [PartyMember: Weapon] = [:]
     /// Every member takes hits, and the last allowed hit on anyone falls the whole party back
     /// to the level's spawn points, while the hostiles keep the damage dealt, instead of
@@ -107,8 +121,8 @@ struct Level {
     /// them (`CoverPlanner`); they keep off open ground where another way exists (`OpenGround`);
     /// and the formation button regroups them instead of changing the formation.
     var combatPositioning = false
-    /// Active-character proximity cover, low-cover firing exposure and tall-edge peeking
-    /// (ADR 0009), tried only in the combat yard.
+    /// Shared party proximity cover, low-cover firing exposure and tall-edge peeking
+    /// (ADR 0009/0011), tried only in the combat yard.
     var leaderCover = false
   }
 

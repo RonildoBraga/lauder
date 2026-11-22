@@ -93,8 +93,21 @@
       case expectFallBacks(Int)
       /// Hold Fire until this many hostiles are down in this run; fails after this many seconds.
       case fireUntilDefeated(Int, seconds: Float)
+      case awaitCombatClear(seconds: Float)
       /// The HUD's latest line, exactly, such as what an action just did.
       case expectLine(String)
+      /// Wait for an active, warned grenade; fails after this many seconds.
+      case awaitGrenade(seconds: Float)
+      /// Remember the warned landing points and fuses for the Pause and escape checks.
+      case rememberGrenades
+      /// The remembered grenades still have exactly the same fuses while paused.
+      case expectGrenadesHeld
+      /// The leader has left every remembered grenade's marked blast radius.
+      case expectOutsideGrenadeMarkers
+      /// Wait until this many grenades have exploded; fails after this many seconds.
+      case awaitExplosions(Int, seconds: Float)
+      /// At least this many hostiles have moved tactically in this run.
+      case expectMovedEnemies(atLeast: Int)
       /// Steer the leader to the cabinet that holds these contents in this run, which the run
       /// dealt in a random order (ADR 0006), as `walk` steers to a point.
       case walkToCabinet(Level.Salvage.Contents)
@@ -112,6 +125,7 @@
       let beat: GameSession.Beat
       let hitsTaken: Int
       let defeated: Int
+      let isFighting: Bool
       let ammo: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
@@ -135,6 +149,10 @@
       let leaderCover: FightSimulation.CoverState?
       /// The current leader's weapon, including an automatic reload's remaining time.
       let weapon: FightSimulation.WeaponStatus
+      let grenades: [Grenade]
+      let grenadesThrown: Int
+      let grenadesExploded: Int
+      let movedEnemies: Set<String>
     }
 
     struct Frame {
@@ -211,6 +229,8 @@
     private var withinSlot = 0
     private var worstGap: Float = 0
     private var previousLeaderPosition: SIMD2<Float>?
+    /// The actual warned grenades, retained across Pause and the walk out of their markers.
+    private var watchedGrenades: [Grenade] = []
     private(set) var summary: Summary?
     /// Set by the world from the window scene; recorded in the summary.
     var orientation = "unknown"
@@ -314,6 +334,51 @@
           expect(actual == word, "\(member.displayName) was \(actual) instead of \(word)")
         case .expectLine(let line):
           expect(snapshot.line == line, "the line was \"\(snapshot.line)\" instead of \"\(line)\"")
+        case .awaitGrenade(let seconds):
+          if !snapshot.grenades.isEmpty {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("no grenade was warned within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .rememberGrenades:
+          watchedGrenades = snapshot.grenades
+          expect(!watchedGrenades.isEmpty, "there was no active grenade to remember")
+        case .expectGrenadesHeld:
+          let held =
+            !watchedGrenades.isEmpty && snapshot.grenades.count == watchedGrenades.count
+            && watchedGrenades.allSatisfy { remembered in
+              snapshot.grenades.contains {
+                $0.id == remembered.id && $0.position == remembered.position
+                  && abs($0.remaining - remembered.remaining) < 0.000001
+              }
+            }
+          expect(snapshot.mode == .paused && held, "Pause did not hold the warned grenade fuses")
+        case .expectOutsideGrenadeMarkers:
+          expect(
+            !watchedGrenades.isEmpty && watchedGrenades.allSatisfy { !$0.contains(leaderPosition) },
+            "the leader remained inside a warned grenade's blast radius")
+        case .awaitExplosions(let count, let seconds):
+          if snapshot.grenadesExploded >= count {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append(
+              "only \(snapshot.grenadesExploded) grenade(s) exploded within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .expectMovedEnemies(let count):
+          expect(
+            snapshot.movedEnemies.count >= count,
+            "only \(snapshot.movedEnemies.count) hostile(s) moved tactically instead of at least \(count)"
+          )
         case .expectSquad(let state):
           expect(
             snapshot.squadState == state,
@@ -398,11 +463,16 @@
             || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
             || snapshot.mode != .exploring || snapshot.formation != .close
             || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
+            || !snapshot.grenades.isEmpty || snapshot.grenadesThrown != 0
+            || snapshot.grenadesExploded != 0 || !snapshot.movedEnemies.isEmpty
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
                 + "\(snapshot.party.count) in \(snapshot.formation.name), the story was at "
-                + "\(snapshot.beat) and \(snapshot.firedTriggers) trigger(s) had fired")
+                + "\(snapshot.beat) and \(snapshot.firedTriggers) trigger(s) had fired; "
+                + "grenades active/thrown/exploded: \(snapshot.grenades.count)/"
+                + "\(snapshot.grenadesThrown)/\(snapshot.grenadesExploded), "
+                + "moved hostiles: \(snapshot.movedEnemies.count)")
           }
           for (member, position) in positions
           where simd_distance(position, start.spawn(member)) > 0.3 {
@@ -527,6 +597,17 @@
           expect(
             snapshot.fallBacks == count,
             "the party had fallen back \(snapshot.fallBacks) time(s) instead of \(count)")
+        case .awaitCombatClear(let seconds):
+          if !snapshot.isFighting {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("combat remained active after \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
         case .fireUntilDefeated(let count, let seconds):
           if snapshot.defeated >= count {
             advance()
@@ -849,16 +930,11 @@
       .mark("third choice"), .wait(seconds: 0.6), .act, .wait(seconds: 1),
     ]
 
-    /// The combat yard (ADR 0005), entered from the bridge through the pause menu's third
-    /// choice. Before the fight, Miki aims her carbine up at the wall and fires, which spends no
-    /// rounds and marks the wall (ADR 0007). The companions hold behind it while she steps out
-    /// past its east end alone,
-    /// where both shooters can see her; the formation button, which regroups in a fight, calls
-    /// them to her, and the shooters' third hit falls the party back to the entrance. Then all
-    /// three go round together: Miki disrupts a wind-up, the companions take cover and fire by
-    /// themselves, and Miki's carbine and theirs clear the yard, after which the formation
-    /// button changes the formation again. Restart begins the yard again, and the third choice
-    /// returns to the bridge.
+    /// The evolving combat yard, through real controls: practice strikes the wall without
+    /// spending rounds; orders and Regroup are exercised before the first deliberate fallback.
+    /// The trio spreads out, disrupts a wind-up and downs two enemies. Another fallback checks
+    /// that their damage persists. A new western approach clears the remaining shelter, then
+    /// the route waits for live grenades before cycling formation and restarting/changing levels.
     private static let combatYard: [Step] =
       [.mark("the bridge")] + otherLevel + [
         .expectLevel("combat-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
@@ -870,11 +946,16 @@
         .expectOrder(.tom, "following"), .mark("regroup"), .awaitFallBacks(1, seconds: 20),
         .mark("falling back"), .wait(seconds: 1.2), .expectHits(0), .expectSquad("following"),
         .expectOrder(.laura, "following"), .expectNear(.miki, [0, 6], within: 0.3),
-        .mark("fell back"), .walk([6.5, 2.5]), .walk([6.5, -1.5]),
+        .mark("fell back"), .formation, .expectFormation(.spread),
+        .walk([6.5, 2.5]), .walk([6.5, -1.5]),
         .awaitDisrupt(seconds: 6), .signature, .expectDisrupts(1), .mark("Miki disrupts"),
-        .wait(seconds: 1.5), .mark("the companions fire"), .fireUntilDefeated(2, seconds: 30),
-        .expectFired(.laura), .expectFired(.tom), .expectFallBacks(1),
-        .mark("the yard is clear"), .formation, .expectFormation(.spread), .wait(seconds: 1),
+        .wait(seconds: 1.5), .mark("the companions fire"), .fireUntilDefeated(2, seconds: 20),
+        .mark("changing the approach"), .awaitFallBacks(2, seconds: 15), .wait(seconds: 1.2),
+        .expectHits(0), .expectFormation(.spread), .mark("damage survives the fallback"),
+        .walk([-6, 2]), .walk([-6, -4.5]),
+        .fireUntilDefeated(3, seconds: 20), .awaitCombatClear(seconds: 4),
+        .expectFired(.laura), .expectFired(.tom), .expectFallBacks(2),
+        .mark("the yard is clear"), .formation, .expectFormation(.column), .wait(seconds: 1),
       ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
         .expectLevel("salvage-yard"), .mark("on to the salvage yard"),
       ] + otherLevel + [
@@ -893,19 +974,19 @@
         .expectCover("wall", firing: nil, exposed: false), .mark("the wall stops the shot"),
         .walk([4.2, -0.25]), .fireAimed([0, -1], seconds: 0.85),
         .expectCover("wall", firing: true, exposed: true), .mark("peeking past the tall edge"),
-        .wait(seconds: 0.45), .expectCover("wall", firing: false, exposed: false),
+        .wait(seconds: 0.45), .expectCover("wall", firing: false, exposed: true),
       ] + restartRun + [
         .order(.hold), .walk([9, 2]), .walk([8.55, -3.55]), .wait(seconds: 0.5),
-        .expectCover("block-east", firing: false, exposed: false),
+        .expectCover("block-east", firing: false, exposed: true),
         .mark("sheltered behind the low block"), .fireAimed([0, -1], seconds: 0.85),
         .expectCover("block-east", firing: true, exposed: true),
         .mark("firing over low cover"), .pause, .wait(seconds: 0.6),
         .expectCover("block-east", firing: true, exposed: true),
         .mark("pause holds the exposed stance"), .pause, .wait(seconds: 0.45),
-        .expectCover("block-east", firing: false, exposed: false), .mark("back behind cover"),
+        .expectCover("block-east", firing: false, exposed: true), .mark("back behind cover"),
         .switchLeader, .expectCover(nil, firing: false, exposed: false),
         .switchLeader, .switchLeader, .wait(seconds: 0.1),
-        .expectCover("block-east", firing: false, exposed: false),
+        .expectCover("block-east", firing: false, exposed: true),
         .walk([8.55, -2]), .expectCover(nil, firing: false, exposed: false),
         .mark("walking away leaves cover"),
       ] + restartRun + [.expectCover(nil, firing: false, exposed: false)]
@@ -937,6 +1018,22 @@
         .expectWeapon(.closeScatter, loaded: 1...3, reloading: false), .switchLeader,
         .expectWeapon(.lightBurst, loaded: 18...18, reloading: false),
       ] + restartRun + [.expectWeapon(.carbine, loaded: 12...12, reloading: false)]
+
+    /// Tactical enemies in the combat yard (ADR 0012): companions hold at the entrance while
+    /// Miki draws a warned grenade. Pause freezes its fuse, then she walks out of its marked
+    /// ground behind the wall before it bursts. At least one hostile has found another angle,
+    /// and Restart clears the grenades, their counters and the remembered tactical movement.
+    private static let tacticalEnemies: [Step] =
+      [.mark("the bridge")] + otherLevel + [
+        .expectLevel("combat-yard"), .order(.hold),
+        .expectOrder(.tom, "holding"), .expectOrder(.laura, "holding"),
+        .walk([6.5, 2.5]), .walk([6.5, -3]), .awaitGrenade(seconds: 8),
+        .mark("grenade warning"), .wait(seconds: 0.3), .pause, .rememberGrenades,
+        .wait(seconds: 0.6), .expectGrenadesHeld, .mark("Pause holds the grenade fuse"),
+        .pause, .walk([4, 2]), .expectOutsideGrenadeMarkers, .mark("clear of the grenade marker"),
+        .awaitExplosions(1, seconds: 5), .expectMovedEnemies(atLeast: 1),
+        .mark("the blast and a new enemy angle"), .wait(seconds: 0.3),
+      ] + restartRun + [.expectLevel("combat-yard")]
 
     /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
     /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
@@ -977,6 +1074,7 @@
       ("orders", orders), ("combat-yard", combatYard), ("leader-cover", leaderCover),
       ("salvage-yard", salvageYard),
       ("squad-weapons", squadWeapons),
+      ("tactical-enemies", tacticalEnemies),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

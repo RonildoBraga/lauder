@@ -18,8 +18,8 @@ struct CombatYardTests {
     #expect(yard.cameraOffset == BrooklynBridge.layout.camera.offset)
     #expect(yard.fieldOfView == BrooklynBridge.layout.camera.fieldOfView)
     #expect(yard.lights.map(\.name) == BrooklynBridge.layout.lights.map(\.name))
-    // One full-height wall and two small blocks.
-    #expect(yard.boxes.count == 3)
+    // One full-height wall, two party blocks and a low shelter for the cover shooter.
+    #expect(yard.boxes.count == 4)
     #expect(yard.boxes.filter { $0.size.y > PartyBody.height }.count == 1)
     // Everything lies within the 19 m that the camera shows ahead of the entrance.
     let entrance = yard.spawn(.miki)
@@ -121,6 +121,8 @@ struct CombatYardTests {
     var shooter = HostileState(spec: CombatYard.rightShooter)
     #expect(shooter.isVisible && shooter.phase == .waiting && !shooter.isTargetable)
     shooter.engage()
+    #expect(!shooter.isTargetable)
+    _ = shooter.step(dt: CombatYard.rightShooter.reactionDelay + 0.001, canHit: true, toward: .zero)
     #expect(shooter.isTargetable)
     // Laura alone stands in the open, with Miki and Tom behind the wall.
     let world = GameWorld(

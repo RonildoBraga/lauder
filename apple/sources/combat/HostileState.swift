@@ -25,6 +25,9 @@ struct HostileState {
     case hit
     /// Cover was in the way, or the leader was out of range.
     case blocked
+    /// Launch a marked grenade. The fight resolves its fuse and blast later, never as an
+    /// immediate hit on the member being aimed at.
+    case grenade
   }
 
   /// Seconds to step out from where it waited.
@@ -72,12 +75,34 @@ struct HostileState {
   mutating func engage() {
     guard !isDown else { return }
     engaged = true
-    if phase == .waiting { phase = attacking }
+    if phase == .waiting { phase = openingAttack }
   }
 
   /// The phase an engaged hostile attacks in.
   private var attacking: Phase {
-    spec.attack == .shoot ? .aiming(remaining: spec.windUp) : .charging
+    switch spec.attack {
+    case .shoot, .throwGrenade: .aiming(remaining: spec.windUp)
+    case .charge: .charging
+    }
+  }
+
+  /// Reaction is paid once per engagement, rather than before every shot. Chargers retain
+  /// the opening's direct charge and never wait in a shooting phase.
+  private var openingAttack: Phase {
+    if case .charge = spec.attack { return attacking }
+    return spec.reactionDelay.isFinite && spec.reactionDelay > 0
+      ? .recovering(remaining: spec.reactionDelay) : attacking
+  }
+
+  /// The fight has checked this destination against movement blockers and floor bounds.
+  /// Revealing and falling bodies keep their authored movement; hidden or downed actors
+  /// cannot be repositioned by a stale tactical destination.
+  mutating func reposition(to point: SIMD2<Float>) {
+    guard point.x.isFinite, point.y.isFinite else { return }
+    switch phase {
+    case .waiting, .aiming, .recovering, .charging: position = point
+    case .hidden, .steppingOut, .down: break
+    }
   }
 
   mutating func knockDown() {
@@ -114,7 +139,9 @@ struct HostileState {
   /// Advance by one simulation step. A shot returns when a wind-up completes; `canHit` says
   /// whether the line to the leader is clear and within range at that moment. A charger runs
   /// towards `target`, the leader.
-  mutating func step(dt: Float, canHit: Bool, toward target: SIMD2<Float>) -> Shot? {
+  mutating func step(
+    dt: Float, canHit: Bool, toward target: SIMD2<Float>, canAttack: Bool = true
+  ) -> Shot? {
     switch phase {
     case .hidden, .down:
       return nil
@@ -124,7 +151,7 @@ struct HostileState {
       if progress < 1 {
         phase = .steppingOut(elapsed: elapsed + dt)
       } else {
-        phase = engaged ? attacking : .waiting
+        phase = engaged ? openingAttack : .waiting
       }
       return nil
     case .waiting:
@@ -138,15 +165,22 @@ struct HostileState {
       }
       return nil
     case .aiming(let remaining):
+      guard canAttack else { return nil }
       guard remaining - dt <= 0 else {
         phase = .aiming(remaining: remaining - dt)
         return nil
       }
-      let shot: Shot = spec.firstShotMisses && !hasFired ? .miss : canHit ? .hit : .blocked
+      let shot: Shot
+      if spec.attack == .throwGrenade {
+        shot = canHit ? .grenade : .blocked
+      } else {
+        shot = spec.firstShotMisses && !hasFired ? .miss : canHit ? .hit : .blocked
+      }
       hasFired = true
       phase = .recovering(remaining: spec.recovery)
       return shot
     case .recovering(let remaining):
+      guard canAttack else { return nil }
       phase =
         remaining - dt <= 0
         ? .aiming(remaining: spec.windUp) : .recovering(remaining: remaining - dt)

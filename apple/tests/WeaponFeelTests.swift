@@ -88,6 +88,7 @@ struct WeaponFeelTests {
   func aHitDuringAWindUpDelaysTheShotUpToALimit() throws {
     var state = HostileState(spec: CombatYard.rightShooter)
     state.engage()
+    _ = state.step(dt: CombatYard.rightShooter.reactionDelay + 0.001, canHit: true, toward: .zero)
     let windUp = CombatYard.rightShooter.windUp
     #expect(state.phase == .aiming(remaining: windUp))
     state.flinch()

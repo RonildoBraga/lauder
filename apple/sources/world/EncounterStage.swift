@@ -17,7 +17,10 @@ final class EncounterStage {
   private var visuals: [String: Entity] = [:]
   private var aimLines: [String: Entity] = [:]
   private let targetMarker: Entity
-  private let coverShield: CoverShield?
+  private let coverShields: [PartyMember: CoverShield]
+  private let enemyCoverShields: [String: CoverShield]
+  private let grenadeMarkers: [String: GrenadeMarker]
+  private var throwerMarks: [String: Entity] = [:]
   /// How much larger than authored the aim marker and the aim and shot lines show.
   private let markerScale: Float
 
@@ -31,17 +34,47 @@ final class EncounterStage {
       })
     markerScale = style.markerScale
     targetMarker = style.targetMarker()
-    coverShield = level.combat.leaderCover ? CoverShield(style: style) : nil
+    coverShields =
+      level.combat.leaderCover
+      ? Dictionary(
+        uniqueKeysWithValues: PartyMember.allCases.map { member in
+          let shield = CoverShield(style: style)
+          shield.entity.name = "cover.shield.\(member.rawValue)"
+          return (member, shield)
+        }) : [:]
+    let specs = level.encounters.flatMap(\.hostiles)
+    enemyCoverShields = Dictionary(
+      uniqueKeysWithValues: specs.filter { $0.behavior != .stationary }.map { spec in
+        let shield = CoverShield(style: style)
+        shield.entity.name = "cover.hostile.\(spec.id)"
+        return (spec.id, shield)
+      })
+    grenadeMarkers = Dictionary(
+      uniqueKeysWithValues: specs.filter { $0.attack == .throwGrenade }.map { spec in
+        let marker = GrenadeMarker(style: style)
+        marker.entity.name = "grenade.marker.\(spec.id)"
+        return (spec.id, marker)
+      })
     container.name = "combat"
     targetMarker.name = "combat.target"
     container.addChild(targetMarker)
     container.addChild(shots)
-    if let coverShield { container.addChild(coverShield.entity) }
+    for shield in coverShields.values { container.addChild(shield.entity) }
+    for shield in enemyCoverShields.values { container.addChild(shield.entity) }
+    for marker in grenadeMarkers.values { container.addChild(marker.entity) }
 
-    for spec in level.encounters.flatMap(\.hostiles) {
+    for spec in specs {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
       let visual = style.hostile()
+      if spec.attack == .throwGrenade {
+        // A simple overhead shape distinguishes the thrower without requiring character art.
+        let mark = style.block(
+          size: [0.3, 0.12, 0.24], at: [0, PartyBody.height / 2 + 0.14, 0], material: style.warm)
+        mark.name = "hostile.\(spec.id).thrower"
+        visual.addChild(mark)
+        throwerMarks[spec.id] = mark
+      }
       body.addChild(visual)
       container.addChild(body)
       bodies[spec.id] = body
@@ -74,15 +107,28 @@ final class EncounterStage {
       effects.show(
         shot.path, side: side, height: FightSimulation.aimHeight, muzzle: shot.muzzle)
     }
+    for point in fight.explosions { effects.blast(at: point) }
     show(fight)
   }
 
   /// Applies the state without advancing it or choosing a target, pose, shot or outcome.
   private func show(_ fight: FightSimulation) {
-    if let cover = fight.coverState {
-      coverShield?.show(at: cover.position, toward: -cover.normal, exposed: cover.exposed)
-    } else {
-      coverShield?.hide()
+    for (member, shield) in coverShields {
+      if let cover = fight.coverStates[member] {
+        shield.show(at: cover.position, toward: -cover.normal, exposed: cover.exposed)
+      } else {
+        shield.hide()
+      }
+    }
+    for (id, shield) in enemyCoverShields {
+      if let cover = fight.enemyCoverStates[id], fight.hostiles[id]?.isDown == false {
+        shield.show(at: cover.position, toward: -cover.normal, exposed: cover.exposed)
+      } else {
+        shield.hide()
+      }
+    }
+    for (owner, marker) in grenadeMarkers {
+      marker.show(fight.grenades.first { $0.owner == owner })
     }
     for (id, state) in fight.hostiles {
       if let body = bodies[id] {
@@ -90,12 +136,16 @@ final class EncounterStage {
         body.position = [state.position.x, PartyBody.height / 2, state.position.y]
       }
       if let visual = visuals[id], let pose = fight.hostilePoses[id] {
+        visual.scale = [1, pose.scale, 1]
         visual.orientation = pose.orientation
         visual.position = pose.position
       }
+      throwerMarks[id]?.isEnabled = state.isVisible && !state.isDown
       if let line = aimLines[id] {
         if let point = fight.hostileAimPoints[id] {
-          place(line, from: state.position, to: point, thickness: 0.025 * markerScale)
+          place(
+            line, from: fight.hostileAimOrigins[id] ?? state.position,
+            to: point, thickness: 0.025 * markerScale)
           line.isEnabled = true
         } else {
           line.isEnabled = false

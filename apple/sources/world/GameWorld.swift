@@ -121,6 +121,8 @@ final class GameWorld {
   /// Where companions take cover in a fight, in a level with combat positioning (ADR 0003,
   /// phase S4).
   @ObservationIgnored private var cover: CoverPlanner
+  @ObservationIgnored private var evasions: [PartyMember: (ids: Set<Int>, point: SIMD2<Float>)] =
+    [:]
   /// What blocks sight, for what the shooters can see: the level's blockers, worked out once.
   @ObservationIgnored private let sightBlockers: [PartyMotion.Box]
   /// What the shooters see, remembered across the routes planned in a fight.
@@ -167,7 +169,7 @@ final class GameWorld {
   @ObservationIgnored private var facingGoal: SIMD2<Float>?
   /// Members still rocking from a shot or a hit in the latest step (ADR 0008).
   @ObservationIgnored private var joltedMembers: Set<PartyMember> = []
-  @ObservationIgnored private var posedCoverLeader: PartyMember?
+  @ObservationIgnored private var posedCoverMembers: Set<PartyMember> = []
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -307,7 +309,10 @@ final class GameWorld {
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
     sightBlockers = level.obstacles
-    cover = CoverPlanner(obstacles: sightBlockers)
+    cover = CoverPlanner(
+      obstacles: sightBlockers,
+      coverRules: level.combat.leaderCover
+        ? LeaderCover(boxes: level.boxes, ground: level.ground.footprint) : nil)
     motors = Self.freshMotors()
     cameraTarget = Self.cameraTarget(over: level.spawn(level.party[0]))
     let style = SceneStyle(
@@ -316,7 +321,7 @@ final class GameWorld {
     #if DEBUG
       let fightStarted = ContinuousClock.now
     #endif
-    fight = FightSimulation(level: level)
+    fight = FightSimulation(level: level, grid: grid)
     stage = EncounterStage(level: level, style: style)
     stage.reset(fight)
     #if DEBUG
@@ -670,7 +675,7 @@ final class GameWorld {
     stage.reset(fight)
     for member in PartyMember.allCases { showPose(member) }
     joltedMembers = []
-    posedCoverLeader = nil
+    posedCoverMembers = []
     updateWeaponStatus()
     resetSquad(around: spot)
   }
@@ -691,6 +696,7 @@ final class GameWorld {
     route = RouteMemory(start: spot)
     planner = SquadPlanner(heading: level.heading)
     cover.reset()
+    evasions = [:]
     motors = Self.freshMotors()
     companionTargets = [:]
     unsimulatedTime = 0
@@ -830,6 +836,8 @@ final class GameWorld {
     } else {
       cover.reset()
     }
+    let previouslyEvading = Set(evasions.keys)
+    targets = avoidGrenades(targets: targets, positions: current)
     let previousTargets = companionTargets
     companionTargets = targets
     for member in session.party where member != leader {
@@ -837,7 +845,8 @@ final class GameWorld {
         var motor = motors[member]
       else { continue }
       // Into cover, or out to fire: a settled companion moves off however short the step.
-      if takingCover, let before = previousTargets[member],
+      if takingCover || evasions[member] != nil || previouslyEvading.contains(member),
+        let before = previousTargets[member],
         simd_distance(before, target) > CompanionMotor.settleDistance
       {
         motor.wake()
@@ -848,7 +857,8 @@ final class GameWorld {
       let context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
-        speed: PartyBody.speed, dt: dt, targetMoves: order == .following && !inCover,
+        speed: PartyBody.speed, dt: dt,
+        targetMoves: order == .following && !inCover && evasions[member] == nil,
         openGround: openGround)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
@@ -857,7 +867,7 @@ final class GameWorld {
       place(member, at: end)
       turn(member, moved: end - start, dt: dt)
       // A going companion arrives at their point, or in cover at their spot near it.
-      if case .going(let point) = order,
+      if case .going(let point) = order, evasions[member] == nil,
         simd_distance(end, takingCover ? target : point) <= Self.arrivalDistance
       {
         session.arrived(member)
@@ -870,6 +880,54 @@ final class GameWorld {
         ? "\($0.displayName) can't reach you" : "\($0.displayName) can't get there"
     }
     if diagnostic != message { diagnostic = message }
+  }
+
+  /// Immediate danger temporarily displaces a companion without changing their order. A
+  /// cached destination avoids a navigation scan on every fixed step or returning too soon.
+  private func avoidGrenades(
+    targets: [PartyMember: SIMD2<Float>], positions: [PartyMember: SIMD2<Float>]
+  ) -> [PartyMember: SIMD2<Float>] {
+    let grenades = fight.grenades
+    guard !grenades.isEmpty else {
+      evasions = [:]
+      return targets
+    }
+    let ids = Set(grenades.map(\.id))
+    var result = targets
+    func safe(_ point: SIMD2<Float>) -> Bool {
+      grenades.allSatisfy {
+        simd_distance(point, $0.position) > Grenade.radius + PartyBody.radius + 0.1
+      }
+    }
+    for member in session.companions {
+      guard let point = positions[member], let target = targets[member] else { continue }
+      if let kept = evasions[member], kept.ids == ids {
+        result[member] = kept.point
+        continue
+      }
+      evasions[member] = nil
+      guard !safe(point) || !safe(target) else { continue }
+      if safe(point) {
+        evasions[member] = (ids, point)
+        result[member] = point
+        continue
+      }
+      let region = grid.region(at: point)
+      let candidates = grid.roomySpots(within: Grenade.radius * 2, of: point, stride: 2).filter {
+        candidate in
+        safe(candidate) && grid.region(at: candidate) == region
+          && positions.allSatisfy { other, place in
+            other == member || simd_distance(place, candidate) >= 0.7
+          }
+      }.sorted { simd_distance_squared($0, point) < simd_distance_squared($1, point) }
+      if let escape = candidates.prefix(16).first(where: {
+        motion.canTraverse(from: point, to: $0) || grid.route(from: point, to: $0) != nil
+      }) {
+        evasions[member] = (ids, escape)
+        result[member] = escape
+      }
+    }
+    return result
   }
 
   // MARK: - Squad orders
@@ -1154,10 +1212,11 @@ final class GameWorld {
     // Members still rocking from a shot or a hit show it, and those that just settled stand
     // straight again.
     let jolted = Set(fight.jolts.keys)
-    for member in jolted.union(joltedMembers) { showPose(member) }
-    if let posedCoverLeader { showPose(posedCoverLeader) }
-    if fight.coverState != nil { showPose(leader) }
-    posedCoverLeader = fight.coverState == nil ? nil : leader
+    let covered = Set(fight.coverStates.keys)
+    for member in jolted.union(joltedMembers).union(covered).union(posedCoverMembers) {
+      showPose(member)
+    }
+    posedCoverMembers = covered
     joltedMembers = jolted
     combatEvents.append(contentsOf: fight.takeEvents())
     if combatEvents.count > Self.keptEvents {
@@ -1249,6 +1308,7 @@ final class GameWorld {
       place(member, at: level.spawn(member))
       setYaw(member, facing)
     }
+    posedCoverMembers = []
     fallBacks += 1
     resetSquad(around: level.spawn(session.leader))
     showOrders()
@@ -1261,11 +1321,15 @@ final class GameWorld {
     squadLeader = leader
     updateWeaponStatus()
     fight.clearCover()
-    showPose(previous)
+    for member in posedCoverMembers.union(fight.coverStates.keys).union([previous, leader]) {
+      showPose(member)
+    }
+    posedCoverMembers = Set(fight.coverStates.keys)
     facingGoal = nil
     if let point = position(of: leader) { route.reset(to: point) }
     planner.reset()
     cover.reset()
+    evasions = [:]
     for member in [previous, leader] { motors[member] = CompanionMotor(for: member) }
     showLeaderMarker()
   }
@@ -1332,7 +1396,7 @@ final class GameWorld {
       visuals[member]?.position = [0, Self.lyingDrop, 0]
       return
     }
-    let cover = member == session.leader ? fight.coverState : nil
+    let cover = fight.coverStates[member]
     let scale: Float = cover != nil && cover?.firing == false ? 0.68 : 1
     let offset = cover?.offset ?? .zero
     let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height * scale)
@@ -1435,14 +1499,17 @@ final class GameWorld {
       PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
-        hitsTaken: session.hitsTaken, defeated: session.defeated.count, ammo: session.ammo,
+        hitsTaken: session.hitsTaken, defeated: session.defeated.count,
+        isFighting: session.inEncounter, ammo: session.ammo,
         formation: session.formation, orders: session.orders, squadState: session.squadState,
         line: gameLine, salvageContents: session.salvage.contents,
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks,
         shotMarks: shotMarks, leaderCover: fight.coverState,
-        weapon: fight.status(for: session.leader))
+        weapon: fight.status(for: session.leader),
+        grenades: fight.grenades, grenadesThrown: fight.grenadesThrown,
+        grenadesExploded: fight.grenadesExploded, movedEnemies: fight.movedEnemies)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
