@@ -3,7 +3,7 @@ import simd
 /// The bridge's fights and scripted cues as values. The fixed step advances hostiles,
 /// native weapons, spread and reactions; the world presents the resulting shots and poses.
 @MainActor
-final class FightSimulation {
+final class EncounterSimulation {
   struct Shot {
     enum Side { case party, hostile }
     let path: ShotPath

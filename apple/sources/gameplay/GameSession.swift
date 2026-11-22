@@ -8,25 +8,6 @@ final class GameSession {
     case exploring, dialogue, paused
   }
 
-  /// The opening's story beats, in order (ADR 0004). Each begins once, after the one before.
-  enum Beat: Int, Comparable, Sendable {
-    case alone, stranger
-    /// Searching the stranger's body begins the ambush (M3).
-    case ambush
-    /// After the exchange that follows Tom's shot, Tom travels with Miki.
-    case withTom
-    /// The party nears the place beyond mid-span where Laura lies hurt in the snow (M4).
-    case lauraFound
-    /// Helping Laura: the medical kit lets her stand (M4).
-    case helpingLaura
-    /// After the exchange that follows, Laura travels with them too.
-    case withLaura
-    /// The three reach the Manhattan end together: the end of the opening.
-    case arrived
-
-    static func < (lhs: Beat, rhs: Beat) -> Bool { lhs.rawValue < rhs.rawValue }
-  }
-
   /// The pause menu's choices, in order. It opens on Resume.
   enum PauseChoice: CaseIterable, Sendable {
     case resume, restart
@@ -88,7 +69,7 @@ final class GameSession {
 
   /// What an encounter's retry returns to: the state when it began.
   private struct Checkpoint {
-    let beat: Beat
+    let progress: BridgeProgress
     let ammo: Int
     let medicalKits: Int
     let defeated: Set<String>
@@ -96,24 +77,11 @@ final class GameSession {
     let hitsDealt: [String: Int]
   }
 
-  enum ActionResult: Equatable, Sendable {
-    /// Accepted: progress changed.
-    case done
-    /// The action already succeeded; repeating it changes nothing.
-    case alreadyDone
-    /// The story has not reached this action yet.
-    case notYet
-    /// Not now: only while exploring, not while paused or in a conversation, and not while a
-    /// scene that must finish first is still playing.
-    case unavailable
-  }
-
   private let startingParty: [PartyMember]
   private let startingAmmo: Int
-  /// The beat each encounter-starting action begins, from the level's encounters.
-  private let beatStarted: [Level.ActionID: Beat]
-  /// The story's progress on the bridge.
-  private(set) var beat = Beat.alone
+  /// Story policy is a checkpointable value; the session retains mode and shared progress.
+  private var progress: BridgeProgress
+  var beat: StoryBeat { progress.beat }
   /// Hits each member has taken in the current encounter. On the bridge only the leader is hit.
   private var hits: [PartyMember: Int] = [:]
   /// Rounds left for the leader's weapon.
@@ -150,11 +118,7 @@ final class GameSession {
     startingParty = level.party
     startingAmmo = level.startingAmmo
     ammo = level.startingAmmo
-    beatStarted = Dictionary(
-      level.encounters.compactMap { encounter in
-        if case .action(let action) = encounter.start { (action, encounter.beat) } else { nil }
-      },
-      uniquingKeysWith: { first, _ in first })
+    progress = BridgeProgress(encounters: level.encounters)
     party = level.party
     leader = level.party[0]
   }
@@ -327,16 +291,17 @@ final class GameSession {
   }
 
   /// The beat after the current one, the only one that can begin; nil after the last.
-  var nextBeat: Beat? { Beat(rawValue: beat.rawValue + 1) }
+  var nextBeat: StoryBeat? { progress.nextBeat }
 
   /// An encounter's beat begins: only the next beat, only while exploring and only once. What
   /// the party has now is kept, so a retry can return to it.
-  func beginEncounter(_ next: Beat) -> Bool {
+  func beginEncounter(_ next: StoryBeat) -> Bool {
     guard mode == .exploring, checkpoint == nil, next == nextBeat else { return false }
     checkpoint = Checkpoint(
-      beat: beat, ammo: ammo, medicalKits: medicalKits, defeated: defeated, searched: searched,
+      progress: progress, ammo: ammo, medicalKits: medicalKits, defeated: defeated,
+      searched: searched,
       hitsDealt: hitsDealt)
-    beat = next
+    progress.begin(next)
     return true
   }
 
@@ -401,7 +366,7 @@ final class GameSession {
   /// everything that happened in it is undone.
   func retryEncounter() {
     guard let checkpoint else { return }
-    beat = checkpoint.beat
+    progress = checkpoint.progress
     ammo = checkpoint.ammo
     medicalKits = checkpoint.medicalKits
     defeated = checkpoint.defeated
@@ -419,36 +384,24 @@ final class GameSession {
 
   /// Whether the action is offered at its approach now.
   func offers(_ action: Level.ActionID) -> Bool {
-    switch action {
-    case .searchStranger:
-      defeated.contains("stranger") && !searched.contains("stranger") && beat == .stranger
-        && !inEncounter
-    case .helpLaura: beat == .lauraFound && !inEncounter
-    }
+    progress.offers(action, defeated: defeated, searched: searched, inEncounter: inEncounter)
   }
 
-  /// Accept or reject a named action. The world has already checked that the leader stands in
-  /// the action's approach area; the session checks mode and progress.
+  /// The world checks the approach; this authority checks mode, then asks the bridge rules.
+  /// Checkpoint creation precedes any inventory cost.
   func perform(_ action: Level.ActionID) -> ActionResult {
     guard mode == .exploring else { return .unavailable }
-    switch action {
-    case .searchStranger:
-      // The search begins the ambush; the loot is taken when it finishes (ADR 0004, M3).
-      guard defeated.contains("stranger") else { return .notYet }
-      guard !searched.contains("stranger"), let beat = beatStarted[action],
-        beginEncounter(beat)
-      else { return .alreadyDone }
-    case .helpLaura:
-      // Helping uses the medical kit from the stranger's body and begins a short scene (M4).
-      if beat > .lauraFound { return .alreadyDone }
-      guard beat == .lauraFound, medicalKits > 0 else { return .notYet }
-      // While she is still calling out, a press does nothing.
-      guard !inEncounter, let next = beatStarted[action], beginEncounter(next) else {
-        return .unavailable
-      }
-      medicalKits -= 1
+    switch progress.action(
+      action, defeated: defeated, searched: searched, medicalKits: medicalKits,
+      inEncounter: inEncounter)
+    {
+    case .refused(let result):
+      return result
+    case .begin(let beat, let cost, let unavailable):
+      guard beginEncounter(beat) else { return unavailable }
+      medicalKits -= cost
+      return .done
     }
-    return .done
   }
 
   /// The action press during a conversation: the next line, or after the last, what it settles
@@ -458,18 +411,9 @@ final class GameSession {
     if lineIndex + 1 < MissionScript.lines(conversation).count {
       lineIndex += 1
     } else {
-      switch conversation {
-      case .metTom:
-        // The exchange after Tom's shot ends with him joining (ADR 0004, M3).
-        recruit(.tom)
-        if beat == .ambush { beat = .withTom }
-      case .metLaura:
-        // And the one after Laura stands ends with her joining (M4).
-        recruit(.laura)
-        if beat == .helpingLaura { beat = .withLaura }
-      case .arrival:
-        break
-      }
+      let completion = progress.completion(of: conversation)
+      if let member = completion.recruit { recruit(member) }
+      progress.finish(completion)
       self.conversation = nil
       lineIndex = 0
       mode = .exploring
@@ -486,7 +430,7 @@ final class GameSession {
     formation = .close
     orders = [:]
     firedTriggers = []
-    beat = .alone
+    progress.restart()
     hits = [:]
     ammo = startingAmmo
     defeated = []

@@ -4,6 +4,10 @@
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
+## Structural preparation
+
+The maintainer approved the architecture review's focused improvements ([ADR 0018](decisions/0018-runtime-boundaries.md), [issue #124](https://github.com/RonildoBraga/lauder/issues/124)): camera ownership/value motion, bridge progression separate from session authority, accurate encounter naming, cohesive combat files and narrow declaration drift checks with CI. Gameplay and story are unchanged. The implementation PR records fresh checks and rendered evidence; build 27 validates the earlier source only. Reproducible release tooling follows as a separate focused change.
+
 ## Purpose and scope
 
 Use the retained bridge to decide what is enjoyable before expanding again. This cleanup preserves its existing opening, party movement, native weapons and input paths. It does not redesign the story or author a replacement core loop.

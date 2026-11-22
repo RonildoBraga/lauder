@@ -58,8 +58,8 @@ struct WeaponFeelTests {
   @Test
   func aDeviatedActualRayCanHitMissOrStrikeScenery() {
     let ballistics = Ballistics(level: range(shooterAt: [0, -10], hits: 50))
-    let start = SIMD3<Float>(0, FightSimulation.aimHeight, 0)
-    let target = Ballistics.Target(id: "target", centre: [0, FightSimulation.aimHeight, -10])
+    let start = SIMD3<Float>(0, EncounterSimulation.aimHeight, 0)
+    let target = Ballistics.Target(id: "target", centre: [0, EncounterSimulation.aimHeight, -10])
     let straight = ballistics.trace(
       from: start, direction: [0, 0, -1], range: 14, targets: [target])
     #expect(straight.strike == .body("target"))

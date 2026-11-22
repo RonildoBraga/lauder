@@ -72,7 +72,7 @@ struct ShootingTests {
   func aShotFliesOverALowBlock() throws {
     let low = Level.Box.box("low", at: [0, 0.5, -5], size: [2, 1, 1])
     let tall = Level.Box.box("tall", at: [0, 1.1, -8], size: [2, 2.2, 1])
-    let blockers = Aim.blockers([low, tall], above: FightSimulation.aimHeight)
+    let blockers = Aim.blockers([low, tall], above: EncounterSimulation.aimHeight)
     #expect(blockers.count == 1)
     let shot = try #require(
       Aim.shot(
@@ -179,13 +179,13 @@ struct ShootingTests {
     let wide = world.level.fieldOfView
     #expect(world.cameraLens == wide)
     run(world, upTo: 1.5, aim: stick(world, towards: [1, 0]))
-    #expect(abs(world.cameraLens - wide * GameWorld.fightLens) < 0.05)
+    #expect(abs(world.cameraLens - wide * CameraRig.fightLens) < 0.05)
     run(world, upTo: 1.5)
     #expect(abs(world.cameraLens - wide) < 0.05)
     walk(world, to: [6.5, 15])
     run(world, upTo: 1.5)
     #expect(world.session.inEncounter)
-    #expect(abs(world.cameraLens - wide * GameWorld.fightLens) < 0.05)
+    #expect(abs(world.cameraLens - wide * CameraRig.fightLens) < 0.05)
     #expect(world.projection(aspect: 2).fieldOfView == world.cameraLens)
   }
 

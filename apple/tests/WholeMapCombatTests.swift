@@ -81,7 +81,7 @@ struct WholeMapCombatTests {
       hostiles: [enemy], engaged: [enemy.id], boxes: [wall], player: members[.miki]!,
       party: [.miki, .tom], spawns: members)
     let (session, fight) = try begin(level)
-    var found: FightSimulation.Shot?
+    var found: EncounterSimulation.Shot?
     for _ in 0..<120 {
       _ = step(fight, session: session, at: [0, 8], figures: members)
       if let shot = hostileShots(fight).first {
@@ -115,9 +115,9 @@ struct WholeMapCombatTests {
     #expect(session.ammo == level.startingAmmo && session.defeated.isEmpty)
   }
 
-  private func begin(_ level: Level) throws -> (GameSession, FightSimulation) {
+  private func begin(_ level: Level) throws -> (GameSession, EncounterSimulation) {
     let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     let encounter = try #require(level.encounters.first)
     #expect(session.beginEncounter(encounter.beat))
     fight.begin(encounter)
@@ -126,18 +126,18 @@ struct WholeMapCombatTests {
 
   @discardableResult
   private func step(
-    _ fight: FightSimulation, session: GameSession, at point: SIMD2<Float>,
+    _ fight: EncounterSimulation, session: GameSession, at point: SIMD2<Float>,
     aiming: Bool = false, fire: Bool = false,
     figures: [PartyMember: SIMD2<Float>]? = nil
-  ) -> FightSimulation.Outcome {
+  ) -> EncounterSimulation.Outcome {
     fight.step(
       dt: 1 / 120, leader: point, facing: [0, 1], aiming: aiming,
       fireHeld: fire, firePressed: false,
       figures: figures ?? [.miki: point], session: session)
   }
 
-  private func partyShot(_ fight: FightSimulation, session: GameSession, at point: SIMD2<Float>)
-    -> FightSimulation.Shot?
+  private func partyShot(_ fight: EncounterSimulation, session: GameSession, at point: SIMD2<Float>)
+    -> EncounterSimulation.Shot?
   {
     for _ in 0..<180 {
       _ = step(fight, session: session, at: point, aiming: true, fire: true)
@@ -149,9 +149,9 @@ struct WholeMapCombatTests {
   }
 
   private func enemyShot(
-    _ fight: FightSimulation, session: GameSession, at point: SIMD2<Float>, seconds: Float = 3
+    _ fight: EncounterSimulation, session: GameSession, at point: SIMD2<Float>, seconds: Float = 3
   )
-    -> FightSimulation.Shot?
+    -> EncounterSimulation.Shot?
   {
     for _ in 0..<Int(seconds * 120) {
       _ = step(fight, session: session, at: point)
@@ -160,7 +160,7 @@ struct WholeMapCombatTests {
     return nil
   }
 
-  private func hostileShots(_ fight: FightSimulation) -> [FightSimulation.Shot] {
+  private func hostileShots(_ fight: EncounterSimulation) -> [EncounterSimulation.Shot] {
     fight.shots.filter { if case .hostile = $0.side { true } else { false } }
   }
 

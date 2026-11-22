@@ -44,25 +44,26 @@ final class EncounterStage {
     }
   }
 
-  func reset(_ fight: FightSimulation) {
+  func reset(_ fight: EncounterSimulation) {
     effects.clear()
     show(fight)
   }
 
-  func update(_ fight: FightSimulation, dt: Float) {
+  func update(_ fight: EncounterSimulation, dt: Float) {
     effects.update(dt: dt)
     for shot in fight.shots {
       let side: ShotEffects.Side = shot.side == .party ? .party : .hostile
       if let trace = shot.trace {
         effects.show(trace, side: side, muzzle: shot.muzzle)
       } else {
-        effects.show(shot.path, side: side, height: FightSimulation.aimHeight, muzzle: shot.muzzle)
+        effects.show(
+          shot.path, side: side, height: EncounterSimulation.aimHeight, muzzle: shot.muzzle)
       }
     }
     show(fight)
   }
 
-  private func show(_ fight: FightSimulation) {
+  private func show(_ fight: EncounterSimulation) {
     for (id, state) in fight.hostiles {
       if let body = bodies[id] {
         body.isEnabled = state.isVisible

@@ -19,7 +19,7 @@
       case expectRestarted
       case expectTriggers(Int)
       case fire(seconds: Float)
-      case expectBeat(GameSession.Beat)
+      case expectBeat(StoryBeat)
       case expectDefeated(Int)
       case expectHits(Int)
       case expectParty([PartyMember])
@@ -43,7 +43,7 @@
       let positions: [PartyMember: SIMD2<Float>]
       let mode: GameSession.Mode
       let firedTriggers: Int
-      let beat: GameSession.Beat
+      let beat: StoryBeat
       let hitsTaken: Int
       let defeated: Int
       let ammo: Int
@@ -53,7 +53,7 @@
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
       /// Native weapon state, observed by headless Pause/reload regressions.
-      let weapon: FightSimulation.WeaponStatus
+      let weapon: EncounterSimulation.WeaponStatus
     }
 
     struct Frame {

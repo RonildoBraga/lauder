@@ -7,12 +7,9 @@ struct Level {
   /// A box that blocks movement and sight with its footprint; the ground is separate. How it
   /// looks is up to the level's scene file (ADR 0002).
   struct Box {
-    enum Look: Sendable { case scenery, signal, rust, teal, ink }
     let name: String
     let position: SIMD3<Float>
     let size: SIMD3<Float>
-    /// Semantic greybox accents from the existing palette; exported scenes own their look.
-    var look = Look.scenery
 
     var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
   }
@@ -112,7 +109,7 @@ struct Level {
       case action(ActionID)
     }
 
-    let beat: GameSession.Beat
+    let beat: StoryBeat
     let start: Start
     /// Just outside the area, or nil when the leader cannot be hurt.
     let retryAt: SIMD2<Float>?
@@ -163,9 +160,9 @@ struct Level {
   /// The objective line when a run starts.
   let objective: String
   /// The objective from each of these beats on, in story order.
-  var objectiveChanges: [(beat: GameSession.Beat, text: String)] = []
+  var objectiveChanges: [(beat: StoryBeat, text: String)] = []
   /// Where the compass points from each of these beats on, in story order; nil hides it.
-  var goals: [(beat: GameSession.Beat, goal: Goal?)] = []
+  var goals: [(beat: StoryBeat, goal: Goal?)] = []
   /// What a look shows outside every action's approach.
   let lookAround: String
   /// What the pause menu says Restart does.

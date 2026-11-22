@@ -115,7 +115,7 @@ enum BrooklynBridge {
 
   /// What the compass points to: the Manhattan end while crossing, the woman while she waits
   /// for help, the Manhattan end again for the three, and nothing once they are there.
-  static let goals: [(beat: GameSession.Beat, goal: Level.Goal?)] = [
+  static let goals: [(beat: StoryBeat, goal: Level.Goal?)] = [
     (.alone, manhattan),
     (.lauraFound, Level.Goal(name: "The woman", point: layout.marker(named: "spawn.laura"))),
     (.withLaura, manhattan),
