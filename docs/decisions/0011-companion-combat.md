@@ -1,6 +1,6 @@
 # ADR 0011 — Shared cover and coordinated companions
 
-**Status:** Implemented; final Simulator/release verification in progress\
+**Status:** Implemented and delivered in TestFlight 0.1.0 (21)\
 **Date:** 22 November 2026
 
 ## Assignment
@@ -19,4 +19,6 @@ This record covers phase 4, [issue #94](https://github.com/RonildoBraga/lauder/i
 
 ## Validation and limits
 
-Focused tests cover shared cover geometry, exact-step exposure, focus-fire fallback, flanking, order bounds and lifecycle. Rendered squad/combat/cover routes exercise the integrated rules; the existing opening and salvage scenarios remain regressions. The standard check and Release build pass before integration and delivery. Simulator results do not establish phone performance, physical multi-touch, haptics or controller feel. The later maintainer judgement “Do they fight like a squad?” remains a playtest question rather than a fabricated result.
+Focused tests cover shared cover geometry, exact-step exposure, focus-fire fallback, flanking, order bounds and lifecycle. The final integrated source `cec1a33` passed the standard check, all thirteen headless scenarios and six rendered Simulator regressions, including squad weapons, combat, cover, tactical enemies, the opening's first fight and salvage. Automatic source review completed with no findings. A fresh signed Release archive passed bundle, signing and symbol verification, and **0.1.0 (21)** completed Apple processing and became available to the existing internal TestFlight testers. The [prototype plan](../prototype-plan.md#verification-and-performance) records the delivery evidence.
+
+Simulator results and TestFlight availability do not establish phone performance, physical multi-touch, haptics or controller feel. The later maintainer judgement “Do they fight like a squad?” remains a playtest question rather than a recorded result.
