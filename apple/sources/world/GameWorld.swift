@@ -150,7 +150,8 @@ final class GameWorld {
   @ObservationIgnored private var landmarkFade = LandmarkFade()
   @ObservationIgnored private var cameraElapsed: Float = 0
   @ObservationIgnored private var unsimulatedTime: Float = 0
-  /// The level's fights (ADR 0004, M2).
+  /// The level's fight rules and presentation, kept separate (ADR 0004, ADR 0008).
+  @ObservationIgnored private let fight: FightSimulation
   @ObservationIgnored private let stage: EncounterStage
   @ObservationIgnored private var fireHeld = false
   /// Where the right stick aims, in the stick's terms, and where that is on the ground while the
@@ -223,7 +224,7 @@ final class GameWorld {
   var showsSignature: Bool { session.inEncounter && leaderHasSignature }
   /// How many shots each companion has fired by themselves in this run. Tests and playtests
   /// read it.
-  var companionShots: [PartyMember: Int] { stage.companionShots }
+  var companionShots: [PartyMember: Int] { fight.companionShots }
   /// How many shots' marks show on blocks now (ADR 0007). Tests and playtests read it.
   var shotMarks: Int { stage.effects.marksShown }
   /// The camera's lens now, in degrees (ADR 0007). Tests read it.
@@ -231,7 +232,7 @@ final class GameWorld {
   /// The direction on the ground a member faces. Tests read it.
   func facing(of member: PartyMember) -> SIMD2<Float> { Movement.facing(yaw: yaw[member] ?? 0) }
   /// How many wind-ups Disrupt has cancelled in this run. Tests and playtests read it.
-  var disrupts: Int { stage.disrupts }
+  var disrupts: Int { fight.disrupts }
   /// The HUD's objective: the level's own, until the story changes it or a salvage task's
   /// repair is done.
   var objective: String {
@@ -270,7 +271,9 @@ final class GameWorld {
     let style = SceneStyle(
       markerScale: SceneStyle.markerScale(
         cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
+    fight = FightSimulation(level: level)
     stage = EncounterStage(level: level, style: style)
+    stage.reset(fight)
     root.name = level.id
     if let scene = level.scene {
       root.addChild(Self.loadScene(named: scene, for: level))
@@ -379,6 +382,13 @@ final class GameWorld {
     return combatEvents
   }
 
+  /// The frame's feedback context. Only the interface plays the events; headless simulation
+  /// keeps no sound, vibration or controller-trigger dependency.
+  var listenerPoint: SIMD2<Float> { SIMD2(cameraTarget.x, cameraTarget.z) }
+  var screenRight: SIMD2<Float> { Movement.axes(cameraOffset: level.cameraOffset).right }
+  var canFire: Bool { session.mode == .exploring && showsWeapon && !fight.holdsParty }
+  var isActive: Bool { isPresented && isApplicationActive }
+
   /// What the player chose in another level's world carries over to this one: a hidden status
   /// panel, the vibration choice, and touch controls in place of an attached controller.
   func takePreferences(from other: GameWorld) {
@@ -403,24 +413,6 @@ final class GameWorld {
     update(
       with: input, sampledIn: mode, deltaTime: Float(deltaTime),
       inputReady: controls.status == .ready)
-    playFeedback()
-  }
-
-  /// This frame's sounds and vibrations (ADR 0008): heard from the camera's target, felt on the
-  /// phone when playing by touch or on the controller otherwise, unless the player turned
-  /// vibration off. A DualSense's R2 resists like a trigger while Miki can fire.
-  private func playFeedback() {
-    let events = takeCombatEvents()
-    let device: CombatFeedback.Device =
-      !vibrationEnabled
-      ? .none
-      : controls.touchControlsEnabled
-        ? .phone : controls.activeController.map { .controller($0) } ?? .none
-    let canFire = session.mode == .exploring && showsWeapon && !stage.holdsParty
-    CombatFeedback.shared.play(
-      events, listener: SIMD2(cameraTarget.x, cameraTarget.z),
-      right: Movement.axes(cameraOffset: level.cameraOffset).right, device: device,
-      triggerArmed: canFire)
   }
 
   /// One frame after sampling: the command the input means in the mode it was sampled in, then
@@ -534,7 +526,7 @@ final class GameWorld {
   /// The leader's action press. Identity, approach and progress are checked afresh, so a
   /// prompt left over from before a move or a switch cannot act.
   func performAction() {
-    guard session.mode == .exploring, !stage.holdsParty,
+    guard session.mode == .exploring, !fight.holdsParty,
       let position = self.position(of: session.leader)
     else { return }
     // In a salvage task, the place decides; at the gate, whoever cannot open it hears who can
@@ -557,7 +549,7 @@ final class GameWorld {
         if let encounter = level.encounters.first(where: {
           if case .action(let action) = $0.start { action == interaction.id } else { false }
         }) {
-          stage.begin(encounter)
+          fight.begin(encounter)
           retrySpot = encounter.retryAt
         }
       case .alreadyDone:
@@ -605,7 +597,8 @@ final class GameWorld {
   /// the fights as they began, with the weapon holstered, the squad's movement around the
   /// leader, and the camera settled behind them.
   private func resetPlay(around spot: SIMD2<Float>) {
-    stage.reset()
+    fight.reset()
+    stage.reset(fight)
     resetSquad(around: spot)
   }
 
@@ -692,7 +685,7 @@ final class GameWorld {
     let grid = self.grid
     // A scripted scene holds the party where they stand, whoever leads; only its cues place and
     // turn anyone, and switching leader during it moves no one.
-    let held = stage.holdsParty
+    let held = fight.holdsParty
     let movement = held ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
@@ -741,8 +734,8 @@ final class GameWorld {
     // Once a fight is under way in a level with combat positioning (ADR 0003, phase S4),
     // companions keep off the ground the shooters see, and take cover near those places unless
     // they are regrouping, which ends once everyone is back in the formation.
-    let positioning = level.combat.combatPositioning && stage.fightUnderWay
-    let threats = positioning ? stage.threats : []
+    let positioning = level.combat.combatPositioning && fight.fightUnderWay
+    let threats = positioning ? fight.threats : []
     sightMemo.prepare(for: threats)
     let openGround =
       threats.isEmpty
@@ -825,7 +818,7 @@ final class GameWorld {
   /// up to a metre to somewhere the companions can reach, or shows a brief cross and does
   /// nothing.
   private func give(_ command: GameSession.Command, at screen: InputRules.ScreenPoint?) {
-    guard session.mode == .exploring, session.ordersAvailable, !stage.holdsParty,
+    guard session.mode == .exploring, session.ordersAvailable, !fight.holdsParty,
       let leader = position(of: session.leader)
     else { return }
     if command == .hold {
@@ -1053,7 +1046,7 @@ final class GameWorld {
         }
       }
       if session.beginEncounter(encounter.beat) {
-        stage.begin(encounter)
+        fight.begin(encounter)
         retrySpot = encounter.retryAt
       }
     }
@@ -1062,8 +1055,8 @@ final class GameWorld {
 
   // MARK: - Fights
 
-  /// One step of the fight: the stage plays the encounter and fires the leader's weapon; the
-  /// world turns the leader, shows lines, the threat and who can answer it, and starts a retry
+  /// One step of the fight rules, then their stage presentation; the world turns the leader,
+  /// shows lines, the threat and who can answer it, and starts a retry
   /// or a fall back after the last hit. Only Miki carries the carbine and has Disrupt, and not
   /// while a scene holds her; outside an encounter, only her carbine acts (ADR 0007).
   private func stepStage(
@@ -1073,24 +1066,25 @@ final class GameWorld {
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
         bodies[member]?.isEnabled == true ? self.position(of: member).map { (member, $0) } : nil
       })
-    let outcome = stage.step(
+    let outcome = fight.step(
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
       aiming: aimDirection != nil, fireHeld: armed && fireHeld,
       firePressed: armed && firePressPending,
-      mayDisrupt: leaderHasSignature && !stage.holdsParty,
+      mayDisrupt: leaderHasSignature && !fight.holdsParty,
       signaturePressed: signaturePressPending, figures: figures, session: session)
+    stage.update(fight, dt: dt)
     firePressPending = false
     signaturePressPending = false
-    let cue = stage.canDisrupt ? "\(leader.displayName) can Disrupt" : nil
+    let cue = fight.canDisrupt ? "\(leader.displayName) can Disrupt" : nil
     if signatureCue != cue { signatureCue = cue }
     // The leader turns there in the steps to come, at her turn rate (ADR 0008).
     if let facing = outcome.facing { facingGoal = facing }
     // Members still rocking from a shot or a hit show it, and those that just settled stand
     // straight again.
-    let jolted = Set(stage.jolts.keys)
+    let jolted = Set(fight.jolts.keys)
     for member in jolted.union(joltedMembers) { showPose(member) }
     joltedMembers = jolted
-    combatEvents.append(contentsOf: stage.takeEvents())
+    combatEvents.append(contentsOf: fight.takeEvents())
     if combatEvents.count > Self.keptEvents {
       combatEvents.removeFirst(combatEvents.count - Self.keptEvents)
     }
@@ -1104,9 +1098,9 @@ final class GameWorld {
       setYaw(shooter.member, Movement.yaw(towards: shooter.facing))
     }
     if let (first, second) = outcome.face { faceEachOther(first, second) }
-    let threat = stage.threat
+    let threat = fight.threat
     if self.threat != threat { self.threat = threat }
-    if weaponDrawn != stage.isDrawn { weaponDrawn = stage.isDrawn }
+    if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if outcome.retry { retryElapsed = 0 }
   }
 
@@ -1115,7 +1109,7 @@ final class GameWorld {
   private func appear(_ member: PartyMember) {
     guard let body = bodies[member], let here = position(of: member) else { return }
     body.isEnabled = true
-    let standing = stage.hostiles.values.filter { $0.isVisible && !$0.isDown }.map(\.position)
+    let standing = fight.hostiles.values.filter { $0.isVisible && !$0.isDown }.map(\.position)
     let focus =
       standing.min { simd_distance_squared($0, here) < simd_distance_squared($1, here) }
       ?? position(of: session.leader)
@@ -1173,7 +1167,8 @@ final class GameWorld {
   /// hostiles keep the damage dealt and wait where they stand, and whoever is down stays down.
   private func fallBack() {
     session.fallBack()
-    stage.fallBack()
+    fight.fallBack()
+    stage.reset(fight)
     let facing = Movement.yaw(towards: level.heading)
     for member in session.party {
       place(member, at: level.spawn(member))
@@ -1214,7 +1209,7 @@ final class GameWorld {
     let wanted: Float
     if simd_length(delta) > 0.2 * dt {
       wanted = Movement.yaw(towards: delta)
-    } else if let aim = stage.aims[member], let here = position(of: member),
+    } else if let aim = fight.aims[member], let here = position(of: member),
       simd_distance(aim, here) > 0.01
     {
       // A companion firing by themselves faces their target (ADR 0005).
@@ -1258,7 +1253,7 @@ final class GameWorld {
       visuals[member]?.position = [0, Self.lyingDrop, 0]
       return
     }
-    let jolt = (stage.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
+    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
     visuals[member]?.orientation = jolt.tilt * facing
     visuals[member]?.position = jolt.offset
   }
@@ -1275,14 +1270,12 @@ final class GameWorld {
     controls.setActive(isPresented && isApplicationActive)
     controls.requireNeutralInput()
     skipNextStep = true
-    // Out of the foreground, or replaced by another level's world: quiet, still and slack.
-    if !(isPresented && isApplicationActive) { CombatFeedback.shared.suspend() }
   }
 
   private func updateCamera(deltaTime: Float) {
     guard let leader = position(of: session.leader) else { return }
     // During a fight the target leans towards the threat, so both stay on screen.
-    let wanted = stage.cameraLean(leader: leader)
+    let wanted = fight.cameraLean(leader: leader)
     cameraLean += (wanted - cameraLean) * min(1, deltaTime * Self.cameraLeanRate)
     let target = Self.cameraTarget(over: leader + cameraLean)
     if let start = cameraStart {
@@ -1299,7 +1292,7 @@ final class GameWorld {
     // In a fight, or while the right stick aims, the lens narrows so the camera comes closer
     // through it, keeping its height and angle (ADR 0007, the visual direction); a scene keeps
     // the level's lens for its framing.
-    let close = (session.inEncounter && !stage.holdsParty) || aimDirection != nil
+    let close = (session.inEncounter && !fight.holdsParty) || aimDirection != nil
     let goal = level.fieldOfView * (close ? Self.fightLens : 1)
     lens += (goal - lens) * min(1, deltaTime / Self.lensTime)
     if abs(camera.camera.fieldOfViewInDegrees - lens) > 0.001 {
@@ -1472,7 +1465,7 @@ final class GameWorld {
         gateHinge?.orientation = simd_quatf(angle: 0, axis: [0, 1, 0])
       }
     }
-    stage.setGate(progress.gateOpen ? task.openGate : task.gate.footprint)
+    fight.setGate(progress.gateOpen ? task.openGate : task.gate.footprint)
     salvageLooks?.show(progress)
   }
 

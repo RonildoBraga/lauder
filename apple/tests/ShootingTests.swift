@@ -72,7 +72,7 @@ struct ShootingTests {
   func aShotFliesOverALowBlock() throws {
     let low = Level.Box.box("low", at: [0, 0.5, -5], size: [2, 1, 1])
     let tall = Level.Box.box("tall", at: [0, 1.1, -8], size: [2, 2.2, 1])
-    let blockers = Aim.blockers([low, tall], above: EncounterStage.aimHeight)
+    let blockers = Aim.blockers([low, tall], above: FightSimulation.aimHeight)
     #expect(blockers.count == 1)
     let shot = try #require(
       Aim.shot(
