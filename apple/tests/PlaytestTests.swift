@@ -36,6 +36,14 @@
       #expect(summary.passed, "\(name): \(summary.failures)")
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
+      if name == "combat-yard" {
+        #expect(summary.highestArenaWave >= 3, "the real-control route did not clear two packs")
+        #expect(summary.peakArrivalWarnings > 0, "the route observed no arrival warnings")
+      }
+      if name == "arena-elevation" {
+        #expect(summary.highestFloor >= 2.35, "the bodies never reached the upper deck")
+        #expect(summary.lowestFloor <= -1.75, "the bodies never reached the lower trench")
+      }
     }
 
     @Test

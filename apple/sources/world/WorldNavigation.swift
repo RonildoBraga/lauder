@@ -19,12 +19,14 @@ final class WorldNavigation {
     }
 
     let bounds: Footprint
+    let terrain: Terrain
     let obstacles: [Footprint]
     let shutGate: Footprint?
     let openGate: Footprint?
 
     init(level: Level) {
       bounds = Footprint(level.bounds)
+      terrain = level.terrain
       obstacles = level.obstacles.map(Footprint.init)
       shutGate = level.salvage.map { Footprint($0.gate.footprint) }
       openGate = level.salvage.map { Footprint($0.openGate) }

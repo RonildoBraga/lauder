@@ -127,6 +127,7 @@ final class GameWorld {
   @ObservationIgnored private let sightBlockers: [PartyMotion.Box]
   /// What the shooters see, remembered across the routes planned in a fight.
   @ObservationIgnored private let sightMemo = SightMemo()
+  @ObservationIgnored private let terrainSight: Ballistics?
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
@@ -308,12 +309,17 @@ final class GameWorld {
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
     sightBlockers = level.obstacles
+    let terrainSight = level.terrain.patches.isEmpty ? nil : Ballistics(level: level)
+    self.terrainSight = terrainSight
     cover = CoverPlanner(
       obstacles: sightBlockers,
       coverRules: level.combat.leaderCover
-        ? LeaderCover(boxes: level.boxes, ground: level.ground.footprint) : nil)
+        ? LeaderCover(boxes: level.boxes, ground: level.ground.footprint, terrain: level.terrain)
+        : nil,
+      ballistics: terrainSight)
     motors = Self.freshMotors()
-    cameraTarget = Self.cameraTarget(over: level.spawn(level.party[0]))
+    let spawn = level.spawn(level.party[0])
+    cameraTarget = Self.cameraTarget(over: spawn, floor: level.terrain.height(at: spawn))
     let style = SceneStyle(
       markerScale: SceneStyle.markerScale(
         cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
@@ -332,7 +338,12 @@ final class GameWorld {
       root.addChild(Self.loadScene(named: scene, for: level))
     } else {
       // A greybox, such as the combat yard or a test's level: snow underfoot, and plain blocks.
-      for box in [level.ground] + level.boxes {
+      if !level.terrain.patches.isEmpty {
+        root.addChild(
+          TerrainMesh.entity(terrain: level.terrain, ground: level.ground, style: style))
+      }
+      let blocks = level.terrain.patches.isEmpty ? [level.ground] + level.boxes : level.boxes
+      for box in blocks {
         let material: any Material =
           box.name == level.ground.name ? style.snow : style.material(for: box.look)
         let entity = style.block(size: box.size, at: box.position, material: material)
@@ -417,8 +428,8 @@ final class GameWorld {
 
   /// Where the camera looks while it is settled behind a leader standing at this point: just
   /// above the body's centre.
-  private static func cameraTarget(over point: SIMD2<Float>) -> SIMD3<Float> {
-    [point.x, PartyBody.height / 2 + 0.1, point.y]
+  private static func cameraTarget(over point: SIMD2<Float>, floor: Float) -> SIMD3<Float> {
+    [point.x, floor + PartyBody.height / 2 + 0.1, point.y]
   }
 
   func attach(_ subscription: EventSubscription) {
@@ -714,7 +725,7 @@ final class GameWorld {
     cameraStart = nil
     cameraElapsed = 0
     cameraLean = .zero
-    cameraTarget = Self.cameraTarget(over: spot)
+    cameraTarget = Self.cameraTarget(over: spot, floor: level.terrain.height(at: spot))
     lens = level.fieldOfView
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
@@ -827,7 +838,9 @@ final class GameWorld {
     sightMemo.prepare(for: threats)
     let openGround =
       threats.isEmpty
-      ? nil : OpenGround(threats: threats, obstacles: sightBlockers, memo: sightMemo)
+      ? nil
+      : OpenGround(
+        threats: threats, obstacles: sightBlockers, ballistics: terrainSight, memo: sightMemo)
     if session.regrouping,
       session.companions.allSatisfy({ member in
         guard let here = current[member], let place = targets[member] else { return true }
@@ -906,8 +919,20 @@ final class GameWorld {
     let ids = Set(grenades.map(\.id))
     var result = targets
     func safe(_ point: SIMD2<Float>) -> Bool {
-      grenades.allSatisfy {
-        simd_distance(point, $0.position) > Grenade.radius + PartyBody.radius + 0.1
+      grenades.allSatisfy { grenade in
+        let radius = Grenade.radius + PartyBody.radius + 0.1
+        guard let terrainSight else {
+          return simd_distance(point, grenade.position) > radius
+        }
+        // A warning belongs to its actual floor. Do not abandon a held point on a separate
+        // tier when the blast is too far away in 3D or the terrace itself stops it.
+        return simd_distance(
+          terrainSight.point(point, above: 0),
+          terrainSight.point(grenade.position, above: 0)) > radius
+          || !terrainSight.isClear(
+            from: terrainSight.point(grenade.position, above: 0.15),
+            to: terrainSight.point(point, above: FightSimulation.aimHeight * 0.68),
+            ignoringLowCover: true)
       }
     }
     for member in session.companions {
@@ -975,7 +1000,7 @@ final class GameWorld {
       touchMark = nil
     } else {
       let ahead = pointAhead(of: leader)
-      pressed = SIMD3(ahead.x, 0, ahead.y)
+      pressed = SIMD3(ahead.x, level.terrain.height(at: ahead), ahead.y)
     }
     guard let pressed else { return }
     let marked = SIMD2(pressed.x, pressed.z)
@@ -1137,7 +1162,7 @@ final class GameWorld {
   private func showOrders() {
     for (member, ring) in orderMarkers {
       if member != session.leader, case .going(let point) = session.order(of: member) {
-        ring.position = [point.x, 0.02, point.y]
+        ring.position = [point.x, level.terrain.height(at: point) + 0.02, point.y]
         ring.isEnabled = true
       } else {
         ring.isEnabled = false
@@ -1148,9 +1173,12 @@ final class GameWorld {
   /// The camera's mapping between the screen and the ground, for a screen of this shape, through
   /// its lens as it is now.
   func projection(aspect: Float) -> CameraProjection {
-    CameraProjection(
+    // Flat levels retain off-road marking: the order is then refused visibly. Terraced
+    // levels must instead intersect their bounded actual floor, including lowered courts.
+    let terrain = level.terrain.patches.isEmpty ? nil : level.terrain
+    return CameraProjection(
       eye: cameraTarget + level.cameraOffset, target: cameraTarget, fieldOfView: lens,
-      aspect: aspect)
+      aspect: aspect, terrain: terrain, bounds: terrain == nil ? nil : level.bounds)
   }
 
   /// Where a member's body stands on the ground.
@@ -1362,7 +1390,9 @@ final class GameWorld {
   }
 
   private func place(_ member: PartyMember, at point: SIMD2<Float>) {
-    bodies[member]?.position = [point.x, PartyBody.height / 2, point.y]
+    bodies[member]?.position = [
+      point.x, level.terrain.height(at: point) + PartyBody.height / 2, point.y,
+    ]
   }
 
   /// Companions turn towards their movement, or towards their target while they fire by
@@ -1446,7 +1476,8 @@ final class GameWorld {
     // During a fight the target leans towards the threat, so both stay on screen.
     let wanted = fight.cameraLean(leader: leader)
     cameraLean += (wanted - cameraLean) * min(1, deltaTime * Self.cameraLeanRate)
-    let target = Self.cameraTarget(over: leader + cameraLean)
+    let target = Self.cameraTarget(
+      over: leader + cameraLean, floor: level.terrain.height(at: leader))
     if let start = cameraStart {
       cameraElapsed = min(0.25, cameraElapsed + deltaTime)
       let amount = cameraElapsed / 0.25
@@ -1494,7 +1525,22 @@ final class GameWorld {
   /// its direction on screen, turned from up the screen towards its right.
   private func updateCompass() {
     let goal: Level.Goal?
-    if let task = level.salvage, task.depotGoal != nil {
+    if level.arena != nil, let leader = position(of: session.leader) {
+      let living = fight.hostiles.values.filter { $0.isVisible && !$0.isDown }
+        .sorted { $0.spec.id < $1.spec.id }
+      if let nearest = living.min(by: {
+        simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
+      }) {
+        goal = Level.Goal(name: nearest.spec.name, point: nearest.position)
+      } else {
+        let arrivals = level.encounters.flatMap(\.hostiles).filter {
+          fight.arenaWarnings[$0.id] != nil
+        }.sorted { $0.id < $1.id }
+        goal = arrivals.min(by: {
+          simd_distance_squared($0.standAt, leader) < simd_distance_squared($1.standAt, leader)
+        }).map { Level.Goal(name: "Arrival: \($0.name)", point: $0.standAt) }
+      }
+    } else if let task = level.salvage, task.depotGoal != nil {
       goal =
         session.salvage.repaired
         ? nil
@@ -1540,7 +1586,10 @@ final class GameWorld {
         shotMarks: shotMarks, leaderCover: fight.coverState,
         weapon: fight.status(for: session.leader),
         grenades: fight.grenades, grenadesThrown: fight.grenadesThrown,
-        grenadesExploded: fight.grenadesExploded, movedEnemies: fight.movedEnemies)
+        grenadesExploded: fight.grenadesExploded, movedEnemies: fight.movedEnemies,
+        arenaWave: fight.arenaWave, arenaWarnings: fight.arenaWarnings, hostiles: fight.hostiles,
+        enemyCover: fight.enemyCoverStates,
+        heights: bodies.mapValues { $0.position.y - PartyBody.height / 2 })
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
@@ -1597,7 +1646,9 @@ final class GameWorld {
       for (member, disc) in targetMarkers {
         let target = companionTargets[member]
         disc.isEnabled = target != nil && member != session.leader
-        if let target { disc.position = [target.x, 0.012, target.y] }
+        if let target {
+          disc.position = [target.x, level.terrain.height(at: target) + 0.012, target.y]
+        }
       }
       // The playtest's status covers the HUD's line, while the game's own stays in `gameLine`.
       if let status = playtest?.status, shownLine != status {

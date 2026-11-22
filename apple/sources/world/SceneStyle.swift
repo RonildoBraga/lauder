@@ -87,12 +87,6 @@ struct SceneStyle {
     return model
   }
 
-  /// A line for an aim or a shot: the unit box, which the fight stretches between the line's
-  /// ends.
-  func line(_ material: any Material) -> ModelEntity {
-    ModelEntity(mesh: unitBox, materials: [material])
-  }
-
   /// The leader's mark: a solid disc on the ground beneath the body's centre, in the warm
   /// colour.
   func leaderMarker() -> ModelEntity {

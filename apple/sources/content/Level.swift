@@ -69,6 +69,8 @@ struct Level {
       case stationary
       case takeCover
       case flank
+      /// Advances with a rifle to a closer firing position within its bounded home area.
+      case advance
     }
 
     let id: String
@@ -81,6 +83,11 @@ struct Level {
     /// A short pause after engagement before the first wind-up. Zero keeps older encounters
     /// unchanged; the combat yard supplies its prototype reaction delay explicitly.
     var reactionDelay: Float = 0
+    /// Rifle discharges after one wind-up. A single shot preserves the opening's authored
+    /// timing; the combat test supplies short bursts for different rifle roles.
+    var burst = 1
+    /// Seconds between the discharges of one rifle burst.
+    var burstGap: Float = 0.16
     /// The visible aim before each shot, long enough to take cover or answer.
     var windUp: Float = 0
     /// The pause after each shot before the next aim begins.
@@ -187,6 +194,8 @@ struct Level {
   let id: String
   /// The floor. It bounds the navigation grid and blocks nothing.
   let ground: Box
+  /// Optional terraces and ramps. Existing story places keep the flat floor at y = 0.
+  var terrain = Terrain()
   let boxes: [Box]
   /// The scene file that shows the level, exported by Blender (ADR 0002): the name of a USDZ in
   /// the app's bundle. Without one, such as in a test, the game draws the ground and boxes as
@@ -228,6 +237,8 @@ struct Level {
   var combat = Combat()
   /// A salvage task, as in the salvage yard (ADR 0006); nil where there is none.
   var salvage: Salvage?
+  /// A bounded, repeatable combat test. Story encounters retain their authored completion.
+  var arena: ArenaWaves.Configuration?
 
   /// A salvage task (ADR 0006): a part to find for a repair, behind a gate that more than one
   /// member can open. The session keeps what the party has done (`SalvageProgress`); the world
@@ -302,9 +313,9 @@ struct Level {
     return point
   }
 
-  /// Movement blockers: the scenery and the ground's edges. The flat-floor footprints come from
-  /// the same dimensions as the visible blocks.
-  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + edges }
+  /// Movement blockers share the visible scenery's footprints. Cliff edges keep bodies on a
+  /// terrace until they reach a ramp, using the same collision and navigation as ordinary walls.
+  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + terrain.cliffs + edges }
 
   /// The ground's edges: a metre-thick wall just outside each side of its footprint, which
   /// nobody sees, so the party keeps to the ground, as on the buried bridge's road.

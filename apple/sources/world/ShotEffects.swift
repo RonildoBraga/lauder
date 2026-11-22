@@ -62,13 +62,15 @@ final class ShotEffects {
   private let thickness: [Side: Float]
   private let flashSize: Float
   private let chipSize: Float
+  private let terrain: Terrain
 
   /// How many marks show on blocks now. Tests read it.
   var marksShown: Int { markRemaining.filter { $0 > 0 }.count }
 
   /// The effects' blocks, unseen until a shot shows them, in `container`; `style` gives their
   /// colours, and its marker scale their size, so they read from the level's camera.
-  init(style: SceneStyle, in container: Entity) {
+  init(style: SceneStyle, in container: Entity, terrain: Terrain = Terrain()) {
+    self.terrain = terrain
     let scale = style.markerScale
     thickness = [.party: 0.06 * scale, .hostile: 0.045 * scale]
     flashSize = 0.16 * scale
@@ -86,8 +88,9 @@ final class ShotEffects {
       let party = side == .party
       let material = party ? style.warm : style.threat
       let name = party ? "party" : "hostile"
-      streakPools[side] = Pool(party ? 6 : 4) { block("\(name).streak", material) }
-      flashPools[side] = Pool(party ? 6 : 4) { block("\(name).flash", material) }
+      // Four short-burst rifles can overlap three volleys before an 18 m streak expires.
+      streakPools[side] = Pool(party ? 6 : 12) { block("\(name).streak", material) }
+      flashPools[side] = Pool(party ? 6 : 8) { block("\(name).flash", material) }
     }
     self.streakPools = streakPools
     self.flashPools = flashPools
@@ -108,6 +111,24 @@ final class ShotEffects {
     let start = muzzle ?? path.start
     let from = SIMD3(start.x, height, start.y)
     let to = SIMD3(path.end.x, height, path.end.y)
+    show(from: from, to: to, strike: path.strike, side: side, atMuzzle: muzzle != nil)
+  }
+
+  func show(_ trace: Ballistics.Trace, side: Side, muzzle: SIMD2<Float>?) {
+    var from = trace.start
+    if let muzzle {
+      let distance = simd_distance(SIMD2(trace.start.x, trace.start.z), muzzle)
+      let span = trace.end - trace.start
+      let across = max(0.001, simd_length(SIMD2(span.x, span.z)))
+      from = [muzzle.x, trace.start.y + span.y / across * distance, muzzle.y]
+    }
+    show(from: from, to: trace.end, strike: trace.strike, side: side, atMuzzle: muzzle != nil)
+  }
+
+  private func show(
+    from: SIMD3<Float>, to: SIMD3<Float>, strike: ShotPath.Strike,
+    side: Side, atMuzzle: Bool
+  ) {
     let span = to - from
     let distance = simd_length(span)
     let direction = distance > 0.001 ? span / distance : SIMD3<Float>(0, 0, 1)
@@ -120,10 +141,10 @@ final class ShotEffects {
       place(streak: list[index], pool.entities[index], side: side)
     }
     // The flash shows at the muzzle, or just ahead of a shooter that shows no weapon.
-    flash(at: muzzle == nil ? from + direction * 0.3 : from, side: side, size: flashSize)
-    switch path.strike {
+    flash(at: atMuzzle ? from : from + direction * 0.3, side: side, size: flashSize)
+    switch strike {
     case .body: flash(at: to, side: side, size: flashSize * 1.4)
-    case .scenery: strike(at: to, from: direction, side: side)
+    case .scenery: self.strike(at: to, from: direction, side: side)
     case .nothing: break
     }
   }
@@ -132,7 +153,7 @@ final class ShotEffects {
   /// The warning marker already showed the exact damage radius; this is presentation only.
   func blast(at point: SIMD2<Float>) {
     guard point.x.isFinite, point.y.isFinite else { return }
-    let centre = SIMD3(point.x, 0.12, point.y)
+    let centre = SIMD3(point.x, terrain.height(at: point) + 0.12, point.y)
     flash(at: centre, side: .hostile, size: Grenade.radius)
     let count = Self.chipsPerStrike * 2
     for number in 0..<count {
@@ -176,7 +197,8 @@ final class ShotEffects {
       chips[index].velocity.y -= 9.8 * dt
       chips[index].position += chips[index].velocity * dt
       let entity = chipPool.entities[index]
-      if chips[index].remaining <= 0 || chips[index].position.y < 0 {
+      let point = chips[index].position
+      if chips[index].remaining <= 0 || point.y < terrain.height(at: [point.x, point.z]) {
         chips[index].remaining = 0
         entity.isEnabled = false
       } else {

@@ -13,6 +13,8 @@
       /// bridge's towers. A conversation that starts on the way, as at the end of the opening,
       /// ends the walk.
       case walk(SIMD2<Float>)
+      /// Follow a legal navigation route through the same movement input as a player.
+      case navigate(SIMD2<Float>, defending: Bool = false)
       case wait(seconds: Float)
       /// A named moment, for stills cut from the screen recording.
       case mark(String)
@@ -80,6 +82,8 @@
       /// The active member's cover and whether firing has exposed them (ADR 0009). Nil means
       /// no nearby cover; the stance and visibility checks then do not apply.
       case expectCover(String?, firing: Bool?, exposed: Bool)
+      /// The real committed tall-edge offset clears a shot towards the level's heading.
+      case expectCoverPeek(atLeast: Float)
       /// Press Square for one frame: the leader's signature, such as Miki's Disrupt.
       case signature
       /// Wait until the HUD says Miki can Disrupt; fails after this many seconds.
@@ -110,6 +114,14 @@
       case awaitExplosions(Int, seconds: Float)
       /// At least this many hostiles have moved tactically in this run.
       case expectMovedEnemies(atLeast: Int)
+      /// Fight through complete arena packs using normal movement, aim and Fire input.
+      case battleUntilWave(Int, seconds: Float)
+      case awaitArenaWarnings(seconds: Float)
+      case expectArenaWave(Int)
+      case rememberArena
+      case expectArenaHeld
+      /// The actual leader body's floor height, rather than a layout-only query.
+      case expectHeight(ClosedRange<Float>)
       /// Steer the leader to the cabinet that holds these contents in this run, which the run
       /// dealt in a random order (ADR 0006), as `walk` steers to a point.
       case walkToCabinet(Level.Salvage.Contents)
@@ -156,6 +168,11 @@
       let grenadesThrown: Int
       let grenadesExploded: Int
       let movedEnemies: Set<String>
+      let arenaWave: Int?
+      let arenaWarnings: [String: Float]
+      let hostiles: [String: HostileState]
+      let enemyCover: [String: FightSimulation.CoverState]
+      let heights: [PartyMember: Float]
     }
 
     struct Frame {
@@ -197,6 +214,10 @@
       let overlapFraction: Double
       let withinSlotWhileMoving: Double
       let worstLeaderGap: Double
+      let highestArenaWave: Int
+      let peakArrivalWarnings: Int
+      let lowestFloor: Float
+      let highestFloor: Float
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -222,7 +243,8 @@
     private var failures: [String] = []
     private var trace =
       "t,dt,leader,miki_x,miki_z,laura_x,laura_z,tom_x,tom_z,"
-      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning\n"
+      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning,wave,ammo,enemies\n"
+    private var arenaTrace = ",,"
     private var frameTimes: [Double] = []
     private var simulationTimes: [Double] = []
     private var worldLoads: [WorldLoadTiming] = []
@@ -234,6 +256,12 @@
     private var previousLeaderPosition: SIMD2<Float>?
     /// The actual warned grenades, retained across Pause and the walk out of their markers.
     private var watchedGrenades: [Grenade] = []
+    private var arenaPilot = ArenaPlaytest.Pilot()
+    private var watchedArena: Snapshot?
+    private var highestArenaWave = 0
+    private var peakArrivalWarnings = 0
+    private var lowestFloor: Float = 0
+    private var highestFloor: Float = 0
     private(set) var summary: Summary?
     /// Set by the world from the window scene; recorded in the summary.
     var orientation = "unknown"
@@ -271,10 +299,36 @@
       let leader = snapshot.leader
       let positions = snapshot.positions
       let leaderPosition = positions[leader] ?? .zero
+      let enemies = snapshot.hostiles.values.filter { $0.isVisible && !$0.isDown }
+        .sorted { $0.spec.id < $1.spec.id }.map { state in
+          let cover = snapshot.enemyCover[state.spec.id]
+          let point = state.position + (cover?.offset ?? .zero)
+          return "\(state.spec.id):\(Self.decimal(point.x)):\(Self.decimal(point.y))"
+            + ":\(cover?.isLow == true ? "low" : "standing"):\(cover?.firing == true ? "up" : "down")"
+        }.joined(separator: ";")
+      arenaTrace = "\(snapshot.arenaWave.map(String.init) ?? ""),\(snapshot.ammo),\(enemies)"
+      highestArenaWave = max(highestArenaWave, snapshot.arenaWave ?? 0)
+      peakArrivalWarnings = max(peakArrivalWarnings, snapshot.arenaWarnings.count)
+      if let height = snapshot.heights[leader] {
+        lowestFloor = min(lowestFloor, height)
+        highestFloor = max(highestFloor, height)
+      }
       while index < steps.count {
         switch steps[index] {
         case .walk(let target):
           if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
+        case .navigate(let target, let defending):
+          if simd_distance(target, leaderPosition) < 0.25 {
+            advance()
+            continue
+          }
+          if stepTime > Self.walkTimeout {
+            failures.append("navigation did not reach \(Self.describe(target)) within two minutes")
+            advance()
+            continue
+          }
+          let raw = arenaPilot.navigate(to: target, snapshot: snapshot, seconds: elapsed)
+          return defending ? arenaPilot.defend(raw, snapshot: snapshot, seconds: elapsed) : raw
         case .walkToCabinet(let contents):
           guard
             let cabinet = snapshot.level.salvage?.cabinets.first(where: {
@@ -382,6 +436,51 @@
             snapshot.movedEnemies.count >= count,
             "only \(snapshot.movedEnemies.count) hostile(s) moved tactically instead of at least \(count)"
           )
+        case .battleUntilWave(let wave, let seconds):
+          if (snapshot.arenaWave ?? 0) >= wave {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append(
+              "arena reached wave \(snapshot.arenaWave ?? 0), not \(wave), within \(Int(seconds)) s"
+            )
+            advance()
+            continue
+          }
+          return arenaPilot.fight(snapshot: snapshot, seconds: elapsed)
+        case .awaitArenaWarnings(let seconds):
+          if !snapshot.arenaWarnings.isEmpty {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("no arena arrival was warned within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .expectArenaWave(let wave):
+          expect(
+            snapshot.arenaWave == wave, "arena wave was \(snapshot.arenaWave ?? 0), not \(wave)")
+        case .rememberArena:
+          watchedArena = snapshot
+          expect(snapshot.arenaWave != nil, "there was no arena state to remember")
+        case .expectArenaHeld:
+          let held =
+            watchedArena.map { old in
+              old.arenaWave == snapshot.arenaWave && old.arenaWarnings == snapshot.arenaWarnings
+                && old.hostiles.mapValues(\.phase) == snapshot.hostiles.mapValues(\.phase)
+                && old.hostiles.mapValues(\.position) == snapshot.hostiles.mapValues(\.position)
+                && old.positions == snapshot.positions && old.hitsTaken == snapshot.hitsTaken
+                && old.ammo == snapshot.ammo && old.defeated == snapshot.defeated
+            } ?? false
+          expect(
+            snapshot.mode == .paused && held, "Pause advanced arena warnings, actors or combat")
+        case .expectHeight(let range):
+          let actual = snapshot.heights[leader] ?? .infinity
+          expect(
+            range.contains(actual), "the leader's floor height was \(actual), not within \(range)")
         case .expectSquad(let state):
           expect(
             snapshot.squadState == state,
@@ -468,6 +567,9 @@
             || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
             || !snapshot.grenades.isEmpty || snapshot.grenadesThrown != 0
             || snapshot.grenadesExploded != 0 || !snapshot.movedEnemies.isEmpty
+            || (start.arena != nil
+              && (snapshot.arenaWave != 1 || !snapshot.arenaWarnings.isEmpty
+                || snapshot.hostiles.values.contains(where: \.isVisible)))
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
@@ -571,6 +673,16 @@
             "cover was \(cover?.boxID ?? "none"), firing \(cover?.firing ?? false), "
               + "exposed \(cover?.exposed ?? false); expected \(box ?? "none"), "
               + "firing \(firing.map(String.init) ?? "any"), exposed \(exposed)")
+        case .expectCoverPeek(let distance):
+          let cover = snapshot.leaderCover
+          let origin = (cover?.position ?? leaderPosition) + (cover?.offset ?? .zero)
+          let ballistics = Ballistics(level: snapshot.level)
+          expect(
+            cover?.firing == true && simd_length(cover?.offset ?? .zero) >= distance
+              && ballistics.isClear(
+                from: ballistics.point(origin),
+                to: ballistics.point(origin + snapshot.level.heading * 3)),
+            "the committed tall-edge peek did not clear the wall")
         case .signature:
           return press(InputRules.Raw(controllerSignature: true))
         case .awaitDisrupt(let seconds):
@@ -717,7 +829,7 @@
         let point = frame.targets[member]
         row += ",\(Self.decimal(point?.x)),\(Self.decimal(point?.y))"
       }
-      row += ",\(frame.warning == nil ? 0 : 1)\n"
+      row += ",\(frame.warning == nil ? 0 : 1),\(arenaTrace)\n"
       trace += row
     }
 
@@ -765,7 +877,9 @@
         warningFrames: warningFrames,
         overlapFraction: Double(overlapFrames) / Double(max(1, simulationTimes.count)),
         withinSlotWhileMoving: Double(withinSlot) / Double(max(1, movingSamples)),
-        worstLeaderGap: Double(worstGap))
+        worstLeaderGap: Double(worstGap), highestArenaWave: highestArenaWave,
+        peakArrivalWarnings: peakArrivalWarnings, lowestFloor: lowestFloor,
+        highestFloor: highestFloor)
       summary = result
       write(result)
     }
@@ -941,32 +1055,27 @@
       .mark("third choice"), .wait(seconds: 0.6), .act, .wait(seconds: 1),
     ]
 
-    /// The evolving combat yard, through real controls: practice strikes the wall without
-    /// spending rounds; orders and Regroup are exercised before the first deliberate fallback.
-    /// The trio spreads out, disrupts a wind-up and downs two enemies. Another fallback checks
-    /// that their damage persists. A new western approach clears the remaining shelter, then
-    /// the route waits for live grenades before cycling formation and restarting/changing levels.
+    /// The repeatable arena, through real controls. An arrival warning freezes on Pause;
+    /// leaving the companions safely at the entrance forces a real fallback. The reunited
+    /// squad then completes two full packs, receives resupply, and sees the third wave begin.
+    /// Restart clears the pool and cadence before the ordinary level cycle continues.
     private static let combatYard: [Step] =
       [.mark("the bridge")] + otherLevel + [
         .expectLevel("combat-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
         .fireAimed([0, -1], seconds: 1.5), .expectAmmo(60), .expectMarks(atLeast: 2),
-        .mark("practice on the wall"), .walk([0, 2.5]), .wait(seconds: 1), .order(.hold),
-        .expectOrder(.tom, "holding"),
-        .walk([6.5, 2.5]), .walk([6.5, -1.5]), .expectBeat(.stranger),
-        .mark("alone beyond the wall"), .formation, .expectSquad("regrouping"),
-        .expectOrder(.tom, "following"), .mark("regroup"), .awaitFallBacks(1, seconds: 20),
-        .mark("falling back"), .wait(seconds: 1.2), .expectHits(0), .expectSquad("following"),
+        .mark("practice on the wall"), .order(.hold), .expectOrder(.tom, "holding"),
+        .walk([6.5, 2.5]), .walk([6.5, -2.2]), .expectBeat(.stranger),
+        .awaitArenaWarnings(seconds: 3), .mark("reinforcements are warned"),
+        .pause, .rememberArena, .wait(seconds: 0.6), .expectArenaHeld,
+        .mark("Pause freezes arrivals and actors"), .pause, .wait(seconds: 2.3),
+        .expectArenaWave(1), .navigate([3, -7.5]), .awaitFallBacks(1, seconds: 40),
+        .mark("falling back"), .wait(seconds: 0.3), .expectHits(0), .expectSquad("following"),
         .expectOrder(.laura, "following"), .expectNear(.miki, [0, 6], within: 0.3),
-        .mark("fell back"), .formation, .expectFormation(.spread),
-        .walk([6.5, 2.5]), .walk([6.5, -1.5]),
-        .awaitDisrupt(seconds: 6), .signature, .expectDisrupts(1), .mark("Miki disrupts"),
-        .wait(seconds: 1.5), .mark("the companions fire"), .fireUntilDefeated(2, seconds: 20),
-        .mark("changing the approach"), .awaitFallBacks(2, seconds: 15), .wait(seconds: 1.2),
-        .expectHits(0), .expectFormation(.spread), .mark("damage survives the fallback"),
-        .walk([-6, 2]), .walk([-6, -4.5]),
-        .fireUntilDefeated(3, seconds: 20), .awaitCombatClear(seconds: 4),
-        .expectFired(.laura), .expectFired(.tom), .expectFallBacks(2),
-        .mark("the yard is clear"), .formation, .expectFormation(.column), .wait(seconds: 1),
+        .expectArenaWave(1), .mark("the same wave retries safely"),
+        .battleUntilWave(2, seconds: 150), .expectArenaWave(2), .mark("first pack complete"),
+        .battleUntilWave(3, seconds: 180), .expectArenaWave(3), .expectAmmo(60),
+        .expectFired(.laura), .expectFired(.tom), .mark("second pack complete and resupplied"),
+        .awaitArenaWarnings(seconds: 7), .mark("the third wave continues"),
       ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
         .expectLevel("salvage-yard"), .mark("on to the salvage yard"),
       ] + otherLevel + [.expectLevel("relay-run")] + otherLevel + [
@@ -984,11 +1093,12 @@
         .fireAimed([0, -1], seconds: 0.7), .expectMarks(atLeast: 1),
         .expectCover("wall", firing: nil, exposed: false), .mark("the wall stops the shot"),
         .walk([4.2, -0.25]), .fireAimed([0, -1], seconds: 0.85),
-        .expectCover("wall", firing: true, exposed: true), .mark("peeking past the tall edge"),
-        .wait(seconds: 0.45), .expectCover("wall", firing: false, exposed: true),
+        .expectCover("wall", firing: true, exposed: false), .expectCoverPeek(atLeast: 0.5),
+        .mark("practice peek clears the tall wall"),
+        .wait(seconds: 0.45), .expectCover("wall", firing: false, exposed: false),
       ] + restartRun + [
         .order(.hold), .walk([9, 2]), .walk([8.55, -3.55]), .wait(seconds: 0.5),
-        .expectCover("block-east", firing: false, exposed: true),
+        .expectCover("block-east", firing: false, exposed: false),
         .mark("sheltered behind the low block"), .fireAimed([0, -1], seconds: 0.85),
         .expectCover("block-east", firing: true, exposed: true),
         .mark("firing over low cover"), .pause, .wait(seconds: 0.6),
@@ -1038,13 +1148,36 @@
       [.mark("the bridge")] + otherLevel + [
         .expectLevel("combat-yard"), .order(.hold),
         .expectOrder(.tom, "holding"), .expectOrder(.laura, "holding"),
-        .walk([6.5, 2.5]), .walk([6.5, -3]), .awaitGrenade(seconds: 8),
+        .walk([6.5, 2.5]), .walk([6.5, -3]), .formation,
+        .battleUntilWave(2, seconds: 150), .mark("the grenadier pack is next"),
+        .navigate([0, -17]), .awaitGrenade(seconds: 12),
         .mark("grenade warning"), .wait(seconds: 0.3), .pause, .rememberGrenades,
         .wait(seconds: 0.6), .expectGrenadesHeld, .mark("Pause holds the grenade fuse"),
-        .pause, .walk([4, 2]), .expectOutsideGrenadeMarkers, .mark("clear of the grenade marker"),
+        .pause, .navigate([4, -17]), .expectOutsideGrenadeMarkers,
+        .mark("clear of the grenade marker"),
         .awaitExplosions(1, seconds: 5), .expectMovedEnemies(atLeast: 1),
         .mark("the blast and a new enemy angle"), .wait(seconds: 0.3),
       ] + restartRun + [.expectLevel("combat-yard")]
+
+    /// Both height changes use the broad authored ramps. Heights come from the real bodies;
+    /// the pilot does not teleport onto a terrace or bypass the ordinary collision resolver.
+    private static let arenaElevation: [Step] =
+      [.mark("the bridge")] + otherLevel + [
+        .expectLevel("combat-yard"),
+        .navigate([-18, -4], defending: true), .expectHeight(0.45...0.75),
+        .mark("climbing the west ramp"),
+        .navigate([-18, -20], defending: true), .expectHeight(2.35...2.45),
+        .mark("on the raised deck"),
+        .navigate([-18, -42], defending: true), .expectHeight(0.2...0.4),
+        .mark("descending the north ramp"),
+        .navigate([18, -44], defending: true), .expectHeight(-0.05...0.05),
+        .navigate([18, -20], defending: true), .expectHeight(-1.85 ... -1.75),
+        .mark("inside the lower trench"),
+        .navigate([18, -3], defending: true), .expectHeight(-0.4 ... -0.05),
+        .mark("climbing out of the trench"),
+        .navigate([18, 2], defending: true), .expectHeight(-0.05...0.05),
+        .mark("back on the main floor"),
+      ] + restartRun + [.expectHeight(-0.05...0.05)]
 
     /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
     /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
@@ -1088,6 +1221,7 @@
         ("salvage-yard", salvageYard),
         ("squad-weapons", squadWeapons),
         ("tactical-enemies", tacticalEnemies),
+        ("arena-elevation", arenaElevation),
       ] + RelayRunPlaytest.scenarios
 
     static func steps(for scenario: String) -> [Step]? {

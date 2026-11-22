@@ -98,12 +98,16 @@ struct CoverPlanner {
 
   private let obstacles: [PartyMotion.Box]
   private let coverRules: LeaderCover?
+  private let ballistics: Ballistics?
   private var covers: [PartyMember: Cover] = [:]
 
   /// A planner whose sight lines meet the given blockers.
-  init(obstacles: [PartyMotion.Box], coverRules: LeaderCover? = nil) {
+  init(
+    obstacles: [PartyMotion.Box], coverRules: LeaderCover? = nil, ballistics: Ballistics? = nil
+  ) {
     self.obstacles = obstacles
     self.coverRules = coverRules
+    self.ballistics = ballistics
   }
 
   /// How far from their place a companion looks for cover: about 1.5 m in Close and Column,
@@ -150,7 +154,7 @@ struct CoverPlanner {
           member: member, place: place, position: input.positions[member] ?? place,
           threats: input.threats, weaponRange: weaponRange,
           taken: taken(by: member, input: input), teammates: teammates, obstacles: obstacles,
-          grid: grid, coverRules: coverRules
+          grid: grid, coverRules: coverRules, ballistics: ballistics
         ).choose(within: Self.reach(in: input.formation), keeping: flanked ? nil : kept)
         if let spot = cover.spot {
           cover.protected = self.protection(at: spot, from: input.threats)
@@ -170,7 +174,8 @@ struct CoverPlanner {
       let aimedAt = input.threats.contains { $0.aimingAt == member }
       if !aimedAt, let firing = cover.firing,
         Self.canShoot(
-          from: firing, threats: input.threats, weaponRange: weaponRange, obstacles: obstacles)
+          from: firing, threats: input.threats, weaponRange: weaponRange, obstacles: obstacles,
+          ballistics: ballistics)
       {
         result[member] = firing
       } else {
@@ -189,9 +194,14 @@ struct CoverPlanner {
     guard let coverRules else { return [] }
     let shelter = Self.shelter(at: spot, threats: threats, rules: coverRules)
     let blockers = coverRules.incomingBlockers(in: shelter, exposed: false)
-    return threats.map {
-      simd_distance($0.position, spot) > $0.range
-        || !LineOfSight.isClear(from: $0.position, to: spot, obstacles: blockers)
+    return threats.map { threat in
+      let clear =
+        ballistics.map {
+          $0.isClear(
+            from: $0.point(threat.position),
+            to: $0.point(spot, above: shelter?.isLow == true ? 0.85 : 1.25))
+        } ?? LineOfSight.isClear(from: threat.position, to: spot, obstacles: blockers)
+      return simd_distance(threat.position, spot) > threat.range || !clear
     }
   }
 
@@ -221,22 +231,28 @@ struct CoverPlanner {
 
   /// Whether a companion at `point` can shoot at a target within their weapon's reach.
   private static func canShoot(
-    from point: SIMD2<Float>, threats: [Threat], weaponRange: Float, obstacles: [PartyMotion.Box]
+    from point: SIMD2<Float>, threats: [Threat], weaponRange: Float, obstacles: [PartyMotion.Box],
+    ballistics: Ballistics? = nil
   ) -> Bool {
-    target(from: point, threats: threats, weaponRange: weaponRange, obstacles: obstacles) != nil
+    target(
+      from: point, threats: threats, weaponRange: weaponRange, obstacles: obstacles,
+      ballistics: ballistics) != nil
   }
 
   /// Where the shooter stands that a companion at `point` would fire at, chosen as the stage
   /// chooses a companion's target: the nearest that is a target, within their weapon's reach
   /// and in clear sight; nil when there is none.
   static func target(
-    from point: SIMD2<Float>, threats: [Threat], weaponRange: Float, obstacles: [PartyMotion.Box]
+    from point: SIMD2<Float>, threats: [Threat], weaponRange: Float, obstacles: [PartyMotion.Box],
+    ballistics: Ballistics? = nil
   ) -> SIMD2<Float>? {
     var nearest: (distance: Float, position: SIMD2<Float>)?
     for threat in threats where threat.isTarget {
       let distance = simd_distance(point, threat.position)
       guard distance <= weaponRange, nearest.map({ distance < $0.distance }) ?? true,
-        LineOfSight.isClear(from: threat.position, to: point, obstacles: obstacles)
+        ballistics.map({
+          $0.isClear(from: $0.point(point), to: $0.point(threat.position))
+        }) ?? LineOfSight.isClear(from: threat.position, to: point, obstacles: obstacles)
       else { continue }
       nearest = (distance, threat.position)
     }
@@ -299,6 +315,7 @@ struct CoverPlanner {
     let teammates: [SIMD2<Float>]
     let obstacles: [PartyMotion.Box]
     let coverRules: LeaderCover?
+    let ballistics: Ballistics?
     let grid: NavigationGrid
     /// What the shooters see.
     let ground: OpenGround
@@ -310,7 +327,8 @@ struct CoverPlanner {
     init(
       member: PartyMember, place: SIMD2<Float>, position: SIMD2<Float>, threats: [Threat],
       weaponRange: Float, taken: [SIMD2<Float>], teammates: [SIMD2<Float>],
-      obstacles: [PartyMotion.Box], grid: NavigationGrid, coverRules: LeaderCover?
+      obstacles: [PartyMotion.Box], grid: NavigationGrid, coverRules: LeaderCover?,
+      ballistics: Ballistics?
     ) {
       self.member = member
       self.place = place
@@ -321,8 +339,9 @@ struct CoverPlanner {
       self.teammates = teammates
       self.obstacles = obstacles
       self.coverRules = coverRules
+      self.ballistics = ballistics
       self.grid = grid
-      ground = OpenGround(threats: threats, obstacles: obstacles)
+      ground = OpenGround(threats: threats, obstacles: obstacles, ballistics: ballistics)
       danger =
         threats.firstIndex { $0.aimingAt == member }
         ?? threats.indices.min {
@@ -401,7 +420,8 @@ struct CoverPlanner {
         member == .miki
         ? firing.flatMap {
           CoverPlanner.target(
-            from: $0, threats: threats, weaponRange: weaponRange, obstacles: firingBlockers)
+            from: $0, threats: threats, weaponRange: weaponRange, obstacles: firingBlockers,
+            ballistics: ballistics)
         } : nil
       return (firing == nil ? CoverPlanner.noFiringPosition : 0)
         + CoverPlanner.personality(
@@ -448,7 +468,9 @@ struct CoverPlanner {
         let direction = threat.position - spot
         guard let firing = rules.firingPoint(from: spot, in: shelter, facing: direction),
           simd_distance(firing, threat.position) <= weaponRange,
-          LineOfSight.isClear(from: firing, to: threat.position, obstacles: blockers)
+          ballistics.map({
+            $0.isClear(from: $0.point(firing), to: $0.point(threat.position))
+          }) ?? LineOfSight.isClear(from: firing, to: threat.position, obstacles: blockers)
         else { continue }
         return firing
       }
@@ -469,7 +491,8 @@ struct CoverPlanner {
 
     private func canShoot(from point: SIMD2<Float>) -> Bool {
       CoverPlanner.canShoot(
-        from: point, threats: threats, weaponRange: weaponRange, obstacles: obstacles)
+        from: point, threats: threats, weaponRange: weaponRange, obstacles: obstacles,
+        ballistics: ballistics)
     }
 
     /// Whether a body at `spot` is beyond the shooter's reach, or hidden from it: the sight
@@ -478,8 +501,14 @@ struct CoverPlanner {
       if let coverRules {
         let shelter = CoverPlanner.shelter(at: spot, threats: threats, rules: coverRules)
         let blockers = coverRules.incomingBlockers(in: shelter, exposed: false)
+        let clear =
+          ballistics.map {
+            $0.isClear(
+              from: $0.point(threat.position),
+              to: $0.point(spot, above: shelter?.isLow == true ? 0.85 : 1.25))
+          } ?? LineOfSight.isClear(from: threat.position, to: spot, obstacles: blockers)
         return simd_distance(spot, threat.position) > threat.range
-          || !LineOfSight.isClear(from: threat.position, to: spot, obstacles: blockers)
+          || !clear
       }
       let offset = spot - threat.position
       let distance = simd_length(offset)
@@ -496,7 +525,8 @@ struct CoverPlanner {
     }
 
     private func sees(_ from: SIMD2<Float>, _ to: SIMD2<Float>) -> Bool {
-      LineOfSight.isClear(from: from, to: to, obstacles: obstacles)
+      ballistics.map { $0.isClear(from: $0.point(from), to: $0.point(to)) }
+        ?? LineOfSight.isClear(from: from, to: to, obstacles: obstacles)
     }
   }
 }

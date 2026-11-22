@@ -169,8 +169,10 @@ struct ShootingTests {
     // Before the yard's fight, practice is free.
     run(world, upTo: 1.2, fire: true, aim: up)
     #expect(world.session.ammo == ammo && world.shotMarks > 0)
-    // Inside it, every shot spends a round, even one that hits nobody.
-    walk(world, to: [0, 0])
+    // Go around the entrance wall and cross into the expanded yard. Inside its encounter,
+    // every shot spends a round, even one that hits nobody.
+    walk(world, to: [6, 3])
+    walk(world, to: [6, -2])
     #expect(world.session.inEncounter)
     run(world, upTo: 1, fire: true, aim: up)
     #expect(world.session.ammo < ammo)
@@ -187,9 +189,10 @@ struct ShootingTests {
     #expect(abs(world.cameraLens - wide * GameWorld.fightLens) < 0.05)
     run(world, upTo: 1.5)
     #expect(abs(world.cameraLens - wide) < 0.05)
-    // In the yard's fight it stays narrow without the stick, and the touch order's ground
-    // follows it.
-    walk(world, to: [0, 0])
+    // Beyond the entrance wall the yard's fight keeps the lens narrow without the stick,
+    // and the touch order's ground follows it.
+    walk(world, to: [6, 3])
+    walk(world, to: [6, -2])
     run(world, upTo: 1.5)
     #expect(world.session.inEncounter)
     #expect(abs(world.cameraLens - wide * GameWorld.fightLens) < 0.05)

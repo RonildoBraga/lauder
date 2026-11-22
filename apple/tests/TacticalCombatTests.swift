@@ -226,7 +226,14 @@ struct TacticalCombatTests {
     #expect(simd_distance(shot.path.start, enemy.position + enemy.offset) < 0.001)
     #expect(simd_distance(threat.position, shot.path.start) < 0.001)
     #expect(shield.exposed && shot.path.strike == .body(PartyMember.miki.rawValue))
-    #expect(shot.path.end == shield.position + shield.offset && session.hitsTaken == 1)
+    #expect(
+      abs(simd_distance(shot.path.end, shield.position + shield.offset) - Aim.bodyRadius) < 0.001)
+    let trace = try #require(shot.trace)
+    let crouched = shield.isLow && !shield.firing
+    let centreHeight = FightSimulation.aimHeight * (crouched ? 0.68 : 1)
+    #expect(trace.path == shot.path)
+    #expect(abs(trace.end.y - centreHeight) <= (crouched ? 0.3 : 0.6) + 0.001)
+    #expect(session.hitsTaken == 1)
   }
 
   @Test

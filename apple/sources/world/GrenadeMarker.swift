@@ -52,7 +52,7 @@ final class GrenadeMarker {
       entity.isEnabled = false
       return
     }
-    entity.position = [grenade.position.x, 0, grenade.position.y]
+    entity.position = [grenade.position.x, grenade.landingHeight, grenade.position.y]
     entity.isEnabled = true
     let elapsed = Grenade.fuse - grenade.remaining
     let flashesRed = grenade.remaining <= 1 && Int(elapsed * 8) % 2 == 0

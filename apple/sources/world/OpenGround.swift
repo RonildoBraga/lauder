@@ -16,14 +16,18 @@ struct OpenGround {
 
   let threats: [CoverPlanner.Threat]
   let obstacles: [PartyMotion.Box]
+  /// Nonflat venues share the shot geometry, so a cliff is not an infinitely tall sight wall.
+  var ballistics: Ballistics? = nil
   /// What earlier routes found the shooters see, for the cells they reached.
   var memo: SightMemo?
 
   /// Whether a standing shooter can see and reach `point`.
   func isSeen(_ point: SIMD2<Float>) -> Bool {
-    threats.contains {
-      simd_distance($0.position, point) <= $0.range
-        && LineOfSight.isClear(from: $0.position, to: point, obstacles: obstacles)
+    threats.contains { threat in
+      simd_distance(threat.position, point) <= threat.range
+        && (ballistics.map {
+          $0.isClear(from: $0.point(threat.position), to: $0.point(point))
+        } ?? LineOfSight.isClear(from: threat.position, to: point, obstacles: obstacles))
     }
   }
 

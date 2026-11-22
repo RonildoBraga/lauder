@@ -1,6 +1,6 @@
 import simd
 
-/// The game camera's mapping between the screen and the ground, the plane y = 0, so a touch
+/// The game camera's mapping between the screen and the ground, flat or terraced, so a touch
 /// order can mark the ground, or a block, under the finger (ADR 0003, phase S3). The camera
 /// looks at `target` from `eye` with world up as its up, and a vertical field of view, as
 /// GameWorld places it.
@@ -11,6 +11,8 @@ struct CameraProjection {
   let fieldOfView: Float
   /// The screen's width over its height.
   let aspect: Float
+  var terrain: Terrain? = nil
+  var bounds: PartyMotion.Box? = nil
 
   private var axes: (forward: SIMD3<Float>, right: SIMD3<Float>, up: SIMD3<Float>) {
     let forward = simd_normalize(target - eye)
@@ -71,14 +73,19 @@ struct CameraProjection {
   /// How far along `direction` from the camera a ray comes down to the ground; nil when it
   /// does not.
   private func ground(along direction: SIMD3<Float>) -> Float? {
-    direction.y < -0.0001 && eye.y > 0 ? -eye.y / direction.y : nil
+    if let terrain, let bounds {
+      let reach: Float = 10_000
+      return terrain.firstIntersection(from: eye, to: eye + direction * reach, within: bounds)
+        .map { $0 * reach }
+    }
+    return direction.y < -0.0001 && eye.y > 0 ? -eye.y / direction.y : nil
   }
 
   /// Where a point on the ground shows on the screen, from 0 to 1 across and down; nil when it
   /// is behind the camera.
   func screen(ofGround point: SIMD2<Float>) -> SIMD2<Float>? {
     let (forward, right, up) = axes
-    let offset = SIMD3(point.x, 0, point.y) - eye
+    let offset = SIMD3(point.x, terrain?.height(at: point) ?? 0, point.y) - eye
     let depth = simd_dot(offset, forward)
     guard depth > 0.0001, aspect > 0 else { return nil }
     let across = simd_dot(offset, right) / depth / (halfHeight * aspect)

@@ -11,6 +11,7 @@ final class FightSimulation {
     let path: ShotPath
     let side: Side
     var muzzle: SIMD2<Float>? = nil
+    var trace: Ballistics.Trace? = nil
   }
 
   /// The pose last presented at a simulation instant. Capturing it at the original update
@@ -119,6 +120,21 @@ final class FightSimulation {
   private var nextGrenadeID = 0
   private var tactics: EnemyTactics
   private var enemyStances: [String: CoverStance] = [:]
+  private var enemyHandling: [String: HostileHandling] = [:]
+  private var enemyRandom: [String: SeededRandom] = [:]
+  private(set) var hostileWeaponPoses: [String: WeaponPose] = [:]
+  private var ballistics: Ballistics
+  private var arena: ArenaWaves?
+  var arenaWave: Int? { arena?.wave }
+  var arenaWarnings: [String: Float] { arena?.warnings ?? [:] }
+  var arenaStatus: String? {
+    guard let arena else { return nil }
+    switch arena.phase {
+    case .preparing: return "Wave \(arena.wave) · reinforcements incoming"
+    case .fighting: return "Wave \(arena.wave) · \(arena.activeIDs.count) enemies"
+    case .recovering: return "Wave \(arena.wave) · recovering and resupplying"
+    }
+  }
 
   /// Whether the party stands still while a scripted scene plays, whoever leads.
   var holdsParty: Bool { encounter?.holdsParty == true }
@@ -144,7 +160,6 @@ final class FightSimulation {
   private var weapon: Weapon { leaderWeapon }
   private var handling: [PartyMember: WeaponHandling] = [:]
   private let specs: [String: Level.Hostile]
-  private let obstacles: [PartyMotion.Box]
   /// What stops the leader's shots: the level's blocks that rise above shoulder height, and a
   /// salvage task's gate as it stands (ADR 0007).
   private let shotBlockers: [PartyMotion.Box]
@@ -164,8 +179,6 @@ final class FightSimulation {
   private var director = StoryDirector()
   /// The target marker and the hostiles' warnings as last shown by the rules.
   private(set) var target: SIMD2<Float>?
-  private(set) var hostileAimPoints: [String: SIMD2<Float>] = [:]
-  private(set) var hostileAimOrigins: [String: SIMD2<Float>] = [:]
   private(set) var hostilePoses: [String: FigurePose] = [:]
   /// Visual shots from this step only, in firing order; the stage reads them immediately.
   private(set) var shots: [Shot] = []
@@ -181,26 +194,35 @@ final class FightSimulation {
   private(set) var falls: [String: Fall] = [:]
 
   init(level: Level, grid: NavigationGrid? = nil) {
+    ballistics = Ballistics(level: level)
+    arena = level.arena.map { ArenaWaves(config: $0) }
     tactics = EnemyTactics(level: level, grid: grid)
     startingLeader = level.party[0]
     weaponLeader = level.party[0]
-    obstacles = level.obstacles
     shotBlockers = Aim.blockers(level.boxes, above: Self.aimHeight)
     rules = level.combat
     coverRules =
       level.combat.leaderCover
-      ? LeaderCover(boxes: level.boxes, ground: level.ground.footprint) : nil
+      ? LeaderCover(boxes: level.boxes, ground: level.ground.footprint, terrain: level.terrain)
+      : nil
     lookout = -level.heading
     specs = Dictionary(
       uniqueKeysWithValues: level.encounters.flatMap(\.hostiles).map { ($0.id, $0) })
     reset()
   }
 
+  private func freshHostile(_ original: Level.Hostile) -> HostileState {
+    var spec = original
+    if arena != nil { spec.inView = false }
+    return HostileState(spec: spec)
+  }
+
   /// Back to before any fight: hostiles unseen where they wait, or in view where they stand,
   /// nothing aimed or in flight, the weapon holstered. Restart and an encounter's retry both
   /// use it.
   func reset() {
-    hostiles = specs.mapValues { HostileState(spec: $0) }
+    hostiles = specs.mapValues { freshHostile($0) }
+    arena?.reset()
     companionShots = [:]
     grenadesThrown = 0
     grenadesExploded = 0
@@ -222,7 +244,14 @@ final class FightSimulation {
   /// every hostile still standing waits where it stands, keeping the damage dealt; those down
   /// stay down. Nothing is aimed or in flight, and the weapon is holstered.
   func fallBack() {
-    for id in hostiles.keys { hostiles[id]?.standDown() }
+    if arena != nil {
+      arena?.retry()
+      hostiles = specs.mapValues { freshHostile($0) }
+      falls = [:]
+      hostileJolts = [:]
+    } else {
+      for id in hostiles.keys { hostiles[id]?.standDown() }
+    }
     stopFighting()
   }
 
@@ -242,6 +271,15 @@ final class FightSimulation {
   private func stopFighting() {
     clearCover()
     tactics.reset()
+    enemyHandling = Dictionary(
+      uniqueKeysWithValues: specs.values.map {
+        ($0.id, HostileHandling(facing: lookout, burst: $0.burst, burstGap: $0.burstGap))
+      })
+    enemyRandom = Dictionary(
+      uniqueKeysWithValues: specs.keys.sorted().enumerated().map {
+        ($0.element, SeededRandom(seed: Self.seed + 100 + UInt64($0.offset)))
+      })
+    hostileWeaponPoses = enemyHandling.mapValues(\.pose)
     enemyStances = [:]
     enemyCoverStates = [:]
     grenades = []
@@ -261,8 +299,6 @@ final class FightSimulation {
     scatters = [:]
     lastMotion = [:]
     endFight()
-    hostileAimPoints = [:]
-    hostileAimOrigins = [:]
     target = nil
     shots.removeAll(keepingCapacity: true)
     for (id, state) in hostiles { faceHostile(id, state) }
@@ -291,6 +327,50 @@ final class FightSimulation {
     director.start(encounter.cues)
   }
 
+  /// Fixed slots are recycled only after a clear wave and any outstanding grenade. The
+  /// session forgets damage for those same IDs; no per-wave entity or history is retained.
+  private func advanceArena(dt: Float, party: [PartyMember: SIMD2<Float>], session: GameSession) {
+    guard var arena else { return }
+    let update = arena.step(
+      dt: dt, defeated: session.defeated, party: Array(party.values),
+      canFinishWave: grenades.isEmpty,
+      canSpawn: { slot in
+        !self.hostiles.values.contains {
+          $0.spec.id != slot.id && $0.isVisible && !$0.isDown
+            && simd_distance($0.position, slot.point) < EnemyTactics.spacing
+        }
+      })
+    self.arena = arena
+    if update.resupply {
+      session.prepareArena(hostiles: Set(specs.keys), resupply: true)
+      hostiles = specs.mapValues { freshHostile($0) }
+      falls = [:]
+      hostileJolts = [:]
+      tactics.reset()
+      enemyStances = [:]
+      enemyCoverStates = [:]
+      victims = [:]
+      for id in enemyHandling.keys { enemyHandling[id]?.cancel() }
+      for member in handling.keys {
+        let drawn = handling[member]?.isDrawn == true
+        handling[member] = WeaponHandling(weapon: .forMember(member))
+        if drawn { handling[member]?.draw() }
+      }
+    }
+    for id in update.spawn {
+      guard let spec = specs[id] else { continue }
+      session.prepareArena(hostiles: [id])
+      hostiles[id] = freshHostile(spec)
+      hostiles[id]?.reveal()
+      hostiles[id]?.engage()
+      enemyHandling[id] = HostileHandling(
+        facing: lookout, burst: spec.burst, burstGap: spec.burstGap)
+      falls[id] = nil
+      hostileJolts[id] = nil
+      capturePose(id)
+    }
+  }
+
   /// Detection shares incoming-shot cover geometry, including a freshly evaluated shelter
   /// and any current firing exposure. This adds no separate stealth state.
   func notices(_ encounter: Level.Encounter, party: [PartyMember: SIMD2<Float>]) -> Bool {
@@ -300,15 +380,17 @@ final class FightSimulation {
       return encounter.hostiles.contains { spec in
         guard let state = hostiles[spec.id], state.isVisible, !state.isDown else { return false }
         var destination = point
-        var blockers = obstacles
+        var low = false
         if let coverRules {
           var stance = stances[member] ?? CoverStance()
           stance.advance(at: point, facing: state.position - point, dt: 0, using: coverRules)
           destination = stance.incomingPoint(using: coverRules)
-          blockers = stance.incomingBlockers(using: coverRules)
+          low = stance.shelter?.isLow == true && !stance.firing
         }
-        return simd_distance(state.position, destination) <= spec.range
-          && LineOfSight.isClear(from: state.position, to: destination, obstacles: blockers)
+        let target = ballistics.point(
+          destination, above: low ? Self.aimHeight * 0.68 : Self.aimHeight)
+        return simd_distance(ballistics.point(state.position), target) <= spec.range
+          && ballistics.isClear(from: ballistics.point(state.position), to: target)
       }
     }
   }
@@ -365,6 +447,7 @@ final class FightSimulation {
       return outcome
     }
     let party = figures.filter { session.party.contains($0.key) }
+    advanceArena(dt: dt, party: party, session: session)
     if let area = encounter.guardArea, !party.isEmpty,
       party.values.allSatisfy({ !area.contains($0) })
     {
@@ -431,6 +514,7 @@ final class FightSimulation {
       if encounter.guardArea != nil {
         if let victim = victims[spec.id], eligible[victim] == nil {
           state.disrupt()
+          enemyHandling[spec.id]?.cancel()
           victims[spec.id] = nil
         }
         if victims[spec.id] == nil {
@@ -442,44 +526,68 @@ final class FightSimulation {
       // The leader, or whoever a hostile that aims at anyone began its wind-up at.
       let victim = targetsParty ? victims[spec.id] ?? session.leader : session.leader
       let aimedAt = incomingPoint(for: victim, at: party[victim] ?? leader)
-      let incoming = incomingBlockers(for: victim)
       let origin = hostileFiringPoint(spec.id, toward: aimedAt)
-      let inRange = simd_distance(origin, aimedAt) <= spec.range
+      let inRange =
+        simd_distance(ballistics.point(origin), partyTarget(victim, at: aimedAt).centre)
+        <= spec.range
       let canHit =
         inRange
         && (encounter.guardArea == nil || eligible[victim] != nil)
-        && LineOfSight.isClear(
-          from: origin, to: aimedAt,
-          obstacles: spec.attack == .throwGrenade ? shotBlockers : incoming)
+        && ballistics.isClear(
+          from: ballistics.point(origin), to: partyTarget(victim, at: aimedAt).centre,
+          ignoringLowCover: spec.attack == .throwGrenade)
+      var rifle = enemyHandling[spec.id] ?? HostileHandling(facing: lookout)
+      let aimingNow: Bool
+      if case .aiming = state.phase { aimingNow = true } else { aimingNow = false }
+      rifle.advance(
+        dt: dt, toward: aimedAt - origin, aiming: state.isVisible && aimingNow,
+        moving: tactical.moving.contains(spec.id))
+      if !state.isVisible || state.isDown { rifle.cancel() }
       if let shot = state.step(
         dt: dt, canHit: canHit, toward: leader, canAttack: !tactical.moving.contains(spec.id))
       {
         if shot == .grenade, !grenades.contains(where: { $0.owner == spec.id }) {
           nextGrenadeID += 1
-          grenades.append(Grenade(id: nextGrenadeID, owner: spec.id, from: origin, at: aimedAt))
-          grenadesThrown += 1
-          outcome.line = "Grenade — leave the marked ground."
-        } else if spec.attack != .throwGrenade {
+          let grenade = Grenade(
+            id: nextGrenadeID, owner: spec.id, from: origin, at: aimedAt,
+            startHeight: ballistics.terrain.height(at: origin),
+            landingHeight: ballistics.terrain.height(at: aimedAt))
+          if grenade.canReach(isClear: { ballistics.isClear(from: $0, to: $1) }) {
+            grenades.append(grenade)
+            grenadesThrown += 1
+            outcome.line = "Grenade — leave the marked ground."
+          }
+        } else if spec.attack == .shoot {
+          rifle.begin(deliberateMiss: shot == .miss)
+          if shot == .miss, let line = spec.missLine { outcome.line = line }
+        }
+      }
+      if spec.attack == .shoot, state.isVisible, !state.isDown {
+        var generator = enemyRandom[spec.id] ?? SeededRandom(seed: Self.seed)
+        if let discharge = rifle.takeShot(using: &generator) {
           if let coverRules {
             enemyStances[spec.id]?.fired(facing: aimedAt - state.position, using: coverRules)
             showEnemyCover(spec.id, party: party)
           }
-          fire(
-            spec.id, from: origin, at: aimedAt, victim: victim, range: spec.range,
-            shot: shot, isLeader: victim == session.leader, blockers: incoming)
-          if shot == .miss, let line = spec.missLine { outcome.line = line }
-          if shot == .hit, session.takeHit(victim) { outcome.retry = true }
+          fireHostile(
+            spec.id, from: origin, at: aimedAt, discharge: discharge, range: spec.range,
+            party: eligible, session: session, outcome: &outcome)
         }
+        enemyRandom[spec.id] = generator
       }
+      enemyHandling[spec.id] = rifle
+      var shownWeapon = rifle.pose
+      shownWeapon.pitch = elevationPitch(from: origin, to: partyTarget(victim, at: aimedAt).centre)
+      hostileWeaponPoses[spec.id] = shownWeapon
       if case .aiming = state.phase {
         fightUnderWay = true
         if targetsParty, victims[spec.id] == nil {
           victims[spec.id] = nearestInSight(of: state, among: eligible) ?? session.leader
         }
-      } else {
+      } else if !rifle.isBursting {
         victims[spec.id] = nil
       }
-      // Whom it aims at now, for its aim line, its facing and the HUD.
+      // Body orientation and a raised rifle communicate intent without an exact target line.
       let aim = targetsParty ? victims[spec.id] ?? session.leader : session.leader
       let aimPosition = incomingPoint(for: aim, at: party[aim] ?? leader)
       switch state.phase {
@@ -493,12 +601,12 @@ final class FightSimulation {
       default: break
       }
       hostiles[spec.id] = state
-      let facing = aimPosition - state.position
-      if simd_length(facing) > 0.001 { facings[spec.id] = simd_normalize(facing) }
-      faceHostile(spec.id, state, facing: aimPosition)
-      aimHostile(spec.id, state, at: aimPosition)
+      let direction = spec.attack == .shoot ? rifle.facing : aimPosition - state.position
+      if simd_length(direction) > 0.001 { facings[spec.id] = simd_normalize(direction) }
+      faceHostile(spec.id, state, facing: state.position + direction)
     }
-    threat = threatNow
+    threat = [arenaStatus, threatNow].compactMap { $0 }.joined(separator: " · ")
+    if threat?.isEmpty == true { threat = nil }
     canDisrupt = mayDisrupt && disruptable(from: signaturePoint, in: encounter) != nil
     for member in session.party { showCover(for: member) }
     for id in enemyStances.keys { showEnemyCover(id, party: party) }
@@ -518,14 +626,13 @@ final class FightSimulation {
       }
     }
     // A fight ends once everyone in it is down; a scene also plays its timeline to the end.
-    if !director.isPlaying, grenades.isEmpty,
+    if arena == nil, !director.isPlaying, grenades.isEmpty,
       encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) })
     {
       session.endEncounter()
       self.encounter = nil
       director.stop()
       threat = nil
-      hostileAimPoints = [:]
       if let line = encounter.clearedLine { outcome.line = line }
       endFight()
     }
@@ -567,14 +674,15 @@ final class FightSimulation {
     }
     handling[weaponLeader]?.fired()
     exposeCover(at: leader, facing: facing)
-    let path = scattered(
-      aimed, by: weaponLeader, weapon: weapon, motion: motion, blockers: blockers)
+    let trace = scattered(
+      aimed, by: weaponLeader, weapon: weapon, motion: motion)
+    let path = trace.path
     weaponPoses[weaponLeader]?.fired()
     jolts[session.leader, default: BodyJolt()].push(towards: -facing, by: BodyJolt.recoil)
     shots.append(
       Shot(
         path: path, side: .party,
-        muzzle: WeaponPose.muzzle(from: origin, facing: facing, kind: weapon.kind)))
+        muzzle: WeaponPose.muzzle(from: origin, facing: facing, kind: weapon.kind), trace: trace))
     report(path, firedBy: weapon.kind, byLeader: true)
     if inFight, case .body(let id) = path.strike {
       hit(id, from: origin, damage: weapon.damage, session: session, outcome: &outcome)
@@ -587,9 +695,15 @@ final class FightSimulation {
   private func leaderShot(from leader: SIMD2<Float>, aiming: Bool, facing: SIMD2<Float>)
     -> ShotPath?
   {
-    Aim.shot(
+    let candidates = standingHostiles.filter {
+      simd_distance(ballistics.point(leader), hostileTarget($0.id).centre) <= weapon.range
+        && ballistics.isClear(from: ballistics.point(leader), to: hostileTarget($0.id).centre)
+    }.map { candidate in
+      Aim.Hostile(id: candidate.id, position: candidate.position, isTarget: candidate.isTarget)
+    }
+    return Aim.shot(
       from: leader, aim: aiming ? facing : nil, facing: facing, range: weapon.range,
-      hostiles: standingHostiles, blockers: blockers)
+      hostiles: candidates, blockers: ballistics.terrain.patches.isEmpty ? blockers : [])
   }
 
   /// The hostiles standing in view, as a shot sees them.
@@ -597,7 +711,7 @@ final class FightSimulation {
     hostiles.values.filter { $0.isVisible && !$0.isDown }.map {
       Aim.Hostile(
         id: $0.spec.id, position: hostilePoint($0.spec.id),
-        isTarget: $0.isTargetable, blockers: hostileBlockers($0.spec.id))
+        isTarget: $0.isTargetable)
     }
   }
 
@@ -664,10 +778,10 @@ final class FightSimulation {
       return
     }
     let origin = stance.incomingPoint(using: coverRules)
-    let incoming = stance.incomingBlockers(using: coverRules)
+    let destination = partyTarget(member, at: origin).centre
     let exposed = threats.contains {
-      simd_distance($0.position, origin) <= $0.range
-        && LineOfSight.isClear(from: $0.position, to: origin, obstacles: incoming)
+      simd_distance(ballistics.point($0.position), destination) <= $0.range
+        && ballistics.isClear(from: ballistics.point($0.position), to: destination)
     }
     coverStates[member] = CoverState(
       boxID: shelter.boxID, isLow: shelter.isLow, position: stance.position, normal: shelter.normal,
@@ -677,12 +791,6 @@ final class FightSimulation {
   private func incomingPoint(for member: PartyMember, at point: SIMD2<Float>) -> SIMD2<Float> {
     guard let coverRules else { return point }
     return stances[member]?.incomingPoint(using: coverRules) ?? point
-  }
-
-  private func incomingBlockers(for member: PartyMember) -> [PartyMotion.Box] {
-    guard let coverRules else { return obstacles }
-    return stances[member]?.incomingBlockers(using: coverRules)
-      ?? coverRules.incomingBlockers(in: nil, exposed: false)
   }
 
   private func prepareCompanions(
@@ -718,11 +826,12 @@ final class FightSimulation {
       if let target = companionTarget(for: member, at: point, preferred: preferred) {
         companionTargetIDs[member] = target.id
         var ducking = false
-        if let coverRules, let shelter = stances[member]?.shelter {
-          let protection = coverRules.incomingBlockers(in: shelter, exposed: false)
+        if let shelter = stances[member]?.shelter {
+          let sheltered = ballistics.point(
+            point, above: shelter.isLow ? Self.aimHeight * 0.68 : Self.aimHeight)
           ducking = threats.contains {
             $0.aimingAt == member
-              && !LineOfSight.isClear(from: $0.position, to: point, obstacles: protection)
+              && !ballistics.isClear(from: ballistics.point($0.position), to: sheltered)
           }
         }
         if mayFire, !ducking, handling[member]?.isReady == true {
@@ -745,7 +854,6 @@ final class FightSimulation {
     for member: PartyMember, at point: SIMD2<Float>, preferred: String?
   ) -> (id: String, origin: SIMD2<Float>, direction: SIMD2<Float>)? {
     guard let weapon = rules.companionWeapons[member] else { return nil }
-    let outgoing = coverRules == nil ? obstacles : shotBlockers
     func candidate(_ id: String) -> (id: String, origin: SIMD2<Float>, direction: SIMD2<Float>)? {
       guard let state = hostiles[id], state.isTargetable else { return nil }
       let destination = hostilePoint(id)
@@ -755,9 +863,8 @@ final class FightSimulation {
         coverRules.flatMap { rules in
           stances[member]?.firingPoint(facing: direction, using: rules)
         } ?? point
-      guard simd_distance(origin, destination) <= weapon.range,
-        LineOfSight.isClear(
-          from: origin, to: destination, obstacles: outgoing + hostileBlockers(id))
+      guard simd_distance(ballistics.point(origin), hostileTarget(id).centre) <= weapon.range,
+        ballistics.isClear(from: ballistics.point(origin), to: hostileTarget(id).centre)
       else { return nil }
       return (id, origin, direction)
     }
@@ -792,13 +899,13 @@ final class FightSimulation {
       return
     }
     let origin = stance.incomingPoint(using: coverRules)
-    let incoming = stance.incomingBlockers(using: coverRules)
     let exposed = party.contains { member, point in
       var attacker = stances[member] ?? CoverStance()
       attacker.advance(at: point, facing: origin - point, dt: 0, using: coverRules)
       let source = attacker.firingPoint(facing: origin - point, using: coverRules)
-      return simd_distance(source, origin) <= Weapon.forMember(member).range
-        && LineOfSight.isClear(from: source, to: origin, obstacles: incoming)
+      return simd_distance(ballistics.point(source), hostileTarget(id).centre)
+        <= Weapon.forMember(member).range
+        && ballistics.isClear(from: ballistics.point(source), to: hostileTarget(id).centre)
     }
     enemyCoverStates[id] = CoverState(
       boxID: shelter.boxID, isLow: shelter.isLow, position: stance.position,
@@ -818,11 +925,6 @@ final class FightSimulation {
     return stance.firingPoint(facing: point - state.position, using: coverRules)
   }
 
-  private func hostileBlockers(_ id: String) -> [PartyMotion.Box] {
-    guard let coverRules, let stance = enemyStances[id] else { return [] }
-    return stance.incomingBlockers(using: coverRules)
-  }
-
   private func advanceGrenades(
     dt: Float, party: [PartyMember: SIMD2<Float>], session: GameSession, outcome: inout Outcome
   ) {
@@ -834,7 +936,12 @@ final class FightSimulation {
       events.append(.struckBlock(at: grenade.position))
       for member in session.party {
         guard let point = party[member], grenade.contains(point),
-          LineOfSight.isClear(from: grenade.position, to: point, obstacles: shotBlockers)
+          simd_distance(
+            ballistics.point(grenade.position, above: 0), ballistics.point(point, above: 0))
+            <= Grenade.radius,
+          ballistics.isClear(
+            from: ballistics.point(grenade.position, above: 0.15),
+            to: ballistics.point(point, above: Self.aimHeight * 0.68), ignoringLowCover: true)
         else { continue }
         jolts[member, default: BodyJolt()].push(towards: point - grenade.position, by: BodyJolt.hit)
         events.append(.struckBody(at: point))
@@ -849,6 +956,7 @@ final class FightSimulation {
   /// leader's shots as it stops movement (ADR 0006, ADR 0007).
   func setGate(_ footprint: PartyMotion.Box?) {
     gate = footprint
+    ballistics.gate = footprint
   }
 
   /// How fast the leader moves and turns in this step, each as a share of her full speed.
@@ -866,14 +974,30 @@ final class FightSimulation {
 
   private func scattered(
     _ path: ShotPath, by member: PartyMember, weapon: Weapon,
-    motion: (speed: Float, turning: Float), blockers: [PartyMotion.Box]
-  ) -> ShotPath {
+    motion: (speed: Float, turning: Float)
+  ) -> Ballistics.Trace {
     var scatter = scatters[member] ?? Scatter()
     var generator = random[member] ?? SeededRandom(seed: Self.seed)
     let cone = scatter.angle(spread: weapon.spread, speed: motion.speed, turning: motion.turning)
-    let result = Aim.scattered(
-      path, by: Scatter.deviation(within: cone, using: &generator), range: weapon.range,
-      hostiles: standingHostiles, blockers: blockers)
+    let angle = Scatter.deviation(within: cone, using: &generator)
+    let offset = path.end - path.start
+    let direction =
+      simd_length_squared(offset) > 0.000001 ? simd_normalize(offset) : SIMD2<Float>(0, -1)
+    let turned = SIMD2(
+      direction.x * cos(angle) - direction.y * sin(angle),
+      direction.x * sin(angle) + direction.y * cos(angle))
+    let start = ballistics.point(path.start)
+    let targetHeight: Float
+    if case .body(let id) = path.strike {
+      targetHeight = hostileTarget(id).centre.y
+    } else {
+      targetHeight = start.y
+    }
+    let ray = SIMD3(turned.x, (targetHeight - start.y) / max(0.001, simd_length(offset)), turned.y)
+    let result = ballistics.trace(
+      from: start, direction: ray, range: weapon.range,
+      targets: hostiles.values.filter { $0.isVisible && !$0.isDown && $0.isTargetable }
+        .map { hostileTarget($0.spec.id) })
     scatter.fired(spread: weapon.spread)
     scatters[member] = scatter
     random[member] = generator
@@ -900,17 +1024,19 @@ final class FightSimulation {
       guard companionReady.contains(member), handling[member]?.isReady == true else { continue }
       handling[member]?.fired()
       let aimed = ShotPath(start: selected.origin, end: destination, strike: .body(selected.id))
-      let path = scattered(
-        aimed, by: member, weapon: weapon, motion: motion,
-        blockers: coverRules == nil ? obstacles : shotBlockers)
+      let trace = scattered(
+        aimed, by: member, weapon: weapon, motion: motion)
+      let path = trace.path
       shots.append(
         Shot(
           path: path, side: .party,
           muzzle: WeaponPose.muzzle(
-            from: selected.origin, facing: selected.direction, kind: weapon.kind)))
+            from: selected.origin, facing: selected.direction, kind: weapon.kind), trace: trace))
       report(path, firedBy: weapon.kind, byLeader: false)
       rock(member, awayFrom: state.position, at: from)
       weaponPoses[member]?.fired()
+      weaponPoses[member]?.pitch = elevationPitch(
+        from: selected.origin, to: hostileTarget(selected.id).centre)
       companionShots[member, default: 0] += 1
       if case .body(let hitID) = path.strike {
         hit(
@@ -947,11 +1073,12 @@ final class FightSimulation {
     party.compactMap { member, point -> (member: PartyMember, distance: Float)? in
       let destination = incomingPoint(for: member, at: point)
       let origin = hostileFiringPoint(state.spec.id, toward: destination)
-      let distance = simd_distance(origin, destination)
-      let incoming =
-        state.spec.attack == .throwGrenade ? shotBlockers : incomingBlockers(for: member)
+      let distance = simd_distance(
+        ballistics.point(origin), partyTarget(member, at: destination).centre)
       guard distance <= state.spec.range,
-        LineOfSight.isClear(from: origin, to: destination, obstacles: incoming)
+        ballistics.isClear(
+          from: ballistics.point(origin), to: partyTarget(member, at: destination).centre,
+          ignoringLowCover: state.spec.attack == .throwGrenade)
       else { return nil }
       return (member, distance)
     }.min { $0.distance < $1.distance }?.member
@@ -960,9 +1087,8 @@ final class FightSimulation {
   /// A signature must reach the same exposed body as an ordinary shot.
   private func disruptable(from leader: SIMD2<Float>, in encounter: Level.Encounter) -> String? {
     let visible = encounter.hostiles.compactMap { hostiles[$0.id] }.filter {
-      LineOfSight.isClear(
-        from: leader, to: hostilePoint($0.spec.id),
-        obstacles: (coverRules == nil ? obstacles : blockers) + hostileBlockers($0.spec.id))
+      simd_distance(ballistics.point(leader), hostileTarget($0.spec.id).centre) <= Disrupt.reach
+        && ballistics.isClear(from: ballistics.point(leader), to: hostileTarget($0.spec.id).centre)
     }
     return Disrupt.target(
       from: leader, hostiles: visible, point: { hostilePoint($0.spec.id) },
@@ -977,9 +1103,9 @@ final class FightSimulation {
   ) {
     guard var state = hostiles[id] else { return }
     state.disrupt()
+    enemyHandling[id]?.cancel()
     hostiles[id] = state
     victims[id] = nil
-    hostileAimPoints[id] = nil
     disrupts += 1
     let destination = hostilePoint(id)
     let path = ShotPath(start: leader, end: destination, strike: .body(id))
@@ -991,7 +1117,10 @@ final class FightSimulation {
     hostileJolts[id, default: BodyJolt()].push(towards: towards, by: BodyJolt.hit)
     shots.append(
       Shot(
-        path: path, side: .party, muzzle: WeaponPose.muzzle(from: leader, facing: towards)))
+        path: path, side: .party, muzzle: WeaponPose.muzzle(from: leader, facing: towards),
+        trace: Ballistics.Trace(
+          start: ballistics.point(leader), end: hostileTarget(id).centre,
+          strike: .body(id))))
     report(path, firedBy: weapon.kind, byLeader: true)
     outcome.facing = towards
     outcome.line = "\(state.spec.name)'s shot is disrupted."
@@ -1001,11 +1130,10 @@ final class FightSimulation {
   private func knockDown(_ id: String, from shooter: SIMD2<Float>) {
     guard let state = hostiles[id] else { return }
     hostiles[id]?.knockDown()
+    enemyHandling[id]?.cancel()
     falls[id] = Fall(away: state.position - shooter, yaw: hostileYaws[id] ?? 0)
     hostileJolts[id] = nil
     if let down = hostiles[id] { faceHostile(id, down) }
-    hostileAimPoints[id] = nil
-    hostileAimOrigins[id] = nil
     enemyStances[id] = nil
     enemyCoverStates[id] = nil
     victims[id] = nil
@@ -1075,33 +1203,53 @@ final class FightSimulation {
   /// A hostile's shot at the leader, or at whom it aims: into the cover, which it chips, or
   /// falling short of someone out of range; otherwise just past them when it misses on purpose,
   /// or into them, who rock away from it. The shooter rocks back from its rifle.
-  private func fire(
-    _ id: String, from start: SIMD2<Float>, at point: SIMD2<Float>, victim: PartyMember,
-    range: Float, shot: HostileState.Shot, isLeader: Bool, blockers: [PartyMotion.Box]
+  private func partyTarget(_ member: PartyMember, at point: SIMD2<Float>) -> Ballistics.Target {
+    let low = stances[member]?.shelter?.isLow == true && stances[member]?.firing != true
+    return Ballistics.Target(
+      id: member.rawValue,
+      centre: ballistics.point(point, above: low ? Self.aimHeight * 0.68 : Self.aimHeight),
+      halfHeight: low ? 0.3 : 0.6)
+  }
+
+  private func elevationPitch(from point: SIMD2<Float>, to destination: SIMD3<Float>) -> Float {
+    let source = ballistics.point(point)
+    return atan2(
+      destination.y - source.y,
+      max(0.001, simd_length(SIMD2(destination.x - source.x, destination.z - source.z))))
+  }
+
+  private func hostileTarget(_ id: String) -> Ballistics.Target {
+    let low = enemyStances[id]?.shelter?.isLow == true && enemyStances[id]?.firing != true
+    return Ballistics.Target(
+      id: id,
+      centre: ballistics.point(
+        hostilePoint(id), above: low ? Self.aimHeight * 0.68 : Self.aimHeight),
+      halfHeight: low ? 0.3 : 0.6)
+  }
+
+  private func fireHostile(
+    _ id: String, from start: SIMD2<Float>, at point: SIMD2<Float>,
+    discharge: HostileHandling.Discharge, range: Float,
+    party: [PartyMember: SIMD2<Float>], session: GameSession, outcome: inout Outcome
   ) {
-    let distance = simd_distance(start, point)
-    guard distance > 0.001 else { return }
-    let block = LineOfSight.firstBlock(from: start, to: point, obstacles: blockers) ?? 1
-    let reach = min(block, range / distance)
-    let direction = (point - start) / distance
-    let path =
-      if reach < 1 {
-        ShotPath(
-          start: start, end: start + (point - start) * reach,
-          strike: block < 1 && block <= range / distance ? .scenery : .nothing)
-      } else if shot == .miss {
-        ShotPath(
-          start: start, end: point + SIMD2(-direction.y, direction.x) * 0.7 + direction * 3,
-          strike: .nothing)
-      } else {
-        ShotPath(start: start, end: point, strike: .body(victim.rawValue))
-      }
-    shots.append(Shot(path: path, side: .hostile))
-    report(path, firedBy: .rifle, byLeader: false)
-    hostileJolts[id, default: BodyJolt()].push(towards: -direction, by: BodyJolt.recoil)
-    if case .body = path.strike {
-      jolts[victim, default: BodyJolt()].push(towards: direction, by: BodyJolt.hit)
-      if isLeader { events.append(.leaderHit(at: point)) }
+    let origin = ballistics.point(start)
+    let victim = victims[id] ?? session.leader
+    let aimed = partyTarget(victim, at: point).centre
+    let distance = max(0.001, simd_distance(start, point))
+    let direction = SIMD3(
+      discharge.direction.x, (aimed.y - origin.y) / distance, discharge.direction.y)
+    let trace = ballistics.trace(
+      from: origin, direction: direction, range: range,
+      targets: discharge.deliberateMiss
+        ? [] : party.map { partyTarget($0.key, at: incomingPoint(for: $0.key, at: $0.value)) })
+    let muzzle = WeaponPose.muzzle(from: start, facing: discharge.direction, kind: .rifle)
+    shots.append(Shot(path: trace.path, side: .hostile, muzzle: muzzle, trace: trace))
+    report(trace.path, firedBy: .rifle, byLeader: false)
+    hostileJolts[id, default: BodyJolt()].push(towards: -discharge.direction, by: BodyJolt.recoil)
+    if case .body(let body) = trace.strike, let member = PartyMember(rawValue: body) {
+      jolts[member, default: BodyJolt()].push(towards: discharge.direction, by: BodyJolt.hit)
+      if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
+      if session.takeHit(member) { outcome.retry = true }
     }
   }
 
@@ -1114,9 +1262,12 @@ final class FightSimulation {
       ? leaderShot(from: firingPoint(from: leader, facing: facing), aiming: aiming, facing: facing)
       : nil
     if case .body(let id) = path?.strike {
-      target = hostiles[id]?.position
+      target = hostilePoint(id)
+      weaponPoses[weaponLeader]?.pitch = elevationPitch(
+        from: firingPoint(from: leader, facing: facing), to: hostileTarget(id).centre)
     } else {
       target = nil
+      weaponPoses[weaponLeader]?.pitch = 0
     }
   }
 
@@ -1171,14 +1322,4 @@ final class FightSimulation {
       scale: scale)
   }
 
-  /// A warning stays aimed at the same point the hostile used in this step.
-  private func aimHostile(_ id: String, _ state: HostileState, at point: SIMD2<Float>) {
-    if case .aiming = state.phase {
-      hostileAimPoints[id] = point
-      hostileAimOrigins[id] = hostileFiringPoint(id, toward: point)
-    } else {
-      hostileAimPoints[id] = nil
-      hostileAimOrigins[id] = nil
-    }
-  }
 }
