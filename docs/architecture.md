@@ -15,7 +15,7 @@ Keep **one app target**, one Swift Testing target and ordinary feature folders. 
 
 | Part | Responsibility | Boundary |
 |---|---|---|
-| App composition | Own stable session/world instances and launch/teardown; `Game` holds the world of the level in play | SwiftUI reevaluation does not recreate them; only the pause menu's third choice makes a new world |
+| App composition | Own stable session/world instances and launch/teardown; `Game` holds the world of the level in play and a bounded cache of immutable navigation | SwiftUI reevaluation does not recreate them; only the pause menu's third choice makes a new world |
 | GameSession | Mode, who is in the party, active leader, the squad's formation and each companion's order, fired trigger areas, the story's beat, a fight's hits, rounds and defeated hostiles, bodies searched and the shared inventory; accept/reject commands | Plain Swift values and rules, no entities or views |
 | GameWorld | A body for each member, hidden until they join, camera, collision, following, fights, scenes and owned update/load work | Owns entity state; uses plain Swift motion, routes, formation and combat rules |
 | Combat / FightSimulation | Weapon timing, sight lines, assisted aim, shared cover stances, companion targets, tactical hostiles, warned grenades, timed cues, spread and reaction values; emit presentation values and feedback events | Plain Swift, no RealityKit or feedback player; the world advances it each fixed step |
@@ -60,6 +60,10 @@ The party uses three named, differently coloured primitive stand-ins, each a Ble
 Use plain Swift session state and rules on the main actor, exposing only coarse changes to the interface. There are no separate member inventories, and the world keeps no progress flags of its own.
 
 **GameWorld owns spatial state:** a body reference for each stable member ID, out of movement until that member joins and hidden until then unless the level has them lying hurt where they wait, their actual positions, companion routes and formation state, one camera, scene bindings and one owned scene-update subscription. It reads the active leader from the session. It owns a plain-Swift `FightSimulation` for the fight's moment-to-moment values and an `EncounterStage` for their entities, with no second copy of the session's hits, rounds or defeated IDs. Operational facts such as loading, app activity and hardware availability are not another exploring/dialogue/paused mode.
+
+`Game` reuses immutable navigation data across level visits, keyed by the exact floor bounds, obstacle footprints and open/shut gate geometry rather than a level's name. The cache retains at most three geometry entries for the current three venues; eviction only means rebuilding that data on the next visit. Each visit still creates a fresh session, entities, controls, planners and combat simulation, stops the previous world, transfers preferences and requires neutral input. Restart keeps its existing world. Standalone worlds can build their own navigation without an app-wide or persistent cache.
+
+As with the figures' model templates, `SceneStyle` retains one pristine level-scene template and returns a recursive clone for each world. The template stays unparented and never receives live transforms, fading or gameplay state. A different resource name replaces it. First visits and evicted geometry still need preparation; resource reuse reduces repeat construction without establishing renderer or physical-phone performance.
 
 **GameControls owns device attachment and raw sampling.** Pure InputRules owns the transformation of raw values plus prior input-rule state into intents and next rule state. Neither keeps an independent pause/dialogue policy: `GameWorld` reads the mode from `GameSession`, and `GameControls` receives it when resolving input.
 

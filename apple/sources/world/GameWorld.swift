@@ -101,8 +101,8 @@ final class GameWorld {
   /// Movement against the level's blockers, and the salvage gate as it stands (ADR 0006).
   @ObservationIgnored private var motion: PartyMotion
   @ObservationIgnored private var grid: NavigationGrid
-  /// Both of those with the salvage gate shut and open, made while loading, so that the gate
-  /// opening or shutting stalls no frame (ADR 0006).
+  /// Both of those with the salvage gate shut and open, prepared while loading and reusable
+  /// across visits, so that the gate opening or shutting stalls no frame (ADR 0006).
   @ObservationIgnored private var gateWays:
     (
       shut: (motion: PartyMotion, grid: NavigationGrid),
@@ -279,7 +279,7 @@ final class GameWorld {
     LevelCycle.next(after: level)
   }
 
-  init(level: Level = BrooklynBridge.level) {
+  init(level: Level = BrooklynBridge.level, navigationCache: NavigationCache? = nil) {
     #if DEBUG
       let loadStarted = ContinuousClock.now
     #endif
@@ -287,20 +287,14 @@ final class GameWorld {
     session = GameSession(level: level)
     shownLine = level.opening
     lens = level.fieldOfView
-    // Build the route grid while loading, not on the first frame of play, and in a salvage
-    // task the gate's open one as well.
-    func ways(adding gate: [PartyMotion.Box]) -> (motion: PartyMotion, grid: NavigationGrid) {
-      (
-        PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles + gate),
-        NavigationGrid(level: level, adding: gate)
-      )
-    }
+    // Reuse immutable geometry across visits, not live worlds. A standalone world still
+    // prepares its own grid while loading, including the salvage gate's open position.
     #if DEBUG
       let navigationStarted = ContinuousClock.now
     #endif
-    let start = ways(adding: level.salvage.map { [$0.gate.footprint] } ?? [])
-    (motion, grid) = start
-    gateWays = level.salvage.map { (shut: start, open: ways(adding: [$0.openGate])) }
+    let navigation = navigationCache?.prepare(for: level) ?? WorldNavigation(level: level)
+    (motion, grid) = navigation.start
+    gateWays = navigation.gateOpen.map { (shut: navigation.start, open: $0) }
     #if DEBUG
       let navigationFinished = ContinuousClock.now
     #endif
@@ -404,10 +398,10 @@ final class GameWorld {
   }
 
   /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
-  /// 0002). It loads once, while the world is made; Restart keeps it.
+  /// 0002). Each world gets a fresh clone of the cached pristine scene; Restart keeps it.
   private static func loadScene(named name: String, for level: Level) -> Entity {
     do {
-      let scene = try Entity.load(named: name, in: .main)
+      let scene = try SceneStyle.scene(named: name)
       scene.name = "\(level.id).scene"
       return scene
     } catch {

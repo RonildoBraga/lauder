@@ -9,9 +9,12 @@ import Observation
 @Observable
 final class Game {
   private(set) var world: GameWorld
+  @ObservationIgnored private let navigationCache: NavigationCache
 
   init(level: Level = BrooklynBridge.level) {
-    world = GameWorld(level: level)
+    let navigationCache = NavigationCache()
+    self.navigationCache = navigationCache
+    world = GameWorld(level: level, navigationCache: navigationCache)
     connect()
     #if DEBUG
       // A scripted Simulator playtest (`apple/scripts/playtest`), started by the launch
@@ -27,7 +30,7 @@ final class Game {
   func play(_ level: Level) {
     let previous = world
     previous.stop()
-    world = GameWorld(level: level)
+    world = GameWorld(level: level, navigationCache: navigationCache)
     world.takePreferences(from: previous)
     #if DEBUG
       world.continuePlaytest(from: previous)

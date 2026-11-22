@@ -180,6 +180,19 @@ struct SceneStyle {
   /// and copied for every figure that shows it.
   private static var models: [String: Entity] = [:]
 
+  /// Only the bridge currently has a bundled level scene. Keep one pristine template,
+  /// replacing it when another name is requested, and give every world its own hierarchy.
+  private static var levelScene: (name: String, template: Entity)?
+
+  static func scene(named name: String) throws -> Entity {
+    if let levelScene, levelScene.name == name {
+      return levelScene.template.clone(recursive: true)
+    }
+    let template = try Entity.load(named: name, in: .main)
+    levelScene = (name, template)
+    return template.clone(recursive: true)
+  }
+
   /// A figure from its model. The model stands on the ground at its origin and faces Blender's
   /// -y, the game's +z, so it is turned half a turn to face -z, and lowered to stand below the
   /// body's centre, which the game moves and turns. Its front mark makes facing readable without

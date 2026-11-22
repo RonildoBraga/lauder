@@ -1,6 +1,6 @@
 # ADR 0009 — Cover for the active character
 
-**Status:** Accepted; combat-yard prototype built and checked in Simulator; phone session pending\
+**Status:** Implemented and delivered; phone session deferred\
 **Date:** 22 November 2026
 
 ## Context and assignment
@@ -11,7 +11,7 @@ Codex recommended: “automatic cover near a wall, a shield indicator only for t
 
 The maintainer initially asked to continue building and testing in Simulator and deploy later. TestFlight build 20 subsequently delivered this cover prototype. The later continuous combat assignment in [ADR 0011](0011-companion-combat.md) authorises reviewed integration and TestFlight deliveries without another approval at each milestone; physical cover and performance evidence remains unverified.
 
-This record preserves the initial phase 2 scope below. Phase 4 now assigns the same cover stance and shields to companions, and phase 5 uses it for tactical shooters ([ADR 0012](0012-tactical-enemies.md)). Those extensions are under implementation and validation; their later delivery is not implied by build 20.
+This record preserves the initial phase 2 scope below. Phase 4 extends the same cover stance and shields to companions, and phase 5 uses it for tactical shooters ([ADR 0012](0012-tactical-enemies.md)). Those extensions are implemented and delivered in TestFlight **0.1.0 (21)**; they were not part of build 20. The [prototype plan](../prototype-plan.md#verification-and-performance) records the integrated validation and delivery evidence.
 
 ## Initial phase 2 decision
 
@@ -29,4 +29,4 @@ Plain Swift geometry finds the face and a valid peek. `FightSimulation` owns fir
 
 Focused tests cover proximity and exit, directional protection, low-cover exposure, tall-edge clearance, firing and damage agreement, leadership and reset. A scripted Simulator route exercises both kinds of cover, Pause and recovery, followed by the standard check and existing opening/combat/salvage regressions.
 
-Affected controls, cover feel and representative frame pacing still need actual baseline-iPhone evidence. Build 20's delivery confirmation does not supply those results. The continuous assignment permits the current Simulator-based integration and delivery sequence without repeated phone-session pauses, while these physical checks and the maintainer's judgement remain explicitly unverified.
+Affected controls, cover feel and representative frame pacing still need actual baseline-iPhone evidence. Delivery confirmations do not supply those results. The maintainer has deferred testing while implementation continues; the [deferred checklist](../prototype-plan.md#deferred-phone-and-playtest-checks) preserves these physical checks and the maintainer's judgement as explicitly unverified, even when the implemented issue is closed.
