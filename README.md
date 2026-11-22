@@ -10,7 +10,7 @@ Miki crosses the snowbound bridge towards Manhattan, meets Tom through a fight a
 
 Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/decisions/0001-engine.md)). Blender remains the source of the bridge and character models ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Use simple shapes and colours until a concrete gameplay need warrants art work.
 
-TestFlight **0.1.0 (26)**, source `25195e8`, is the last verified delivery **before this reset**. It contains the retired experiments. Its accepted Apple processing does not establish validation or delivery of the bridge-only changes. Earlier decisions and delivery evidence remain in the [historical decision records](docs/decisions) and Git history; private release archives and evidence are preserved.
+The bridge-only reset is merged in [PR #122](https://github.com/RonildoBraga/lauder/pull/122) and delivered in **TestFlight 0.1.0 (27)**, app source `de4d0db`. The standard check and rendered Simulator checks passed; automatic review found no issues. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records sources, checks and delivery proof. Physical-phone behaviour, performance and enjoyment remain unverified for this build.
 
 ## Start here
 
