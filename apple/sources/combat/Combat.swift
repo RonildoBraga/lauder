@@ -17,6 +17,11 @@ struct Weapon: Sendable {
   /// Seconds from the first Fire press until a holstered weapon can shoot; for a companion's,
   /// from the moment a fight is under way until they first fire.
   let drawTime: Float
+  /// Consecutive discharges before the automatic reload. This is a handling limit, not
+  /// another inventory: the session still counts the party's remaining player-fired rounds.
+  var capacity = 12
+  /// Seconds to ready a fresh magazine, overlapping the normal interval after its last shot.
+  var reloadTime: Float = 1.2
   /// Shots in each of a companion's bursts, `burstGap` seconds apart; one for single shots.
   var burst = 1
   var burstGap: Float = 0
@@ -30,18 +35,35 @@ struct Weapon: Sendable {
   /// ahead. Standing still, its first shot lands within 10 cm at full reach; a long burst, or
   /// firing on the move, scatters (ADR 0008).
   static let carbine = Weapon(
-    kind: .carbine, range: 14, interval: 0.4, drawTime: 0.35,
+    kind: .carbine, range: 14, interval: 0.4, drawTime: 0.35, capacity: 12, reloadTime: 1.2,
     spread: Spread(
       rest: Spread.degrees(0.4), perShot: Spread.degrees(1.6), widest: Spread.degrees(6),
       recovery: Spread.degrees(2.5), moving: Spread.degrees(2.5), turning: Spread.degrees(2)))
   /// Laura's light burst weapon (ADR 0005): bursts of three quick shots, reaching a little
   /// less far than the carbine. Starting values, to tune in play.
   static let lightBurst = Weapon(
-    kind: .lightBurst, range: 12, interval: 1.8, drawTime: 0.5, burst: 3, burstGap: 0.12)
+    kind: .lightBurst, range: 12, interval: 1.8, drawTime: 0.5, capacity: 18, reloadTime: 1.4,
+    burst: 3, burstGap: 0.12,
+    spread: Spread(
+      rest: Spread.degrees(1.2), perShot: Spread.degrees(1.1), widest: Spread.degrees(8),
+      recovery: Spread.degrees(3.5), moving: Spread.degrees(2), turning: Spread.degrees(2)))
   /// Tom's close scatter weapon (ADR 0005): a slow blast that counts as two hits, only at close
   /// range. Starting values, to tune in play.
   static let closeScatter = Weapon(
-    kind: .closeScatter, range: 7, interval: 1.5, drawTime: 0.7, damage: 2)
+    kind: .closeScatter, range: 7, interval: 1.5, drawTime: 0.7, capacity: 4, reloadTime: 1.8,
+    damage: 2,
+    spread: Spread(
+      rest: Spread.degrees(6), perShot: Spread.degrees(2), widest: Spread.degrees(10),
+      recovery: Spread.degrees(4), moving: Spread.degrees(2), turning: Spread.degrees(1)))
+
+  /// Each traveller keeps the same weapon whether leading or supporting the others.
+  static func forMember(_ member: PartyMember) -> Weapon {
+    switch member {
+    case .miki: .carbine
+    case .laura: .lightBurst
+    case .tom: .closeScatter
+    }
+  }
 }
 
 /// How a weapon's shots scatter (ADR 0008): each goes within a cone either side of where it is
@@ -115,36 +137,6 @@ struct SeededRandom: RandomNumberGenerator, Sendable {
     value = (value ^ (value >> 30)) &* 0xBF58_476D_1CE4_E5B9
     value = (value ^ (value >> 27)) &* 0x94D0_49BB_1331_11EB
     return value ^ (value >> 31)
-  }
-}
-
-/// When a weapon that fires by itself shoots, as a companion's does once a fight is under way
-/// (ADR 0005): first after its draw time, then each shot of a burst a short gap apart, with the
-/// weapon's interval between bursts. It holds fire while there is nothing to shoot at, and a
-/// burst whose target is gone stops there.
-struct AutoFire {
-  private var wait: Float
-  private var shotsLeft = 0
-
-  init(weapon: Weapon) {
-    wait = weapon.drawTime
-  }
-
-  /// One simulation step: true when a shot fires now.
-  mutating func step(dt: Float, weapon: Weapon, hasTarget: Bool) -> Bool {
-    wait = max(0, wait - dt)
-    guard hasTarget else {
-      if shotsLeft > 0 {
-        shotsLeft = 0
-        wait = weapon.interval
-      }
-      return false
-    }
-    guard wait <= 0 else { return false }
-    if shotsLeft == 0 { shotsLeft = weapon.burst }
-    shotsLeft -= 1
-    wait = shotsLeft > 0 ? weapon.burstGap : weapon.interval
-    return true
   }
 }
 

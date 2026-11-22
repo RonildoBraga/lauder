@@ -11,7 +11,7 @@ struct TouchControls: UIViewRepresentable {
   let actionTitle: String
   /// Who Next would switch to, or nil while the leader travels alone.
   let nextLeaderName: String?
-  /// Whether Fire is shown: while Miki leads, with the carbine she can fire anywhere (ADR 0007).
+  /// Whether Fire is shown for the active character's weapon (ADR 0007, ADR 0010).
   let showsFire: Bool
   /// Whether Signature is shown: in a fight in the combat yard while Miki leads (ADR 0005).
   let showsSignature: Bool
@@ -152,7 +152,7 @@ struct TouchControls: UIViewRepresentable {
       // Alone, there is nobody to switch to. A finger already on Next keeps it until it lifts,
       // so the release gate still sees that button let go.
       cycle.isHidden = nextLeaderName == nil && !cycle.isCaptured
-      // Fire shows while Miki leads, and stays while a finger holds it.
+      // Fire shows for every leader, and stays while a finger holds it.
       fire.isHidden = !showsFire && !fire.isCaptured
       // Signature appears in a fight while the leader has one; a finger on it keeps it.
       signature.isHidden = !showsSignature && !signature.isCaptured

@@ -65,7 +65,24 @@ final class FightSimulation {
   static let seed: UInt64 = 8
 
   private(set) var hostiles: [String: HostileState] = [:]
-  private(set) var isDrawn = false
+  var isDrawn: Bool { handling[weaponLeader]?.isDrawn == true }
+  var leaderWeapon: Weapon { Weapon.forMember(weaponLeader) }
+  var drawnWeapons: Set<PartyMember> { Set(handling.filter { $0.value.isDrawn }.keys) }
+
+  struct WeaponStatus: Sendable {
+    let kind: Weapon.Kind
+    let loaded: Int
+    let reloadRemaining: Float
+    let isDrawn: Bool
+  }
+
+  func status(for member: PartyMember) -> WeaponStatus {
+    let weapon = Weapon.forMember(member)
+    let state = handling[member] ?? WeaponHandling(weapon: weapon)
+    return WeaponStatus(
+      kind: weapon.kind, loaded: state.magazineRemaining,
+      reloadRemaining: state.reloadRemaining, isDrawn: state.isDrawn)
+  }
   /// The HUD's warning, such as "The stranger is aiming."
   private(set) var threat: String?
   /// Whether the fight is under way: a hostile has begun a wind-up, or the leader has fired.
@@ -83,7 +100,8 @@ final class FightSimulation {
   /// How each member of the party rocks after firing or being hit, while it lasts (ADR 0008).
   private(set) var jolts: [PartyMember: BodyJolt] = [:]
   /// How the leader holds her weapon now (ADR 0008).
-  private(set) var pose = WeaponPose()
+  private(set) var weaponPoses: [PartyMember: WeaponPose] = [:]
+  var pose: WeaponPose { weaponPoses[weaponLeader] ?? WeaponPose(kind: leaderWeapon.kind) }
   /// What players hear and feel since the world last took them (ADR 0008).
   private(set) var events: [CombatEvent] = []
   private(set) var coverState: CoverState?
@@ -105,7 +123,10 @@ final class FightSimulation {
     }
   }
 
-  private let weapon = Weapon.carbine
+  private var weaponLeader: PartyMember
+  private let startingLeader: PartyMember
+  private var weapon: Weapon { leaderWeapon }
+  private var handling: [PartyMember: WeaponHandling] = [:]
   private let specs: [String: Level.Hostile]
   private let obstacles: [PartyMotion.Box]
   /// What stops the leader's shots: the level's blocks that rise above shoulder height, and a
@@ -130,8 +151,6 @@ final class FightSimulation {
   private var victims: [String: PartyMember] = [:]
   /// Which way each hostile in the fight faces: towards whom it aims at, as a unit vector.
   private var facings: [String: SIMD2<Float>] = [:]
-  /// When each companion's weapon fires next.
-  private var companionFire: [PartyMember: AutoFire] = [:]
   private var director = StoryDirector()
   /// The target marker and the hostiles' warnings as last shown by the rules.
   private(set) var target: SIMD2<Float>?
@@ -139,14 +158,11 @@ final class FightSimulation {
   private(set) var hostilePoses: [String: FigurePose] = [:]
   /// Visual shots from this step only, in firing order; the stage reads them immediately.
   private(set) var shots: [Shot] = []
-  private var drawRemaining: Float = 0
-  private var cooldown: Float = 0
   private var reportedEmpty = false
-  /// The leader's spread, and what picks where in it each shot goes (ADR 0008).
-  private var scatter = Scatter()
-  private var random = SeededRandom(seed: FightSimulation.seed)
-  /// Where the leader stood and faced a step ago: how fast she moves and turns widens her spread.
-  private var lastLeader: (position: SIMD2<Float>, facing: SIMD2<Float>)?
+  /// Each member keeps spread and its random sequence through changes between roles.
+  private var scatters: [PartyMember: Scatter] = [:]
+  private var random: [PartyMember: SeededRandom] = [:]
+  private var lastMotion: [PartyMember: (position: SIMD2<Float>, facing: SIMD2<Float>)] = [:]
   /// Each standing hostile's turn, how it rocks after firing or being hit, and the fall of each
   /// one downed (ADR 0008).
   private var hostileYaws: [String: Float] = [:]
@@ -154,6 +170,8 @@ final class FightSimulation {
   private(set) var falls: [String: Fall] = [:]
 
   init(level: Level) {
+    startingLeader = level.party[0]
+    weaponLeader = level.party[0]
     obstacles = level.obstacles
     shotBlockers = Aim.blockers(level.boxes, above: Self.aimHeight)
     rules = level.combat
@@ -173,7 +191,11 @@ final class FightSimulation {
     hostiles = specs.mapValues { HostileState(spec: $0) }
     companionShots = [:]
     disrupts = 0
-    random = SeededRandom(seed: Self.seed)
+    random = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.enumerated().map {
+        ($0.element, SeededRandom(seed: Self.seed + UInt64($0.offset)))
+      })
+    weaponLeader = startingLeader
     falls = [:]
     hostileJolts = [:]
     jolts = [:]
@@ -194,14 +216,18 @@ final class FightSimulation {
     clearCover()
     encounter = nil
     director.stop()
-    isDrawn = false
-    drawRemaining = 0
-    cooldown = 0
+    handling = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.map {
+        ($0, WeaponHandling(weapon: .forMember($0)))
+      })
     threat = nil
     reportedEmpty = false
-    pose.holster()
-    scatter = Scatter()
-    lastLeader = nil
+    weaponPoses = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.map {
+        ($0, WeaponPose(kind: Weapon.forMember($0).kind))
+      })
+    scatters = [:]
+    lastMotion = [:]
     endFight()
     hostileAimPoints = [:]
     target = nil
@@ -215,7 +241,8 @@ final class FightSimulation {
     fightUnderWay = false
     victims = [:]
     facings = [:]
-    companionFire = [:]
+    for member in handling.keys { handling[member]?.releaseTrigger() }
+    lastMotion = lastMotion.filter { $0.key == weaponLeader }
     aims = [:]
     canDisrupt = false
   }
@@ -248,16 +275,23 @@ final class FightSimulation {
     var outcome = Outcome()
     shots.removeAll(keepingCapacity: true)
     settleBodies(dt: dt)
-    // A fresh Fire press, or aiming with the right stick, draws a holstered weapon.
-    if firePressed || aiming, !isDrawn {
-      isDrawn = true
-      drawRemaining = weapon.drawTime
+    if weaponLeader != session.leader {
+      handling[weaponLeader]?.releaseTrigger()
+      handling[session.leader]?.releaseTrigger()
+      lastMotion[session.leader] = nil
+      weaponLeader = session.leader
+      reportedEmpty = false
     }
-    drawRemaining -= dt
-    cooldown -= dt
-    let motion = leaderMotion(at: leader, facing: facing, dt: dt)
-    scatter.settle(dt: dt, spread: weapon.spread)
-    pose.step(dt: dt, aiming: isDrawn && (aiming || fireHeld))
+    if firePressed || aiming { handling[weaponLeader]?.draw() }
+    if !fireHeld { handling[weaponLeader]?.releaseTrigger() }
+    for member in PartyMember.allCases {
+      handling[member]?.advance(dt: dt)
+      scatters[member, default: Scatter()].settle(dt: dt, spread: Weapon.forMember(member).spread)
+      weaponPoses[member]?.step(
+        dt: dt,
+        aiming: member == weaponLeader ? isDrawn && (aiming || fireHeld) : aims[member] != nil)
+    }
+    let motion = shooterMotion(of: weaponLeader, at: leader, facing: facing, dt: dt)
     guard let encounter else {
       prepareCover(
         at: leader, facing: facing, dt: dt, fireHeld: fireHeld, aiming: aiming,
@@ -284,6 +318,8 @@ final class FightSimulation {
         guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
         let path = ShotPath(start: from, end: state.position, strike: .body(id))
         shots.append(Shot(path: path, side: .party))
+        handling[member]?.draw()
+        weaponPoses[member]?.fired()
         report(path, firedBy: Self.weaponKind(of: member), byLeader: false)
         rock(member, awayFrom: state.position, at: from)
         session.defeat(id)
@@ -362,6 +398,10 @@ final class FightSimulation {
       fireCompanions(dt: dt, party: party, session: session, outcome: &outcome)
     } else {
       aims = [:]
+      for member in session.companions {
+        handling[member]?.releaseTrigger()
+        lastMotion[member] = nil
+      }
     }
     // A fight ends once everyone in it is down; a scene also plays its timeline to the end.
     if !director.isPlaying, encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) }) {
@@ -399,7 +439,7 @@ final class FightSimulation {
     guard readyToFire(aimed, from: origin, facing: facing, aiming: aiming) else { return }
     if inFight {
       guard session.spendRound() else {
-        cooldown = weapon.interval
+        handling[weaponLeader]?.emptyClick()
         events.append(.empty(at: leader))
         if !reportedEmpty {
           reportedEmpty = true
@@ -409,18 +449,16 @@ final class FightSimulation {
       }
       fightUnderWay = true
     }
-    cooldown = weapon.interval
+    handling[weaponLeader]?.fired()
     exposeCover(at: leader, facing: facing)
-    let cone = scatter.angle(spread: weapon.spread, speed: motion.speed, turning: motion.turning)
-    let path = Aim.scattered(
-      aimed, by: Scatter.deviation(within: cone, using: &random), range: weapon.range,
-      hostiles: standingHostiles, blockers: blockers)
-    scatter.fired(spread: weapon.spread)
-    pose.fired()
+    let path = scattered(
+      aimed, by: weaponLeader, weapon: weapon, motion: motion, blockers: blockers)
+    weaponPoses[weaponLeader]?.fired()
     jolts[session.leader, default: BodyJolt()].push(towards: -facing, by: BodyJolt.recoil)
     shots.append(
       Shot(
-        path: path, side: .party, muzzle: WeaponPose.muzzle(from: origin, facing: facing)))
+        path: path, side: .party,
+        muzzle: WeaponPose.muzzle(from: origin, facing: facing, kind: weapon.kind)))
     report(path, firedBy: weapon.kind, byLeader: true)
     if inFight, case .body(let id) = path.strike {
       hit(id, from: origin, damage: weapon.damage, session: session, outcome: &outcome)
@@ -470,7 +508,7 @@ final class FightSimulation {
   private func readyToFire(
     _ shot: ShotPath, from origin: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool
   ) -> Bool {
-    guard drawRemaining <= 0, cooldown <= 0 else { return false }
+    guard handling[weaponLeader]?.isReady == true else { return false }
     if !aiming, case .body = shot.strike, simd_distance(shot.end, origin) > 0.001 {
       return simd_dot(simd_normalize(shot.end - origin), facing) >= cos(Aim.helpAngle)
     }
@@ -558,14 +596,32 @@ final class FightSimulation {
   }
 
   /// How fast the leader moves and turns in this step, each as a share of her full speed.
-  private func leaderMotion(at position: SIMD2<Float>, facing: SIMD2<Float>, dt: Float)
+  private func shooterMotion(
+    of member: PartyMember, at position: SIMD2<Float>, facing: SIMD2<Float>, dt: Float
+  )
     -> (speed: Float, turning: Float)
   {
-    defer { lastLeader = (position, facing) }
-    guard let last = lastLeader, dt > 0 else { return (0, 0) }
+    defer { lastMotion[member] = (position, facing) }
+    guard let last = lastMotion[member], dt > 0 else { return (0, 0) }
     let speed = simd_distance(position, last.position) / (PartyBody.speed * dt)
     let turned = acos(min(max(simd_dot(facing, last.facing), -1), 1))
     return (speed, turned / (Movement.leaderTurnRate * dt))
+  }
+
+  private func scattered(
+    _ path: ShotPath, by member: PartyMember, weapon: Weapon,
+    motion: (speed: Float, turning: Float), blockers: [PartyMotion.Box]
+  ) -> ShotPath {
+    var scatter = scatters[member] ?? Scatter()
+    var generator = random[member] ?? SeededRandom(seed: Self.seed)
+    let cone = scatter.angle(spread: weapon.spread, speed: motion.speed, turning: motion.turning)
+    let result = Aim.scattered(
+      path, by: Scatter.deviation(within: cone, using: &generator), range: weapon.range,
+      hostiles: standingHostiles, blockers: blockers)
+    scatter.fired(spread: weapon.spread)
+    scatters[member] = scatter
+    random[member] = generator
+    return result
   }
 
   /// Each companion with a weapon fires by themselves at their own assisted target, the nearest
@@ -584,18 +640,31 @@ final class FightSimulation {
       let target = Targeting.nearest(
         from: from, candidates: candidates, range: weapon.range,
         isClear: { LineOfSight.isClear(from: $0, to: $1, obstacles: self.obstacles) })
-      var trigger = companionFire[member] ?? AutoFire(weapon: weapon)
-      let fires = trigger.step(dt: dt, weapon: weapon, hasTarget: target != nil)
-      companionFire[member] = trigger
-      guard let target, let state = hostiles[target] else { continue }
+      handling[member]?.draw()
+      guard let target, let state = hostiles[target] else {
+        handling[member]?.releaseTrigger()
+        lastMotion[member] = nil
+        continue
+      }
       aims[member] = state.position
-      guard fires else { continue }
-      let path = ShotPath(start: from, end: state.position, strike: .body(target))
-      shots.append(Shot(path: path, side: .party))
+      let offset = state.position - from
+      let direction = simd_length_squared(offset) > 0.000001 ? simd_normalize(offset) : -lookout
+      let motion = shooterMotion(of: member, at: from, facing: direction, dt: dt)
+      guard handling[member]?.isReady == true else { continue }
+      handling[member]?.fired()
+      let aimed = ShotPath(start: from, end: state.position, strike: .body(target))
+      let path = scattered(aimed, by: member, weapon: weapon, motion: motion, blockers: obstacles)
+      shots.append(
+        Shot(
+          path: path, side: .party,
+          muzzle: WeaponPose.muzzle(from: from, facing: direction, kind: weapon.kind)))
       report(path, firedBy: weapon.kind, byLeader: false)
       rock(member, awayFrom: state.position, at: from)
+      weaponPoses[member]?.fired()
       companionShots[member, default: 0] += 1
-      hit(target, from: from, damage: weapon.damage, session: session, outcome: &outcome)
+      if case .body(let hitID) = path.strike {
+        hit(hitID, from: from, damage: weapon.damage, session: session, outcome: &outcome)
+      }
     }
     self.aims = aims
   }
@@ -662,7 +731,8 @@ final class FightSimulation {
     let path = ShotPath(start: leader, end: state.position, strike: .body(id))
     let offset = state.position - leader
     let towards = simd_length(offset) > 0.001 ? simd_normalize(offset) : facing
-    pose.fired()
+    handling[session.leader]?.draw()
+    weaponPoses[session.leader]?.fired()
     jolts[session.leader, default: BodyJolt()].push(towards: -towards, by: BodyJolt.recoil)
     hostileJolts[id, default: BodyJolt()].push(towards: towards, by: BodyJolt.hit)
     shots.append(

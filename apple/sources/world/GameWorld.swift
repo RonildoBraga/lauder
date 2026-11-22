@@ -212,10 +212,38 @@ final class GameWorld {
   static let lensTime: Float = 0.3
 
   var isPaused: Bool { session.isPaused }
-  /// Whether the weapon's controls show: while Miki leads, since she carries the carbine and can
-  /// fire it in a fight or out of one (ADR 0007).
-  var showsWeapon: Bool { session.leader == .miki }
-  /// Whether the carbine's rounds show: during a fight, or while the weapon is drawn.
+  /// Every member of the playable party carries a weapon (ADR 0010).
+  var showsWeapon: Bool { session.party.contains(session.leader) }
+
+  /// The active member's magazine is a readiness gate within the one shared round count.
+  private(set) var weaponStatus = ""
+
+  private func updateWeaponStatus() {
+    let state = fight.status(for: session.leader)
+    let name: String =
+      switch state.kind {
+      case .carbine: "Carbine"
+      case .lightBurst: "Burst weapon"
+      case .closeScatter: "Scatter weapon"
+      case .rifle: "Rifle"
+      }
+    let text: String
+    let suffix = session.inEncounter ? "\(session.ammo) total" : "Practice"
+    if session.inEncounter && session.ammo == 0 {
+      text = "\(name) · No rounds"
+    } else if state.reloadRemaining > 0 {
+      text = String(
+        format: "%@ · Reloading %.1f s · %@", name,
+        ceil(state.reloadRemaining * 10) / 10, suffix)
+    } else {
+      let loaded = session.inEncounter ? min(state.loaded, session.ammo) : state.loaded
+      text = "\(name) · \(loaded) loaded · \(suffix)"
+    }
+    if weaponStatus != text { weaponStatus = text }
+  }
+
+  var weaponKind: Weapon.Kind? { canFire ? Weapon.forMember(session.leader).kind : nil }
+  /// Whether weapon readiness and shared rounds show: during a fight, or while drawn.
   var showsAmmo: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry, or the party's fall back, is under way.
   var isRetrying: Bool { retryElapsed != nil }
@@ -351,8 +379,7 @@ final class GameWorld {
     refusalCross.name = "order.refused"
     refusalCross.isEnabled = false
     root.addChild(refusalCross)
-    // Miki carries the carbine; it shows while drawn.
-    visuals[.miki]?.addChild(stage.weaponProp)
+    for (member, weapon) in stage.weaponProps { visuals[member]?.addChild(weapon) }
     #if DEBUG
       let partyFinished = ContinuousClock.now
     #endif
@@ -360,6 +387,7 @@ final class GameWorld {
     showSalvage()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
+    updateWeaponStatus()
     #if DEBUG
       loadTiming = WorldLoadTiming(
         level: level.id, total: loadStarted.duration(to: .now),
@@ -424,7 +452,10 @@ final class GameWorld {
   /// keeps no sound, vibration or controller-trigger dependency.
   var listenerPoint: SIMD2<Float> { SIMD2(cameraTarget.x, cameraTarget.z) }
   var screenRight: SIMD2<Float> { Movement.axes(cameraOffset: level.cameraOffset).right }
-  var canFire: Bool { session.mode == .exploring && showsWeapon && !fight.holdsParty }
+  var canFire: Bool {
+    session.mode == .exploring && showsWeapon && !fight.holdsParty
+      && fight.status(for: session.leader).reloadRemaining <= 0
+  }
   var isActive: Bool { isPresented && isApplicationActive }
 
   /// What the player chose in another level's world carries over to this one: a hidden status
@@ -640,6 +671,7 @@ final class GameWorld {
     for member in PartyMember.allCases { showPose(member) }
     joltedMembers = []
     posedCoverLeader = nil
+    updateWeaponStatus()
     resetSquad(around: spot)
   }
 
@@ -732,11 +764,9 @@ final class GameWorld {
     let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
-    // Only Miki carries the carbine, and not while a scene holds her. While the right stick aims
-    // it, she turns towards her aim, whichever way she moves (ADR 0007); otherwise towards where
-    // the fight turns her, or where she moves. She never turns faster than her turn rate, and
-    // her shots leave the way she faces (ADR 0008).
-    let armed = leader == .miki && !held
+    // Each leader aims their own weapon, whichever way they move. A scripted scene still
+    // holds fire; facing and turn-rate rules are shared by all three (ADR 0010).
+    let armed = !held
     aimDirection =
       armed ? aimStick.map { Movement.aim(for: $0, cameraOffset: level.cameraOffset) } : nil
     let moving = simd_length_squared(leaderDelta) > 0.000001 ? leaderDelta : nil
@@ -1098,8 +1128,8 @@ final class GameWorld {
 
   /// One step of the fight rules, then their stage presentation; the world turns the leader,
   /// shows lines, the threat and who can answer it, and starts a retry
-  /// or a fall back after the last hit. Only Miki carries the carbine and has Disrupt, and not
-  /// while a scene holds her; outside an encounter, only her carbine acts (ADR 0007).
+  /// or a fall back after the last hit. Every leader carries their weapon; only Miki has
+  /// Disrupt, and not while a scene holds her. Outside an encounter, shots are practice.
   private func stepStage(
     leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
   ) {
@@ -1114,6 +1144,7 @@ final class GameWorld {
       mayDisrupt: leaderHasSignature && !fight.holdsParty,
       signaturePressed: signaturePressPending, figures: figures, session: session)
     stage.update(fight, dt: dt)
+    updateWeaponStatus()
     firePressPending = false
     signaturePressPending = false
     let cue = fight.canDisrupt ? "\(leader.displayName) can Disrupt" : nil
@@ -1228,6 +1259,7 @@ final class GameWorld {
     let previous = squadLeader
     let leader = session.leader
     squadLeader = leader
+    updateWeaponStatus()
     fight.clearCover()
     showPose(previous)
     facingGoal = nil
@@ -1409,7 +1441,8 @@ final class GameWorld {
         refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect), canDisrupt: signatureCue != nil,
         disrupts: disrupts, companionShots: companionShots, fallBacks: fallBacks,
-        shotMarks: shotMarks, leaderCover: fight.coverState)
+        shotMarks: shotMarks, leaderCover: fight.coverState,
+        weapon: fight.status(for: session.leader))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

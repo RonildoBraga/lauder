@@ -194,7 +194,7 @@ struct GameView: View {
         ? .phone : world.controls.activeController.map { .controller($0) } ?? .none
     CombatFeedback.shared.play(
       world.takeCombatEvents(), listener: world.listenerPoint, right: world.screenRight,
-      device: device, triggerArmed: world.canFire)
+      device: device, triggerWeapon: world.weaponKind)
   }
 
   /// What the pause menu calls each choice: the third names the level it starts.
@@ -232,7 +232,7 @@ struct GameView: View {
 
   /// The status panel, small and with just the essentials: who leads, marked, and who follows,
   /// with the leader's hits during a fight, or everyone's in the combat yard, and the squad's
-  /// formation. A new objective or line shows for a few seconds; a threat, the carbine's rounds,
+  /// formation. A new objective or line shows for a few seconds; a threat, the weapon's rounds,
   /// a warning or the release guidance only while they matter. The panel button hides it, and
   /// shows it again.
   private func status(talking: Bool) -> some View {
@@ -276,7 +276,7 @@ struct GameView: View {
         Text(cue).font(.caption.bold())
       }
       if world.showsAmmo {
-        Text("Carbine · \(world.session.ammo)").font(.caption)
+        Text(world.weaponStatus).font(.caption)
       }
       if world.level.salvage != nil, let bag = world.session.salvage.bag {
         // The shared bag (ADR 0006): what it holds, and a regulator known not to fit.

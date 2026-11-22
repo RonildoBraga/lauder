@@ -33,7 +33,13 @@
       /// Hold the right stick towards this direction on the ground, and Fire, for this long
       /// (ADR 0007).
       case fireAimed(SIMD2<Float>, seconds: Float)
-      /// How many rounds the carbine has left.
+      /// Keep aiming and firing until the current weapon starts its automatic reload.
+      case fireUntilReloading(SIMD2<Float>, seconds: Float)
+      /// Wait without Fire until a new magazine is ready.
+      case awaitReloaded(seconds: Float)
+      /// The active weapon and its mechanical magazine; nil accepts any loaded count.
+      case expectWeapon(Weapon.Kind, loaded: ClosedRange<Int>?, reloading: Bool)
+      /// How many player-fired rounds the party has left.
       case expectAmmo(Int)
       /// At least this many shots' marks show on blocks (ADR 0007).
       case expectMarks(atLeast: Int)
@@ -127,6 +133,8 @@
       let shotMarks: Int
       /// The leader's cover stance and directional protection, tried only in the combat yard.
       let leaderCover: FightSimulation.CoverState?
+      /// The current leader's weapon, including an automatic reload's remaining time.
+      let weapon: FightSimulation.WeaponStatus
     }
 
     struct Frame {
@@ -420,8 +428,39 @@
           return InputRules.Raw(
             aimStick: Movement.stick(towards: direction, cameraOffset: snapshot.level.cameraOffset),
             controllerFire: true)
+        case .fireUntilReloading(let direction, let seconds):
+          if snapshot.weapon.reloadRemaining > 0 {
+            advance()
+            return InputRules.Raw()
+          }
+          if stepTime > seconds {
+            failures.append("the weapon did not reload within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw(
+            aimStick: Movement.stick(towards: direction, cameraOffset: snapshot.level.cameraOffset),
+            controllerFire: true)
+        case .awaitReloaded(let seconds):
+          if snapshot.weapon.reloadRemaining == 0 && snapshot.weapon.loaded > 0 {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append("the reload did not finish within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .expectWeapon(let kind, let loaded, let reloading):
+          let weapon = snapshot.weapon
+          expect(
+            weapon.kind == kind && (loaded?.contains(weapon.loaded) ?? true)
+              && (weapon.reloadRemaining > 0) == reloading,
+            "weapon was \(weapon.kind), loaded \(weapon.loaded), reload \(weapon.reloadRemaining); "
+              + "expected \(kind), loaded \(String(describing: loaded)), reloading \(reloading)")
         case .expectAmmo(let count):
-          expect(snapshot.ammo == count, "the carbine had \(snapshot.ammo) round(s), not \(count)")
+          expect(snapshot.ammo == count, "the party had \(snapshot.ammo) round(s), not \(count)")
         case .expectMarks(let count):
           expect(
             snapshot.shotMarks >= count,
@@ -871,6 +910,34 @@
         .mark("walking away leaves cover"),
       ] + restartRun + [.expectCover(nil, firing: false, exposed: false)]
 
+    /// All three travellers fire at the wall, without spending shared rounds. Laura empties
+    /// a magazine, Pause holds the reload, and switching cannot refill the other weapons.
+    private static let squadWeapons: [Step] =
+      [.mark("the bridge")] + otherLevel + [
+        .expectLevel("combat-yard"), .order(.hold),
+        .expectWeapon(.carbine, loaded: 12...12, reloading: false),
+        .fireAimed([0, -1], seconds: 0.9),
+        .expectWeapon(.carbine, loaded: 1...11, reloading: false), .expectAmmo(60),
+        .mark("Miki fires her carbine"), .wait(seconds: 0.3), .switchLeader,
+        .expectWeapon(.closeScatter, loaded: 4...4, reloading: false),
+        .fireAimed([0, -1], seconds: 0.9),
+        .expectWeapon(.closeScatter, loaded: 1...3, reloading: false), .expectAmmo(60),
+        .mark("Tom fires his scatter weapon"), .wait(seconds: 0.3), .switchLeader,
+        .expectWeapon(.lightBurst, loaded: 18...18, reloading: false),
+        .fireAimed([0, -1], seconds: 0.9),
+        .expectWeapon(.lightBurst, loaded: 1...17, reloading: false), .expectAmmo(60),
+        .mark("Laura fires a burst"), .fireUntilReloading([0, -1], seconds: 18),
+        .expectWeapon(.lightBurst, loaded: 0...0, reloading: true),
+        .pause, .wait(seconds: 0.6),
+        .expectWeapon(.lightBurst, loaded: 0...0, reloading: true), .mark("Pause holds the reload"),
+        .pause, .awaitReloaded(seconds: 3),
+        .expectWeapon(.lightBurst, loaded: 18...18, reloading: false), .expectAmmo(60),
+        .mark("Laura reloads automatically"), .switchLeader,
+        .expectWeapon(.carbine, loaded: 1...11, reloading: false), .switchLeader,
+        .expectWeapon(.closeScatter, loaded: 1...3, reloading: false), .switchLeader,
+        .expectWeapon(.lightBurst, loaded: 18...18, reloading: false),
+      ] + restartRun + [.expectWeapon(.carbine, loaded: 12...12, reloading: false)]
+
     /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
     /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
     /// loose panel and it swings open. Tom searches the cabinet that holds the wrong model in this
@@ -909,6 +976,7 @@
       ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
       ("orders", orders), ("combat-yard", combatYard), ("leader-cover", leaderCover),
       ("salvage-yard", salvageYard),
+      ("squad-weapons", squadWeapons),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

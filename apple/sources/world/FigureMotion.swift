@@ -83,11 +83,22 @@ struct Fall: Sendable {
   }
 }
 
-/// How the leader holds her drawn carbine (ADR 0008): low across her body while she is not using
-/// it, raised to her shoulder along her facing while she aims or fires, and kicked back and up by
+/// How a party member holds a drawn weapon (ADR 0008, ADR 0010): low across the body while not
+/// using it, raised to the shoulder along their facing while aiming or firing, and kicked back and up by
 /// each shot. Positions are in the figure, whose centre is the origin, facing -z with +x to its
 /// right; the weapon's own origin is its grip, with the barrel along its -z.
 struct WeaponPose: Sendable {
+  /// The grip and barrel shared by the pose, prop and shot's muzzle. Recoil is a starting
+  /// value for each weapon's feel, without changing the character's movement or aim rules.
+  struct Profile: Sendable {
+    let lowGrip: SIMD3<Float>
+    let raisedGrip: SIMD3<Float>
+    let barrel: Float
+    let kickBack: Float
+    let kickLift: Float
+  }
+
+  let kind: Weapon.Kind
   /// Seconds the weapon stays raised after she last aims or fires.
   static let holdTime: Float = 0.8
   /// Seconds to raise it, and to lower it again.
@@ -114,6 +125,27 @@ struct WeaponPose: Sendable {
   private(set) var kick: Float = 0
   private var held: Float = 0
 
+  init(kind: Weapon.Kind = .carbine) {
+    self.kind = kind
+  }
+
+  static func profile(for kind: Weapon.Kind) -> Profile {
+    switch kind {
+    case .carbine, .rifle:
+      Profile(
+        lowGrip: lowGrip, raisedGrip: raisedGrip, barrel: barrel,
+        kickBack: kickBack, kickLift: kickLift)
+    case .lightBurst:
+      Profile(
+        lowGrip: [0.14, -0.02, -0.08], raisedGrip: [0.14, 0.4, -0.12], barrel: 0.32,
+        kickBack: 0.055, kickLift: 6 * .pi / 180)
+    case .closeScatter:
+      Profile(
+        lowGrip: [0.18, -0.05, -0.12], raisedGrip: [0.17, 0.4, -0.16], barrel: 0.5,
+        kickBack: 0.16, kickLift: 16 * .pi / 180)
+    }
+  }
+
   /// One step: while she aims or holds Fire the weapon rises and stays up; a short while after,
   /// it lowers; a kick settles.
   mutating func step(dt: Float, aiming: Bool) {
@@ -134,24 +166,29 @@ struct WeaponPose: Sendable {
 
   /// Holstered: the next draw starts held low.
   mutating func holster() {
-    self = WeaponPose()
+    self = WeaponPose(kind: kind)
   }
 
   /// Where the weapon's grip is in the figure now, and which way the barrel points.
   var transform: (position: SIMD3<Float>, orientation: simd_quatf) {
+    let profile = Self.profile(for: kind)
     let low =
       simd_quatf(angle: Self.lowTurn, axis: [0, 1, 0])
       * simd_quatf(angle: Self.lowTip, axis: [1, 0, 0])
     let held = simd_slerp(low, simd_quatf(angle: 0, axis: [0, 1, 0]), raise)
-    let lift = simd_quatf(angle: Self.kickLift * kick, axis: [1, 0, 0])
-    let grip = simd_mix(Self.lowGrip, Self.raisedGrip, SIMD3(repeating: raise))
-    return (grip + SIMD3(0, 0, Self.kickBack * kick), held * lift)
+    let lift = simd_quatf(angle: profile.kickLift * kick, axis: [1, 0, 0])
+    let grip = simd_mix(profile.lowGrip, profile.raisedGrip, SIMD3(repeating: raise))
+    return (grip + SIMD3(0, 0, profile.kickBack * kick), held * lift)
   }
 
   /// Where the raised weapon's muzzle is on the ground, for a figure at `position` facing
   /// `facing`: where the leader's shots start.
-  static func muzzle(from position: SIMD2<Float>, facing: SIMD2<Float>) -> SIMD2<Float> {
+  static func muzzle(
+    from position: SIMD2<Float>, facing: SIMD2<Float>, kind: Weapon.Kind = .carbine
+  ) -> SIMD2<Float> {
+    let profile = Self.profile(for: kind)
     let right = SIMD2(-facing.y, facing.x)
-    return position + facing * (Self.barrel - Self.raisedGrip.z) + right * Self.raisedGrip.x
+    return position + facing * (profile.barrel - profile.raisedGrip.z) + right
+      * profile.raisedGrip.x
   }
 }

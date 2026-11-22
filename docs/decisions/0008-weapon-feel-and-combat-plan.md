@@ -34,7 +34,7 @@ On 22 November 2026, asked whether to start the first phase with the recommended
 
 ### 1. Combat improves in five phases
 
-Each phase is built and tested in the Simulator, then checked on the baseline iPhone and played on TestFlight, each after the maintainer's go-ahead. Cover, companion and enemy changes start in the combat yard, as [ADR 0005](0005-squad-combat-experiment.md)'s did. The weapon's feel applies everywhere, as ADR 0007's changes did. Each fight becomes deeper, but there are no more of them: the [story bible](../story/story-bible.md) still keeps combat occasional after the bridge.
+Each phase is built and tested in the Simulator, then checked on the baseline iPhone and played on TestFlight, each after the maintainer's go-ahead. After build 20's delivery, the maintainer authorised continued Simulator development without waiting for another phone session, as [ADR 0010](0010-squad-weapons.md) records; physical evidence remains separate from Simulator results. Cover, companion and enemy changes start in the combat yard, as [ADR 0005](0005-squad-combat-experiment.md)'s did. The weapon's feel applies everywhere, as ADR 0007's changes did. Each fight becomes deeper, but there are no more of them: the [story bible](../story/story-bible.md) still keeps combat occasional after the bridge.
 
 This record decides only the first phase. The others are the working proposal each starts from, and each gets its own record when it begins:
 1. **The shot:** this record.
@@ -43,7 +43,7 @@ This record decides only the first phase. The others are the working proposal ea
    - firing rises over a low block or steps out at a tall block's edge, and the leader is exposed while firing;
    - cover protects only from the side it faces;
    - a shield on the ground shows it, and turns red when a threat can see the leader.
-3. **The squad's weapons:** Laura and Tom fire their own weapons when they lead, since the story bible makes each “useful as leader and capable of ordinary weapon defence”. Reloads are automatic, and companions' shots follow the same spread.
+3. **The squad's weapons:** now assigned and built in the Simulator prototype recorded in [ADR 0010](0010-squad-weapons.md). Laura and Tom fire their own weapons when they lead, since the story bible makes each “useful as leader and capable of ordinary weapon defence”. Each member keeps magazine and reload state across roles, reloads are automatic, and companions' shots use spread. One shared ammunition total remains.
 4. **Companion combat:** companions use the leader's cover rule, focus fire on the leader's target and find new cover when flanked.
 5. **Enemies that fight back:** shooters in cover, a flanker and a grenade thrower. Fights get harder through behaviour, not by adding hits.
 
@@ -81,7 +81,7 @@ Each shot goes within a cone around where it is aimed: the weapon's spread. For 
 - **What it means:** standing still, the first shot of a short burst lands within 10 cm at the carbine's 14 m reach. A long burst, or firing on the move, scatters, and at range it can miss a figure, which a shot must pass within 0.35 m of.
 - **What shows it:** each shot's streak, the only sign of the spread.
 - **Never first:** if a scattered shot would meet someone who is not yet a target, it flies straight instead.
-- **Others unchanged:** until phases 3 and 5, companions' shots hit what they aim at, and a hostile's shot hits when its line is clear at the end of its wind-up.
+- **First-phase boundary:** this phase left companions' shots hitting what they aim at, and a hostile's shot hitting when its line is clear at the end of its wind-up. [ADR 0010](0010-squad-weapons.md)'s phase 3 now applies spread to companions too; phase 5's enemy changes remain a proposal.
 
 ### 4. Enemies react
 
@@ -103,8 +103,8 @@ Each shot goes within a cone around where it is aimed: the weapon's spread. For 
 ### 6. Vibration
 
 - **Which device:** playing by touch, the phone vibrates. With a controller, the controller vibrates and the phone stays still.
-- **Patterns:** a firm tap for each carbine shot, a sharp, heavier jolt when the leader is hit, and a light tick for an empty click. Laura's and Tom's weapons get their patterns in phase 3, when the player fires them.
-- **DualSense:** R2 resists like a trigger's break while Miki can fire. It goes slack while paused, outside play, or when the leader has no weapon.
+- **Patterns:** a firm tap for each carbine shot, a sharp, heavier jolt when the leader is hit, and a light tick for an empty click. Phase 3 now gives Laura's and Tom's player-fired weapons distinct patterns, recorded in [ADR 0010](0010-squad-weapons.md); their physical feel remains unverified.
+- **DualSense:** in this phase, R2 resists like a trigger's break while Miki can fire. [ADR 0010](0010-squad-weapons.md) extends it to distinct settings for all three weapons and clears resistance during automatic reloads. It goes slack while paused or outside play.
 - **The switch:** the pause menu's **Vibration** choice turns all of it off and on again.
   - It starts on.
   - It carries over to the other level.
@@ -139,6 +139,6 @@ Simulator playtests come first. Then the maintainer plays on the baseline iPhone
 
 ## What this does not settle
 
-- Phases 2 to 5.
-- Magazines and reloads, which come in phase 3.
+- Later phases: phase 2 is recorded in [ADR 0009](0009-leader-cover.md) and phase 3 in [ADR 0010](0010-squad-weapons.md); phases 4 and 5 remain proposals.
+- Magazines and reloads, subsequently assigned in phase 3 with one shared ammunition total.
 - Aiming by hand on touch, such as a drag on Fire.

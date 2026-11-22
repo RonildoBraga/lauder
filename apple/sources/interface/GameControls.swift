@@ -18,7 +18,7 @@ final class GameControls {
   private(set) var pauseButtonName = "Pause"
   private(set) var switchButtonName = "Switch"
   private(set) var fireButtonName = "Fire"
-  /// What aims the carbine apart from movement, such as the right stick; touch has nothing,
+  /// What aims the active weapon apart from movement, such as the right stick; touch has nothing,
   /// and Fire takes the assisted target (ADR 0007).
   private(set) var aimControlName: String?
   private(set) var formationButtonName = "Formation"
