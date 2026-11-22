@@ -875,7 +875,11 @@ final class GameWorld {
           formation: session.formation, threats: threats,
           weaponRanges: Dictionary(
             uniqueKeysWithValues: level.combat.companionWeapons.map { member, authored in
-              (member, level.arena != nil ? session.weapon(for: member).range : authored.range)
+              (
+                member,
+                level.arena != nil
+                  ? session.weapon(for: member).assistanceRange : authored.assistanceRange
+              )
             }), dt: dt),
         grid: grid)
     } else {
@@ -1553,19 +1557,9 @@ final class GameWorld {
     if level.arena != nil, let leader = position(of: session.leader) {
       let living = fight.hostiles.values.filter { $0.isVisible && !$0.isDown }
         .sorted { $0.spec.id < $1.spec.id }
-      // A long-range attack needs a bearing even when its shooter is outside the camera.
+      // The most imminent attack needs a bearing even when its actor is outside the camera.
       // This points to the actor, not to its aim line or the shot's destination.
-      let preparing = living.filter {
-        ($0.spec.weapon == .marksman || $0.spec.weapon == .supportGun)
-          && fight.preparingShots.contains($0.spec.id)
-      }.min { first, second in
-        if case .aiming(let a) = first.phase, case .aiming(let b) = second.phase, a != b {
-          return a < b
-        }
-        return simd_distance_squared(first.position, leader)
-          < simd_distance_squared(second.position, leader)
-      }
-      if let preparing {
+      if let preparing = fight.preparingHostile {
         goal = Level.Goal(name: "Preparing: \(preparing.spec.name)", point: preparing.position)
       } else if let nearest = living.min(by: {
         simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)

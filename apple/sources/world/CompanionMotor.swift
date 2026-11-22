@@ -102,7 +102,8 @@ struct CompanionMotor {
       return .zero
     }
     wait = 0
-    if targetSpeed < 0.1 && distance < Self.settleDistance
+    // A static order or cover anchor must not settle us again while making way for the leader.
+    if dodge == nil && targetSpeed < 0.1 && distance < Self.settleDistance
       && simd_length(velocity) < 0.3 && !crowded
     {
       isSettled = true
@@ -233,7 +234,10 @@ struct CompanionMotor {
     let direction = context.leaderVelocity / leaderSpeed
     let lateral = SIMD2(-direction.y, direction.x)
     let side: Float = simd_dot(offset, lateral) >= 0 ? 1 : -1
-    return lateral * side * 3 * (1 - gap / Self.avoidRadius)
+    // Keep the full side step while predicted bodies overlap; taper only once their full
+    // diameter clears. Tapering from zero gap left too little speed to clear a static anchor.
+    let urgency = min(1, (Self.avoidRadius - gap) / (Self.avoidRadius - 2 * PartyBody.radius))
+    return lateral * side * 3 * urgency
   }
 
   private static func limited(_ vector: SIMD2<Float>, to maximum: Float) -> SIMD2<Float> {
