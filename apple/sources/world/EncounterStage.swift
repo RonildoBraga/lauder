@@ -11,7 +11,10 @@ final class EncounterStage {
   /// What every shot looks like (ADR 0007).
   let effects: ShotEffects
   /// Each member's weapon, posed at its grip; the world attaches it to that member's visual.
-  let weaponProps: [PartyMember: Entity]
+  private(set) var weaponProps: [PartyMember: Entity]
+  private var partyWeaponKinds: [PartyMember: Weapon.Kind] = [:]
+  private var partyWeaponCache: [PartyMember: [Weapon.Kind: Entity]] = [:]
+  private let style: SceneStyle
 
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
@@ -22,9 +25,12 @@ final class EncounterStage {
   private let grenadeMarkers: [String: GrenadeMarker]
   private let arrivalMarkers: [String: ArenaArrivalMarker]
   private var throwerMarks: [String: Entity] = [:]
+  private var roleMarks: [String: Entity] = [:]
+  private var windUpCues: [String: Entity] = [:]
   private let terrain: Terrain
 
   init(level: Level, style: SceneStyle) {
+    self.style = style
     terrain = level.terrain
     let shots = Entity()
     shots.name = "combat.shots"
@@ -33,6 +39,11 @@ final class EncounterStage {
       uniqueKeysWithValues: PartyMember.allCases.map {
         ($0, style.weapon(for: Weapon.forMember($0).kind))
       })
+    for member in PartyMember.allCases {
+      let kind = Weapon.forMember(member).kind
+      partyWeaponKinds[member] = kind
+      if let prop = weaponProps[member] { partyWeaponCache[member] = [kind: prop] }
+    }
     targetMarker = style.targetMarker()
     coverShields =
       level.combat.leaderCover
@@ -82,10 +93,26 @@ final class EncounterStage {
       let visual = style.hostile()
       if spec.attack == .shoot {
         // The raised barrel and recoil communicate aim without revealing its exact endpoint.
-        let weapon = style.weapon(for: .rifle)
-        weapon.name = "hostile.\(spec.id).rifle"
+        let weapon = style.weapon(for: spec.weapon)
+        weapon.name = "hostile.\(spec.id).\(spec.weapon)"
         visual.addChild(weapon)
         hostileWeaponProps[spec.id] = weapon
+        if let mark = roleMark(for: spec.weapon, style: style) {
+          mark.name = "hostile.\(spec.id).role"
+          visual.addChild(mark)
+          roleMarks[spec.id] = mark
+        }
+        if spec.weapon == .marksman || spec.weapon == .supportGun {
+          // A compact, non-directional charge cue survives the distant camera. It conveys
+          // readiness without drawing a laser, cone or endpoint onto the intended victim.
+          let cue = style.block(
+            size: [0.13, 0.13, 0.13], at: [0, PartyBody.height / 2 + 0.32, 0],
+            material: style.warm)
+          cue.name = "hostile.\(spec.id).windup"
+          cue.isEnabled = false
+          visual.addChild(cue)
+          windUpCues[spec.id] = cue
+        }
       }
       if spec.attack == .throwGrenade {
         // A simple overhead shape distinguishes the thrower without requiring character art.
@@ -170,6 +197,16 @@ final class EncounterStage {
         visual.position = pose.position
       }
       throwerMarks[id]?.isEnabled = state.isVisible && !state.isDown
+      roleMarks[id]?.isEnabled = state.isVisible && !state.isDown
+      if let cue = windUpCues[id] {
+        if case .aiming(let remaining) = state.phase, fight.preparingShots.contains(id) {
+          cue.isEnabled = true
+          let charged = 1 - min(1, remaining / max(0.001, state.spec.windUp))
+          cue.scale = SIMD3(repeating: 0.7 + 0.6 * charged)
+        } else {
+          cue.isEnabled = false
+        }
+      }
       if let prop = hostileWeaponProps[id] {
         prop.isEnabled = state.isVisible && !state.isDown
         if let pose = fight.hostileWeaponPoses[id] {
@@ -187,7 +224,20 @@ final class EncounterStage {
       targetMarker.isEnabled = false
     }
     let drawn = fight.drawnWeapons
-    for (member, prop) in weaponProps {
+    for member in PartyMember.allCases {
+      guard var prop = weaponProps[member] else { continue }
+      let kind = fight.equippedWeapon(for: member).kind
+      if partyWeaponKinds[member] != kind {
+        let parent = prop.parent
+        prop.isEnabled = false
+        prop.removeFromParent()
+        let replacement = partyWeaponCache[member]?[kind] ?? style.weapon(for: kind)
+        partyWeaponCache[member, default: [:]][kind] = replacement
+        parent?.addChild(replacement)
+        weaponProps[member] = replacement
+        partyWeaponKinds[member] = kind
+        prop = replacement
+      }
       prop.isEnabled = drawn.contains(member)
       if let pose = fight.weaponPoses[member] {
         let transform = pose.transform
@@ -195,6 +245,34 @@ final class EncounterStage {
         prop.orientation = transform.orientation
       }
     }
+  }
+
+  /// Distinct equipment silhouettes in the existing palette; none implies armour or a
+  /// larger hit pool. Weapon geometry supplies the barrel and magazine differences too.
+  private func roleMark(for kind: Weapon.Kind, style: SceneStyle) -> Entity? {
+    let result = Entity()
+    switch kind {
+    case .marksman:
+      result.addChild(
+        style.block(
+          size: [0.3, 0.07, 0.13], at: [0, PartyBody.height / 2 + 0.1, 0],
+          material: style.gear))
+    case .supportGun:
+      for side: Float in [-1, 1] {
+        result.addChild(
+          style.block(
+            size: [0.14, 0.28, 0.2], at: [side * 0.3, 0.12, 0.05],
+            material: style.gear))
+      }
+    case .submachineGun:
+      result.addChild(
+        style.block(size: [0.12, 0.32, 0.12], at: [-0.27, 0.2, 0.1], material: style.gear))
+    case .closeScatter:
+      result.addChild(
+        style.block(size: [0.48, 0.1, 0.12], at: [0, 0.15, -0.08], material: style.gear))
+    default: return nil
+    }
+    return result
   }
 
 }

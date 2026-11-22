@@ -31,10 +31,10 @@ struct CombatYardTests {
       #expect(abs(box.position.y - box.size.y / 2 - yard.terrain.height(at: point)) < 0.001)
     }
     let arena = try #require(yard.arena)
-    #expect(arena.slots.count == 8 && arena.maxActive == 4)
+    #expect(arena.slots.count == CombatYard.hostiles.count && arena.maxActive == 4)
     #expect(Set(arena.slots.map(\.id)) == Set(CombatYard.fight.hostiles.map(\.id)))
     #expect(CombatYard.fight.cues.isEmpty && CombatYard.fight.clearedLine == nil)
-    #expect(CombatYard.hostiles.filter { $0.behavior == .takeCover }.count == 2)
+    #expect(CombatYard.hostiles.filter { $0.behavior == .takeCover }.count == 3)
     #expect(CombatYard.hostiles.filter { $0.behavior == .flank }.count == 2)
     #expect(CombatYard.hostiles.filter { $0.behavior == .advance && $0.range == 7 }.count == 2)
     #expect(CombatYard.hostiles.filter { $0.attack == .throwGrenade }.count == 2)
@@ -240,17 +240,18 @@ struct CombatYardTests {
 
   @Test
   func disruptNeedsTheWindUpInMikisReachAndSight() {
-    // Out of her reach, 16 m away, and out of her sight, behind the wall.
+    // Out of her reach, 16 m away, and out of her sight, behind the wall. Tom stands in
+    // sight and reach, so the shooter has a real acquired wind-up for Miki to try to cancel.
     for miki: SIMD2<Float> in [[3, 8], [-3.5, 2]] {
       let world = GameWorld(
         level: range(
-          spawns: [.miki: miki, .tom: [-5, 2.9], .laura: [-4, 2.9]],
+          spawns: [.miki: miki, .tom: [3, 2], .laura: [-4, 2.9]],
           shooters: [Shooter(id: "a", at: [0, -8])]))
       #expect(world.session.holdAll())
-      #expect(run(world, upTo: 1) { world.threat != nil })
+      #expect(run(world, upTo: 1) { world.threat == "Shooter A is aiming at Tom." })
       #expect(world.showsSignature && world.signatureCue == nil)
       press(InputRules.Raw(touchSignature: true), in: world)
-      #expect(world.disrupts == 0 && world.threat != nil)
+      #expect(world.disrupts == 0 && world.threat == "Shooter A is aiming at Tom.")
     }
   }
 

@@ -13,6 +13,7 @@ struct TouchInput {
     case signature
     /// The pause menu's Vibration choice, shown only while paused (ADR 0008).
     case vibration
+    case testWeapon
   }
 
   private(set) var generation = 0
@@ -63,6 +64,7 @@ struct TouchInput {
       touchSwitch: pressed.contains(.cycle), touchRestart: pressed.contains(.restart),
       touchOtherLevel: pressed.contains(.otherLevel),
       touchVibration: pressed.contains(.vibration),
+      touchTestWeapon: pressed.contains(.testWeapon),
       touchFire: pressed.contains(.fire), touchFormation: pressed.contains(.formation),
       touchSignature: pressed.contains(.signature), touchGround: pressed.contains(.ground),
       touchMark: mark, touchOrder: order)

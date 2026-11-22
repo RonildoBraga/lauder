@@ -126,6 +126,15 @@ struct HostileState {
     phase = .recovering(remaining: spec.recovery)
   }
 
+  /// A new angle or lost target requires a fresh readable wind-up. In particular a marksman
+  /// cannot carry an almost-finished shot through a retreat and fire the instant it stops.
+  /// Reaction and post-shot recovery still have to finish before that next wind-up begins.
+  mutating func restartWindUp() {
+    guard engaged, spec.attack == .shoot, isVisible, !isDown, case .aiming = phase else { return }
+    flinched = 0
+    phase = .aiming(remaining: spec.windUp)
+  }
+
   /// The party fell back (ADR 0005): a hostile still standing stops fighting and waits where it
   /// stands until it is engaged again. It remembers having aimed, so it stays a target; the
   /// session keeps the damage dealt to it.
@@ -137,10 +146,11 @@ struct HostileState {
   }
 
   /// Advance by one simulation step. A shot returns when a wind-up completes; `canHit` says
-  /// whether the line to the leader is clear and within range at that moment. A charger runs
-  /// towards `target`, the leader.
+  /// whether the line to the leader is clear and within range at that moment. `canFire` gates
+  /// aiming without freezing arrival/recovery readiness. A charger runs towards `target`.
   mutating func step(
-    dt: Float, canHit: Bool, toward target: SIMD2<Float>, canAttack: Bool = true
+    dt: Float, canHit: Bool, toward target: SIMD2<Float>, canAttack: Bool = true,
+    canFire: Bool = true
   ) -> Shot? {
     switch phase {
     case .hidden, .down:
@@ -166,6 +176,10 @@ struct HostileState {
       return nil
     case .aiming(let remaining):
       guard canAttack else { return nil }
+      guard canFire else {
+        phase = .aiming(remaining: spec.windUp)
+        return nil
+      }
       guard remaining - dt <= 0 else {
         phase = .aiming(remaining: remaining - dt)
         return nil

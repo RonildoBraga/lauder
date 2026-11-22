@@ -40,6 +40,54 @@ struct EnemyBehaviorTests {
   }
 
   @Test
+  func acquisitionGatesTheShotWithoutFreezingReadinessOrBankingWindUpTime() {
+    let spec = enemy(behavior: .takeCover, reaction: 0.35)
+    var state = HostileState(spec: spec)
+    state.engage()
+    #expect(!state.isTargetable)
+    // Outside acquisition range, the reaction can finish and expose a known threat.
+    #expect(state.step(dt: spec.reactionDelay, canHit: true, toward: .zero, canFire: false) == nil)
+    #expect(state.isTargetable && state.phase == .aiming(remaining: spec.windUp))
+    // Waiting longer than a wind-up cannot produce a shot or store an almost-ready one.
+    for _ in 0..<30 {
+      #expect(state.step(dt: 0.1, canHit: true, toward: .zero, canFire: false) == nil)
+    }
+    #expect(state.phase == .aiming(remaining: spec.windUp))
+    #expect(state.step(dt: spec.windUp - 0.001, canHit: true, toward: .zero) == nil)
+    #expect(state.step(dt: 0.002, canHit: true, toward: .zero) == .hit)
+    // Losing acquisition during recovery cannot freeze its readiness either.
+    #expect(state.step(dt: spec.recovery, canHit: true, toward: .zero, canFire: false) == nil)
+    #expect(state.phase == .aiming(remaining: spec.windUp))
+  }
+
+  @Test
+  func retargetingRestartsAnUnfinishedAimWithoutSkippingReactionOrReload() {
+    let spec = CombatYard.supportGunner
+    var state = HostileState(spec: spec)
+    state.engage()
+    #expect(state.step(dt: 0.2, canHit: true, toward: .zero) == nil)
+    let reaction = state.phase
+    state.restartWindUp()
+    #expect(state.phase == reaction && !state.isTargetable)
+    #expect(state.step(dt: spec.reactionDelay, canHit: true, toward: .zero) == nil)
+    // A near-complete aim cannot survive a target change: the complete wind-up is paid again.
+    #expect(state.step(dt: spec.windUp - 0.01, canHit: true, toward: .zero) == nil)
+    state.restartWindUp()
+    #expect(state.phase == .aiming(remaining: spec.windUp))
+    #expect(state.step(dt: spec.windUp - 0.01, canHit: true, toward: .zero) == nil)
+    #expect(state.step(dt: 0.02, canHit: true, toward: .zero) == .hit)
+    // Retargeting during the gunner's reload preserves the time already paid and still owed.
+    #expect(state.step(dt: 0.4, canHit: true, toward: .zero) == nil)
+    let reload = state.phase
+    state.restartWindUp()
+    #expect(state.phase == reload)
+    #expect(state.step(dt: 10, canHit: true, toward: .zero, canAttack: false) == nil)
+    #expect(state.phase == reload)
+    #expect(state.step(dt: spec.recovery, canHit: true, toward: .zero) == nil)
+    #expect(state.phase == .aiming(remaining: spec.windUp))
+  }
+
+  @Test
   func movingCannotCompleteAnAimOrRecovery() {
     let spec = enemy(behavior: .flank)
     var state = HostileState(spec: spec)

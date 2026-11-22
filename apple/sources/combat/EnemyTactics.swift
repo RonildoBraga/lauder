@@ -7,6 +7,9 @@ struct EnemyTactics {
   static let speed: Float = 1.7
   static let homeReach: Float = 6
   static let advancingReach: Float = 14
+  static let marksmanReach: Float = 12
+  static let marksmanNear: Float = 20
+  static let marksmanFar: Float = 30
   static let coverReach: Float = 3
   static let coverInterval: Float = 2
   static let flankInterval: Float = 3
@@ -79,8 +82,19 @@ struct EnemyTactics {
     plans = plans.filter { actors[$0.key] != nil }
     var result = Step()
     for id in actors.keys.sorted() {
-      guard let actor = actors[id], let target = nearest(to: actor.position, among: targets)
-      else { continue }
+      guard let actor = actors[id] else { continue }
+      // Long-range enemies react to a visible, acquired target, not every body on the map.
+      // Once sight is broken the marksman holds, rather than tracking through a retaining wall.
+      let acquired =
+        actor.spec.behavior == .keepDistance
+        ? targets.filter {
+          simd_distance(ballistics.point(actor.position), ballistics.point($0)) <= actor.spec.range
+            && ballistics.isClear(from: ballistics.point(actor.position), to: ballistics.point($0))
+        } : targets
+      guard let target = nearest(to: actor.position, among: acquired) else {
+        plans[id] = nil
+        continue
+      }
       var plan = plans[id]
       if let old = plan {
         if !old.route.isEmpty && simd_distance(old.goal, actor.position) > Self.arrival {
@@ -91,6 +105,14 @@ struct EnemyTactics {
         } else {
           plan?.remaining = old.remaining - dt
         }
+      }
+      let crowded =
+        actor.spec.behavior == .keepDistance
+        && simd_distance(actor.position, target) < Self.marksmanNear
+      if crowded, let current = plan, current.travelling >= 0.5,
+        simd_distance(current.goal, target) < simd_distance(actor.position, target)
+      {
+        plan = nil
       }
       if plan == nil || plan!.remaining <= 0 {
         let taken =
@@ -149,8 +171,18 @@ struct EnemyTactics {
   ) -> SIMD2<Float> {
     let home = actor.spec.standAt
     let advancing = actor.spec.behavior == .advance
-    let centre = actor.spec.behavior == .flank || advancing ? home : actor.position
-    let reach = actor.spec.behavior == .flank || advancing ? homeReach(for: actor) : Self.coverReach
+    let keepingDistance = actor.spec.behavior == .keepDistance
+    let currentDistance = simd_distance(ballistics.point(actor.position), ballistics.point(target))
+    if keepingDistance, currentDistance >= Self.marksmanNear, currentDistance <= Self.marksmanFar,
+      ballistics.isClear(from: ballistics.point(actor.position), to: ballistics.point(target))
+    {
+      return actor.position
+    }
+    let centre =
+      actor.spec.behavior == .flank || advancing || keepingDistance ? home : actor.position
+    let reach =
+      actor.spec.behavior == .flank || advancing || keepingDistance
+      ? homeReach(for: actor) : Self.coverReach
     let region = grid.region(at: actor.position)
     let candidates = grid.roomySpots(within: reach, of: centre, stride: 3).filter {
       fits($0) && simd_distance($0, home) <= homeReach(for: actor)
@@ -182,7 +214,14 @@ struct EnemyTactics {
         guard ballistics.isClear(from: ballistics.point(point), to: ballistics.point(target)) else {
           continue
         }
-        if advancing {
+        if keepingDistance {
+          // A swept, directly reachable retreat cannot choose a tempting point across a
+          // cliff or through a screen. Subsequent bounded plans can carry it along a ramp.
+          guard motion.canTraverse(from: actor.position, to: point) else { continue }
+          let distance = simd_distance(ballistics.point(point), ballistics.point(target))
+          let outsideBand = max(0, Self.marksmanNear - distance, distance - Self.marksmanFar)
+          cost = outsideBand * 4 + simd_distance(point, actor.position) * 0.1
+        } else if advancing {
           cost =
             simd_distance(ballistics.point(point), ballistics.point(target))
             + simd_distance(point, actor.position) * 0.05
@@ -228,7 +267,11 @@ struct EnemyTactics {
   private static let crouchedHeight: Float = 1.25 * 0.68
 
   private func homeReach(for actor: HostileState) -> Float {
-    actor.spec.behavior == .advance ? Self.advancingReach : Self.homeReach
+    switch actor.spec.behavior {
+    case .advance: Self.advancingReach
+    case .keepDistance: Self.marksmanReach
+    default: Self.homeReach
+    }
   }
 
   private func fits(_ point: SIMD2<Float>) -> Bool {

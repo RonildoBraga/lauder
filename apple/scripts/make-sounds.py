@@ -146,6 +146,30 @@ def rifle(rng):
     return finish(shot, drive=1.7, peak=0.85)
 
 
+def submachine_gun(rng):
+    """A short, dry crack leaves room between rapid discharges."""
+    shot = gunshot(
+        rng, 0.24, crack=(3100, 0.003), body=(3300, 0.016), boom=(170, 95, 0.025, 0.025, 0.35),
+        tail=(0.06, 0.1), delay=(0.07, 0.12))
+    return finish(shot, drive=1.3, peak=0.65)
+
+
+def marksman(rng):
+    """A distinct sharp report and low tail for a measured long shot."""
+    shot = gunshot(
+        rng, 0.9, crack=(2100, 0.01), body=(2200, 0.045), boom=(85, 40, 0.07, 0.1, 0.85),
+        tail=(0.23, 0.22), delay=(0.15, 0.3))
+    return finish(shot, drive=1.8, peak=0.95)
+
+
+def support_gun(rng):
+    """A low mechanical report for the longer support burst."""
+    shot = gunshot(
+        rng, 0.34, crack=(1400, 0.005), body=(1600, 0.035), boom=(105, 48, 0.04, 0.06, 0.7),
+        tail=(0.09, 0.14), delay=(0.08, 0.15))
+    return finish(shot, drive=1.6, peak=0.8)
+
+
 def strike_body(rng):
     """A shot striking someone: a dull thud."""
     length = samples(0.2)
@@ -179,6 +203,9 @@ SOUNDS = {
     "light-burst": light_burst,
     "close-scatter": close_scatter,
     "rifle": rifle,
+    "submachine-gun": submachine_gun,
+    "marksman": marksman,
+    "support-gun": support_gun,
     "strike-body": strike_body,
     "strike-block": strike_block,
     "empty-click": empty_click,

@@ -35,6 +35,8 @@ final class GameSession {
     case otherLevel
     /// Turns vibration off or on again, staying in the menu (ADR 0008).
     case vibration
+    /// Arena-only bench: cycles the current member's test gun while remaining paused.
+    case testWeapon
   }
 
   /// How the companions arrange themselves around the leader, in the order the formation
@@ -146,6 +148,7 @@ final class GameSession {
   private(set) var conversation: MissionScript.Conversation?
   private(set) var lineIndex = 0
   private(set) var pauseChoice = PauseChoice.resume
+  private var testWeapons: [PartyMember: Weapon.Kind] = [:]
   /// The squad's formation. It stays Close until there are two companions.
   private(set) var formation = Formation.close
   /// Companions going to or holding a point; everyone else follows (ADR 0003, phase S3).
@@ -191,6 +194,28 @@ final class GameSession {
   }
 
   var isPaused: Bool { mode == .paused }
+  var availablePauseChoices: [PauseChoice] {
+    isArena ? PauseChoice.allCases : PauseChoice.allCases.filter { $0 != .testWeapon }
+  }
+  var testWeaponTitle: String? {
+    isArena ? "Test weapon: \(weapon(for: leader).kind.name)" : nil
+  }
+
+  func weapon(for member: PartyMember) -> Weapon {
+    guard isArena, let kind = testWeapons[member] else { return .forMember(member) }
+    return .forKind(kind)
+  }
+
+  /// A deliberate pause-menu selection starts that test gun's magazine afresh. It never
+  /// adds shared rounds, and merely changing leader does not change a selected weapon.
+  @discardableResult
+  func cycleTestWeapon() -> Bool {
+    guard isArena, mode == .paused else { return false }
+    let kinds = Weapon.testKinds
+    let index = kinds.firstIndex(of: weapon(for: leader).kind) ?? 0
+    testWeapons[leader] = kinds[(index + 1) % kinds.count]
+    return true
+  }
   var currentLine: MissionScript.Line? {
     conversation.map { MissionScript.lines($0)[lineIndex] }
   }
@@ -222,7 +247,7 @@ final class GameSession {
   /// stopping at either end.
   func movePauseChoice(by step: Int) {
     guard mode == .paused, step != 0 else { return }
-    let all = PauseChoice.allCases
+    let all = availablePauseChoices
     let index = all.firstIndex(of: pauseChoice) ?? 0
     pauseChoice = all[min(max(index + step.signum(), 0), all.count - 1)]
   }
@@ -572,6 +597,7 @@ final class GameSession {
     mode = .exploring
     resumeMode = .exploring
     pauseChoice = .resume
+    testWeapons = [:]
     party = startingParty
     leader = startingParty[0]
     formation = .close

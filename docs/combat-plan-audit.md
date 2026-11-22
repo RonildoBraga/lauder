@@ -1,14 +1,27 @@
 # Combat plan coverage
 
 **Updated:** 22 November 2026\
-**Current work:** [ADR 0014](decisions/0014-continuous-combat-arena.md), implemented, checked in Simulator, reviewed, merged and delivered in TestFlight 0.1.0 (24).\
+**Current work:** [ADR 0015](decisions/0015-weapon-variety-and-map-range.md), implementation prepared; integrated validation, review and delivery pending.\
 **Latest verified delivery:** **0.1.0 (24)**, source `887963b`, as recorded in the [prototype plan](prototype-plan.md#verification-and-performance).
 
 The original five combat phases are implemented and delivered. That is an implementation result, not a finding that combat already feels finished. This audit distinguishes the delivered prototype, the current arena extension and deliberately deferred features. Exploration and salvage still lead the game; the combat yard is a separate place to repeat and tune encounters.
 
-## The five phases
+## Pending weapon/range extension
 
-The clean source `e031233` passed `./scripts/check`, all **16 headless scenarios** and focused rule/integration tests, including **30 repeated waves** with bounded actor/entity pools and cleared prior-life progress. Five rendered routes passed: `combat-yard` **101/101** through wave 3, `arena-elevation` **43/43** across actual floors **−1.8 m to +2.4 m**, `tactical-enemies` **48/48**, `first-fight` **23/23** and `relay-run-retreat` **104/104**. The named test suites below are part of the completed current regression coverage; rendered routes labelled historical are earlier evidence.
+[Issue #115](https://github.com/RonildoBraga/lauder/issues/115) extends the delivered prototype; its source must be checked and reviewed independently. No new build or delivery is claimed. The following is assigned scope under ADR 0015:
+
+| Area | Pending change | Required evidence |
+| --- | --- | --- |
+| Actual firearm travel | Clip the fired 3D ray to this level's bounds, separate from assistance/acquisition/effective damage; keep real nearer obstructions and neutral protection | Long-map body/wall/gate/terrain cases, short-assist manual fire, no new out-of-awareness bursts, committed-burst completion and authored miss safety |
+| Enemy variety | Marksman and support gunner; SMG flanker and scatter rusher; ten fixed slots, six roles, maximum four active | Role/tactic/presentation tests and repeated real-control encounters; safe arrivals and bounded entities remain required |
+| Test weapons | Six fixed choices through Pause, per-member arena selections and fresh selected magazines without adding shared rounds | Selection/reload/leadership/Restart/input-neutral tests; story/Relay defaults retained |
+| Presentation | Fast short moving tracers and bounded simultaneous effect pools; distinct primitive firearm/role shapes, generated sounds and feedback profiles | Long-bridge endpoint and rapid-volley retention, no entity growth or exact aiming beam; physical output still unverified |
+
+The paused test bench is a small arena implementation choice, not an asserted separate maintainer preference reply, loot system or change to character canon. The six original goals and five delivered phases below describe the **build 24 baseline**; their recorded results do not establish this pending pass.
+
+## The five delivered phases
+
+The clean source `e031233` passed `./scripts/check`, all **16 headless scenarios** and focused rule/integration tests, including **30 repeated waves** with bounded actor/entity pools and cleared prior-life progress. Five rendered routes passed: `combat-yard` **101/101** through wave 3, `arena-elevation` **43/43** across actual floors **−1.8 m to +2.4 m**, `tactical-enemies` **48/48**, `first-fight` **23/23** and `relay-run-retreat` **104/104**. The named test suites below are part of the completed build 24 regression coverage; rendered routes labelled historical are earlier evidence. ADR 0015 requires fresh results.
 
 [PR #113](https://github.com/RonildoBraga/lauder/pull/113) merged as `887963b` with a tree identical to that checked/reviewed source. Automated review had no findings; independent findings were addressed. The Claude request had no response at integration, so it is not counted as a completed Claude review. A signed **0.1.0 (24)** archive passed bundle, team, signature and matching-dSYM verification. API-authenticated upload is **COMPLETE** with zero errors, Apple processing is **VALID**, and the unexpired build is **IN_BETA_TESTING**, **INTERNAL_ONLY** and available to the existing internal testers. The existing group contains build 24; tester and group membership are unchanged. The [prototype plan](prototype-plan.md#verification-and-performance) records full evidence and measurements.
 
@@ -33,7 +46,7 @@ These are the six requests recorded in [ADR 0008's context](decisions/0008-weapo
 | **Active, coordinated companions** | Automatic support, cover preferences, focus fire, flank replanning, grenade escape, formations, move/hold orders and Regroup coexist under shared command priority. | Miki's Disrupt is the only signature implemented. Laura's Reposition and Tom's Brace remain proposed. Combat feel and orders under pressure need personal play. |
 | **Convincing recoil, flashes, impacts, sound and reactions** | Pooled traces/flashes/impacts, recoil, flinch, falls and generated spatial sound are implemented. Hostile hits now depend on actual rays rather than target selection alone. | This is lightweight ray-based combat, not a physical projectile simulation. Finished animation, recorded voice and a final sound pass are not implied. |
 
-## The current arena request
+## Build 24 arena coverage
 
 | Requested change | Implemented scope in ADR 0014 | Completed checks and remaining limits |
 | --- | --- | --- |

@@ -71,6 +71,8 @@ struct Level {
       case flank
       /// Advances with a rifle to a closer firing position within its bounded home area.
       case advance
+      /// Keeps a useful long firing lane and yields ground when the party closes in.
+      case keepDistance
     }
 
     let id: String
@@ -79,6 +81,9 @@ struct Level {
     let standAt: SIMD2<Float>
     let hits: Int
     var attack = Attack.shoot
+    /// The actual firearm used for handling, spread, props, feedback and damage. Existing
+    /// authored encounters retain their rifle unless the combat test assigns another kind.
+    var weapon = Weapon.Kind.rifle
     var behavior = Behavior.stationary
     /// A short pause after engagement before the first wind-up. Zero keeps older encounters
     /// unchanged; the combat yard supplies its prototype reaction delay explicitly.

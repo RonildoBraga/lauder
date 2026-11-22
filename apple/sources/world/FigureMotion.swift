@@ -146,6 +146,18 @@ struct WeaponPose: Sendable {
       Profile(
         lowGrip: [0.18, -0.05, -0.12], raisedGrip: [0.17, 0.4, -0.16], barrel: 0.5,
         kickBack: 0.16, kickLift: 16 * .pi / 180)
+    case .submachineGun:
+      Profile(
+        lowGrip: [0.14, -0.01, -0.08], raisedGrip: [0.14, 0.4, -0.1], barrel: 0.26,
+        kickBack: 0.04, kickLift: 4 * .pi / 180)
+    case .marksman:
+      Profile(
+        lowGrip: [0.17, -0.05, -0.12], raisedGrip: [0.16, 0.4, -0.18], barrel: 0.76,
+        kickBack: 0.19, kickLift: 13 * .pi / 180)
+    case .supportGun:
+      Profile(
+        lowGrip: [0.2, -0.07, -0.12], raisedGrip: [0.18, 0.4, -0.16], barrel: 0.62,
+        kickBack: 0.09, kickLift: 8 * .pi / 180)
     }
   }
 

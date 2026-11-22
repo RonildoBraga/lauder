@@ -166,17 +166,19 @@ struct FirstFightTests {
   }
 
   @Test
-  func outOfRangeHisShotsFallShort() {
+  func outsideAcquisitionHeWaitsInsteadOfFiringAcrossTheMap() {
     let world = GameWorld(level: BrooklynBridge.level)
     walk(world, to: [6.5, 15])
     walk(world, to: [6.5, 30])
     let stranger = BrooklynBridge.stranger
     #expect(simd_distance(position(world, .miki), stranger.standAt) > stranger.range)
-    for _ in 0..<2 {
-      #expect(run(world, upTo: 4) { world.threat != nil })
-      #expect(run(world, upTo: 2) { world.threat == nil })
-    }
+    // Physical shots now cross the level. He must not start one without acquiring Miki.
+    #expect(!run(world, upTo: 8) { world.threat != nil })
     #expect(world.session.hitsTaken == 0 && world.session.inEncounter)
+    walk(world, to: [6.5, 15])
+    #expect(run(world, upTo: 4) { world.threat != nil })
+    #expect(run(world, upTo: 2) { world.threat == nil })
+    #expect(world.session.hitsTaken == 0)
   }
 
   @Test

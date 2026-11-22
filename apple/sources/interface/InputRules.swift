@@ -73,6 +73,7 @@ enum InputRules {
     var touchOtherLevel = false
     /// The touch layout's Vibration button, shown only while paused (ADR 0008).
     var touchVibration = false
+    var touchTestWeapon = false
     var touchFire = false
     var touchFormation = false
     /// The touch layout's Signature button, shown in a fight while the leader has one.
@@ -122,6 +123,7 @@ enum InputRules {
     var panelWasPressed = false
     var otherLevelWasPressed = false
     var vibrationWasPressed = false
+    var testWeaponWasPressed = false
     var previousWasPressed = false
     var signatureWasPressed = false
   }
@@ -157,6 +159,7 @@ enum InputRules {
     var otherLevelPressed = false
     /// A fresh press of the touch Vibration button while paused (ADR 0008).
     var vibrationPressed = false
+    var testWeaponPressed = false
     /// A fresh Previous press while exploring, which leads as the member before the leader.
     var previousPressed = false
     /// A fresh Signature press while exploring: the leader's signature, such as Disrupt.
@@ -180,6 +183,7 @@ enum InputRules {
     let restart = raw.touchRestart
     let otherLevel = raw.touchOtherLevel
     let vibration = raw.touchVibration
+    let testWeapon = raw.touchTestWeapon
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
     let panel = raw.keyboardPanel || raw.controllerPanel
@@ -213,6 +217,7 @@ enum InputRules {
     next.panelWasPressed = panel
     next.otherLevelWasPressed = otherLevel
     next.vibrationWasPressed = vibration
+    next.testWeaponWasPressed = testWeapon
     next.previousWasPressed = previous
     next.signatureWasPressed = signature
     let panelEdge = panel && !state.panelWasPressed
@@ -227,7 +232,8 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || panel || raw.hasDpad || raw.touchGround || otherLevel || vibration || previous
+        || panel || raw.hasDpad || raw.touchGround || otherLevel || vibration || testWeapon
+        || previous
         || signature
       return (.neutral, next)
     }
@@ -249,7 +255,8 @@ enum InputRules {
           menuMove: direction != state.menuDirection ? direction : 0,
           restartPressed: restart && !state.restartWasPressed,
           otherLevelPressed: otherLevel && !state.otherLevelWasPressed,
-          vibrationPressed: vibration && !state.vibrationWasPressed), next
+          vibrationPressed: vibration && !state.vibrationWasPressed,
+          testWeaponPressed: testWeapon && !state.testWeaponWasPressed), next
       )
     case .dialogue:
       // Action shows the next line, and the panel button hides or shows the status panel;

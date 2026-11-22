@@ -109,51 +109,9 @@ struct GameView: View {
         .allowsHitTesting(false)
       } else if world.isPaused {
         Color.black.opacity(0.35).ignoresSafeArea().allowsHitTesting(false)
-        VStack(spacing: 14) {
-          Text("Paused").font(.title2.bold())
-          if world.controls.touchControlsEnabled {
-            Text(
-              "Tap Resume to continue, Restart to begin a new run, or \(world.otherLevel.name)."
-            )
-            Text(world.otherLevel.note).font(.caption)
-          } else {
-            // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
-            VStack(spacing: 6) {
-              ForEach(GameSession.PauseChoice.allCases, id: \.self) { choice in
-                let chosen = choice == world.session.pauseChoice
-                Text(pauseChoiceName(choice))
-                  .font(.headline)
-                  .frame(width: 180, height: 36)
-                  .background(
-                    chosen ? HUDStyle.ink.opacity(0.1) : .clear,
-                    in: RoundedRectangle(cornerRadius: 8)
-                  )
-                  .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                      .stroke(chosen ? HUDStyle.ink.opacity(0.6) : .clear)
-                  )
-              }
-            }
-            Text(world.level.restartNote).font(.caption)
-            Text(world.otherLevel.note).font(.caption)
-            HStack(spacing: 12) {
-              Text("Up or down to choose").font(.caption)
-              Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
-                .font(.caption)
-              Text("\(world.controls.pauseButtonName) · Resume").font(.caption)
-            }
-            .foregroundStyle(HUDStyle.muted)
-          }
-          if world.controls.needsNeutralInput {
-            Text(releaseGuidance).font(.caption)
-          }
-          // Which build this is, as TestFlight lists it, so a tester knows what they play.
-          Text("Lauder \(AppVersion.current)").font(.caption2).foregroundStyle(HUDStyle.muted)
+        GeometryReader { geometry in
+          pauseMenu(compact: geometry.size.height < 440)
         }
-        .padding(28)
-        .frostedPanel(cornerRadius: 18)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(false)
       }
 
       if world.controls.touchControlsEnabled {
@@ -168,6 +126,7 @@ struct GameView: View {
           orderNames: orderNames,
           otherLevelTitle: world.otherLevel.name,
           vibrationTitle: vibrationTitle,
+          testWeaponTitle: world.session.testWeaponTitle,
           mode: world.session.mode)
       }
     }
@@ -182,6 +141,62 @@ struct GameView: View {
       world.stop()
       CombatFeedback.shared.suspend()
     }
+  }
+
+  /// A compact menu keeps the optional fifth bench row and release guidance readable
+  /// on small landscape screens, while touch buttons remain on their capture surface.
+  private func pauseMenu(compact: Bool) -> some View {
+    VStack(spacing: compact ? 6 : 14) {
+      Text("Paused").font(compact ? .title3.bold() : .title2.bold())
+      if world.controls.touchControlsEnabled {
+        Text(
+          "Tap Resume to continue, Restart to begin a new run, or \(world.otherLevel.name)."
+        )
+        if !compact || !world.controls.needsNeutralInput {
+          Text(world.otherLevel.note).font(compact ? .caption2 : .caption)
+        }
+      } else {
+        // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
+        VStack(spacing: compact ? 4 : 6) {
+          ForEach(world.session.availablePauseChoices, id: \.self) { choice in
+            let chosen = choice == world.session.pauseChoice
+            Text(pauseChoiceName(choice))
+              .font(choice == .testWeapon ? .subheadline : .headline)
+              .lineLimit(1)
+              .minimumScaleFactor(0.75)
+              .frame(width: 250, height: compact ? 28 : 36)
+              .background(
+                chosen ? HUDStyle.ink.opacity(0.1) : .clear,
+                in: RoundedRectangle(cornerRadius: 8)
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                  .stroke(chosen ? HUDStyle.ink.opacity(0.6) : .clear)
+              )
+          }
+        }
+        Text(world.level.restartNote).font(compact ? .caption2 : .caption)
+        if !compact || !world.controls.needsNeutralInput {
+          Text(world.otherLevel.note).font(compact ? .caption2 : .caption)
+        }
+        HStack(spacing: compact ? 8 : 12) {
+          Text(compact ? "↑ / ↓ Choose" : "Up or down to choose").font(.caption2)
+          Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
+            .font(.caption)
+          Text("\(world.controls.pauseButtonName) · Resume").font(.caption)
+        }
+        .foregroundStyle(HUDStyle.muted)
+      }
+      if world.controls.needsNeutralInput {
+        Text(releaseGuidance).font(.caption2).lineLimit(2)
+      }
+      // Which build this is, as TestFlight lists it, so a tester knows what they play.
+      Text("Lauder \(AppVersion.current)").font(.caption2).foregroundStyle(HUDStyle.muted)
+    }
+    .padding(compact ? 16 : 28)
+    .frostedPanel(cornerRadius: 18)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .allowsHitTesting(false)
   }
 
   /// Plays this frame's events from the current camera target, with vibration on the selected
@@ -204,6 +219,7 @@ struct GameView: View {
     case .restart: "Restart"
     case .otherLevel: world.otherLevel.name
     case .vibration: vibrationTitle
+    case .testWeapon: world.session.testWeaponTitle ?? "Test weapon"
     }
   }
 
