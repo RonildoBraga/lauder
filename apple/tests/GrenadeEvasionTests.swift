@@ -61,7 +61,31 @@ struct GrenadeEvasionTests {
     #expect(world.session.order(of: .laura) == order)
   }
 
-  private func level(laura: SIMD2<Float>, tom: SIMD2<Float>) -> Level {
+  @Test
+  func aHeldCompanionOnAnUnrelatedTierDoesNotFleeTheHorizontalWarning() throws {
+    let terrace = Terrain(patches: [
+      .flat(minimum: [0.7, -3], maximum: [5, 3], height: 2.4)
+    ])
+    let held: SIMD2<Float> = [1.5, 0]
+    let world = GameWorld(level: level(laura: held, tom: [-5, 5], terrain: terrace))
+    #expect(world.session.holdAll())
+    run(world, upTo: 0.1)
+    let marker = try #require(world.root.findEntity(named: "grenade.marker.thrower"))
+    try #require(run(world, upTo: 1) { marker.isEnabled })
+    let landing = SIMD2(marker.position.x, marker.position.z)
+    #expect(simd_distance(held, landing) < Grenade.radius)
+    for _ in 0..<60 {
+      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+      #expect(simd_distance(position(world, .laura), held) < 0.01)
+      #expect(world.companionTargets[.laura] == held)
+    }
+    #expect(world.session.order(of: .laura) == .holding(held))
+    #expect(world.session.hits(of: .laura) == 0)
+  }
+
+  private func level(
+    laura: SIMD2<Float>, tom: SIMD2<Float>, terrain: Terrain = Terrain()
+  ) -> Level {
     let spawns: [PartyMember: SIMD2<Float>] = [.miki: .zero, .tom: tom, .laura: laura]
     let thrower = Level.Hostile(
       id: "thrower", name: "Thrower", hiddenAt: [0, -5], standAt: [0, -5], hits: 6,
@@ -72,7 +96,8 @@ struct GrenadeEvasionTests {
       retryAt: spawns[.miki], hostiles: [thrower], cues: [(at: 0, cue: .engage(thrower.id))])
     return Level(
       id: "grenade-evasion", ground: .box("ground", at: [0, -0.15, 0], size: [20, 0.3, 20]),
-      boxes: [], interactions: [], triggers: [], encounters: [encounter], startingAmmo: 60,
+      terrain: terrain, boxes: [], interactions: [], triggers: [], encounters: [encounter],
+      startingAmmo: 60,
       party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "Snow.", objective: "Test.", lookAround: "A thrower.", restartNote: "Restart.",

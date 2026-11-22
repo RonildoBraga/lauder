@@ -34,7 +34,7 @@ BUNDLE = "com.ronildo.lauder"
 SCENARIOS = [
     "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
     "orders", "combat-yard", "salvage-yard", "leader-cover", "squad-weapons", "tactical-enemies",
-    "relay-run-safe", "relay-run-retreat",
+    "arena-elevation", "relay-run-safe", "relay-run-retreat",
 ]
 
 
@@ -183,6 +183,10 @@ def report(summary, images):
     say(f"    bodies overlapping {summary['overlapFraction'] * 100:.1f}% of frames; "
         f"within 0.6 m of slot while moving {summary['withinSlotWhileMoving'] * 100:.0f}%; "
         f"widest leader gap {summary['worstLeaderGap']:.2f} m")
+    if summary["highestArenaWave"]:
+        say(f"    arena wave {summary['highestArenaWave']}; "
+            f"peak arrival warnings {summary['peakArrivalWarnings']}; "
+            f"actual body floor {summary['lowestFloor']:.2f} to {summary['highestFloor']:.2f} m")
     for image in images:
         say(f"    still: {image.relative_to(ROOT) if image.is_relative_to(ROOT) else image}")
 

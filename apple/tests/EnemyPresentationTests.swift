@@ -53,7 +53,7 @@ struct EnemyPresentationTests {
   }
 
   @Test
-  func tacticalCoverPosesAndWarningsUseTheSamePeekAsTheRules() throws {
+  func tacticalCoverAndRaisedWeaponsShowIntentWithoutAnExactAimLine() throws {
     let leader = SIMD2<Float>(3, 4)
     let shooter = Level.Hostile(
       id: "cover", name: "The cover shooter", hiddenAt: [1.8, -1], standAt: [1.8, -1], hits: 3,
@@ -66,12 +66,13 @@ struct EnemyPresentationTests {
     let stage = EncounterStage(level: level, style: SceneStyle())
     let body = try #require(stage.container.findEntity(named: "hostile.cover"))
     let visual = try #require(body.children.first)
-    let line = try #require(stage.container.findEntity(named: "hostile.cover.aim"))
+    let rifle = try #require(stage.container.findEntity(named: "hostile.cover.rifle"))
+    #expect(stage.container.findEntity(named: "hostile.cover.aim") == nil)
     let shield = try #require(stage.container.findEntity(named: "cover.hostile.cover"))
     let count = entityCount(stage.container)
     try begin(fight, session: session, level: level)
     var sawCrouch = false
-    var sawPeekWarning = false
+    var sawRaisedWeapon = false
     for _ in 0..<60 {
       step(fight, stage: stage, session: session, leader: leader)
       if let cover = fight.enemyCoverStates[shooter.id], !cover.firing {
@@ -79,24 +80,19 @@ struct EnemyPresentationTests {
         #expect(shield.isEnabled && visual.scale.y == 0.68)
         #expect(visual.position == fight.hostilePoses[shooter.id]?.position)
       }
-      if let origin = fight.hostileAimOrigins[shooter.id],
-        let endpoint = fight.hostileAimPoints[shooter.id],
-        let anchor = fight.hostiles[shooter.id]?.position,
-        simd_distance(origin, anchor) > 0.01
-      {
-        sawPeekWarning = true
-        let midpoint = (origin + endpoint) / 2
-        #expect(line.isEnabled)
-        #expect(
-          simd_distance(line.position, [midpoint.x, FightSimulation.aimHeight, midpoint.y]) < 0.001)
-        #expect(abs(line.scale.z - simd_distance(origin, endpoint)) < 0.001)
+      if let pose = fight.hostileWeaponPoses[shooter.id], pose.raise > 0 {
+        sawRaisedWeapon = true
+        #expect(rifle.isEnabled && rifle.parent === visual)
+        #expect(rifle.position == pose.transform.position)
+        #expect(rifle.orientation == pose.transform.orientation)
       }
     }
-    #expect(sawCrouch && sawPeekWarning && entityCount(stage.container) == count)
+    #expect(sawCrouch && sawRaisedWeapon && entityCount(stage.container) == count)
     session.restart()
     fight.reset()
     stage.reset(fight)
-    #expect(!shield.isEnabled && !line.isEnabled && visual.scale == [1, 1, 1])
+    #expect(!shield.isEnabled && visual.scale == [1, 1, 1])
+    #expect(stage.container.findEntity(named: "hostile.cover.aim") == nil)
     #expect(entityCount(stage.container) == count)
   }
 

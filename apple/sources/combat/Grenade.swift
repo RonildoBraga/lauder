@@ -14,14 +14,21 @@ struct Grenade: Sendable {
   let owner: String
   let start: SIMD2<Float>
   let position: SIMD2<Float>
+  let startHeight: Float
+  let landingHeight: Float
   private(set) var remaining: Float = Grenade.fuse
 
-  init(id: Int, owner: String, from start: SIMD2<Float>, at position: SIMD2<Float>) {
+  init(
+    id: Int, owner: String, from start: SIMD2<Float>, at position: SIMD2<Float>,
+    startHeight: Float = 0, landingHeight: Float = 0
+  ) {
     precondition(start.x.isFinite && start.y.isFinite && position.x.isFinite && position.y.isFinite)
     self.id = id
     self.owner = owner
     self.start = start
     self.position = position
+    self.startHeight = startHeight
+    self.landingHeight = landingHeight
   }
 
   /// Only positive finite simulation time advances a fuse. Pause does not call this. The
@@ -36,11 +43,28 @@ struct Grenade: Sendable {
   /// the rest of its fuse. This presentation query does not change the simulation.
   var projectilePosition: SIMD3<Float> {
     let progress = min(1, max(0, (Self.fuse - remaining) / Self.flightTime))
+    return projectilePosition(at: progress)
+  }
+
+  func projectilePosition(at progress: Float) -> SIMD3<Float> {
     let point = start + (position - start) * progress
     let height =
-      Self.launchHeight * (1 - progress) + Self.landingHeight * progress
+      (startHeight + Self.launchHeight) * (1 - progress)
+      + (landingHeight + Self.landingHeight) * progress
       + 4 * Self.arcHeight * progress * (1 - progress)
     return [point.x, height, point.y]
+  }
+
+  /// A throw cannot pass through a ramp, retaining wall or cover. Twelve short segments
+  /// follow the same visible arc, evaluated once at launch rather than each rendered frame.
+  func canReach(isClear: (SIMD3<Float>, SIMD3<Float>) -> Bool) -> Bool {
+    var previous = projectilePosition(at: 0)
+    for step in 1...12 {
+      let next = projectilePosition(at: Float(step) / 12)
+      guard isClear(previous, next) else { return false }
+      previous = next
+    }
+    return true
   }
 
   /// The marker's world-space radius is also the blast's inclusive radius. Walls and whether

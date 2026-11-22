@@ -123,7 +123,7 @@ struct CoverTests {
     let grid = NavigationGrid(level: level)
     var planner = CoverPlanner(obstacles: level.obstacles)
     var shooter = CoverPlanner.Threat(
-      position: CombatYard.rightShooter.standAt, range: CombatYard.rightShooter.range)
+      position: [4, -5.5], range: 14)
     func target() -> SIMD2<Float>? {
       planner.targets(
         for: CoverPlanner.Input(

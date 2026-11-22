@@ -6,7 +6,7 @@ import simd
 /// the world applies each simulation step before asking this stage to show it.
 @MainActor
 final class EncounterStage {
-  /// Holds the hostiles, aim lines, shots and target marker; the world adds it to the scene.
+  /// Holds the hostiles, shots and target marker; the world adds it to the scene.
   let container = Entity()
   /// What every shot looks like (ADR 0007).
   let effects: ShotEffects
@@ -15,24 +15,24 @@ final class EncounterStage {
 
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
-  private var aimLines: [String: Entity] = [:]
+  private var hostileWeaponProps: [String: Entity] = [:]
   private let targetMarker: Entity
   private let coverShields: [PartyMember: CoverShield]
   private let enemyCoverShields: [String: CoverShield]
   private let grenadeMarkers: [String: GrenadeMarker]
+  private let arrivalMarkers: [String: ArenaArrivalMarker]
   private var throwerMarks: [String: Entity] = [:]
-  /// How much larger than authored the aim marker and the aim and shot lines show.
-  private let markerScale: Float
+  private let terrain: Terrain
 
   init(level: Level, style: SceneStyle) {
+    terrain = level.terrain
     let shots = Entity()
     shots.name = "combat.shots"
-    effects = ShotEffects(style: style, in: shots)
+    effects = ShotEffects(style: style, in: shots, terrain: level.terrain)
     weaponProps = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.map {
         ($0, style.weapon(for: Weapon.forMember($0).kind))
       })
-    markerScale = style.markerScale
     targetMarker = style.targetMarker()
     coverShields =
       level.combat.leaderCover
@@ -55,6 +55,18 @@ final class EncounterStage {
         marker.entity.name = "grenade.marker.\(spec.id)"
         return (spec.id, marker)
       })
+    if let arena = level.arena {
+      arrivalMarkers = Dictionary(
+        uniqueKeysWithValues: arena.slots.map { slot in
+          (
+            slot.id,
+            ArenaArrivalMarker(
+              slot: slot, duration: arena.warningDuration, terrain: level.terrain, style: style)
+          )
+        })
+    } else {
+      arrivalMarkers = [:]
+    }
     container.name = "combat"
     targetMarker.name = "combat.target"
     container.addChild(targetMarker)
@@ -62,11 +74,19 @@ final class EncounterStage {
     for shield in coverShields.values { container.addChild(shield.entity) }
     for shield in enemyCoverShields.values { container.addChild(shield.entity) }
     for marker in grenadeMarkers.values { container.addChild(marker.entity) }
+    for marker in arrivalMarkers.values { container.addChild(marker.entity) }
 
     for spec in specs {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
       let visual = style.hostile()
+      if spec.attack == .shoot {
+        // The raised barrel and recoil communicate aim without revealing its exact endpoint.
+        let weapon = style.weapon(for: .rifle)
+        weapon.name = "hostile.\(spec.id).rifle"
+        visual.addChild(weapon)
+        hostileWeaponProps[spec.id] = weapon
+      }
       if spec.attack == .throwGrenade {
         // A simple overhead shape distinguishes the thrower without requiring character art.
         let mark = style.block(
@@ -80,11 +100,6 @@ final class EncounterStage {
       bodies[spec.id] = body
       visuals[spec.id] = visual
 
-      let line = style.line(style.threat)
-      line.name = "hostile.\(spec.id).aim"
-      line.isEnabled = false
-      container.addChild(line)
-      aimLines[spec.id] = line
     }
   }
 
@@ -104,8 +119,14 @@ final class EncounterStage {
         case .party: .party
         case .hostile: .hostile
         }
-      effects.show(
-        shot.path, side: side, height: FightSimulation.aimHeight, muzzle: shot.muzzle)
+      if let trace = shot.trace {
+        effects.show(trace, side: side, muzzle: shot.muzzle)
+      } else {
+        effects.show(
+          shot.path, side: side,
+          height: terrain.height(at: shot.path.start) + FightSimulation.aimHeight,
+          muzzle: shot.muzzle)
+      }
     }
     for point in fight.explosions { effects.blast(at: point) }
     show(fight)
@@ -115,25 +136,33 @@ final class EncounterStage {
   private func show(_ fight: FightSimulation) {
     for (member, shield) in coverShields {
       if let cover = fight.coverStates[member] {
-        shield.show(at: cover.position, toward: -cover.normal, exposed: cover.exposed)
+        shield.show(
+          at: cover.position, toward: -cover.normal, exposed: cover.exposed,
+          floor: terrain.height(at: cover.position))
       } else {
         shield.hide()
       }
     }
     for (id, shield) in enemyCoverShields {
       if let cover = fight.enemyCoverStates[id], fight.hostiles[id]?.isDown == false {
-        shield.show(at: cover.position, toward: -cover.normal, exposed: cover.exposed)
+        shield.show(
+          at: cover.position, toward: -cover.normal, exposed: cover.exposed,
+          floor: terrain.height(at: cover.position))
       } else {
         shield.hide()
       }
     }
+    for (id, marker) in arrivalMarkers { marker.show(remaining: fight.arenaWarnings[id]) }
     for (owner, marker) in grenadeMarkers {
       marker.show(fight.grenades.first { $0.owner == owner })
     }
     for (id, state) in fight.hostiles {
       if let body = bodies[id] {
         body.isEnabled = state.isVisible
-        body.position = [state.position.x, PartyBody.height / 2, state.position.y]
+        body.position = [
+          state.position.x, terrain.height(at: state.position) + PartyBody.height / 2,
+          state.position.y,
+        ]
       }
       if let visual = visuals[id], let pose = fight.hostilePoses[id] {
         visual.scale = [1, pose.scale, 1]
@@ -141,20 +170,18 @@ final class EncounterStage {
         visual.position = pose.position
       }
       throwerMarks[id]?.isEnabled = state.isVisible && !state.isDown
-      if let line = aimLines[id] {
-        if let point = fight.hostileAimPoints[id] {
-          place(
-            line, from: fight.hostileAimOrigins[id] ?? state.position,
-            to: point, thickness: 0.025 * markerScale)
-          line.isEnabled = true
-        } else {
-          line.isEnabled = false
+      if let prop = hostileWeaponProps[id] {
+        prop.isEnabled = state.isVisible && !state.isDown
+        if let pose = fight.hostileWeaponPoses[id] {
+          let transform = pose.transform
+          prop.position = transform.position
+          prop.orientation = transform.orientation
         }
       }
     }
 
     if let target = fight.target {
-      targetMarker.position = [target.x, 0.012, target.y]
+      targetMarker.position = [target.x, terrain.height(at: target) + 0.012, target.y]
       targetMarker.isEnabled = true
     } else {
       targetMarker.isEnabled = false
@@ -170,15 +197,4 @@ final class EncounterStage {
     }
   }
 
-  private func place(
-    _ line: Entity, from start: SIMD2<Float>, to end: SIMD2<Float>, thickness: Float
-  ) {
-    let from = SIMD3(start.x, FightSimulation.aimHeight, start.y)
-    let to = SIMD3(end.x, FightSimulation.aimHeight, end.y)
-    let span = to - from
-    let length = max(simd_length(span), 0.01)
-    line.position = (from + to) / 2
-    line.scale = [thickness, thickness, length]
-    line.orientation = simd_quatf(from: [0, 0, 1], to: span / length)
-  }
 }

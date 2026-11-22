@@ -24,8 +24,8 @@ struct LeaderCoverIntegrationTests {
     #expect(fight.shots.count == 2 && session.ammo == rounds - 1)
     let incoming = try #require(fight.shots.first)
     if case .hostile = incoming.side {} else { Issue.record("The hostile must fire first.") }
-    #expect(incoming.path.strike == .body(PartyMember.miki.rawValue))
-    #expect(incoming.path.end == leader && session.hitsTaken == 1)
+    try expectBodyImpact(incoming, at: leader)
+    #expect(session.hitsTaken == 1)
     #expect(fight.coverState?.firing == true && fight.coverState?.exposed == true)
   }
 
@@ -71,8 +71,8 @@ struct LeaderCoverIntegrationTests {
     #expect(outgoing.path.start == leader)
     #expect(fight.coverState?.firing == true && fight.coverState?.exposed == true)
     let incoming = try nextHostileShot(fight, session: session)
-    #expect(incoming.path.strike == .body(PartyMember.miki.rawValue))
-    #expect(incoming.path.end == leader && session.hitsTaken == 1)
+    try expectBodyImpact(incoming, at: leader)
+    #expect(session.hitsTaken == 1)
 
     for _ in 0..<60 { step(fight, session: session) }
     #expect(fight.coverState?.firing == false && fight.coverState?.exposed == false)
@@ -97,8 +97,8 @@ struct LeaderCoverIntegrationTests {
     #expect(fight.coverState == nil)
     let incoming = try nextHostileShot(fight, session: session, at: away)
     #expect(fight.coverState == nil)
-    #expect(incoming.path.strike == .body(PartyMember.miki.rawValue))
-    #expect(incoming.path.end == away && session.hitsTaken == 1)
+    try expectBodyImpact(incoming, at: away)
+    #expect(session.hitsTaken == 1)
   }
 
   @Test
@@ -125,8 +125,7 @@ struct LeaderCoverIntegrationTests {
     let turned = try #require(fight.coverState)
     #expect(simd_distance(point + turned.offset, exposedPoint) < 0.001)
     let incoming = try nextHostileShot(fight, session: session, at: point, facing: [0, 1])
-    #expect(incoming.path.strike == .body(PartyMember.miki.rawValue))
-    #expect(simd_distance(incoming.path.end, exposedPoint) < 0.001)
+    try expectBodyImpact(incoming, at: exposedPoint)
     #expect(session.hitsTaken == 1)
   }
 
@@ -148,9 +147,10 @@ struct LeaderCoverIntegrationTests {
     #expect(session.hitsTaken == 1)
   }
 
-  @Test
-  func levelsWithoutTheExperimentKeepTheirExistingLowBlockRule() throws {
-    let level = range(enabled: false)
+  @Test(arguments: [Float(1), 3])
+  func levelsWithoutCoverKeepStandingBodiesAndActualWallHeights(height: Float) throws {
+    let box = Level.Box.box("cover", at: [0, height / 2, 0], size: [2, height, 1])
+    let level = range(box: box, enabled: false)
     let session = GameSession(level: level)
     let fight = FightSimulation(level: level)
     try begin(fight, session: session, level: level)
@@ -158,7 +158,14 @@ struct LeaderCoverIntegrationTests {
     _ = try #require(fireOnce(fight, session: session))
     #expect(fight.coverState == nil)
     let incoming = try nextHostileShot(fight, session: session)
-    #expect(incoming.path.strike == .scenery && session.hitsTaken == 0)
+    if height < LeaderCover.lowHeight {
+      // Without the cover experiment the visible body stays standing. A low box cannot
+      // become an invisible tall wall just for incoming fire.
+      try expectBodyImpact(incoming, at: leader)
+      #expect(session.hitsTaken == 1)
+    } else {
+      #expect(incoming.path.strike == .scenery && session.hitsTaken == 0)
+    }
     #expect(!BrooklynBridge.level.combat.leaderCover && !SalvageYard.level.combat.leaderCover)
   }
 
@@ -215,6 +222,16 @@ struct LeaderCoverIntegrationTests {
   #endif
 
   private let leader = SIMD2<Float>(0, 0.9)
+
+  /// A real flat shot enters the cylinder's near face, rather than snapping to its centre.
+  /// Preserve the victim, damage and shared trace contract while checking that exact surface.
+  private func expectBodyImpact(_ shot: FightSimulation.Shot, at point: SIMD2<Float>) throws {
+    #expect(shot.path.strike == .body(PartyMember.miki.rawValue))
+    let trace = try #require(shot.trace)
+    #expect(shot.path == trace.path)
+    #expect(abs(simd_distance(shot.path.end, point) - Aim.bodyRadius) < 0.001)
+    #expect(abs(trace.end.y - FightSimulation.aimHeight) < 0.001)
+  }
 
   private func begin(_ fight: FightSimulation, session: GameSession, level: Level) throws {
     let encounter = try #require(level.encounters.first)

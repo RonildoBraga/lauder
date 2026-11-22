@@ -27,23 +27,30 @@ struct LeaderCover {
     let name: String
     let footprint: PartyMotion.Box
     let isLow: Bool
+    let bottom: Float
+    let top: Float
   }
 
   private let blocks: [Block]
   private let motion: PartyMotion
   private let ground: PartyMotion.Box?
+  private let terrain: Terrain
   private static let tolerance: Float = 0.00001
   /// A little room outside a tall corner for the shoulder and the shot, beyond body clearance.
   private static let peekRoom: Float = 0.05
 
-  init(boxes: [Level.Box], ground: PartyMotion.Box? = nil) {
+  init(boxes: [Level.Box], ground: PartyMotion.Box? = nil, terrain: Terrain = Terrain()) {
     blocks = boxes.map {
       Block(
         name: $0.name, footprint: $0.footprint,
-        isLow: $0.position.y + $0.size.y / 2 < Self.lowHeight)
+        isLow: $0.position.y + $0.size.y / 2
+          - terrain.height(at: [$0.position.x, $0.position.z]) < Self.lowHeight,
+        bottom: $0.position.y - $0.size.y / 2, top: $0.position.y + $0.size.y / 2)
     }
-    motion = PartyMotion(radius: PartyBody.radius, obstacles: boxes.map(\.footprint))
+    motion = PartyMotion(
+      radius: PartyBody.radius, obstacles: boxes.map(\.footprint) + terrain.cliffs)
     self.ground = ground
+    self.terrain = terrain
   }
 
   /// The nearest external face within reach. Ties prefer the face the leader faces into,
@@ -51,14 +58,18 @@ struct LeaderCover {
   func shelter(at point: SIMD2<Float>, facing: SIMD2<Float>) -> Shelter? {
     guard fits(point), finite(facing) else { return nil }
     var nearest: (shelter: Shelter, gap: Float, alignment: Float)?
+    let floor = terrain.height(at: point)
     for (index, block) in blocks.enumerated() {
+      // A low box on a different tier cannot become this body's shelter through the cliff.
+      guard block.bottom <= floor + 0.15, block.top > floor + 0.1 else { continue }
       for axis in 0..<2 {
         let across = 1 - axis
         for sign: Float in [-1, 1] {
           var normal = SIMD2<Float>.zero
           normal[axis] = sign
           let candidate = Shelter(
-            boxID: block.name, normal: normal, isLow: block.isLow, index: index, axis: axis,
+            boxID: block.name, normal: normal, isLow: block.top - floor < Self.lowHeight,
+            index: index, axis: axis,
             face: sign < 0 ? block.footprint.minimum[axis] : block.footprint.maximum[axis],
             minimum: block.footprint.minimum[across], maximum: block.footprint.maximum[across])
           guard isBeside(point, candidate) else { continue }

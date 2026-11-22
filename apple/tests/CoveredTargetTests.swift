@@ -4,6 +4,7 @@ import simd
 @testable import Lauder
 
 /// A low block protects its crouched target without protecting an unrelated standing body.
+@MainActor
 struct CoveredTargetTests {
   private static let lowBlock = PartyMotion.Box(minimum: [-1, 2], maximum: [1, 2.5])
   private static let covered = Aim.Hostile(
@@ -43,16 +44,28 @@ struct CoveredTargetTests {
   }
 
   @Test
-  func scatteredShotsUseTheSameTargetSpecificObstruction() {
-    let original = ShotPath(start: .zero, end: [0, 5], strike: .body("covered"))
-    let scattered = Aim.scattered(
-      original, by: 0.01, range: 14, hostiles: [Self.covered], blockers: [])
-    #expect(scattered.strike == .scenery)
-    #expect(abs(scattered.end.y - 2) < 0.0001 && abs(scattered.end.x) < 0.03)
-    var exposed = Self.covered
-    exposed.blockers = []
-    let hit = Aim.scattered(original, by: 0.01, range: 14, hostiles: [exposed], blockers: [])
-    #expect(hit.strike == .body("covered"))
+  func aDeviatedActualRayMeetsLowCoverAtCrouchedHeightAndPassesAboveItWhileStanding() {
+    let low = Level.Box.box("low", at: [0, 0.55, 2.25], size: [2, 1.1, 0.5])
+    let level = Level(
+      id: "covered-ray", ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]),
+      boxes: [low], interactions: [], triggers: [], party: [.miki], spawns: [.miki: .zero],
+      heading: [0, 1], cameraOffset: [0, 10, 10], fieldOfView: 42,
+      opening: "A range.", objective: "Test.", lookAround: "Low cover.", restartNote: "Restart.")
+    let ballistics = Ballistics(level: level)
+    let standing = FightSimulation.aimHeight
+    let crouched = standing * 0.68
+    let start = SIMD3<Float>(0, standing, 0)
+    let angle: Float = 0.01
+    let covered = ballistics.trace(
+      from: start, direction: [sin(angle), (crouched - standing) / 5, cos(angle)], range: 14,
+      targets: [.init(id: "covered", centre: [0, crouched, 5])])
+    #expect(covered.strike == .scenery)
+    #expect(abs(covered.end.z - 2) < 0.0001 && abs(covered.end.x) < 0.03)
+    let exposed = ballistics.trace(
+      from: start, direction: [sin(angle), 0, cos(angle)], range: 14,
+      targets: [.init(id: "covered", centre: [0, standing, 5])])
+    #expect(exposed.strike == .body("covered"))
+    #expect(exposed.end.y == standing)
   }
 
   @Test

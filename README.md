@@ -14,6 +14,8 @@ The game opens on the snowbound **Brooklyn Bridge** ([ADR 0004](docs/decisions/0
 
 TestFlight build **0.1.0 (23)**, source `2199ad7`, is the latest verified delivery. It includes Relay Run and all five combat phases: weapon feel, active-character cover ([ADR 0009](docs/decisions/0009-leader-cover.md)), every leader's weapon and automatic reload ([ADR 0010](docs/decisions/0010-squad-weapons.md)), coordinated companions and tactical enemies. The standard check, fifteen headless scenarios, focused mission tests, four rendered routes and signed Release verification passed. Apple processing is **VALID**, and the build is **IN_BETA_TESTING**, available to existing internal testers with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records the evidence and remaining performance limits.
 
+The current assignment expands **Combat test** into a repeatable arena: a 52 × 60 m yard with a raised deck, a lower trench and ramps, repeated mixed waves with safe arrival warnings and resupply, and rifles that turn, burst and resolve actual shot rays without red aiming lines. [ADR 0014](docs/decisions/0014-continuous-combat-arena.md) records the scope; the [combat plan audit](docs/combat-plan-audit.md) maps all five phases and the six original goals to implementation and remaining limits. This extension is implemented with integrated validation, review and delivery pending. Build 23 remains the latest verified TestFlight delivery until that evidence is recorded.
+
 The maintainer assigned completion, Simulator testing, reviewed integration and TestFlight delivery without repeated milestone approval ([ADR 0011](docs/decisions/0011-companion-combat.md)). Phase 4 shares cover and shields across the party, adds focus fire and replans unsafe cover. Phase 5 adds bounded cover-seeking and flanking shooters, a fixed grenade warning and companion escape ([ADR 0012](docs/decisions/0012-tactical-enemies.md)). Both first reached TestFlight in build 21. The maintainer then deferred personal testing and requested closure of the completed implementation issues. Physical weapon feel, touch combinations, baseline-phone performance and subjective playtest answers remain unchecked in the [deferred checklist](docs/prototype-plan.md#deferred-phone-and-playtest-checks). Exploration and salvage still lead, with occasional combat; this work adds no story encounters or character canon.
 
 The technical direction is Swift, RealityKit and SwiftUI, with iPhone first ([ADR 0001](docs/decisions/0001-engine.md)). The game plays with a PS5 or Xbox controller, with touch, or with the keyboard in the Simulator; the [input contract](docs/prototype-plan.md#input-and-interaction-contract) lists the controls, and [Touch controls](docs/touch-controls.md) describes the touch layout.
@@ -26,8 +28,9 @@ The assigned **Relay Run** mission is implemented and delivered in build 23: a c
 - [Gameplay walkthrough](docs/gameplay-script.md): the Brooklyn Bridge opening as the player meets it, and the future squad and combat design.
 - [Relay Run walkthrough](docs/relay-run-walkthrough.md): the assigned standalone exploration-and-salvage mission, with a safe route and optional guarded shortcut.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, a proposal, not assigned for implementation.
+- [Combat plan coverage](docs/combat-plan-audit.md): the five combat phases, original goals, current arena extension and deliberately deferred features.
 - [Architecture](docs/architecture.md): ownership, input, movement, fights, scenes, Restart and later saving.
-- [Decision records](docs/decisions): the engine, Blender as the source of levels and models, squad movement, the Brooklyn Bridge opening, squad combat and salvage experiments, aiming and shot feedback, weapon feel with a plan for combat, active-character cover, squad weapons, coordinated companions and tactical enemies.
+- [Decision records](docs/decisions): the engine, Blender as the source of levels and models, squad movement, the Brooklyn Bridge opening, squad combat and salvage experiments, aiming and shot feedback, weapon feel with a plan for combat, active-character cover, squad weapons, coordinated companions, tactical enemies and the repeatable arena.
 - [First playable prototype](docs/prototype-plan.md): the scope, the input contract, the checks and what comes next.
 - [Visual direction](docs/visual-direction.md): the frozen, minimalist low-poly look the maintainer chose on 20 November 2026, with its palette, light, camera and rendering budget.
 
@@ -48,7 +51,7 @@ apple/                          The iPhone game: Swift, RealityKit and SwiftUI
       Level.swift               A playable place as a value, and the party's shared body
       LevelLayout.swift         The shape of a layout file: where a level's parts stand, its camera and lights
       BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
-      CombatYard.swift          The combat experiment's temporary greybox yard, defined in Swift, and its fight rules
+      CombatYard.swift          The repeatable greybox combat arena, its terrain, cover and bounded enemy slots
       SalvageYard.swift         The salvage experiment's temporary greybox yard, defined in Swift, and its salvage task
       RelayRun.swift            One continuous greybox salvage journey with an optional guarded shortcut
       LevelCycle.swift          The pause menu's cycle through the bridge and the two test yards

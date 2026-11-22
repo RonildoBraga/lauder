@@ -320,26 +320,6 @@ enum Aim {
       start: start, end: start + unit * reach, strike: block == nil ? .nothing : .scenery)
   }
 
-  /// The leader's shot `path` turned by `angle` within its spread (ADR 0008): it flies on from
-  /// the shooter along the turned direction, meeting the first hostile it passes close to before
-  /// any block, or striking the first block, or running out at `range`, so a scattered shot can
-  /// miss its target. If the turned shot would meet someone who is not yet a target, it keeps to
-  /// `path`: the leader never fires first, even by a stray shot.
-  static func scattered(
-    _ path: ShotPath, by angle: Float, range: Float, hostiles: [Hostile],
-    blockers: [PartyMotion.Box]
-  ) -> ShotPath {
-    let offset = path.end - path.start
-    guard angle != 0, simd_length(offset) > 0.0001 else { return path }
-    let direction = simd_normalize(offset)
-    let turned = SIMD2(
-      direction.x * cos(angle) - direction.y * sin(angle),
-      direction.x * sin(angle) + direction.y * cos(angle))
-    return ray(
-      from: path.start, along: turned, range: range, hostiles: hostiles, blockers: blockers)
-      ?? path
-  }
-
   /// What stops a shot fired at `height`: blocks that reach that height or rise above it, so a
   /// shot flies over a low block.
   static func blockers(_ boxes: [Level.Box], above height: Float) -> [PartyMotion.Box] {

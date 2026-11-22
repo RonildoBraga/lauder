@@ -1,90 +1,114 @@
 import simd
 
-/// The combat yard: a temporary greybox venue for the first squad combat experiment (ADR 0005),
-/// outside the story, which the pause menu reaches only while the experiment lasts. It has no
-/// Blender file and no scene file, so the game draws its snow ground, its one full-height wall and
-/// its three small blocks as plain blocks, under the bridge's camera and lights. All of it lies
-/// within the roughly 19 m that the camera shows ahead of the entrance.
-///
-/// The whole trio starts recruited at the entrance, in the Close formation, with Laura on the
-/// left and Tom on the right, as the HUD orders them at the end of the opening. A cover shooter, a flanker
-/// and a grenade thrower wait in view beyond the wall, out of the party's clear sight, so the party
-/// approaches; the fight begins once the leader comes level with the wall.
-///
-/// The experiment's rules are the yard's own, and the bridge keeps the opening's: the shooters
-/// aim at anyone in clear sight within reach and are targets from their first wind-up, the
-/// companions fire by themselves once the fight is under way, everyone can take three hits and
-/// the third on anyone falls the party back to the entrance, and Miki can Disrupt. Since the
-/// first session the yard also tries ADR 0003's combat positioning: companions take cover near
-/// their places, each by their own preference, keep off the ground the shooters see, and
-/// regroup on the formation button.
+/// A deliberately larger, repeatable greybox combat test, outside the story. Two broad
+/// approaches climb a west deck or descend an east trench; the central yard has several
+/// sight-breaking clusters. Authored arrival slots are reused instead of creating actors.
 enum CombatYard {
-  /// The entrance: where each member starts, and where the party falls back to.
   static let spawns: [PartyMember: SIMD2<Float>] = [
     .miki: [0, 6], .laura: [-0.9, 6.9], .tom: [0.9, 6.9],
   ]
 
-  /// A tall wall, two party blocks and a low shelter for the cover shooter.
+  static let terrain = Terrain(patches: [
+    .flat(minimum: [-21, -35], maximum: [-9, -10], height: 2.4),
+    .ramp(minimum: [-21, -43], maximum: [-9, -35], axis: .z, from: 0, to: 2.4),
+    .ramp(minimum: [-21, -10], maximum: [-9, -2], axis: .z, from: 2.4, to: 0),
+    .flat(minimum: [9, -35], maximum: [21, -10], height: -1.8),
+    .ramp(minimum: [9, -43], maximum: [21, -35], axis: .z, from: 0, to: -1.8),
+    .ramp(minimum: [9, -10], maximum: [21, -2], axis: .z, from: -1.8, to: 0),
+  ])
+
   static let boxes: [Level.Box] = [
+    // A safe entrance, with space to go around either side rather than a single doorway.
     .box("wall", at: [0, 1.5, -1], size: [9, 3, 0.5]),
-    .box("block-west", at: [-7.5, 0.5, -4], size: [1.6, 1, 1.2]),
-    .box("block-east", at: [8, 0.5, -4.5], size: [1.6, 1, 1.2]),
-    .box("enemy-cover", at: [-3, 0.5, -7], size: [2, 1, 0.8]),
+    .box("block-west", at: [-7.5, 0.55, -4], size: [1.6, 1.1, 1.2], look: .teal),
+    .box("block-east", at: [8, 0.55, -4.5], size: [1.6, 1.1, 1.2], look: .rust),
+    // Low shelters and tall hiding places break the central route into short crossings.
+    .box("centre-low-south", at: [0, 0.55, -11], size: [3.2, 1.1, 1]),
+    .box("centre-tall-west", at: [-6, 1.35, -18], size: [0.7, 2.7, 5]),
+    .box("centre-low-west", at: [-5, 0.55, -23], size: [2.2, 1.1, 1]),
+    .box("centre-tall-east", at: [6, 1.35, -28], size: [0.7, 2.7, 5]),
+    .box("centre-tall-north", at: [0, 1.25, -34], size: [6, 2.5, 0.7]),
+    .box("centre-low-north", at: [5, 0.55, -37], size: [3, 1.1, 1]),
+    .box("far-screen", at: [0, 1.25, -39], size: [6, 2.5, 0.7]),
+    // These boxes sit on their actual local floors; the coloured terraces are walkable.
+    .box("enemy-cover", at: [-16, 2.95, -14], size: [3.6, 1.1, 1], look: .teal),
+    .box("deck-low-north", at: [-17, 2.95, -30], size: [3.6, 1.1, 1], look: .teal),
+    .box("deck-screen", at: [-12.5, 3.75, -24], size: [0.8, 2.7, 5]),
+    .box("trench-low-south", at: [15, -1.25, -12], size: [3.6, 1.1, 1], look: .rust),
+    .box("trench-low-north", at: [16, -1.25, -31], size: [3.6, 1.1, 1], look: .rust),
+    .box("trench-screen", at: [12.5, -0.45, -23], size: [0.8, 2.7, 5]),
   ]
 
-  /// The shooter beyond the wall's west end, the further of the two.
+  /// Rifle profiles differ in burst length and recovery, rather than simply taking more hits.
   static let leftShooter = shooter(
-    id: "left-shooter", name: "The left shooter", at: [-3, -8], behavior: .takeCover)
-  /// The shooter beyond the wall's east end, the nearer of the two.
+    id: "left-shooter", name: "The deck rifle", at: [-16, -16], behavior: .takeCover)
   static let rightShooter = shooter(
-    id: "right-shooter", name: "The right shooter", at: [4, -5.5], behavior: .flank)
-  static let thrower = Level.Hostile(
-    id: "thrower", name: "The thrower", hiddenAt: [0, -11], standAt: [0, -11], hits: 6,
-    attack: .throwGrenade, reactionDelay: 0.35, windUp: 1.8, recovery: 4,
-    range: 14, inView: true, targetsAnyone: true, targetFromWindUp: true)
+    id: "right-shooter", name: "The trench flanker", at: [15, -14], behavior: .flank)
+  static let rusher = rusher(id: "rusher", name: "The south rusher", at: [3, -15])
+  static let thrower = grenadier(id: "thrower", name: "The yard grenadier", at: [-4, -26])
+  static let northRifle = shooter(
+    id: "north-rifle", name: "The north rifle", at: [16, -33], behavior: .takeCover)
+  static let northFlanker = shooter(
+    id: "north-flanker", name: "The north flanker", at: [-16, -33], behavior: .flank)
+  static let northRusher = rusher(id: "north-rusher", name: "The north rusher", at: [4, -36])
+  static let northThrower = grenadier(
+    id: "north-thrower", name: "The north grenadier", at: [0, -42])
 
-  /// The fight begins as the leader comes level with the wall, wherever they cross, and the two
-  /// rifle shooters and thrower engage a moment apart. The yard has no story:
-  /// its one fight takes the beat after the start, as any level's first encounter must.
+  static let hostiles = [
+    leftShooter, rightShooter, rusher, thrower, northRifle, northFlanker, northRusher, northThrower,
+  ]
+  static let waves = ArenaWaves.Configuration(
+    slots: hostiles.map { ArenaWaves.Slot(id: $0.id, point: $0.standAt) })
+
+  /// The encounter establishes the test's combat rules. ArenaWaves supplies every engagement
+  /// after a visible, rechecked arrival warning; the finite story director has no spawn cues.
   static let fight = Level.Encounter(
-    beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -16], maximum: [15, 1])),
-    retryAt: spawns[.miki], hostiles: [leftShooter, rightShooter, thrower],
-    cues: [
-      (0.4, .engage(rightShooter.id)), (0.8, .engage(thrower.id)),
-      (1.1, .engage(leftShooter.id)),
-    ],
-    clearedLine: "The yard is clear. Restart to fight again.")
+    beat: .stranger,
+    start: .area(PartyMotion.Box(minimum: [-25, -47], maximum: [25, -1.5])),
+    retryAt: spawns[.miki], hostiles: hostiles, cues: [])
 
-  /// The experiment's rules. While someone else leads, each member fires by themselves, Miki
-  /// with her carbine, Laura with her light burst weapon and Tom with his close scatter weapon,
-  /// and positions themselves as ADR 0003's combat positioning has it.
+  /// Shared squad rules, also used by the small relay mission. Repeated waves belong only to
+  /// this level's arena configuration, so borrowing combat does not change story encounters.
   static let combat = Level.Combat(
     companionWeapons: [.miki: .carbine, .laura: .lightBurst, .tom: .closeScatter],
     fallsBack: true, disrupt: true, combatPositioning: true, leaderCover: true)
 
   static let level = Level(
-    id: "combat-yard",
-    ground: .box("ground", at: [0, -0.15, -2], size: [30, 0.3, 28]),
-    boxes: boxes, interactions: [], triggers: [], encounters: [fight],
-    // Enough rounds that ammunition does not decide the experiment.
-    startingAmmo: 60,
-    party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
+    id: "combat-yard", ground: .box("ground", at: [0, -0.15, -18], size: [52, 0.3, 60]),
+    terrain: terrain, boxes: boxes, interactions: [], triggers: [], encounters: [fight],
+    startingAmmo: 60, party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
     cameraOffset: BrooklynBridge.layout.camera.offset,
     fieldOfView: BrooklynBridge.layout.camera.fieldOfView, lights: BrooklynBridge.layout.lights,
-    opening: "The combat yard, a test of squad fighting outside the story.",
-    objective: "Clear the yard.",
-    lookAround: "Cover, a flanker, and a thrower. Leave a grenade ring before it bursts.",
-    restartNote: "Restart begins the yard again.", combat: combat)
+    opening: "Combat test: marked arrivals, mixed waves, and fresh resources after each clear.",
+    objective: "Test the squad; survive repeated waves.",
+    lookAround:
+      "Upper west deck, lower east trench, and cover between crossings. Watch arrival markers.",
+    restartNote: "Restart begins the combat test at wave one.", combat: combat, arena: waves)
 
-  /// A shooter of the stranger's type, waiting in view where it fights, that aims at anyone and
-  /// is a target from its first wind-up. Starting values for playtests: the stranger's wind-up,
-  /// recovery and reach, and six hits to take down, since three members can fire at it.
   private static func shooter(
     id: String, name: String, at point: SIMD2<Float>, behavior: Level.Hostile.Behavior
   ) -> Level.Hostile {
+    let flanker = behavior == .flank
+    return Level.Hostile(
+      id: id, name: name, hiddenAt: point, standAt: point, hits: flanker ? 4 : 6,
+      behavior: behavior, reactionDelay: flanker ? 0.5 : 0.7,
+      burst: flanker ? 2 : 3, burstGap: flanker ? 0.14 : 0.16,
+      windUp: flanker ? 1.2 : 1.7, recovery: flanker ? 1.7 : 2.4, range: 18,
+      inView: true, targetsAnyone: true, targetFromWindUp: true)
+  }
+
+  private static func rusher(id: String, name: String, at point: SIMD2<Float>) -> Level.Hostile {
     Level.Hostile(
-      id: id, name: name, hiddenAt: point, standAt: point, hits: 6,
-      behavior: behavior, reactionDelay: 0.35, windUp: 1.5, recovery: 1.4,
-      range: 14, inView: true, targetsAnyone: true, targetFromWindUp: true)
+      id: id, name: name, hiddenAt: point, standAt: point, hits: 4,
+      behavior: .advance, reactionDelay: 0.6, burst: 2, burstGap: 0.12,
+      windUp: 0.8, recovery: 1.2, range: 7,
+      inView: true, targetsAnyone: true, targetFromWindUp: true)
+  }
+
+  private static func grenadier(id: String, name: String, at point: SIMD2<Float>) -> Level.Hostile {
+    Level.Hostile(
+      id: id, name: name, hiddenAt: point, standAt: point, hits: 5,
+      attack: .throwGrenade, reactionDelay: 1, windUp: 2.2, recovery: 5, range: 19,
+      inView: true, targetsAnyone: true, targetFromWindUp: true)
   }
 }

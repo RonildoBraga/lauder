@@ -42,13 +42,15 @@ final class CoverShield {
   /// The shield's curved front faces the block, with its centre behind the body's anchor to
   /// keep it visible at wall contact. Its colour comes from the incoming-damage sight check;
   /// this renderer decides no cover rules.
-  func show(at point: SIMD2<Float>, toward direction: SIMD2<Float>, exposed: Bool) {
+  func show(
+    at point: SIMD2<Float>, toward direction: SIMD2<Float>, exposed: Bool, floor: Float = 0
+  ) {
     guard simd_length_squared(direction) > 0.000001 else {
       hide()
       return
     }
     let centre = point - simd_normalize(direction) * inset
-    entity.position = [centre.x, 0.028, centre.y]
+    entity.position = [centre.x, floor + 0.028, centre.y]
     entity.orientation = simd_quatf(angle: Movement.yaw(towards: direction), axis: [0, 1, 0])
     protectedArc.isEnabled = !exposed
     exposedArc.isEnabled = exposed

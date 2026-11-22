@@ -114,6 +114,7 @@ final class GameSession {
 
   private let startingParty: [PartyMember]
   private let startingAmmo: Int
+  private let isArena: Bool
   /// Whether the formation button regroups the companions in a fight: in a level with combat
   /// positioning (ADR 0003, phase S4), such as the combat yard.
   private let regroupsInFights: Bool
@@ -164,6 +165,7 @@ final class GameSession {
     precondition(!level.party.isEmpty, "\(level.id) must start with someone.")
     startingParty = level.party
     startingAmmo = level.startingAmmo
+    isArena = level.arena != nil
     regroupsInFights = level.combat.combatPositioning
     salvageTask = level.salvage
     salvage = Self.newSalvage(for: level.salvage)
@@ -382,6 +384,20 @@ final class GameSession {
     guard mode == .exploring, ammo > 0 else { return false }
     ammo -= 1
     return true
+  }
+
+  /// The combat test reuses a fixed actor pool. Remove its previous-life records before a
+  /// respawn, and recover the trio and ammunition during the warned inter-wave break.
+  func prepareArena(hostiles ids: Set<String>, resupply: Bool = false) {
+    guard isArena, mode == .exploring else { return }
+    defeated.subtract(ids)
+    searched.subtract(ids)
+    for id in ids { hitsDealt[id] = nil }
+    if resupply {
+      ammo = startingAmmo
+      hits = [:]
+      regrouping = false
+    }
   }
 
   /// A hit on a hostile; true when it takes the hostile down.

@@ -41,14 +41,18 @@ struct FightSimulationTests {
     _ = step(fight, session: session, aiming: true)
 
     #expect(fight.canDisrupt && fight.fightUnderWay)
-    #expect(fight.hostileAimPoints["shooter"] == leader)
+    #expect(fight.hostileWeaponPoses["shooter"]?.raise ?? 0 > 0)
     #expect(fight.target == [0, -4])
     let ammo = session.ammo
     let result = step(fight, session: session, signature: true)
     #expect(result.line == "Shooter's shot is disrupted.")
     #expect(result.facing == [0, -1])
     #expect(fight.disrupts == 1 && !fight.canDisrupt)
-    #expect(fight.hostileAimPoints["shooter"] == nil)
+    guard case .recovering(let remaining) = fight.hostiles["shooter"]?.phase else {
+      Issue.record("Disrupt must cancel the wind-up into recovery.")
+      return
+    }
+    #expect(remaining > 1.3 && remaining <= 1.4)
     #expect(session.ammo == ammo && session.hitsTaken == 0)
     let shot = try #require(fight.shots.first)
     #expect(fight.shots.count == 1 && shot.path.strike == .body("shooter"))
@@ -82,7 +86,7 @@ struct FightSimulationTests {
     fight.fallBack()
     #expect(!fight.isDrawn && !fight.fightUnderWay)
     #expect(fight.hostiles["shooter"]?.phase == .waiting)
-    #expect(fight.hostileAimPoints.isEmpty && fight.target == nil)
+    #expect(fight.target == nil)
     // A second real shot takes it down: the first shot's damage survived falling back.
     #expect(session.beginEncounter(encounter.beat))
     fight.begin(encounter)

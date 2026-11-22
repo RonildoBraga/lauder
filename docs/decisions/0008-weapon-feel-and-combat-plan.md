@@ -3,6 +3,8 @@
 **Status:** Accepted\
 **Date:** 22 November 2026
 
+**Later change:** [ADR 0014](0014-continuous-combat-arena.md) supersedes the retained hostile red aiming line and the combat yard's finite encounter/fallback policy. This record preserves the earlier phase's assignment and delivery evidence.
+
 ## Context
 
 On 21 November 2026, after playing [ADR 0007](0007-aiming-and-shot-feedback.md)'s shooting, the maintainer asked to take combat further: **“I can see the improvements, but I think we need to take the combat system further to make it feel more realistic, immersive, and engaging.”** The request named these changes:

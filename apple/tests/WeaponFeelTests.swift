@@ -56,30 +56,29 @@ struct WeaponFeelTests {
   }
 
   @Test
-  func aScatteredShotCanMissItsTargetButNeverHitsSomeoneNotYetATarget() throws {
-    let target = Aim.Hostile(id: "target", position: [0, -10], isTarget: true)
-    let aimed = try #require(
-      Aim.shot(
-        from: .zero, aim: [0, -1], facing: [0, -1], range: 14, hostiles: [target], blockers: []))
-    #expect(Aim.scattered(aimed, by: 0, range: 14, hostiles: [target], blockers: []) == aimed)
-    // A little off still meets the body; 4° off at 10 m passes 0.7 m wide and flies on.
-    let near = Aim.scattered(
-      aimed, by: Spread.degrees(1), range: 14, hostiles: [target], blockers: [])
+  func aDeviatedActualRayCanHitMissOrStrikeScenery() {
+    let ballistics = Ballistics(level: range(shooterAt: [0, -10], hits: 50))
+    let start = SIMD3<Float>(0, FightSimulation.aimHeight, 0)
+    let target = Ballistics.Target(id: "target", centre: [0, FightSimulation.aimHeight, -10])
+    let straight = ballistics.trace(
+      from: start, direction: [0, 0, -1], range: 14, targets: [target])
+    #expect(straight.strike == .body("target"))
+    // A little deviation still crosses the actual body cylinder. Four degrees passes it
+    // about 0.7 m wide and keeps travelling, rather than preserving an assisted hit.
+    let small = Spread.degrees(1)
+    let near = ballistics.trace(
+      from: start, direction: [sin(small), 0, -cos(small)], range: 14, targets: [target])
     #expect(near.strike == .body("target"))
-    let wide = Aim.scattered(
-      aimed, by: Spread.degrees(4), range: 14, hostiles: [target], blockers: [])
-    #expect(wide.strike == .nothing && simd_distance(wide.end, .zero) > 13.9)
-    // A wall beside the target catches the stray shot.
-    let wall = PartyMotion.Box(minimum: [-3, -12], maximum: [3, -11])
-    let walled = Aim.scattered(
-      aimed, by: Spread.degrees(-4), range: 14, hostiles: [target], blockers: [wall])
-    #expect(walled.strike == .scenery)
-    // A stranger beside the target, where the stray shot would go, is never hit by it: it
-    // keeps to the aim.
-    let stranger = Aim.Hostile(id: "stranger", position: [-0.7, -10], isTarget: false)
-    let kept = Aim.scattered(
-      aimed, by: Spread.degrees(-4), range: 14, hostiles: [target, stranger], blockers: [])
-    #expect(kept == aimed)
+    let large = Spread.degrees(4)
+    let wide = ballistics.trace(
+      from: start, direction: [sin(large), 0, -cos(large)], range: 14, targets: [target])
+    #expect(wide.strike == .nothing && simd_distance(wide.end, start) > 13.9)
+    // The same missed ray meets a real tall block beyond the body.
+    let wall = Level.Box.box("wall", at: [0, 1.5, -11.5], size: [6, 3, 1])
+    let blocked = Ballistics(level: range(shooterAt: [0, -10], hits: 50, boxes: [wall]))
+      .trace(
+        from: start, direction: [sin(large), 0, -cos(large)], range: 14, targets: [target])
+    #expect(blocked.strike == .scenery && abs(blocked.end.z + 11) < 0.0001)
   }
 
   // MARK: - Enemies react
@@ -94,7 +93,15 @@ struct WeaponFeelTests {
     state.flinch()
     #expect(state.phase == .aiming(remaining: windUp + HostileState.flinchDelay))
     for _ in 0..<5 { state.flinch() }
-    #expect(state.phase == .aiming(remaining: windUp + HostileState.flinchLimit))
+    guard case .aiming(let capped) = state.phase else {
+      Issue.record("Flinching must preserve the wind-up.")
+      return
+    }
+    #expect(abs(capped - (windUp + HostileState.flinchLimit)) < 0.00001)
+    // Repeated hits cannot extend the capped wind-up, even by another simulation step.
+    let cappedPhase = state.phase
+    for _ in 0..<20 { state.flinch() }
+    #expect(state.phase == cappedPhase)
     // Out of a wind-up, a hit delays nothing.
     var shot: HostileState.Shot?
     for _ in 0..<400 where shot == nil {
@@ -361,7 +368,7 @@ struct WeaponFeelTests {
 
   /// A small open range with the combat yard's rules: Miki in the open with the companions just
   /// behind her, and one shooter, "a", in the open, which fights at once.
-  private func range(shooterAt point: SIMD2<Float>, hits: Int) -> Level {
+  private func range(shooterAt point: SIMD2<Float>, hits: Int, boxes: [Level.Box] = []) -> Level {
     let shooter = Level.Hostile(
       id: "a", name: "Shooter A", hiddenAt: point, standAt: point, hits: hits, windUp: 1.5,
       recovery: 1.4, range: 14, inView: true, targetsAnyone: true, targetFromWindUp: true)
@@ -371,7 +378,7 @@ struct WeaponFeelTests {
     return Level(
       id: "test-range",
       ground: Level.Box(name: "ground", position: [0, -0.15, 0], size: [40, 0.3, 40]),
-      boxes: [], interactions: [], triggers: [], encounters: [fight], startingAmmo: 60,
+      boxes: boxes, interactions: [], triggers: [], encounters: [fight], startingAmmo: 60,
       party: [.miki, .tom, .laura], spawns: [.miki: [0, 2], .tom: [-1, 3], .laura: [1, 3]],
       heading: [0, -1], cameraOffset: CombatYard.level.cameraOffset,
       fieldOfView: CombatYard.level.fieldOfView, opening: "A range.", objective: "Test.",

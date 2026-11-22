@@ -69,7 +69,7 @@ struct CompanionCombatTests {
     // Laura fires; its next short wind-up can then acquire her still-exposed body.
     let level = range(
       boxes: [lowBlock], spawns: [.miki: [5, 3], .tom: [9, 8], .laura: [0, 0.9]],
-      shooters: [shooter("shooter", at: [0, -4], windUp: 0.05, recovery: 0.55, anyone: true)],
+      shooters: [shooter("shooter", at: [0, -4], windUp: 0.15, recovery: 0.55, anyone: true)],
       weapons: [.laura: .lightBurst])
     let session = GameSession(level: level)
     let fight = FightSimulation(level: level)
@@ -82,7 +82,7 @@ struct CompanionCombatTests {
     var aimedAtLaura = false
     for _ in 0..<120 {
       step(fight, session: session, level: level)
-      if fight.hostileAimPoints["shooter"] == level.spawn(.laura) {
+      if fight.threat?.contains("aiming at Laura") == true {
         aimedAtLaura = true
         break
       }
@@ -102,7 +102,8 @@ struct CompanionCombatTests {
     }
     let hit = try #require(incoming)
     #expect(hit.path.strike == .body(PartyMember.laura.rawValue))
-    #expect(hit.path.end == level.spawn(.laura) && session.hits(of: .laura) == 1)
+    #expect(simd_distance(hit.path.end, level.spawn(.laura)) <= Aim.bodyRadius + 0.001)
+    #expect(session.hits(of: .laura) == 1)
     #expect(fight.coverStates[.laura]?.firing == true)
     for _ in 0..<40 { step(fight, session: session, level: level) }
     #expect(fight.coverStates[.laura]?.firing == false)

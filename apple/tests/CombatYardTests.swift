@@ -11,59 +11,64 @@ struct CombatYardTests {
   // MARK: - The venue
 
   @Test
-  func theYardIsAGreyboxUnderTheBridgesCameraWithItsShootersOutOfSight() throws {
+  func theYardProvidesConnectedUpperAndLowerRoutesWithAReusableMixedEnemyPool() throws {
     let yard = CombatYard.level
     #expect(yard.id == "combat-yard" && yard.scene == nil)
     #expect(yard.party == [.miki, .tom, .laura])
     #expect(yard.cameraOffset == BrooklynBridge.layout.camera.offset)
     #expect(yard.fieldOfView == BrooklynBridge.layout.camera.fieldOfView)
     #expect(yard.lights.map(\.name) == BrooklynBridge.layout.lights.map(\.name))
-    // One full-height wall, two party blocks and a low shelter for the cover shooter.
-    #expect(yard.boxes.count == 4)
-    #expect(yard.boxes.filter { $0.size.y > PartyBody.height }.count == 1)
-    // Everything lies within the 19 m that the camera shows ahead of the entrance.
-    let entrance = yard.spawn(.miki)
-    func ahead(_ point: SIMD2<Float>) -> Float { simd_dot(point - entrance, yard.heading) }
+    #expect(yard.ground.size.x == 52 && yard.ground.size.z == 60)
+    #expect(yard.boxes.count >= 16)
+    #expect(yard.boxes.filter { $0.size.y > PartyBody.height }.count >= 5)
+    #expect(yard.terrain.height(at: [-16, -20]) == 2.4)
+    #expect(yard.terrain.height(at: [15, -20]) == -1.8)
+    #expect(abs(yard.terrain.height(at: [-16, -6]) - 1.2) < 0.001)
+    #expect(abs(yard.terrain.height(at: [15, -6]) + 0.9) < 0.001)
+    // Cover stands on the local deck or trench floor rather than floating or being buried.
     for box in yard.boxes {
-      #expect(ahead(box.footprint.minimum) < 19 && ahead(box.footprint.maximum) < 19, "\(box.name)")
+      let point = SIMD2(box.position.x, box.position.z)
+      #expect(abs(box.position.y - box.size.y / 2 - yard.terrain.height(at: point)) < 0.001)
     }
-    let obstacles = yard.obstacles
-    for shooter in CombatYard.fight.hostiles {
-      #expect(ahead(shooter.standAt) < 19, "\(shooter.id)")
-      #expect(shooter.inView && shooter.targetsAnyone && shooter.targetFromWindUp)
-      // In view beyond the wall, but out of everyone's clear sight at the start.
+    let arena = try #require(yard.arena)
+    #expect(arena.slots.count == 8 && arena.maxActive == 4)
+    #expect(Set(arena.slots.map(\.id)) == Set(CombatYard.fight.hostiles.map(\.id)))
+    #expect(CombatYard.fight.cues.isEmpty && CombatYard.fight.clearedLine == nil)
+    #expect(CombatYard.hostiles.filter { $0.behavior == .takeCover }.count == 2)
+    #expect(CombatYard.hostiles.filter { $0.behavior == .flank }.count == 2)
+    #expect(CombatYard.hostiles.filter { $0.behavior == .advance && $0.range == 7 }.count == 2)
+    #expect(CombatYard.hostiles.filter { $0.attack == .throwGrenade }.count == 2)
+    let motion = PartyMotion(radius: PartyBody.radius, obstacles: yard.obstacles)
+    let grid = NavigationGrid(level: yard)
+    for slot in arena.slots {
+      #expect(yard.bounds.contains(slot.point))
+      #expect(motion.canTraverse(from: slot.point, to: slot.point), "\(slot.id)")
+      #expect(grid.route(from: yard.spawn(.miki), to: slot.point) != nil, "\(slot.id)")
       for member in PartyMember.allCases {
-        #expect(
-          !LineOfSight.isClear(from: yard.spawn(member), to: shooter.standAt, obstacles: obstacles),
-          "\(member.rawValue) sees \(shooter.id)")
+        #expect(simd_distance(slot.point, yard.spawn(member)) >= arena.minimumDistance)
       }
     }
-    // Everyone starts clear of the scenery, in the Close formation behind Miki.
-    func clearance(_ point: SIMD2<Float>, _ box: PartyMotion.Box) -> Float {
-      simd_distance(point, simd_clamp(point, box.minimum, box.maximum))
-    }
+    // Everyone starts clear of scenery and cliffs, in Close formation behind Miki.
     for member in PartyMember.allCases {
-      let spawn = yard.spawn(member)
-      #expect(yard.bounds.contains(spawn))
-      #expect(obstacles.allSatisfy { clearance(spawn, $0) >= PartyBody.radius + PartyMotion.skin })
+      #expect(motion.canTraverse(from: yard.spawn(member), to: yard.spawn(member)))
     }
-    #expect(simd_distance(yard.spawn(.laura), entrance + [-0.9, 0.9]) < 0.01)
-    #expect(simd_distance(yard.spawn(.tom), entrance + [0.9, 0.9]) < 0.01)
-    // Combat positioning is the yard's, and not the opening's.
+    #expect(simd_distance(yard.spawn(.laura), yard.spawn(.miki) + [-0.9, 0.9]) < 0.01)
+    #expect(simd_distance(yard.spawn(.tom), yard.spawn(.miki) + [0.9, 0.9]) < 0.01)
     #expect(yard.combat.combatPositioning && !BrooklynBridge.level.combat.combatPositioning)
+    #expect(RelayRun.level.arena == nil && BrooklynBridge.level.arena == nil)
   }
 
   @Test
-  func theYardStartsWithTheWholeTrioAndItsShootersInView() throws {
+  func theYardStartsWithTheWholeTrioAndWaitsForTelegraphedArrivals() throws {
     let world = GameWorld(level: CombatYard.level)
     for member in PartyMember.allCases {
       #expect(try #require(world.root.findEntity(named: "party.\(member.rawValue)")).isEnabled)
     }
-    for shooter in CombatYard.fight.hostiles {
-      #expect(try #require(world.root.findEntity(named: "hostile.\(shooter.id)")).isEnabled)
+    for hostile in CombatYard.fight.hostiles {
+      #expect(!((try #require(world.root.findEntity(named: "hostile.\(hostile.id)"))).isEnabled))
     }
     #expect(world.session.nextLeader == .tom && world.session.formationsAvailable)
-    #expect(world.objective == "Clear the yard." && world.session.ammo == 60)
+    #expect(world.objective == CombatYard.level.objective && world.session.ammo == 60)
     #expect(world.compass == nil)
   }
 

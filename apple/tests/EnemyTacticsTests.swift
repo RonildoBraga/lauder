@@ -205,6 +205,73 @@ struct EnemyTacticsTests {
         .isEmpty)
   }
 
+  @Test
+  func aRaisedTerraceBlocksFalseFlankingLanesButAllowsAClearAngleToItsEdge() throws {
+    let spec = enemy(behavior: .flank, at: [0, -4])
+    var level = yard(hostiles: [spec])
+    level.terrain = Terrain(patches: [
+      .flat(minimum: [-12, -1], maximum: [12, 12], height: 4)
+    ])
+    let actor = engaged(spec)
+    let ballistics = Ballistics(level: level)
+    #expect(
+      !ballistics.isClear(
+        from: ballistics.point(actor.position), to: ballistics.point([0, 5])))
+    var hidden = EnemyTactics(level: level)
+    let held = hidden.step(hostiles: [spec.id: actor], party: Self.party, dt: 1 / 120)
+    #expect(hidden.goals[spec.id] == spec.standAt && held.moving.isEmpty)
+
+    // Near the lip, the elevated body is actually visible. A lower-tier angle is legal,
+    // whereas a shortcut onto the unconnected raised floor remains unreachable.
+    let edge = SIMD2<Float>(0, -0.4)
+    var visible = EnemyTactics(level: level)
+    let step = visible.step(hostiles: [spec.id: actor], party: [.miki: edge], dt: 1 / 120)
+    let goal = try #require(visible.goals[spec.id])
+    #expect(goal != actor.position && step.moving.contains(spec.id))
+    #expect(level.terrain.height(at: goal) == 0)
+    #expect(ballistics.isClear(from: ballistics.point(goal), to: ballistics.point(edge)))
+    #expect(
+      PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles).canTraverse(
+        from: actor.position, to: try #require(step.positions[spec.id])))
+  }
+
+  @Test
+  func anElevatedAttackerMakesLowCoverUnsafeInsteadOfSelectingItThroughAFlatQuery() {
+    let spec = enemy(behavior: .takeCover, at: [0, -2])
+    var level = yard(hostiles: [spec], boxes: [Self.low])
+    level.terrain = Terrain(patches: [
+      .flat(minimum: [-12, 3], maximum: [12, 12], height: 3)
+    ])
+    var tactics = EnemyTactics(level: level)
+    let step = tactics.step(hostiles: [spec.id: engaged(spec)], party: Self.party, dt: 1 / 120)
+    #expect(tactics.goals[spec.id] == spec.standAt)
+    #expect(step.positions.isEmpty && step.moving.isEmpty)
+  }
+
+  @Test
+  func anAdvancingRifleClosesBeyondTheOrdinaryHomeReachWithoutChargingThroughTheParty() {
+    var spec = enemy(behavior: .advance, at: [0, -9])
+    spec.range = 7
+    let level = yard(hostiles: [spec])
+    var tactics = EnemyTactics(level: level)
+    var actor = engaged(spec)
+    let target = SIMD2<Float>(0, 5)
+    var moved = false
+    for _ in 0..<600 {
+      let step = tactics.step(hostiles: [spec.id: actor], party: [.miki: target], dt: 1 / 60)
+      if let next = step.positions[spec.id] {
+        #expect(simd_distance(next, actor.position) <= EnemyTactics.speed / 60 + 0.0001)
+        #expect(simd_distance(next, spec.standAt) <= EnemyTactics.advancingReach + 0.0001)
+        #expect(simd_distance(next, target) >= EnemyTactics.spacing)
+        actor.reposition(to: next)
+      }
+      moved = moved || step.moving.contains(spec.id)
+    }
+    #expect(moved && simd_distance(actor.position, spec.standAt) > EnemyTactics.homeReach)
+    #expect(simd_distance(actor.position, target) < spec.range)
+    #expect(actor.spec.attack == .shoot)
+  }
+
   private func enemy(
     id: String = "tactical", behavior: Level.Hostile.Behavior,
     at point: SIMD2<Float>, reaction: Float = 0

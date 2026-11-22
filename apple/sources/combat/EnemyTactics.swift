@@ -6,6 +6,7 @@ import simd
 struct EnemyTactics {
   static let speed: Float = 1.7
   static let homeReach: Float = 6
+  static let advancingReach: Float = 14
   static let coverReach: Float = 3
   static let coverInterval: Float = 2
   static let flankInterval: Float = 3
@@ -33,7 +34,7 @@ struct EnemyTactics {
   private let motion: PartyMotion
   private let ground: PartyMotion.Box
   private let cover: LeaderCover
-  private let shotBlockers: [PartyMotion.Box]
+  private let ballistics: Ballistics
   private var plans: [String: Plan] = [:]
 
   /// The world can supply its grid. A separate grid is made only for a level that actually
@@ -45,8 +46,8 @@ struct EnemyTactics {
     self.grid = tactical ? (grid ?? NavigationGrid(level: level)) : nil
     motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
     ground = level.bounds
-    cover = LeaderCover(boxes: level.boxes, ground: level.bounds)
-    shotBlockers = Aim.blockers(level.boxes, above: LeaderCover.lowHeight)
+    cover = LeaderCover(boxes: level.boxes, ground: level.bounds, terrain: level.terrain)
+    ballistics = Ballistics(level: level)
   }
 
   /// The committed destinations, useful for the Simulator's diagnostics and focused tests.
@@ -97,7 +98,9 @@ struct EnemyTactics {
             other != id && state.isVisible && !state.isDown ? state.position : nil
           } + plans.compactMap { other, plan in other != id ? plan.goal : nil }
         let goal = destination(for: actor, target: target, party: targets, taken: taken, grid: grid)
-        let route = route(from: actor.position, to: goal, home: actor.spec.standAt, grid: grid)
+        let route = route(
+          from: actor.position, to: goal, home: actor.spec.standAt,
+          reach: homeReach(for: actor), grid: grid)
         plan = Plan(
           goal: goal, route: route,
           remaining: actor.spec.behavior == .flank ? Self.flankInterval : Self.coverInterval)
@@ -123,7 +126,7 @@ struct EnemyTactics {
             other != id && state.isVisible && !state.isDown
               && simd_distance(proposed, result.positions[other] ?? state.position) < Self.spacing
           }
-          if fits(proposed), simd_distance(proposed, actor.spec.standAt) <= Self.homeReach,
+          if fits(proposed), simd_distance(proposed, actor.spec.standAt) <= homeReach(for: actor),
             !occupied, targets.allSatisfy({ simd_distance($0, proposed) >= Self.spacing })
           {
             result.positions[id] = proposed
@@ -145,42 +148,52 @@ struct EnemyTactics {
     taken: [SIMD2<Float>], grid: NavigationGrid
   ) -> SIMD2<Float> {
     let home = actor.spec.standAt
-    let centre = actor.spec.behavior == .flank ? home : actor.position
-    let reach = actor.spec.behavior == .flank ? Self.homeReach : Self.coverReach
+    let advancing = actor.spec.behavior == .advance
+    let centre = actor.spec.behavior == .flank || advancing ? home : actor.position
+    let reach = actor.spec.behavior == .flank || advancing ? homeReach(for: actor) : Self.coverReach
     let region = grid.region(at: actor.position)
     let candidates = grid.roomySpots(within: reach, of: centre, stride: 3).filter {
-      fits($0) && simd_distance($0, home) <= Self.homeReach
+      fits($0) && simd_distance($0, home) <= homeReach(for: actor)
         && (region == nil || grid.region(at: $0) == region)
     }
     var best: (cost: Float, point: SIMD2<Float>)?
     for point in candidates {
       guard taken.allSatisfy({ simd_distance($0, point) >= Self.spacing }),
         party.allSatisfy({ simd_distance($0, point) >= 2 }),
-        simd_distance(point, target) <= actor.spec.range
+        advancing
+          || simd_distance(ballistics.point(point), ballistics.point(target)) <= actor.spec.range
       else { continue }
       let cost: Float
       if actor.spec.behavior == .takeCover {
         guard let shelter = cover.shelter(at: point, facing: target - point),
           let firing = cover.firingPoint(from: point, in: shelter, facing: target - point),
-          !LineOfSight.isClear(
-            from: target, to: point, obstacles: cover.incomingBlockers(in: shelter, exposed: false)),
-          LineOfSight.isClear(from: firing, to: target, obstacles: shotBlockers)
+          !ballistics.isClear(
+            from: ballistics.point(target),
+            to: ballistics.point(point, above: shelter.isLow ? Self.crouchedHeight : 1.25)),
+          ballistics.isClear(from: ballistics.point(firing), to: ballistics.point(target))
         else { continue }
         let visible = party.filter {
-          LineOfSight.isClear(
-            from: $0, to: point, obstacles: cover.incomingBlockers(in: shelter, exposed: false))
+          ballistics.isClear(
+            from: ballistics.point($0),
+            to: ballistics.point(point, above: shelter.isLow ? Self.crouchedHeight : 1.25))
         }.count
         cost = Float(visible) * 8 + simd_distance(point, actor.position)
       } else {
-        guard LineOfSight.isClear(from: point, to: target, obstacles: shotBlockers) else {
+        guard ballistics.isClear(from: ballistics.point(point), to: ballistics.point(target)) else {
           continue
         }
-        let fromHome = home - target
-        let fromPoint = point - target
-        let first = simd_length(fromHome) > 0.001 ? simd_normalize(fromHome) : SIMD2<Float>(0, -1)
-        let second = simd_normalize(fromPoint)
-        let angle = abs(first.x * second.y - first.y * second.x)
-        cost = -angle * 8 + simd_distance(point, actor.position) * 0.25
+        if advancing {
+          cost =
+            simd_distance(ballistics.point(point), ballistics.point(target))
+            + simd_distance(point, actor.position) * 0.05
+        } else {
+          let fromHome = home - target
+          let fromPoint = point - target
+          let first = simd_length(fromHome) > 0.001 ? simd_normalize(fromHome) : SIMD2<Float>(0, -1)
+          let second = simd_normalize(fromPoint)
+          let angle = abs(first.x * second.y - first.y * second.x)
+          cost = -angle * 8 + simd_distance(point, actor.position) * 0.25
+        }
       }
       if best == nil || cost < best!.cost - 0.00001 { best = (cost, point) }
     }
@@ -188,14 +201,15 @@ struct EnemyTactics {
   }
 
   private func route(
-    from point: SIMD2<Float>, to goal: SIMD2<Float>, home: SIMD2<Float>, grid: NavigationGrid
+    from point: SIMD2<Float>, to goal: SIMD2<Float>, home: SIMD2<Float>, reach: Float,
+    grid: NavigationGrid
   ) -> [SIMD2<Float>] {
     guard simd_distance(point, goal) > Self.arrival else { return [] }
     if motion.canTraverse(from: point, to: goal) { return [goal] }
     guard
       let cells = grid.route(
         from: point, to: goal,
-        extraCost: { simd_distance($0, home) <= Self.homeReach && fits($0) ? 0 : .infinity })
+        extraCost: { simd_distance($0, home) <= reach && fits($0) ? 0 : .infinity })
     else { return [] }
     var points = [point] + cells
     if let last = points.last, motion.canTraverse(from: last, to: goal) { points.append(goal) }
@@ -203,7 +217,18 @@ struct EnemyTactics {
   }
 
   private func nearest(to point: SIMD2<Float>, among targets: [SIMD2<Float>]) -> SIMD2<Float>? {
-    targets.min { simd_distance_squared($0, point) < simd_distance_squared($1, point) }
+    let origin = ballistics.point(point)
+    return targets.min {
+      simd_distance_squared(ballistics.point($0), origin)
+        < simd_distance_squared(ballistics.point($1), origin)
+    }
+  }
+
+  /// The same 68% body stance used by the fight's target and presentation values.
+  private static let crouchedHeight: Float = 1.25 * 0.68
+
+  private func homeReach(for actor: HostileState) -> Float {
+    actor.spec.behavior == .advance ? Self.advancingReach : Self.homeReach
   }
 
   private func fits(_ point: SIMD2<Float>) -> Bool {

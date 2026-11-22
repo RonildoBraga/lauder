@@ -98,7 +98,19 @@ After build 21's delivery, the maintainer instructed: **“I will test later, pl
 
 - [ ] **Relay Run journey:** answer the [walkthrough's playtest questions](relay-run-walkthrough.md#what-play-should-answer) about route readability, useful switching, purposeful salvage/return and credible avoidance/withdrawal. Check its phone controls and performance as above; those results remain unverified.
 
+- [ ] **Expanded arena:** on a delivered ADR 0014 build, judge whether arrivals are fair, the four enemy roles and raised-weapon aim read without exact red lines, both tiers offer useful cover and the repeatable loop is enjoyable. Measure representative frame pacing and sustained use on the baseline phone; the larger arena's target is still 60 fps.
+
 For each result, record the actual build, phone, input source, conditions, measurement or observation and the exact question answered. Preserve failed or unsupported results as such; TestFlight availability and Simulator success do not answer this checklist.
+
+## Expanded combat test
+
+The maintainer's current request in [issue #112](https://github.com/RonildoBraga/lauder/issues/112) assigns a repeatable, larger combat test with upper/lower ground, more cover, different enemy types and no hostile red aim line. [ADR 0014](decisions/0014-continuous-combat-arena.md) records the implementation choices and explicitly supersedes the earlier decision to retain that line. This extension is implemented; **integrated checks, source review, signed Release verification and TestFlight delivery are pending**. The latest verified delivery remains build 23 above.
+
+The yard is 52 × 60 m. A raised west deck (+2.4 m) and lowered east trench (−1.8 m) connect through broad ramps at both ends; a covered central route gives another approach. Ground height affects movement, cover, actual shot rays, grenades, camera and order projection. It remains one walkable surface per ground point, with no stacked floors or free jumping/climbing.
+
+Three-/four-enemy packs repeat through eight reused slots, with at most four active actors. A two-second arrival marker is rechecked against the whole party's distance and occupancy. A four-second break after a clear restores shared ammunition, hits and weapon readiness; fallback retries the same wave and Restart begins wave one. Cover rifles, flankers, armed close rushers and grenadiers supply different ranges, burst timings and pressure. Rifle props and finite turning communicate aim; seeded spread and actual height-aware rays decide damage. Fixed grenade warning circles remain, and the opening's deliberate first miss remains non-damaging.
+
+The [combat plan audit](combat-plan-audit.md) covers all five implemented phases and the six original goals, including what is approximate and what remains outside scope. Current validation must cover long-loop bounded actors/entities/progress, warning fairness, both ramp routes with the whole party, shot/cover agreement across tiers, Pause/recovery/Restart and finite-level regressions. Record actual check results and source/build in [Verification and performance](#verification-and-performance) after they complete. Baseline-phone performance, controller/touch feel, haptics and personal judgement stay in the deferred checklist; they are not inferred from this larger Simulator test.
 
 ## Relay Run — a complete salvage journey
 
@@ -126,7 +138,7 @@ Combat stays occasional; exploration and salvage lead. The longer-term goal is a
 
 The characters' [combat identities](story/story-bible.md#combat-identities), the [future squad behaviour](gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](encounters/the-quiet-yard.md) record the working design. [ADR 0003](decisions/0003-squad-movement.md) sets out the navigation, formations, orders and phases S1 to S4, of which S1 to S3 are built and S4 is built in the combat yard, and [ADR 0004](decisions/0004-brooklyn-bridge-opening.md) settles the opening's fights.
 
-Formation or combat implementation beyond the opening needs an explicit assignment for a bounded greybox experiment. The current remaining combat assignment is recorded in [ADR 0011](decisions/0011-companion-combat.md), with phase 5's scope in [ADR 0012](decisions/0012-tactical-enemies.md); it authorises this sequence without another approval at each milestone. Its tunable prototype defaults are implementer choices under that instruction. A reviewer recommendation or a clean review alone does not assign additional work outside it.
+Formation or combat implementation beyond the opening needs an explicit assignment for a bounded greybox experiment. [ADR 0011](decisions/0011-companion-combat.md) assigned completion of the now-delivered five phases, with phase 5's scope in [ADR 0012](decisions/0012-tactical-enemies.md). The current arena extension is assigned separately in [ADR 0014](decisions/0014-continuous-combat-arena.md), under the continuing Simulator/review/TestFlight workflow. Tunable prototype defaults are implementer choices under those instructions. A reviewer recommendation or a clean review alone does not assign additional work outside them.
 
 On 21 November 2026 the maintainer settled the choices for a first experiment, which [ADR 0005](decisions/0005-squad-combat-experiment.md) records:
 - a test yard outside the story;
