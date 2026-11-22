@@ -25,3 +25,7 @@
 # larger than 1 MiB (1,048,576 bytes) need an explicit-path LFS rule before commit.
 # PNG/JPEG files at or below that size stay in ordinary Git. This is not a GitHub limit.
 # Inspect mixed-format .usd files separately; binary .usd needs a path rule at any size.
+
+# Bridge concept PNGs exceed 1 MiB; keep their deliberate exports in LFS.
+art/bridge/bridge-establishing-v1.png filter=lfs diff=lfs merge=lfs -text
+art/bridge/bridge-gameplay-v1.png filter=lfs diff=lfs merge=lfs -text
