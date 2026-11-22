@@ -128,18 +128,24 @@ struct ShootingTests {
     #expect(simd_distance(world.facing(of: .miki), [0, -1]) < 0.01)
   }
 
-  @Test
-  func onlyMikiAimsAndFires() {
+  @Test(arguments: PartyMember.allCases)
+  func everyLeaderAimsAndFiresTheirOwnWeapon(member: PartyMember) {
     let world = GameWorld(level: SalvageYard.level)
-    for _ in 0..<3 where world.session.leader != .tom { world.session.cycleLeader() }
+    while world.session.leader != member { world.session.cycleLeader() }
     world.advanceParty(movement: .zero, deltaTime: 1 / 60)
-    #expect(world.session.leader == .tom && !world.showsWeapon)
+    #expect(world.session.leader == member && world.showsWeapon)
     let right = stick(world, towards: [1, 0])
-    for _ in 0..<30 {
-      world.advanceParty(movement: .zero, aim: right, fireHeld: true, deltaTime: 1 / 60)
-    }
-    #expect(!world.weaponDrawn && world.shotMarks == 0)
-    #expect(world.cameraLens == SalvageYard.level.fieldOfView)
+    run(world, upTo: 1.4, fire: true, aim: right)
+    #expect(world.weaponDrawn && world.session.ammo == 0)
+    #expect(simd_distance(world.facing(of: member), [1, 0]) < 0.01)
+    #expect(
+      world.takeCombatEvents().contains {
+        if case .fired(let kind, _, let byLeader) = $0 {
+          kind == Weapon.forMember(member).kind && byLeader
+        } else {
+          false
+        }
+      })
   }
 
   // MARK: - Shots and rounds

@@ -10,8 +10,8 @@ final class EncounterStage {
   let container = Entity()
   /// What every shot looks like (ADR 0007).
   let effects: ShotEffects
-  /// The leader's weapon, posed at its grip; the world puts it in the leader's hands.
-  let weaponProp: Entity
+  /// Each member's weapon, posed at its grip; the world attaches it to that member's visual.
+  let weaponProps: [PartyMember: Entity]
 
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
@@ -25,7 +25,10 @@ final class EncounterStage {
     let shots = Entity()
     shots.name = "combat.shots"
     effects = ShotEffects(style: style, in: shots)
-    weaponProp = style.carbine()
+    weaponProps = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.map {
+        ($0, style.weapon(for: Weapon.forMember($0).kind))
+      })
     markerScale = style.markerScale
     targetMarker = style.targetMarker()
     coverShield = level.combat.leaderCover ? CoverShield(style: style) : nil
@@ -106,11 +109,14 @@ final class EncounterStage {
     } else {
       targetMarker.isEnabled = false
     }
-    weaponProp.isEnabled = fight.isDrawn
-    if fight.isDrawn {
-      let transform = fight.pose.transform
-      weaponProp.position = transform.position
-      weaponProp.orientation = transform.orientation
+    let drawn = fight.drawnWeapons
+    for (member, prop) in weaponProps {
+      prop.isEnabled = drawn.contains(member)
+      if let pose = fight.weaponPoses[member] {
+        let transform = pose.transform
+        prop.position = transform.position
+        prop.orientation = transform.orientation
+      }
     }
   }
 

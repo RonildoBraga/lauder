@@ -5,8 +5,8 @@ import simd
 
 /// What the player hears and feels of a fight (ADR 0008): each event plays as a sound from where
 /// it happened, and what the leader does or suffers as a vibration on the phone or the
-/// controller. A DualSense's R2 resists like a trigger while Miki can fire. Nothing starts until
-/// the first frame of play asks for it, so headless tests stay silent and still.
+/// controller. A DualSense's R2 uses the active weapon's resistance while it can fire. Nothing
+/// starts until the first frame of play asks for it, so headless tests stay silent and still.
 @MainActor
 final class CombatFeedback {
   /// What vibrates: nothing, the phone in the player's hands, or their controller.
@@ -24,19 +24,19 @@ final class CombatFeedback {
   private var audioStarted = false
 
   /// One frame: plays `events`, heard from `listener` on the ground with the screen's right
-  /// along `right`, felt on `device`; `triggerArmed` says whether R2 should resist. Sound and the
-  /// device's vibration start on the first frame of play, not on the first shot, so a shot never
-  /// waits for them.
+  /// along `right`, felt on `device`; `triggerWeapon` supplies R2's feel, nil while unavailable.
+  /// Sound and vibration start on the first frame of play, not on the first shot, so a shot
+  /// never waits for them.
   func play(
     _ events: [CombatEvent], listener: SIMD2<Float>, right: SIMD2<Float>, device: Device,
-    triggerArmed: Bool
+    triggerWeapon: Weapon.Kind?
   ) {
     if !audioStarted {
       audioStarted = true
       audio.prepare()
     }
     haptics.prepare(device)
-    haptics.setTrigger(armed: triggerArmed, on: device)
+    haptics.setTrigger(weapon: triggerWeapon, on: device)
     for event in events {
       if let sound = CombatSound.of(event) {
         let mix = CombatAudio.mix(at: event.position, listener: listener, right: right)
@@ -205,16 +205,21 @@ final class CombatAudio: @unchecked Sendable {
 enum HapticCue: CaseIterable, Sendable {
   /// A firm tap for each shot of Miki's carbine.
   case carbineShot
+  /// A light tick for each shot in Laura's burst.
+  case lightBurstShot
+  /// A heavier, longer pulse for Tom's close blast.
+  case closeScatterShot
   /// A sharp, heavier jolt when a hostile's shot hits the leader.
   case leaderHit
   /// A light tick for Fire with no rounds.
   case emptyClick
 
-  /// What the leader feels of an event; nothing for what others do. Laura's and Tom's weapons
-  /// get their own patterns once the player fires them (ADR 0008, phase 3).
+  /// What the leader feels of an event; nothing for a companion's or hostile's weapon.
   static func of(_ event: CombatEvent) -> HapticCue? {
     switch event {
     case .fired(.carbine, _, true): .carbineShot
+    case .fired(.lightBurst, _, true): .lightBurstShot
+    case .fired(.closeScatter, _, true): .closeScatterShot
     case .leaderHit: .leaderHit
     case .empty: .emptyClick
     default: nil
@@ -244,6 +249,8 @@ enum HapticCue: CaseIterable, Sendable {
     let events =
       switch self {
       case .carbineShot: [tap(0.8, 0.65), rumble(0.35, 0.2, for: 0.05)]
+      case .lightBurstShot: [tap(0.45, 0.8)]
+      case .closeScatterShot: [tap(1, 0.5), rumble(0.65, 0.2, for: 0.09)]
       case .leaderHit: [tap(1, 0.9), tap(0.6, 0.4, at: 0.06), rumble(0.5, 0.3, for: 0.12)]
       case .emptyClick: [tap(0.35, 1)]
       }
@@ -257,9 +264,20 @@ enum HapticCue: CaseIterable, Sendable {
 @MainActor
 final class CombatHaptics {
   /// Where R2's resistance begins and breaks, as shares of its travel, and how strong it is.
-  static let triggerStart: Float = 0.3
-  static let triggerBreak: Float = 0.55
-  static let triggerStrength: Float = 0.6
+  /// These are tuning values; physical-controller feel still needs a phone session.
+  struct TriggerProfile: Equatable, Sendable {
+    let start: Float
+    let end: Float
+    let strength: Float
+  }
+
+  static func triggerProfile(for weapon: Weapon.Kind) -> TriggerProfile {
+    switch weapon {
+    case .carbine, .rifle: TriggerProfile(start: 0.3, end: 0.55, strength: 0.6)
+    case .lightBurst: TriggerProfile(start: 0.18, end: 0.38, strength: 0.3)
+    case .closeScatter: TriggerProfile(start: 0.4, end: 0.7, strength: 0.85)
+    }
+  }
 
   private var phone: CHHapticEngine?
   private var phoneUnavailable = false
@@ -269,8 +287,9 @@ final class CombatHaptics {
   private var players: [ObjectIdentifier: [HapticCue: any CHHapticPatternPlayer]] = [:]
   /// After a failed start, when to try again.
   private var retryAt = ContinuousClock.now
-  /// The DualSense whose R2 is set, and whether it resists.
-  private var trigger: (controller: GCController, armed: Bool)?
+  /// The DualSense whose R2 is set and which weapon it matches. Kind is part of the cache so
+  /// a leader switch updates resistance even when both weapons are ready to fire.
+  private var trigger: (controller: GCController, weapon: Weapon.Kind?)?
 
   func play(_ cue: HapticCue, on device: CombatFeedback.Device) {
     guard let engine = prepare(device), let player = player(for: cue, on: engine) else { return }
@@ -298,14 +317,14 @@ final class CombatHaptics {
     return nil
   }
 
-  /// R2 resists like a trigger's break while `armed` on a DualSense, and is slack otherwise.
-  func setTrigger(armed: Bool, on device: CombatFeedback.Device) {
-    var wanted: (controller: GCController, armed: Bool)?
+  /// R2 uses the ready weapon's trigger break on a DualSense; nil makes it slack.
+  func setTrigger(weapon: Weapon.Kind?, on device: CombatFeedback.Device) {
+    var wanted: (controller: GCController, weapon: Weapon.Kind?)?
     if case .controller(let controller) = device, controller.extendedGamepad is GCDualSenseGamepad {
-      wanted = (controller, armed)
+      wanted = (controller, weapon)
     }
     if let trigger, let wanted, trigger.controller === wanted.controller,
-      trigger.armed == wanted.armed
+      trigger.weapon == wanted.weapon
     {
       return
     }
@@ -314,9 +333,10 @@ final class CombatHaptics {
       Self.dualSense(trigger.controller)?.rightTrigger.setModeOff()
     }
     if let wanted, let dualSense = Self.dualSense(wanted.controller) {
-      if wanted.armed {
+      if let weapon = wanted.weapon {
+        let profile = Self.triggerProfile(for: weapon)
         dualSense.rightTrigger.setModeWeaponWithStartPosition(
-          Self.triggerStart, endPosition: Self.triggerBreak, resistiveStrength: Self.triggerStrength
+          profile.start, endPosition: profile.end, resistiveStrength: profile.strength
         )
       } else {
         dualSense.rightTrigger.setModeOff()
@@ -326,7 +346,7 @@ final class CombatHaptics {
   }
 
   func suspend() {
-    setTrigger(armed: false, on: .none)
+    setTrigger(weapon: nil, on: .none)
     for engine in [phone, pad?.engine].compactMap({ $0 }) {
       engine.stop(completionHandler: nil)
       forget(ObjectIdentifier(engine))

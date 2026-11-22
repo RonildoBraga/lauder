@@ -17,7 +17,7 @@ struct SceneStyle {
   let snow = SimpleMaterial(
     color: UIColor(red: 236 / 255, green: 233 / 255, blue: 226 / 255, alpha: 1), roughness: 1,
     isMetallic: false)
-  /// The carbine.
+  /// The party's weapons.
   let gear = SimpleMaterial(
     color: UIColor(red: 0.16, green: 0.25, blue: 0.25, alpha: 1), roughness: 0.9,
     isMetallic: false)
@@ -110,15 +110,27 @@ struct SceneStyle {
     figure("hostile")
   }
 
-  /// The leader's carbine, shown while it is drawn: its origin is the grip, which the fight
-  /// poses in her hands (ADR 0008), and the barrel runs ahead along -z to the muzzle.
-  func carbine() -> Entity {
+  /// A party weapon, with its origin at the grip and its barrel ahead along -z. The simple
+  /// shapes differ in length and weight; the same profile locates its visual and shot muzzle.
+  func weapon(for kind: Weapon.Kind) -> Entity {
     let grip = Entity()
-    grip.name = "leader.carbine"
-    let length: Float = 0.55
+    let size: SIMD3<Float> =
+      switch kind {
+      case .carbine, .rifle: [0.07, 0.08, 0.55]
+      case .lightBurst: [0.065, 0.07, 0.4]
+      case .closeScatter: [0.13, 0.11, 0.65]
+      }
+    grip.name =
+      switch kind {
+      case .carbine: "leader.carbine"
+      case .lightBurst: "weapon.light-burst"
+      case .closeScatter: "weapon.close-scatter"
+      case .rifle: "weapon.rifle"
+      }
+    let barrel = WeaponPose.profile(for: kind).barrel
     grip.addChild(
       block(
-        size: [0.07, 0.08, length], at: [0, 0, length / 2 - WeaponPose.barrel], material: gear))
+        size: size, at: [0, 0, size.z / 2 - barrel], material: gear))
     return grip
   }
 
