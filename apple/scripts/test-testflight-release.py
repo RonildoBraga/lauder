@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 import plistlib
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -242,6 +243,46 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(release.ReleaseError, "reviewed source tree"):
                 release.archive(None, self.folder, "abcdef1")
         self.assertFalse((self.folder / "archive-in-progress").exists())
+
+    def test_archive_options_symlink_preserves_unrelated_file_and_never_invokes_xcode(self):
+        # Exercise the archive path, with only its account/build/check prerequisites mocked.
+        (self.folder / "manifest.json").unlink()
+        release.save(self.folder, "discovery.json", {"bundleIdentifier": release.BUNDLE, "version": "0.1.0"})
+        release.save(self.folder, "app.json", FakeApple().app)
+        unrelated = self.folder / "unrelated"
+        unrelated.write_bytes(b"preserve unrelated content")
+        unrelated.chmod(0o640)
+        (self.folder / "ExportOptions.plist").symlink_to(unrelated)
+        initial = {"sourceCommit": "a" * 40, "sourceTree": "reviewed-tree"}
+        def fake_checks(arguments, path):
+            self.assertEqual(arguments, [str(release.ROOT / "scripts/check")])
+            path.write_text("Checks passed.")
+        with patch.object(release, "source", return_value=initial), \
+                patch.object(release, "git", side_effect=["b" * 40, "reviewed-tree"]), \
+                patch.object(release, "identity", return_value=("0.1.0", "28")), \
+                patch.object(release, "team", return_value="TESTTEAM01"), \
+                patch.object(release, "authentication", return_value=[]), \
+                patch.object(release, "unused"), patch.object(release, "frozen"), \
+                patch.object(release, "logged", side_effect=fake_checks) as logged, \
+                patch.object(release.subprocess, "run") as command:
+            with self.assertRaisesRegex(release.ReleaseError, "symbolic link"):
+                release.archive(FakeApple(), self.folder, "b" * 40)
+        logged.assert_called_once()
+        command.assert_not_called()
+        self.assertEqual(unrelated.read_bytes(), b"preserve unrelated content")
+        self.assertEqual(stat.S_IMODE(unrelated.stat().st_mode), 0o640)
+        self.assertTrue((self.folder / "ExportOptions.plist").is_symlink())
+        self.assertFalse((self.folder / "archive-in-progress").exists())
+
+    def test_binary_private_output_retains_restricted_descriptor_permissions(self):
+        output = self.folder / "ExportOptions.plist"
+        output.write_bytes(b"old")
+        output.chmod(0o644)
+        content = plistlib.dumps(release.export_options("TESTTEAM01"))
+        with release.private_file(output, mode="wb") as stream:
+            stream.write(content)
+        self.assertEqual(output.read_bytes(), content)
+        self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o600)
 
     def test_internal_export_policy_keeps_version_and_audience_fixed(self):
         options = release.export_options("LOCAL_TEAM")

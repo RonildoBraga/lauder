@@ -37,9 +37,16 @@ def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-def private_file(path):
+def private_file(path, mode="w"):
+    require(mode in ("w", "wb"), "Unsupported private output mode.")
     require(not path.is_symlink(), "Private output must not be a symbolic link.")
-    return os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600), "w")
+    stream = os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600), mode)
+    try:
+        os.fchmod(stream.fileno(), 0o600)
+    except OSError:
+        stream.close()
+        raise
+    return stream
 
 
 def save(folder, name, value):
@@ -409,8 +416,8 @@ def _archive(api, folder, reviewed):
                 "archivePath": str(output), "createdAt": now()}
     save(folder, "manifest.json", manifest)
     options = folder / "ExportOptions.plist"
-    options.write_bytes(plistlib.dumps(export_options(signing_team)))
-    options.chmod(0o600)
+    with private_file(options, mode="wb") as stream:
+        stream.write(plistlib.dumps(export_options(signing_team)))
     logged(["xcodebuild", "-quiet", "-project", PROJECT, "-scheme", SCHEME,
             "-configuration", "Release", "-destination", "generic/platform=iOS", "-archivePath", str(output),
             "-derivedDataPath", str(folder / "DerivedData"), "DEVELOPMENT_TEAM=" + signing_team,
