@@ -96,7 +96,7 @@ def identity():
 
 def source():
     require(git("branch", "--show-current") == "main", "Archive/upload the integrated main branch.")
-    require(not git("status", "--porcelain"), "Archive/upload requires a clean source checkout.")
+    require(not git("status", "--porcelain", "--untracked-files=all"), "Archive/upload requires a clean source checkout.")
     return {"sourceCommit": git("rev-parse", "HEAD"), "sourceTree": git("rev-parse", "HEAD^{tree}")}
 
 

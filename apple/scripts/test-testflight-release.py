@@ -125,6 +125,39 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(release.status(None, self.folder, timeout=2, interval=15), 2)
             sleep.assert_called_once_with(1)
 
+    def test_hidden_untracked_source_is_rejected_even_when_git_config_hides_it(self):
+        repository = self.folder / "source-repository"
+        repository.mkdir()
+        hooks = self.folder / "no-hooks"
+        hooks.mkdir()
+        def git(*arguments):
+            return subprocess.run(["git", "-C", str(repository), *arguments], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git("init", "-q", "-b", "main")
+        git("config", "user.name", "Release contract fixture")
+        git("config", "user.email", "release-tests@example.invalid")
+        git("config", "core.hooksPath", str(hooks))
+        git("config", "commit.gpgSign", "false")
+        git("config", "status.showUntrackedFiles", "no")
+        (repository / "README.md").write_text("Tracked fixture.\n")
+        (repository / ".gitignore").write_text(".local/\n")
+        git("add", "README.md", ".gitignore")
+        git("commit", "-q", "-m", "Create release source fixture")
+        with patch.object(release, "ROOT", repository):
+            expected = release.source()
+            ignored = repository / ".local"
+            ignored.mkdir()
+            (ignored / "proof.json").write_text("{}")
+            self.assertEqual(release.source(), expected, "Private ignored release evidence remains allowed")
+            untracked = repository / "apple/sources/Untracked.swift"
+            untracked.parent.mkdir(parents=True)
+            untracked.write_text("struct Untracked {}\n")
+            self.assertEqual(git("status", "--porcelain"), "", "Fixture reproduces the hidden-file configuration")
+            with self.assertRaisesRegex(release.ReleaseError, "clean source checkout"):
+                release.source()
+            with self.assertRaisesRegex(release.ReleaseError, "clean source checkout"):
+                release.frozen(expected)
+
     def test_receipt_binds_exact_source_and_unchanged_check_log(self):
         expected = {"sourceCommit": "commit", "sourceTree": "tree"}
         log = self.folder / "check.log"
