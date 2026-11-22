@@ -176,6 +176,9 @@ def report(summary, images):
     frame, sim = summary["frameMilliseconds"], summary["simulationMilliseconds"]
     say(f"    frame time {frame['mean']:.1f} ms mean, {frame['p99']:.1f} ms p99, {frame['max']:.1f} ms max")
     say(f"    party update {sim['mean']:.3f} ms mean, {sim['max']:.3f} ms max (Simulator, not phone)")
+    for load in summary["worldLoads"]:
+        stages = ", ".join(f"{stage['name']} {stage['milliseconds']:.1f}" for stage in load["stages"])
+        say(f"    load {load['level']}: {load['totalMilliseconds']:.1f} ms initializer body ({stages}; ms)")
     say(f"    bodies overlapping {summary['overlapFraction'] * 100:.1f}% of frames; "
         f"within 0.6 m of slot while moving {summary['withinSlotWhileMoving'] * 100:.0f}%; "
         f"widest leader gap {summary['worstLeaderGap']:.2f} m")

@@ -19,6 +19,10 @@ final class GameWorld {
   let root = Entity()
   let controls = GameControls()
   let session: GameSession
+  #if DEBUG
+    /// Elapsed initializer-body time, recorded once for scripted Simulator playtests.
+    @ObservationIgnored private(set) var loadTiming: WorldLoadTiming?
+  #endif
   /// Asks the world's owner for a new run of another level, in a world of its own: the pause
   /// menu's third choice while the combat experiment lasts (ADR 0005). Without an owner, as in
   /// most tests, the choice does nothing.
@@ -245,6 +249,9 @@ final class GameWorld {
   }
 
   init(level: Level = BrooklynBridge.level) {
+    #if DEBUG
+      let loadStarted = ContinuousClock.now
+    #endif
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
@@ -257,9 +264,15 @@ final class GameWorld {
         NavigationGrid(level: level, adding: gate)
       )
     }
+    #if DEBUG
+      let navigationStarted = ContinuousClock.now
+    #endif
     let start = ways(adding: level.salvage.map { [$0.gate.footprint] } ?? [])
     (motion, grid) = start
     gateWays = level.salvage.map { (shut: start, open: ways(adding: [$0.openGate])) }
+    #if DEBUG
+      let navigationFinished = ContinuousClock.now
+    #endif
     squadLeader = level.party[0]
     lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
@@ -271,9 +284,16 @@ final class GameWorld {
     let style = SceneStyle(
       markerScale: SceneStyle.markerScale(
         cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
+    #if DEBUG
+      let fightStarted = ContinuousClock.now
+    #endif
     fight = FightSimulation(level: level)
     stage = EncounterStage(level: level, style: style)
     stage.reset(fight)
+    #if DEBUG
+      let fightFinished = ContinuousClock.now
+      let sceneStarted = fightFinished
+    #endif
     root.name = level.id
     if let scene = level.scene {
       root.addChild(Self.loadScene(named: scene, for: level))
@@ -286,6 +306,9 @@ final class GameWorld {
         root.addChild(entity)
       }
     }
+    #if DEBUG
+      let sceneFinished = ContinuousClock.now
+    #endif
     // A salvage task's gate, which swings open, and the looks that show the party's progress
     // (ADR 0006).
     if let task = level.salvage {
@@ -302,6 +325,9 @@ final class GameWorld {
     camera.name = "camera"
     root.addChild(camera)
     landmarkFade.prepare(before: camera)
+    #if DEBUG
+      let partyStarted = ContinuousClock.now
+    #endif
     for member in PartyMember.allCases {
       let body = Entity()
       body.name = "party.\(member.rawValue)"
@@ -326,10 +352,21 @@ final class GameWorld {
     root.addChild(refusalCross)
     // Miki carries the carbine; it shows while drawn.
     visuals[.miki]?.addChild(stage.weaponProp)
+    #if DEBUG
+      let partyFinished = ContinuousClock.now
+    #endif
     placeParty()
     showSalvage()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
+    #if DEBUG
+      loadTiming = WorldLoadTiming(
+        level: level.id, total: loadStarted.duration(to: .now),
+        navigation: navigationStarted.duration(to: navigationFinished),
+        fight: fightStarted.duration(to: fightFinished),
+        scene: sceneStarted.duration(to: sceneFinished),
+        party: partyStarted.duration(to: partyFinished))
+    #endif
   }
 
   /// Everything the player sees of the level, from its scene file in the app's bundle (ADR
@@ -1381,6 +1418,7 @@ final class GameWorld {
 
     private func install(_ runner: PlaytestRunner) {
       playtest = runner
+      if let loadTiming { playtest?.recordLoad(loadTiming) }
       observation = runner.status
       // Small discs at each companion's target, so screenshots show where they are heading.
       let style = SceneStyle()
