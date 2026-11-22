@@ -1262,7 +1262,7 @@ final class FightSimulation {
       ? leaderShot(from: firingPoint(from: leader, facing: facing), aiming: aiming, facing: facing)
       : nil
     if case .body(let id) = path?.strike {
-      target = hostiles[id]?.position
+      target = hostilePoint(id)
       weaponPoses[weaponLeader]?.pitch = elevationPitch(
         from: firingPoint(from: leader, facing: facing), to: hostileTarget(id).centre)
     } else {

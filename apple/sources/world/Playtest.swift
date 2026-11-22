@@ -171,6 +171,7 @@
       let arenaWave: Int?
       let arenaWarnings: [String: Float]
       let hostiles: [String: HostileState]
+      let enemyCover: [String: FightSimulation.CoverState]
       let heights: [PartyMember: Float]
     }
 
@@ -242,7 +243,8 @@
     private var failures: [String] = []
     private var trace =
       "t,dt,leader,miki_x,miki_z,laura_x,laura_z,tom_x,tom_z,"
-      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning\n"
+      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning,wave,ammo,enemies\n"
+    private var arenaTrace = ",,"
     private var frameTimes: [Double] = []
     private var simulationTimes: [Double] = []
     private var worldLoads: [WorldLoadTiming] = []
@@ -297,6 +299,14 @@
       let leader = snapshot.leader
       let positions = snapshot.positions
       let leaderPosition = positions[leader] ?? .zero
+      let enemies = snapshot.hostiles.values.filter { $0.isVisible && !$0.isDown }
+        .sorted { $0.spec.id < $1.spec.id }.map { state in
+          let cover = snapshot.enemyCover[state.spec.id]
+          let point = state.position + (cover?.offset ?? .zero)
+          return "\(state.spec.id):\(Self.decimal(point.x)):\(Self.decimal(point.y))"
+            + ":\(cover?.isLow == true ? "low" : "standing"):\(cover?.firing == true ? "up" : "down")"
+        }.joined(separator: ";")
+      arenaTrace = "\(snapshot.arenaWave.map(String.init) ?? ""),\(snapshot.ammo),\(enemies)"
       highestArenaWave = max(highestArenaWave, snapshot.arenaWave ?? 0)
       peakArrivalWarnings = max(peakArrivalWarnings, snapshot.arenaWarnings.count)
       if let height = snapshot.heights[leader] {
@@ -819,7 +829,7 @@
         let point = frame.targets[member]
         row += ",\(Self.decimal(point?.x)),\(Self.decimal(point?.y))"
       }
-      row += ",\(frame.warning == nil ? 0 : 1)\n"
+      row += ",\(frame.warning == nil ? 0 : 1),\(arenaTrace)\n"
       trace += row
     }
 

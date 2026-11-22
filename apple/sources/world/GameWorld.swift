@@ -1588,6 +1588,7 @@ final class GameWorld {
         grenades: fight.grenades, grenadesThrown: fight.grenadesThrown,
         grenadesExploded: fight.grenadesExploded, movedEnemies: fight.movedEnemies,
         arenaWave: fight.arenaWave, arenaWarnings: fight.arenaWarnings, hostiles: fight.hostiles,
+        enemyCover: fight.enemyCoverStates,
         heights: bodies.mapValues { $0.position.y - PartyBody.height / 2 })
     }
 

@@ -73,17 +73,21 @@
         else { return InputRules.Raw() }
         let level = snapshot.level
         let ballistics = Ballistics(level: level)
-        let cover = LeaderCover(boxes: level.boxes, ground: level.bounds, terrain: level.terrain)
-        let sheltered = cover.shelter(at: target.position, facing: leader - target.position)
+        let cover = snapshot.enemyCover[target.spec.id]
+        let targetPosition = target.position + (cover?.offset ?? .zero)
+        let low = cover?.isLow == true && cover?.firing != true
         let targetPoint = ballistics.point(
-          target.position, above: sheltered?.isLow == true ? 0.85 : 1.25)
+          targetPosition, above: low ? 0.85 : 1.25)
         var destination = goal ?? leader
         let danger = snapshot.grenades.contains {
           simd_distance($0.position, leader) <= Grenade.radius + 0.4
         }
         let canShoot =
-          simd_distance(ballistics.point(leader), targetPoint) <= 11
+          simd_distance(ballistics.point(leader), targetPoint) <= Weapon.carbine.range
           && ballistics.isClear(from: ballistics.point(leader), to: targetPoint)
+        // A close approach gives Tom's seven-metre scatter weapon a real role rather than
+        // clearing everything from the carbine's maximum reach while he follows out of range.
+        let inPosition = canShoot && simd_distance(leader, targetPosition) <= 4.5
         let needsEscape =
           danger
           && (goal.map { destination in
@@ -91,7 +95,7 @@
               simd_distance($0.position, destination) <= Grenade.radius + 0.6
             }
           } ?? true)
-        if canShoot && !danger {
+        if inPosition && !danger {
           destination = leader
           goal = leader
           route = []
@@ -99,10 +103,10 @@
           enemy = target.spec.id
           let region = grid.region(at: leader)
           let spots = grid.roomySpots(
-            within: danger ? 6 : 11, of: danger ? leader : target.position, stride: 5)
+            within: danger ? 6 : 4.5, of: danger ? leader : targetPosition, stride: 5)
           let choices = spots.filter { point in
-            let gap = simd_distance(point, target.position)
-            return gap >= 3 && gap <= 11
+            let gap = simd_distance(point, targetPosition)
+            return gap >= 3 && gap <= 4.5
               && (region == nil || grid.region(at: point) == region)
               && snapshot.grenades.allSatisfy {
                 simd_distance($0.position, point) > Grenade.radius + 0.6
@@ -114,16 +118,16 @@
           }) {
             destination = closest
           } else {
-            destination = target.position
+            destination = targetPosition
           }
           if goal.map({ simd_distance($0, destination) > 0.4 }) ?? true { route = [] }
           goal = destination
           reconsiderAt = seconds + 2
         }
         var raw = navigate(to: destination, snapshot: snapshot, seconds: seconds)
-        raw.aimStick = Movement.stick(
-          towards: target.position - leader, cameraOffset: level.cameraOffset)
-        raw.controllerFire = true
+        // Use the touch player's assisted Fire. It waits for the finite-turn body to face a
+        // genuinely visible target; travelling past a blocked angle spends no blind rounds.
+        raw.controllerFire = canShoot
         // Disrupt only where the shot can actually reach the low body too; repeatedly
         // cancelling a sheltered shooter's peek must not stall the encounter test.
         if canShoot, snapshot.canDisrupt, seconds - lastSignature > 1 {
@@ -141,23 +145,17 @@
         guard let leader = snapshot.positions[snapshot.leader] else { return movement }
         let level = snapshot.level
         let ballistics = Ballistics(level: level)
-        let cover = LeaderCover(boxes: level.boxes, ground: level.bounds, terrain: level.terrain)
         let targets = snapshot.hostiles.values.sorted { $0.spec.id < $1.spec.id }.filter { state in
           guard state.isTargetable, !state.isDown else { return false }
-          let low =
-            cover.shelter(at: state.position, facing: leader - state.position)?.isLow == true
-          let target = ballistics.point(state.position, above: low ? 0.85 : 1.25)
+          let cover = snapshot.enemyCover[state.spec.id]
+          let low = cover?.isLow == true && cover?.firing != true
+          let target = ballistics.point(
+            state.position + (cover?.offset ?? .zero), above: low ? 0.85 : 1.25)
           return simd_distance(ballistics.point(leader), target) < Weapon.carbine.range
             && ballistics.isClear(from: ballistics.point(leader), to: target)
         }
-        guard
-          let target = targets.min(by: {
-            simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
-          })
-        else { return movement }
+        guard !targets.isEmpty else { return movement }
         var raw = movement
-        raw.aimStick = Movement.stick(
-          towards: target.position - leader, cameraOffset: level.cameraOffset)
         raw.controllerFire = true
         if snapshot.canDisrupt, seconds - lastSignature > 1 {
           raw.controllerSignature = true
