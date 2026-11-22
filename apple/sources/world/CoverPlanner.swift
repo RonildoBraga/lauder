@@ -3,9 +3,10 @@ import simd
 /// Where companions take cover once a fight is under way: ADR 0003's cover near the slot, from
 /// phase S4, tried in the combat yard (ADR 0005). Each companion weighs the spots near their
 /// place, which is their formation slot or the point their order keeps them to, against keeping
-/// to the place itself, and keeps their choice for at least two seconds. From a spot they step
-/// out to a firing position close by while it has a target in sight, and back while a shooter's
-/// wind-up aims at them.
+/// to the place itself, normally keeping a choice for two seconds. Shared cover reconsiders a
+/// newly visible flank sooner and keeps its movement anchor at the shelter while the fight
+/// poses a temporary peek. The earlier rule instead walks to a firing position while a target
+/// is in sight, and back while a shooter's wind-up aims at them.
 ///
 /// A spot scores for being hidden from the shooters, the most dangerous first, for having a
 /// firing position close by, for being near the place, and for being reachable without crossing
@@ -87,17 +88,22 @@ struct CoverPlanner {
     /// The spot they take cover at; nil while they keep to their place, which moves with the
     /// leader as a formation slot does.
     let spot: SIMD2<Float>?
-    /// Where they step out to fire from that spot, if anywhere.
+    /// The valid firing origin, if any. Only the earlier rule physically steps out to it.
     let firing: SIMD2<Float>?
     var kept: Float = 0
+    /// Protection when this choice was last weighed. A newly visible flank invalidates the
+    /// commitment once; a choice that was already exposed does not trigger a rescan each step.
+    var protected: [Bool] = []
   }
 
   private let obstacles: [PartyMotion.Box]
+  private let coverRules: LeaderCover?
   private var covers: [PartyMember: Cover] = [:]
 
   /// A planner whose sight lines meet the given blockers.
-  init(obstacles: [PartyMotion.Box]) {
+  init(obstacles: [PartyMotion.Box], coverRules: LeaderCover? = nil) {
     self.obstacles = obstacles
+    self.coverRules = coverRules
   }
 
   /// How far from their place a companion looks for cover: about 1.5 m in Close and Column,
@@ -124,7 +130,17 @@ struct CoverPlanner {
       guard let place = input.places[member] else { continue }
       let weaponRange = input.weaponRanges[member] ?? 0
       var cover: Cover
-      if var kept = covers[member], kept.kept + input.dt < Self.commitTime {
+      let kept = covers[member]
+      let protection = kept?.spot.map { self.protection(at: $0, from: input.threats) } ?? []
+      let threatsChanged = kept?.spot != nil && kept?.protected.count != protection.count
+      let flanked =
+        coverRules != nil
+        && (threatsChanged
+          || zip(kept?.protected ?? [], protection).contains { $0.0 && !$0.1 })
+      let withinReach =
+        coverRules == nil
+        || kept?.spot.map { simd_distance($0, place) <= Self.reach(in: input.formation) } != false
+      if var kept, kept.kept + input.dt < Self.commitTime, !flanked, withinReach {
         kept.kept += input.dt
         cover = kept
       } else {
@@ -134,12 +150,21 @@ struct CoverPlanner {
           member: member, place: place, position: input.positions[member] ?? place,
           threats: input.threats, weaponRange: weaponRange,
           taken: taken(by: member, input: input), teammates: teammates, obstacles: obstacles,
-          grid: grid
-        ).choose(within: Self.reach(in: input.formation), keeping: covers[member])
+          grid: grid, coverRules: coverRules
+        ).choose(within: Self.reach(in: input.formation), keeping: flanked ? nil : kept)
+        if let spot = cover.spot {
+          cover.protected = self.protection(at: spot, from: input.threats)
+        }
       }
       covers[member] = cover
       guard let spot = cover.spot else {
         result[member] = place
+        continue
+      }
+      // Shared cover poses rise or peek from this anchor. Walking to the exposed firing
+      // point would bypass the common exposure timer and leave the shield behind.
+      if coverRules != nil {
+        result[member] = spot
         continue
       }
       let aimedAt = input.threats.contains { $0.aimingAt == member }
@@ -158,6 +183,25 @@ struct CoverPlanner {
   /// Everyone gives up their cover, as when the fight ends or the leader changes.
   mutating func reset() {
     covers = [:]
+  }
+
+  private func protection(at spot: SIMD2<Float>, from threats: [Threat]) -> [Bool] {
+    guard let coverRules else { return [] }
+    let shelter = Self.shelter(at: spot, threats: threats, rules: coverRules)
+    let blockers = coverRules.incomingBlockers(in: shelter, exposed: false)
+    return threats.map {
+      simd_distance($0.position, spot) > $0.range
+        || !LineOfSight.isClear(from: $0.position, to: spot, obstacles: blockers)
+    }
+  }
+
+  private static func shelter(
+    at spot: SIMD2<Float>, threats: [Threat], rules: LeaderCover
+  ) -> LeaderCover.Shelter? {
+    let nearest = threats.min {
+      simd_distance_squared($0.position, spot) < simd_distance_squared($1.position, spot)
+    }
+    return rules.shelter(at: spot, facing: nearest.map { $0.position - spot } ?? [0, -1])
   }
 
   /// Where a companion's spot must stay clear of: the leader, and each other companion's spot
@@ -254,6 +298,7 @@ struct CoverPlanner {
     /// The leader and the other companion, for Tom's preference.
     let teammates: [SIMD2<Float>]
     let obstacles: [PartyMotion.Box]
+    let coverRules: LeaderCover?
     let grid: NavigationGrid
     /// What the shooters see.
     let ground: OpenGround
@@ -265,7 +310,7 @@ struct CoverPlanner {
     init(
       member: PartyMember, place: SIMD2<Float>, position: SIMD2<Float>, threats: [Threat],
       weaponRange: Float, taken: [SIMD2<Float>], teammates: [SIMD2<Float>],
-      obstacles: [PartyMotion.Box], grid: NavigationGrid
+      obstacles: [PartyMotion.Box], grid: NavigationGrid, coverRules: LeaderCover?
     ) {
       self.member = member
       self.place = place
@@ -275,6 +320,7 @@ struct CoverPlanner {
       self.taken = taken
       self.teammates = teammates
       self.obstacles = obstacles
+      self.coverRules = coverRules
       self.grid = grid
       ground = OpenGround(threats: threats, obstacles: obstacles)
       danger =
@@ -291,13 +337,19 @@ struct CoverPlanner {
     /// least `switchSaving` less.
     func choose(within reach: Float, keeping kept: Cover?) -> Cover {
       // Keeping to the place: no stepping out, since the place moves.
-      let placeCost =
-        baseCost(of: place) + extraCost(at: place, firing: canShoot(from: place) ? place : nil)
-      var best = (cost: placeCost, cover: Cover(spot: nil, firing: nil))
+      let placeFiring =
+        coverRules == nil ? (canShoot(from: place) ? place : nil) : firingPosition(near: place)
+      let placeCost = baseCost(of: place) + extraCost(at: place, firing: placeFiring)
+      let placeShelter = coverRules.flatMap {
+        CoverPlanner.shelter(at: place, threats: threats, rules: $0)
+      }
+      let placeCover = Cover(spot: placeShelter == nil ? nil : place, firing: placeFiring)
+      var best = (cost: placeCost, cover: placeCover)
       // Spots in order of their cost before a firing position, the costliest part to find, and
       // the member's preference, which depends on it: once that alone reaches the best so far,
       // no later spot can win.
-      let spots = grid.roomySpots(within: reach, of: place, stride: CoverPlanner.stride)
+      let stride = coverRules == nil ? CoverPlanner.stride : 1
+      let spots = grid.roomySpots(within: reach, of: place, stride: stride)
         .filter(isOpen).map { (spot: $0, cost: baseCost(of: $0)) }.sorted { $0.cost < $1.cost }
       for (spot, base) in spots {
         guard base < best.cost else { break }
@@ -307,8 +359,7 @@ struct CoverPlanner {
       }
       guard let kept else { return best.cover }
       guard let spot = kept.spot else {
-        return placeCost <= best.cost + CoverPlanner.switchSaving
-          ? Cover(spot: nil, firing: nil) : best.cover
+        return placeCost <= best.cost + CoverPlanner.switchSaving ? placeCover : best.cover
       }
       guard simd_distance(spot, place) <= reach, isOpen(spot) else { return best.cover }
       let firing = firingPosition(near: spot)
@@ -320,7 +371,24 @@ struct CoverPlanner {
     /// Whether the companion may stand at `spot`: somewhere to settle, in the area they can
     /// walk, and clear of the leader and the other companion.
     private func isOpen(_ spot: SIMD2<Float>) -> Bool {
-      grid.isRoomy(spot) && (region == nil || grid.region(at: spot) == region)
+      let hasShelter: Bool
+      if let coverRules {
+        if let shelter = CoverPlanner.shelter(at: spot, threats: threats, rules: coverRules) {
+          // Leave room for the motor to settle short of its destination and still be beside
+          // the same face, rather than stopping outside the common cover proximity.
+          let tangent = SIMD2(-shelter.normal.y, shelter.normal.x)
+          hasShelter = [shelter.normal, tangent, -tangent].allSatisfy { direction in
+            let short = spot + direction * CompanionMotor.settleDistance
+            let settled = CoverPlanner.shelter(at: short, threats: threats, rules: coverRules)
+            return settled?.boxID == shelter.boxID && settled?.normal == shelter.normal
+          }
+        } else {
+          hasShelter = false
+        }
+      } else {
+        hasShelter = true
+      }
+      return hasShelter && grid.isRoomy(spot) && (region == nil || grid.region(at: spot) == region)
         && taken.allSatisfy { simd_distance($0, spot) >= CoverPlanner.spacing }
     }
 
@@ -328,11 +396,12 @@ struct CoverPlanner {
     /// spot's cost.
     private func extraCost(at spot: SIMD2<Float>, firing: SIMD2<Float>?) -> Float {
       // Only Miki's preference depends on whom she would fire at.
+      let firingBlockers = coverRules?.incomingBlockers(in: nil, exposed: true) ?? obstacles
       let target =
         member == .miki
         ? firing.flatMap {
           CoverPlanner.target(
-            from: $0, threats: threats, weaponRange: weaponRange, obstacles: obstacles)
+            from: $0, threats: threats, weaponRange: weaponRange, obstacles: firingBlockers)
         } : nil
       return (firing == nil ? CoverPlanner.noFiringPosition : 0)
         + CoverPlanner.personality(
@@ -359,10 +428,31 @@ struct CoverPlanner {
     /// even where they stop on the way to it; nil when there is none.
     private func firingPosition(near spot: SIMD2<Float>) -> SIMD2<Float>? {
       guard weaponRange > 0 else { return nil }
+      if let coverRules {
+        return sharedFiringPosition(at: spot, rules: coverRules)
+      }
       if canShoot(arrivingAt: spot, from: position) { return spot }
       return grid.roomySpots(within: CoverPlanner.peekReach, of: spot, stride: CoverPlanner.stride)
         .sorted { simd_distance_squared($0, spot) < simd_distance_squared($1, spot) }
         .first { isOpen($0) && canShoot(arrivingAt: $0, from: spot) }
+    }
+
+    private func sharedFiringPosition(at spot: SIMD2<Float>, rules: LeaderCover) -> SIMD2<Float>? {
+      guard let shelter = CoverPlanner.shelter(at: spot, threats: threats, rules: rules) else {
+        return nil
+      }
+      let blockers = rules.incomingBlockers(in: shelter, exposed: true)
+      for threat in threats.filter(\.isTarget).sorted(by: {
+        simd_distance_squared($0.position, spot) < simd_distance_squared($1.position, spot)
+      }) {
+        let direction = threat.position - spot
+        guard let firing = rules.firingPoint(from: spot, in: shelter, facing: direction),
+          simd_distance(firing, threat.position) <= weaponRange,
+          LineOfSight.isClear(from: firing, to: threat.position, obstacles: blockers)
+        else { continue }
+        return firing
+      }
+      return nil
     }
 
     /// Whether the companion can shoot from `point`, and from where the motor may settle on the
@@ -385,6 +475,12 @@ struct CoverPlanner {
     /// Whether a body at `spot` is beyond the shooter's reach, or hidden from it: the sight
     /// lines to the spot and to either side of it, `margin` away, are all blocked.
     private func isHidden(_ spot: SIMD2<Float>, from threat: Threat) -> Bool {
+      if let coverRules {
+        let shelter = CoverPlanner.shelter(at: spot, threats: threats, rules: coverRules)
+        let blockers = coverRules.incomingBlockers(in: shelter, exposed: false)
+        return simd_distance(spot, threat.position) > threat.range
+          || !LineOfSight.isClear(from: threat.position, to: spot, obstacles: blockers)
+      }
       let offset = spot - threat.position
       let distance = simd_length(offset)
       guard distance <= threat.range else { return true }

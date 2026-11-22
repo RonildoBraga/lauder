@@ -128,6 +128,27 @@ final class ShotEffects {
     }
   }
 
+  /// A grenade's brief ground flash and radial debris, reusing the same bounded effect pools.
+  /// The warning marker already showed the exact damage radius; this is presentation only.
+  func blast(at point: SIMD2<Float>) {
+    guard point.x.isFinite, point.y.isFinite else { return }
+    let centre = SIMD3(point.x, 0.12, point.y)
+    flash(at: centre, side: .hostile, size: Grenade.radius)
+    let count = Self.chipsPerStrike * 2
+    for number in 0..<count {
+      let angle = 2 * Float.pi * Float(number) / Float(count)
+      let direction = SIMD3<Float>(sin(angle), 0, cos(angle))
+      let index = chipPool.take()
+      chips[index] = Chip(
+        position: centre + direction * Grenade.radius * 0.35,
+        velocity: direction * 3 + [0, 2, 0], remaining: Self.chipTime)
+      let entity = chipPool.entities[index]
+      entity.position = chips[index].position
+      entity.scale = [chipSize, chipSize, chipSize]
+      entity.isEnabled = true
+    }
+  }
+
   /// One frame: streaks fly on, flashes go out, chips fall and marks fade from sight.
   func update(dt: Float) {
     for side in [Side.party, .hostile] {

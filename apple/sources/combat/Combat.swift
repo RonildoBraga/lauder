@@ -150,11 +150,12 @@ enum Disrupt {
   /// sight, the one nearest its shot; nil when there is none.
   static func target(
     from position: SIMD2<Float>, hostiles: [HostileState],
+    point: (HostileState) -> SIMD2<Float> = { $0.position },
     isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
   ) -> String? {
     hostiles.compactMap { hostile -> (id: String, remaining: Float)? in
       guard case .aiming(let remaining) = hostile.phase,
-        simd_distance(hostile.position, position) <= reach, isClear(position, hostile.position)
+        simd_distance(point(hostile), position) <= reach, isClear(position, point(hostile))
       else { return nil }
       return (hostile.spec.id, remaining)
     }.min { $0.remaining < $1.remaining }?.id
@@ -245,6 +246,10 @@ enum Aim {
     let id: String
     let position: SIMD2<Float>
     let isTarget: Bool
+    /// Cover that conceals this body's height, such as its selected low block while crouched.
+    /// It belongs to this target: a standing body elsewhere still receives shots above low
+    /// scenery. Global blockers continue to stop every shot before any body.
+    var blockers: [PartyMotion.Box] = []
   }
 
   /// The leader's shot from `start`, along the stick's `aim` when there is one, or else at the
@@ -255,7 +260,9 @@ enum Aim {
     hostiles: [Hostile], blockers: [PartyMotion.Box]
   ) -> ShotPath? {
     let isClear = { LineOfSight.isClear(from: $0, to: $1, obstacles: blockers) }
-    let targets = hostiles.filter(\.isTarget).map {
+    let targets = hostiles.filter {
+      $0.isTarget && LineOfSight.isClear(from: start, to: $0.position, obstacles: $0.blockers)
+    }.map {
       Targeting.Candidate(id: $0.id, position: $0.position)
     }
     let direction: SIMD2<Float>
@@ -298,6 +305,14 @@ enum Aim {
       return (hostile, along)
     }.min { $0.distance < $1.distance }
     if let met {
+      let shelter = met.hostile.blockers.compactMap {
+        LineOfSight.entry(
+          from: start, along: unit, minimum: $0.minimum, maximum: $0.maximum,
+          limit: met.distance)
+      }.min()
+      if let shelter {
+        return ShotPath(start: start, end: start + unit * shelter, strike: .scenery)
+      }
       guard met.hostile.isTarget else { return nil }
       return ShotPath(start: start, end: met.hostile.position, strike: .body(met.hostile.id))
     }
@@ -325,10 +340,10 @@ enum Aim {
       ?? path
   }
 
-  /// What stops a shot fired at `height`: the footprints of the blocks that rise above it, so a
+  /// What stops a shot fired at `height`: blocks that reach that height or rise above it, so a
   /// shot flies over a low block.
   static func blockers(_ boxes: [Level.Box], above height: Float) -> [PartyMotion.Box] {
-    boxes.filter { $0.position.y + $0.size.y / 2 > height }.map(\.footprint)
+    boxes.filter { $0.position.y + $0.size.y / 2 >= height }.map(\.footprint)
   }
 }
 

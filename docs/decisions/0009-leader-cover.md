@@ -9,9 +9,11 @@ Phase 2 of [ADR 0008](0008-weapon-feel-and-combat-plan.md) gives the active char
 
 Codex recommended: “automatic cover near a wall, a shield indicator only for the active character, and 0.3 seconds of exposure after firing.” After being told this was the next prototype and its control choice was pending, the maintainer answered in the Codex chat: **“Proceed and let me know if you need anything from me”**. This accepts that recommendation and assigns the prototype; the settings are Codex's recommendation accepted by that instruction, not a separate quotation from the maintainer.
 
-The maintainer previously asked to continue building and testing in Simulator and deploy later. This prototype follows that instruction. Phone checks, TestFlight delivery and merge remain separate steps.
+The maintainer initially asked to continue building and testing in Simulator and deploy later. TestFlight build 20 subsequently delivered this cover prototype. The later continuous combat assignment in [ADR 0011](0011-companion-combat.md) authorises reviewed integration and TestFlight deliveries without another approval at each milestone; physical cover and performance evidence remains unverified.
 
-## Decision
+This record preserves the initial phase 2 scope below. Phase 4 now assigns the same cover stance and shields to companions, and phase 5 uses it for tactical shooters ([ADR 0012](0012-tactical-enemies.md)). Those extensions are under implementation and validation; their later delivery is not implied by build 20.
+
+## Initial phase 2 decision
 
 - **Combat yard first.** Enable this rule only in the greybox combat yard. The bridge and salvage yard retain their current rules. Companions keep their existing cover behaviour; their shared cover rule and shields belong to phase 4.
 - **Position, without a button.** Within 0.5 m of a block, measured from the body's edge, a nearby face offers cover. Walking away leaves it immediately. There is no snapping or automatic player movement. The selected face faces the shield; a shot from another side can still reach the character.
@@ -27,4 +29,4 @@ Plain Swift geometry finds the face and a valid peek. `FightSimulation` owns fir
 
 Focused tests cover proximity and exit, directional protection, low-cover exposure, tall-edge clearance, firing and damage agreement, leadership and reset. A scripted Simulator route exercises both kinds of cover, Pause and recovery, followed by the standard check and existing opening/combat/salvage regressions.
 
-The prototype is not a completed phone milestone until its affected controls and feel are played on the baseline iPhone and representative frame pacing is measured. Those checks and the maintainer's judgement are deferred, not inferred from Simulator results.
+Affected controls, cover feel and representative frame pacing still need actual baseline-iPhone evidence. Build 20's delivery confirmation does not supply those results. The continuous assignment permits the current Simulator-based integration and delivery sequence without repeated phone-session pauses, while these physical checks and the maintainer's judgement remain explicitly unverified.

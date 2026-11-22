@@ -34,9 +34,9 @@ On 22 November 2026, asked whether to start the first phase with the recommended
 
 ### 1. Combat improves in five phases
 
-Each phase is built and tested in the Simulator, then checked on the baseline iPhone and played on TestFlight, each after the maintainer's go-ahead. After build 20's delivery, the maintainer authorised continued Simulator development without waiting for another phone session, as [ADR 0010](0010-squad-weapons.md) records; physical evidence remains separate from Simulator results. Cover, companion and enemy changes start in the combat yard, as [ADR 0005](0005-squad-combat-experiment.md)'s did. The weapon's feel applies everywhere, as ADR 0007's changes did. Each fight becomes deeper, but there are no more of them: the [story bible](../story/story-bible.md) still keeps combat occasional after the bridge.
+Each phase is built and tested in the Simulator. After build 20's delivery, the maintainer first authorised continued Simulator development ([ADR 0010](0010-squad-weapons.md)), then assigned finishing the remaining combat phases, reviewed integration and TestFlight delivery without repeated milestone prompts ([ADR 0011](0011-companion-combat.md)). Physical checks and maintainer judgement remain separate evidence; they are not inferred from Simulator success and do not pause this assigned sequence at every milestone. Cover, companion and enemy changes start in the combat yard, as [ADR 0005](0005-squad-combat-experiment.md)'s did. The weapon's feel applies everywhere, as ADR 0007's changes did. Each fight becomes deeper, but there are no more story encounters: the [story bible](../story/story-bible.md) still keeps combat occasional after the bridge.
 
-This record decides only the first phase. The others are the working proposal each starts from, and each gets its own record when it begins:
+This record decided the first phase. Later assignments are recorded separately; the numeric settings remain tunable prototype details rather than permanent character canon:
 1. **The shot:** this record.
 2. **Cover for the leader:** now assigned and recorded in [ADR 0009](0009-leader-cover.md).
    - no cover button: standing near a block between the leader and a threat is cover;
@@ -44,8 +44,8 @@ This record decides only the first phase. The others are the working proposal ea
    - cover protects only from the side it faces;
    - a shield on the ground shows it, and turns red when a threat can see the leader.
 3. **The squad's weapons:** now assigned and built in the Simulator prototype recorded in [ADR 0010](0010-squad-weapons.md). Laura and Tom fire their own weapons when they lead, since the story bible makes each “useful as leader and capable of ordinary weapon defence”. Each member keeps magazine and reload state across roles, reloads are automatic, and companions' shots use spread. One shared ammunition total remains.
-4. **Companion combat:** companions use the leader's cover rule, focus fire on the leader's target and find new cover when flanked.
-5. **Enemies that fight back:** shooters in cover, a flanker and a grenade thrower. Fights get harder through behaviour, not by adding hits.
+4. **Companion combat:** assigned in [ADR 0011](0011-companion-combat.md), with implementation and validation in progress. Companions use the shared cover rule and shields, prefer the leader's valid target and reconsider cover when flanked while retaining their orders.
+5. **Enemies that fight back:** assigned in [ADR 0012](0012-tactical-enemies.md), with implementation and validation in progress. The yard tries cover-seeking and flanking shooters and a fixed, warned grenade thrower. Fights get harder through behaviour, not by adding hits.
 
 Unless the maintainer widens the [prototype's scope](../prototype-plan.md#outside-the-first-playable), these stay out:
 - armour plates and weak points, which are a health system;
@@ -81,7 +81,7 @@ Each shot goes within a cone around where it is aimed: the weapon's spread. For 
 - **What it means:** standing still, the first shot of a short burst lands within 10 cm at the carbine's 14 m reach. A long burst, or firing on the move, scatters, and at range it can miss a figure, which a shot must pass within 0.35 m of.
 - **What shows it:** each shot's streak, the only sign of the spread.
 - **Never first:** if a scattered shot would meet someone who is not yet a target, it flies straight instead.
-- **First-phase boundary:** this phase left companions' shots hitting what they aim at, and a hostile's shot hitting when its line is clear at the end of its wind-up. [ADR 0010](0010-squad-weapons.md)'s phase 3 now applies spread to companions too; phase 5's enemy changes remain a proposal.
+- **First-phase boundary:** this phase left companions' shots hitting what they aim at, and a hostile's shot hitting when its line is clear at the end of its wind-up. [ADR 0010](0010-squad-weapons.md)'s phase 3 applies spread to companions too; [ADR 0012](0012-tactical-enemies.md)'s assigned enemy work adds tactical positions and warned grenades in the yard.
 
 ### 4. Enemies react
 
@@ -121,7 +121,7 @@ Each shot goes within a cone around where it is aimed: the weapon's spread. For 
 
 ## How it is judged
 
-Simulator playtests come first. Then the maintainer plays on the baseline iPhone with the PS5 controller and with touch. These questions decide it:
+Simulator playtests come first. The following judgement and physical checks remain for play on the baseline iPhone with the PS5 controller and with touch. The current continuous assignment permits reviewed integration and TestFlight delivery while those results remain explicitly unverified:
 - Without the line, can you tell where Miki aims, and does each shot feel solid?
 - Does the spread feel fair, with the first shots landing and long bursts scattering?
 - Do the enemies' reactions read?
@@ -139,6 +139,6 @@ Simulator playtests come first. Then the maintainer plays on the baseline iPhone
 
 ## What this does not settle
 
-- Later phases: phase 2 is recorded in [ADR 0009](0009-leader-cover.md) and phase 3 in [ADR 0010](0010-squad-weapons.md); phases 4 and 5 remain proposals.
+- Later phases are decided in their own records: phase 2 in [ADR 0009](0009-leader-cover.md), phase 3 in [ADR 0010](0010-squad-weapons.md), phase 4 in [ADR 0011](0011-companion-combat.md) and phase 5 in [ADR 0012](0012-tactical-enemies.md). This first-phase record does not claim that work still under validation has passed or been delivered.
 - Magazines and reloads, subsequently assigned in phase 3 with one shared ammunition total.
 - Aiming by hand on touch, such as a drag on Fire.
