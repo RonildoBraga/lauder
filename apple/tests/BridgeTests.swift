@@ -205,11 +205,14 @@ struct BridgeTests {
       #expect(simd_distance(bounds.center, box.position) < 0.001, "\(box.name) stands as written")
       #expect(simd_distance(bounds.extents, box.size) < 0.001, "\(box.name)'s look fills it")
     }
-    // The decoration, the towers' tops over the arches, their shadows baked into the snow, the
-    // snow plain and the route poles, is in the scene file alone, and nothing else shows.
+    // The decoration, including cable fans and low off-route snow drifts, is in the scene file
+    // alone, and nothing else shows.
     let decoration = [
       "tower-top-brooklyn", "tower-top-manhattan", "tower-shadow-brooklyn",
       "tower-shadow-manhattan", "snow plain", "route poles", "route flags",
+      "cable-fan-brooklyn-west", "cable-fan-brooklyn-east",
+      "cable-fan-manhattan-west", "cable-fan-manhattan-east",
+      "snow-drifts-west", "snow-drifts-east",
     ]
     for name in decoration {
       #expect(part(name)?.components.has(ModelComponent.self) == true, "\(name) is shown")
@@ -237,6 +240,7 @@ struct BridgeTests {
     func tower(_ end: String) throws -> [Entity] {
       let names =
         ["tower-top-\(end)"] + ["west", "pier", "east"].map { "\(end)-tower-\($0) block" }
+        + ["west", "east"].map { "cable-fan-\(end)-\($0)" }
       return try names.map { try #require(scene.findEntity(named: Self.sceneName($0)), "\($0)") }
     }
     let brooklyn = try tower("brooklyn")
@@ -277,7 +281,7 @@ struct BridgeTests {
     #expect(opacity(brooklyn) == [LandmarkFade.faded], "the first tower's top hides her")
     #expect(ghostly(brooklyn) == [true], "she sees the tower's ghost")
     #expect(opacity(shadows) == [1] && shadows.allSatisfy(\.isEnabled), "its shadow stays")
-    #expect(opacity(manhattan) == [1])
+    #expect(opacity(manhattan) == [1] && ghostly(manhattan) == [false])
     walk(world, to: [6.5, -206.15])
     standStill()
     #expect(opacity(brooklyn) == [1] && opacity(manhattan) == [1], "nothing hides her mid-span")
@@ -288,7 +292,7 @@ struct BridgeTests {
     standStill()
     #expect(opacity(manhattan) == [LandmarkFade.faded], "the camera hangs above the second tower")
     #expect(ghostly(manhattan) == [true] && opacity(shadows) == [1])
-    #expect(opacity(brooklyn) == [1])
+    #expect(opacity(brooklyn) == [1] && ghostly(brooklyn) == [false])
     // Restart returns Miki to the Brooklyn end, and the tower shows again at once.
     world.restart()
     #expect(opacity(manhattan) == [1] && ghostly(manhattan) == [false])
@@ -353,6 +357,31 @@ struct BridgeTests {
     #expect(poles.min.z < road.minimum.y + 25 && poles.max.z > road.maximum.y - 25)
     #expect(scene.findEntity(named: Self.sceneName("route flags")) != nil)
     #expect(!BrooklynBridge.layout.boxes.contains { $0.name.contains("pole") })
+  }
+
+  /// Snow drifts provide broad facets beside the route without becoming terrain or cover on
+  /// the flat ground the party uses. They add neither gameplay blockers nor scene collisions.
+  @Test
+  func offRouteSnowDriftsStayLowAndNonblocking() throws {
+    let world = GameWorld(level: BrooklynBridge.level)
+    let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
+    let road = BrooklynBridge.level.bounds
+    #expect(BrooklynBridge.layout.boxes.count == 6, "decoration adds no gameplay boxes")
+    func collides(_ entity: Entity) -> Bool {
+      entity.components.has(CollisionComponent.self) || entity.children.contains(where: collides)
+    }
+    for side in ["west", "east"] {
+      let drift = try #require(
+        scene.findEntity(named: Self.sceneName("snow-drifts-\(side)")), "\(side)'s snow drifts")
+      let bounds = drift.visualBounds(relativeTo: nil)
+      if side == "west" {
+        #expect(bounds.max.x <= road.minimum.x, "all western snow stays outside the walkable road")
+      } else {
+        #expect(bounds.min.x >= road.maximum.x, "all eastern snow stays outside the walkable road")
+      }
+      #expect(bounds.max.y > 0 && bounds.max.y < 6, "\(side)'s drifts stay below 6 m")
+      #expect(!collides(drift), "\(side)'s decorative drifts have no collision components")
+    }
   }
 
   /// The panel button, Circle, B or H, hides the status panel and shows it again, while

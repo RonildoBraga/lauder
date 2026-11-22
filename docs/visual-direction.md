@@ -45,7 +45,7 @@ One shared set of colours serves every level and model. At least 80% of the scre
 | Colour | Value | Use |
 |---|---|---|
 | Snow | `#ECE9E2` | Deck, ground, roofs and snow caps; slightly warm, so it separates from ice |
-| Shadow | `#CBC9CA` | Shadows baked into the snow, such as the towers'; lit like the snow, it lands where the live shadows do |
+| Shadow | `#A9B7C6` | Blue-grey colour of the shadows baked into the snow, such as the towers'; lit by the level's lights |
 | Ice | `#D3DFE6` | Frozen river and sea; cooler than snow, so it reads as not the route |
 | Ice ridge | `#8FA5B3` | Cracks, pressure ridges and floe edges |
 | Open water | `#23343F` | Rare channels of dark water, the strongest dark in the world |
@@ -57,7 +57,7 @@ One shared set of colours serves every level and model. At least 80% of the scre
 | Mustard | `#B69A5A` | Accent: taxis and warning paint |
 | Amber | `#E2A64B` | Things to use and the leader's ring; kept clearly apart from Laura's orange |
 
-The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. Hostiles are dark red, `#7A2E2A`, the only red figures on the ice. Shadows on snow should land near `#A9B7C6`; that is a target for the lighting. Today the bridge's live shadows land lighter and neutral, near `#D6D4D5`, and a shadow baked into the snow wears the shadow colour, which the sun brings to the same tone. When the light changes, the shadow colour is matched again.
+The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. Hostiles are dark red, `#7A2E2A`, the only red figures on the ice. The bridge environment pass uses `#A9B7C6` as the baked shadow material's base colour, replacing the earlier neutral `#CBC9CA`. These are sRGB palette values, converted to scene-linear values in Blender. The lights change their displayed appearance; the palette is not a sampled screen-colour or phone performance claim.
 
 ## Materials
 
@@ -91,6 +91,8 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 Snow has buried the bridge's road, everything left on it and the frozen East River alike: a flat white plain at the level of the old deck, with only the towers and their arches standing above it. The maintainer chose this on 20 November 2026, after playing the first build of the new look, and then chose to take every other obstacle out of the game as well, so the towers are the only cover and an invisible edge keeps the party on the line of the buried road. The towers' long shadows, baked into the snow, fall across the plain, and a tower fades to a ghost while it hides the party; its shadow stays. The maintainer chose the ghost and the baked shadows on 20 November 2026, after a full fade hid what stood in the way and took the towers' shadows with it. Thin ink poles with small rust flags stand every 25 m along both edges of the buried road, as on a polar route, so the way and the party's movement read on the white; they block nothing. Ice, with cracks, pressure ridges and rare channels of open water, can show where the wind has cleared the snow, and Brooklyn and Manhattan can show as half-buried blocks at the edges.
 
 The bridge also uses the palette, the light and the camera's starting values, its world markers keep their size on screen, and its HUD is light and frosted, with the compass. A visual pass keeps the route, the collision layout, interaction anchors and the controls.
+
+On 23 November 2026 the maintainer assigned the bridge environment in Blender before the robot. The [level source](../blender/levels/README.md#brooklyn-bridgeblend) now gives the towers faceted pointed arches and weathered bases, adds thin cable fans and places broad, low snow facets outside the walking route. The selected [gameplay concept](../art/bridge/bridge-gameplay-v1.png) guides form and palette; its compressed composition does not replace the existing tower dimensions, spacing or gameplay camera. Both towers retain their independent ghost fade. The cables cast no runtime shadow and are omitted from the masonry's bounding-box shadow bake, which would otherwise turn thin strands into broad slabs. The robot and further gameplay changes remain deferred.
 
 ## Rendering budget
 

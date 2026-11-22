@@ -2,6 +2,8 @@
 
 Selected visual references, kept outside the app's resource folders. The maintainer chose the bridge gameplay view and dark armed v3 robot look. These selections do not implement the scene or approve behaviour and tuning.
 
+The subsequent scene-first assignment is implemented in the bridge's [Blender source and runtime export](../blender/levels/README.md). The images here remain concept references, rather than screenshots of that environment; the robot remains deferred.
+
 - [Frozen Brooklyn Bridge](bridge/README.md): the selected high gameplay-view concept.
 - [Robot enemy](robot/README.md): the selected dark armed spider-bot sheet and bridge-scale study.
 

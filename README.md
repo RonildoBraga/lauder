@@ -14,6 +14,8 @@ The bridge-only prototype's structural preparation is delivered in **TestFlight 
 
 **Design in progress, 23 November 2026:** The maintainer selected the high bridge view and dark armed spider-bot look, and chose to replace the first human shooter while Miki is alone. The [first-tower proposal](docs/encounters/bridge-spider-bot.md) describes movement, shooting, reactions and the supply/search handoff for review before implementation. The current app still has the human encounter.
 
+**Bridge environment, 23 November 2026:** The maintainer assigned the scene in Blender first, deferring the robot. The [level source](blender/levels/README.md) now has low-poly pointed arches, weathered stone, dark cable fans and low off-route snow facets, guided by the selected concept. The gameplay layout and camera are unchanged. This scene pass is separate from the existing TestFlight build above; its verification is recorded in the [prototype plan](docs/prototype-plan.md#bridge-environment-pass).
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.
