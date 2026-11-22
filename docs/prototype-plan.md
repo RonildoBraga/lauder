@@ -6,7 +6,7 @@
 
 ## Structural preparation
 
-The maintainer approved the architecture review's focused improvements ([ADR 0018](decisions/0018-runtime-boundaries.md), [issue #124](https://github.com/RonildoBraga/lauder/issues/124)): camera ownership/value motion, bridge progression separate from session authority, accurate encounter naming, cohesive combat files and narrow declaration drift checks with CI. Gameplay and story are unchanged. The implementation PR records fresh checks and rendered evidence; build 27 validates the earlier source only. Reproducible release tooling follows as a separate focused change.
+The approved structural preparation is merged: [PR #125](https://github.com/RonildoBraga/lauder/pull/125) separates camera motion and bridge progression, clarifies encounter naming, splits combat values into cohesive files and adds narrow declaration checks with CI. [PR #126](https://github.com/RonildoBraga/lauder/pull/126) adds reproducible TestFlight tooling. [ADR 0018](decisions/0018-runtime-boundaries.md) records the boundaries. Gameplay and story are unchanged; the next gameplay task is the design gate below.
 
 ## Purpose and scope
 
@@ -50,19 +50,26 @@ Search and Help are revalidated on press against the leader's position and curre
 
 ## Verification and performance
 
-[PR #122](https://github.com/RonildoBraga/lauder/pull/122) merged the reset as app/archive source `de4d0db566a546217f3c3ca095cdf1b3944a21e3`, with the exact tree of final checked/reviewed `feabb43f10f3708bc6fef4f940f26c2d8b7b462d`. The final `./scripts/check` passed formatting, the shared app build, **255 Swift tests** including all eight retained headless scenarios, **51 Blender tests** and **seven generated sounds**.
+### Architecture checks
 
-The retained headless routes are `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening`, `formations` and `orders`. Rendered Simulator checks passed with no route failures or companion warnings:
+Integrated source `7158f29a44738cfd0188292ef3839d0338bd7c73` has the exact tree of reviewed source `c01dd03f6532063c959f2da9fcd663b3f9d393f3`. On `c01dd03`, `./scripts/check` passed formatting, the shared app build and hosted Swift suite, including all eight retained headless routes and six new camera/progression regression tests, plus **13 declaration-contract tests**, **28 offline release-contract tests**, **51 Blender tests** and **seven generated sounds**. [GitHub Actions run 45002053969](https://github.com/RonildoBraga/lauder/actions/runs/45002053969) passed on that reviewed source. Source review completed with no outstanding findings.
+
+The retained headless routes are `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening`, `formations` and `orders`.
+
+Rendered Simulator checks on `b533e2ff8ee210eb030737293e47524ed008f47e` passed with no route failures or companion warning frames:
 
 | Source | Route | Result |
 |---|---|---:|
-| `8f0230c` | `opening` | 56/56 |
-| `8f0230c` | `orders` | 130/130 |
-| Final checked head `feabb43` | `first-fight` | 23/23 |
+| `b533e2f` | `opening` | 56/56 |
+| `b533e2f` | `orders` | 130/130 |
 
-The final-head change after the first two recordings removed unread DEBUG fields only; those recordings are not described as exact-head captures. Automatic source review completed on `feabb43` without findings. Claude was requested through GitHub and had not replied at integration; the request is not a completed Claude review.
+The app, Swift-test and Blender sources in those recordings are unchanged in integrated source `7158f29`; the recordings are not exact-head repository captures.
 
-The signed **0.1.0 (27)** Release archive passed bundle, signing-team, signature and matching-dSYM verification. At **2026-11-22 07:14:36 UTC**, Apple's read-only verification confirmed Lauder's identity, upload **COMPLETE** with **zero errors**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, an unexpired build and availability to the existing internal testers. Existing internal groups and tester membership are unchanged. Private archives, symbols and full processing evidence are preserved. Availability does not establish phone installation, physical behaviour, performance or enjoyment; no new phone result is claimed.
+### TestFlight delivery
+
+The source-bound standard check also passed on app/archive source `7158f29`. Its signed **0.1.0 (28)** Release archive passed bundle, signing-team, signature and matching-dSYM verification. At **2026-11-22 08:38:25 UTC**, Apple's read-only verification confirmed Lauder's identity, upload **COMPLETE** with **zero errors**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, an unexpired build and availability to the existing internal testers. Existing internal groups contain the build; group and tester membership are unchanged. Private archives, symbols and full processing evidence are preserved. Availability does not establish phone installation, physical behaviour, performance or enjoyment.
+
+### Simulator and physical evidence
 
 Simulator is the everyday validation environment. The script drives ordinary input through shared rules, saves screenshots/video and reports frame time, simulation cost, companion spacing and route failures. DEBUG instrumentation and route helpers are absent from Release builds. Test-only flat ranges and a narrow doorway fixture remain outside the app target because they exercise bridge weapons and navigation boundaries.
 
@@ -75,6 +82,8 @@ The target remains 60 fps on the baseline iPhone 13 Pro Max. Simulator measureme
 - Ask what is enjoyable and what should change before adding another scene or complex mechanic. TestFlight availability supplies no answer to that question.
 
 ### Historical delivery
+
+Build **0.1.0 (27)** delivered the bridge-only reset ([PR #122](https://github.com/RonildoBraga/lauder/pull/122), [delivery record in PR #123](https://github.com/RonildoBraga/lauder/pull/123)) from app/archive source `de4d0db566a546217f3c3ca095cdf1b3944a21e3`, matching the exact tree of checked/reviewed `feabb43f10f3708bc6fef4f940f26c2d8b7b462d`. The standard check passed **255 Swift tests**, **51 Blender tests** and **seven generated sounds**; the signed archive passed bundle/team/signature/dSYM verification. At **2026-11-22 07:14:36 UTC**, Apple confirmed upload **COMPLETE** with **zero errors**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, an unexpired build and existing internal tester availability with membership unchanged. Earlier recording details and review history remain in the original PRs and Git history; private archives, symbols and full processing evidence are preserved.
 
 Build **0.1.0 (26)**, source `25195e8`, was verified as processed and available before the reset. It contains the removed scenes; [ADR 0016](decisions/0016-combat-balance-and-readability.md) and Git history preserve its historical decisions and delivery evidence. Private archives, symbols and full processing evidence remain preserved.
 
