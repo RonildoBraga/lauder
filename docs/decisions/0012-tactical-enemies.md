@@ -1,6 +1,6 @@
 # ADR 0012 — Enemies that take cover, flank and flush
 
-**Status:** Implemented; final Simulator/release verification in progress\
+**Status:** Implemented and delivered in TestFlight 0.1.0 (21)\
 **Date:** 22 November 2026
 
 ## Assignment and scope
@@ -19,4 +19,6 @@ The maintainer's continuous implementation and TestFlight assignment is recorded
 
 ## Verification and delivery
 
-Tests cover reaction, navigation, cover, flanking, grenade launch/fuse/radius/obstruction, one-time damage and lifecycle. Scripted Simulator routes exercise the new enemies, readable warnings, escape, party recovery and the existing opening/salvage flow. After standard checks, rendered playtests, source review and a Release archive, deliver to the existing internal TestFlight group using the established API authentication. Verify Apple processing and group availability; upload-command success alone is not completion. Physical-controller feel and baseline-phone frame pacing remain unverified until actually measured; this assignment permits delivery using Simulator evidence without repeated phone sessions.
+Tests cover reaction, navigation, cover, flanking, grenade launch/fuse/radius/obstruction, one-time damage and lifecycle. Scripted Simulator routes exercise the new enemies, warnings, escape, party recovery and the existing opening/salvage flow. Final source `cec1a33` passed the standard check, all thirteen headless scenarios and six rendered routes; automatic source review completed with no findings. A fresh signed Release archive was verified and uploaded using API authentication. Apple confirmed **0.1.0 (21)** as **VALID**, **IN_BETA_TESTING** and available to the existing internal TestFlight group with membership unchanged. The [prototype plan](../prototype-plan.md#verification-and-performance) holds the full evidence.
+
+Physical-controller feel, baseline-phone frame pacing and the maintainer's judgement “Is each fight a readable puzzle?” remain unverified. This assignment permitted delivery using Simulator evidence without repeated phone sessions.

@@ -44,8 +44,8 @@ This record decided the first phase. Later assignments are recorded separately; 
    - cover protects only from the side it faces;
    - a shield on the ground shows it, and turns red when a threat can see the leader.
 3. **The squad's weapons:** now assigned and built in the Simulator prototype recorded in [ADR 0010](0010-squad-weapons.md). Laura and Tom fire their own weapons when they lead, since the story bible makes each “useful as leader and capable of ordinary weapon defence”. Each member keeps magazine and reload state across roles, reloads are automatic, and companions' shots use spread. One shared ammunition total remains.
-4. **Companion combat:** assigned in [ADR 0011](0011-companion-combat.md), with implementation and validation in progress. Companions use the shared cover rule and shields, prefer the leader's valid target and reconsider cover when flanked while retaining their orders.
-5. **Enemies that fight back:** assigned in [ADR 0012](0012-tactical-enemies.md), with implementation and validation in progress. The yard tries cover-seeking and flanking shooters and a fixed, warned grenade thrower. Fights get harder through behaviour, not by adding hits.
+4. **Companion combat:** implemented and delivered in TestFlight 0.1.0 (21), as recorded in [ADR 0011](0011-companion-combat.md). Companions use the shared cover rule and shields, prefer the leader's valid target and reconsider cover when flanked while retaining their orders.
+5. **Enemies that fight back:** implemented and delivered in TestFlight 0.1.0 (21), as recorded in [ADR 0012](0012-tactical-enemies.md). The yard tries cover-seeking and flanking shooters and a fixed, warned grenade thrower. Fights get harder through behaviour, not by adding hits.
 
 Unless the maintainer widens the [prototype's scope](../prototype-plan.md#outside-the-first-playable), these stay out:
 - armour plates and weak points, which are a health system;
@@ -139,6 +139,6 @@ Simulator playtests come first. The following judgement and physical checks rema
 
 ## What this does not settle
 
-- Later phases are decided in their own records: phase 2 in [ADR 0009](0009-leader-cover.md), phase 3 in [ADR 0010](0010-squad-weapons.md), phase 4 in [ADR 0011](0011-companion-combat.md) and phase 5 in [ADR 0012](0012-tactical-enemies.md). This first-phase record does not claim that work still under validation has passed or been delivered.
+- Later phases are decided in their own records: phase 2 in [ADR 0009](0009-leader-cover.md), phase 3 in [ADR 0010](0010-squad-weapons.md), phase 4 in [ADR 0011](0011-companion-combat.md) and phase 5 in [ADR 0012](0012-tactical-enemies.md). All five are now implemented and delivered; the [prototype plan](../prototype-plan.md#verification-and-performance) owns the current validation and remaining physical checks rather than this historical first-phase decision.
 - Magazines and reloads, subsequently assigned in phase 3 with one shared ammunition total.
 - Aiming by hand on touch, such as a drag on Fire.
