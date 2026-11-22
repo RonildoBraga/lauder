@@ -5,6 +5,9 @@
 
 **Later change:** [ADR 0014](0014-continuous-combat-arena.md) supersedes the retained hostile red aiming line and the combat yard's finite encounter/fallback policy. This record preserves the earlier phase's assignment and delivery evidence.
 
+
+**Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context
 
 On 21 November 2026, after playing [ADR 0007](0007-aiming-and-shot-feedback.md)'s shooting, the maintainer asked to take combat further: **“I can see the improvements, but I think we need to take the combat system further to make it feel more realistic, immersive, and engaging.”** The request named these changes:

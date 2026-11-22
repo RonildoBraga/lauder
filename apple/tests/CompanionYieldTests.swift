@@ -3,7 +3,7 @@ import simd
 
 @testable import Lauder
 
-/// An ordered or sheltered companion makes way before the leader reaches their body,
+/// An ordered companion makes way before the leader reaches their body,
 /// without losing the static place they should return to afterwards.
 @MainActor
 struct CompanionYieldTests {

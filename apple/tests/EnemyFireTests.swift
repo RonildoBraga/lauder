@@ -12,6 +12,7 @@ struct EnemyFireTests {
     let fight = FightSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
+    _ = step(fight, session: session, at: [0, 5], dt: HostileState.stepOutTime)
     // The rifle starts facing south. A target moving east cannot be acquired instantly.
     _ = step(fight, session: session, at: [5, 0], dt: 0.11)
     let shot = try #require(fight.shots.first)
@@ -28,6 +29,7 @@ struct EnemyFireTests {
     let fight = FightSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
+    _ = step(fight, session: session, at: [0, 5], dt: HostileState.stepOutTime)
     var incoming: FightSimulation.Shot?
     for _ in 0..<140 {
       _ = step(fight, session: session, at: [0, 5], dt: 1 / 120)
@@ -49,6 +51,7 @@ struct EnemyFireTests {
     let fight = FightSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
+    _ = step(fight, session: session, at: [0, 5], dt: HostileState.stepOutTime)
     _ = step(fight, session: session, at: [0, 5], dt: 0.11)
     #expect(fight.shots.count == 1 && fight.shots.first?.path.strike != .body("miki"))
     #expect(session.hitsTaken == 0 && session.hits(of: .tom) == 0)
@@ -61,15 +64,14 @@ struct EnemyFireTests {
   {
     fight.step(
       dt: dt, leader: point, facing: [0, -1], aiming: false, fireHeld: false,
-      firePressed: false, mayDisrupt: false, signaturePressed: false,
+      firePressed: false,
       figures: [.miki: point, .tom: [-0.6, 3]], session: session)
   }
 
   private func range(windUp: Float, firstMiss: Bool = false) -> Level {
     let rifle = Level.Hostile(
       id: "rifle", name: "Rifle", hiddenAt: .zero, standAt: .zero,
-      hits: 10, windUp: windUp, recovery: 2, range: 14, firstShotMisses: firstMiss, inView: true,
-      targetsAnyone: false, targetFromWindUp: true)
+      hits: 10, windUp: windUp, recovery: 2, range: 14, firstShotMisses: firstMiss)
     return Level(
       id: "enemy-fire-range",
       ground: .box("floor", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],
@@ -77,10 +79,10 @@ struct EnemyFireTests {
       encounters: [
         Level.Encounter(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 10])),
-          retryAt: nil, hostiles: [rifle], cues: [(0, .engage("rifle"))])
+          retryAt: nil, hostiles: [rifle], cues: [(0, .reveal("rifle")), (0, .engage("rifle"))])
       ], startingAmmo: 60, party: [.miki, .tom], spawns: [.miki: [0, 5], .tom: [-0.6, 3]],
       heading: [0, -1],
-      cameraOffset: CombatYard.level.cameraOffset, fieldOfView: CombatYard.level.fieldOfView,
+      cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "Range", objective: "Range", lookAround: "Range", restartNote: "Restart")
   }
 }

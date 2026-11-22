@@ -56,9 +56,6 @@ struct CompanionMotor {
     /// How the target moves: with the leader for a formation place, not at all for a point an
     /// order marked (ADR 0003, phase S3).
     let targetMoves: Bool
-    /// In a fight, what the shooters see: the companion then takes no long straight way across
-    /// it, and routes pay more for it (ADR 0003, phase S4).
-    var openGround: OpenGround? = nil
   }
 
   /// The movement this companion asks for in this step.
@@ -75,11 +72,6 @@ struct CompanionMotor {
     let crowded = context.others.contains { simd_distance($0, position) < 0.5 }
     sincePlan += dt
     intended = .zero
-    // A straight way is taken only where nothing blocks it and, in a fight, it does not cross
-    // ground the shooters see.
-    func isOpenWay(_ from: SIMD2<Float>, _ to: SIMD2<Float>) -> Bool {
-      isClear(from, to) && context.openGround?.crosses(from: from, to: to) != true
-    }
 
     if isHolding {
       sinceRetry += dt
@@ -102,7 +94,7 @@ struct CompanionMotor {
       return .zero
     }
     wait = 0
-    // A static order or cover anchor must not settle us again while making way for the leader.
+    // A static order must not settle us again while making way for the leader.
     if dodge == nil && targetSpeed < 0.1 && distance < Self.settleDistance
       && simd_length(velocity) < 0.3 && !crowded
     {
@@ -116,7 +108,7 @@ struct CompanionMotor {
     let cap =
       context.speed * (1 + (Self.catchUpFactor - 1) * min(1, max(0, (distance - 0.1) / 1.4)))
     var desired: SIMD2<Float>
-    if isOpenWay(position, context.target) {
+    if isClear(position, context.target) {
       route = []
       routeGoal = nil
       // Match the target's movement and close the gap, so a companion keeps pace with a moving
@@ -126,12 +118,11 @@ struct CompanionMotor {
       let drifted = routeGoal.map { simd_distance($0, context.target) > Self.replanDrift } ?? true
       if (route.isEmpty || drifted) && sincePlan >= Self.replanInterval {
         plan(
-          from: position, to: context.target, grid: grid, isClear: isOpenWay,
-          openGround: context.openGround)
+          from: position, to: context.target, grid: grid, isClear: isClear)
       }
       while let next = route.first,
         simd_distance(next, position) < Self.waypointReach
-          || (route.count > 1 && isOpenWay(position, route[1]))
+          || (route.count > 1 && isClear(position, route[1]))
       {
         route.removeFirst()
       }
@@ -204,12 +195,11 @@ struct CompanionMotor {
 
   private mutating func plan(
     from position: SIMD2<Float>, to target: SIMD2<Float>, grid: NavigationGrid,
-    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool, openGround: OpenGround?
+    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
   ) {
     sincePlan = 0
     routeGoal = target
-    let extraCost = openGround.map { ground in { ground.extraCost(at: $0) } }
-    guard let cells = grid.route(from: position, to: target, extraCost: extraCost) else {
+    guard let cells = grid.route(from: position, to: target) else {
       route = []
       return
     }

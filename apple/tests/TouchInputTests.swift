@@ -51,20 +51,6 @@ struct TouchInputTests {
     #expect(InputRules.resolve(touch.sample(), mode: .exploring, state: state).input == .neutral)
   }
 
-  /// The Signature button and the pause menu's third choice (ADR 0005) latch quick taps too.
-  @Test
-  func signatureAndThirdChoiceTapsAreSampledOnce() {
-    var touch = TouchInput()
-    for button in [TouchInput.Button.signature, .otherLevel] {
-      touch.setButton(button, isPressed: true, generation: 0)
-      touch.setButton(button, isPressed: false, generation: 0)
-    }
-    let raw = touch.sample()
-    #expect(raw.touchSignature && raw.touchOtherLevel)
-    let next = touch.sample()
-    #expect(!next.touchSignature && !next.touchOtherLevel)
-  }
-
   @Test
   func aGroundPressHoldsTheReleaseGateUntilItLifts() {
     var touch = TouchInput()

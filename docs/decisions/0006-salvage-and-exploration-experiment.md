@@ -3,6 +3,9 @@
 **Status:** Accepted; amended after the first session\
 **Date:** 21 November 2026
 
+
+**Retired implementation:** The bridge-only reset removed this experiment and its dedicated runtime. This record preserves the assignment, decisions and historical delivery evidence; it is not current playable scope. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context
 
 The combat experiment of [ADR 0005](0005-squad-combat-experiment.md) has had its three sessions, each of which the maintainer reported as working. Combat now has a greybox venue, companions who fight as a squad and a full set of positioning rules. The game has very little of what the maintainer's goals put first, **“Occasional combat; exploration and salvage lead”**: the opening offers one body to search and one medical kit.

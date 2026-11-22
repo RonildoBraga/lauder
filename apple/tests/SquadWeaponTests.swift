@@ -89,55 +89,13 @@ struct SquadWeaponTests {
   }
 
   @Test
-  func aCompanionKeepsTheSamePartlyUsedMagazineWhenTheyBecomeLeader() throws {
-    let level = range(companionWeapons: [.laura: .lightBurst])
-    let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
-    try begin(fight, session: session, level: level)
-    for _ in 0..<240 {
-      step(fight, session: session, level: level)
-      if fight.companionShots[.laura, default: 0] > 0 { break }
-    }
-    #expect(fight.companionShots[.laura] == 1)
-    let loaded = fight.status(for: .laura).loaded
-    #expect(loaded == Weapon.lightBurst.capacity - 1 && session.ammo == level.startingAmmo)
-    for _ in 0..<2 {
-      session.cycleLeader()
-      step(fight, session: session, level: level)
-    }
-    #expect(session.leader == .laura && fight.status(for: .laura).loaded == loaded)
-    for _ in 0..<30 { step(fight, session: session, level: level, fire: true) }
-    #expect(fight.status(for: .laura).loaded == loaded && session.ammo == level.startingAmmo)
-  }
-
-  @Test
-  func companionsCanMissAtRangeAndNeverSpendTheSharedRounds() throws {
-    let level = range(target: [0, -9], companionWeapons: [.laura: .lightBurst])
-    let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
-    try begin(fight, session: session, level: level)
-    var shots: [ShotPath] = []
-    for _ in 0..<(120 * 36) {
-      step(fight, session: session, level: level)
-      shots += fight.shots.compactMap { if case .party = $0.side { $0.path } else { nil } }
-    }
-    #expect(shots.count >= 18)
-    #expect(shots.contains { $0.strike == .nothing })
-    #expect(session.ammo == level.startingAmmo)
-  }
-
-  @Test
-  func restartRestoresWeaponHandlingWhileFallbackDoesNotCreateSharedRounds() throws {
+  func restartRestoresWeaponHandlingAndSharedRounds() throws {
     let level = range()
     let session = GameSession(level: level)
     session.cycleLeader()
     let fight = FightSimulation(level: level)
     try begin(fight, session: session, level: level)
     try fireUntilReload(fight, session: session, level: level)
-    let ammo = session.ammo
-    session.fallBack()
-    fight.fallBack()
-    #expect(session.ammo == ammo)
     session.restart()
     fight.reset()
     for member in PartyMember.allCases {
@@ -151,7 +109,7 @@ struct SquadWeaponTests {
   #if DEBUG
     @Test
     func pauseCannotCompleteAReloadOrReplayAFirePress() throws {
-      let world = GameWorld(level: CombatYard.level)
+      let world = GameWorld(level: TestRange.practice)
       world.session.cycleLeader()
       let aim = stick(world, towards: [0, -1])
       #expect(
@@ -180,6 +138,7 @@ struct SquadWeaponTests {
     let encounter = try #require(level.encounters.first)
     #expect(session.beginEncounter(encounter.beat))
     fight.begin(encounter)
+    for _ in 0..<120 { step(fight, session: session, level: level) }
   }
 
   @discardableResult
@@ -191,7 +150,7 @@ struct SquadWeaponTests {
     let target = level.encounters[0].hostiles[0].standAt
     return fight.step(
       dt: 1 / 120, leader: leader, facing: simd_normalize(target - leader), aiming: true,
-      fireHeld: fire, firePressed: pressed, mayDisrupt: false, signaturePressed: false,
+      fireHeld: fire, firePressed: pressed,
       figures: level.spawns, session: session)
   }
 
@@ -222,22 +181,21 @@ struct SquadWeaponTests {
     target: SIMD2<Float> = [0, -2], hits: Int = 500,
     spawns: [PartyMember: SIMD2<Float>] = [
       .miki: [0, 2], .tom: [-0.9, 2.9], .laura: [0.9, 2.9],
-    ],
-    companionWeapons: [PartyMember: Weapon] = [:]
+    ]
   ) -> Level {
     let hostile = Level.Hostile(
       id: "target", name: "Target", hiddenAt: target, standAt: target, hits: hits,
-      windUp: 60, recovery: 1.4, range: 14, inView: true, targetFromWindUp: true)
+      windUp: 0.01, recovery: 60, range: 14)
     let encounter = Level.Encounter(
       beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -15], maximum: [15, 15])),
-      retryAt: spawns[.miki], hostiles: [hostile], cues: [(0, .engage(hostile.id))])
+      retryAt: spawns[.miki], hostiles: [hostile],
+      cues: [(0, .reveal(hostile.id)), (0, .engage(hostile.id))])
     return Level(
       id: "squad-weapon-range",
       ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],
       interactions: [], triggers: [], encounters: [encounter], startingAmmo: 60,
       party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
-      cameraOffset: CombatYard.level.cameraOffset, fieldOfView: CombatYard.level.fieldOfView,
-      opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.",
-      combat: Level.Combat(companionWeapons: companionWeapons, fallsBack: true))
+      cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
+      opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.")
   }
 }

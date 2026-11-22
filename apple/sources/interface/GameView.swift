@@ -20,8 +20,7 @@ struct GameView: View {
             [weak world] event in
             guard let world else { return }
             world.step(deltaTime: event.deltaTime)
-            // A pause-menu choice can replace the world inside this step. The old view's
-            // callback must not start its feedback again after the world has stopped.
+            // Do not restart feedback after the world has stopped.
             guard world.isActive else { return }
             Self.playFeedback(for: world)
           }
@@ -122,13 +121,10 @@ struct GameView: View {
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
-          showsSignature: world.showsSignature,
           showsFormation: world.session.formationsAvailable,
           formationTitle: formationAction,
           orderNames: orderNames,
-          otherLevelTitle: world.otherLevel.name,
           vibrationTitle: vibrationTitle,
-          testWeaponTitle: world.session.testWeaponTitle,
           mode: world.session.mode)
       }
     }
@@ -145,25 +141,21 @@ struct GameView: View {
     }
   }
 
-  /// A compact menu keeps the optional fifth bench row and release guidance readable
-  /// on small landscape screens, while touch buttons remain on their capture surface.
+  /// Keep release guidance readable on small landscapes; touch buttons own their captures.
   private func pauseMenu(compact: Bool) -> some View {
     VStack(spacing: compact ? 6 : 14) {
       Text("Paused").font(compact ? .title3.bold() : .title2.bold())
       if world.controls.touchControlsEnabled {
         Text(
-          "Tap Resume to continue, Restart to begin a new run, or \(world.otherLevel.name)."
+          "Tap Resume to continue or Restart to begin a new run."
         )
-        if !compact || !world.controls.needsNeutralInput {
-          Text(world.otherLevel.note).font(compact ? .caption2 : .caption)
-        }
       } else {
         // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
         VStack(spacing: compact ? 4 : 6) {
           ForEach(world.session.availablePauseChoices, id: \.self) { choice in
             let chosen = choice == world.session.pauseChoice
             Text(pauseChoiceName(choice))
-              .font(choice == .testWeapon ? .subheadline : .headline)
+              .font(.headline)
               .lineLimit(1)
               .minimumScaleFactor(0.75)
               .frame(width: 250, height: compact ? 28 : 36)
@@ -178,9 +170,6 @@ struct GameView: View {
           }
         }
         Text(world.level.restartNote).font(compact ? .caption2 : .caption)
-        if !compact || !world.controls.needsNeutralInput {
-          Text(world.otherLevel.note).font(compact ? .caption2 : .caption)
-        }
         HStack(spacing: compact ? 8 : 12) {
           Text(compact ? "↑ / ↓ Choose" : "Up or down to choose").font(.caption2)
           Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
@@ -214,14 +203,12 @@ struct GameView: View {
       device: device, triggerWeapon: world.weaponKind)
   }
 
-  /// What the pause menu calls each choice: the third names the level it starts.
+  /// What the pause menu calls each choice.
   private func pauseChoiceName(_ choice: GameSession.PauseChoice) -> String {
     switch choice {
     case .resume: "Resume"
     case .restart: "Restart"
-    case .otherLevel: world.otherLevel.name
     case .vibration: vibrationTitle
-    case .testWeapon: world.session.testWeaponTitle ?? "Test weapon"
     }
   }
 
@@ -252,7 +239,7 @@ struct GameView: View {
   }
 
   /// The status panel, small and with just the essentials: who leads, marked, and who follows,
-  /// with the leader's hits during a fight, or everyone's in the combat yard, and the squad's
+  /// with the leader's hits during a fight and the squad's
   /// formation. A new objective or line shows for a few seconds; a threat, the weapon's rounds,
   /// a warning or the release guidance only while they matter. The panel button hides it, and
   /// shows it again.
@@ -264,23 +251,18 @@ struct GameView: View {
           Text(member.displayName)
             .fontWeight(leading ? .semibold : .regular)
             .underline(leading)
-          if world.session.inEncounter, leading || world.showsEveryonesHits {
+          if world.session.inEncounter, leading {
             // The placeholder hit rule: three hits, shown beside the name.
             Text(hitPips(of: member)).foregroundStyle(HUDStyle.threat)
           }
         }
-        if world.session.formationsAvailable, !world.showsEveryonesHits {
+        if world.session.formationsAvailable {
           // The squad's formation and what it is doing (ADR 0003, phases S2 and S3).
           Text("· \(world.session.formation.name) · \(world.session.squadState)")
             .foregroundStyle(HUDStyle.muted)
         }
       }
       .font(.caption)
-      if world.session.formationsAvailable, world.showsEveryonesHits {
-        // With everyone's hits beside their names, the formation takes a line of its own.
-        Text("\(world.session.formation.name) · \(world.session.squadState)")
-          .font(.caption).foregroundStyle(HUDStyle.muted)
-      }
       if world.objectiveIsFresh {
         Text(world.objective).font(.subheadline.weight(.semibold))
       }
@@ -292,16 +274,8 @@ struct GameView: View {
       if let threat = world.threat {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
       }
-      if let cue = world.signatureCue {
-        // Who can answer the wind-up (ADR 0005).
-        Text(cue).font(.caption.bold())
-      }
       if world.showsAmmo {
         Text(world.weaponStatus).font(.caption)
-      }
-      if world.level.salvage != nil, let bag = world.session.salvage.bag {
-        // The shared bag (ADR 0006): what it holds, and a regulator known not to fit.
-        Text("Bag · \(bag)").font(.caption)
       }
       if let diagnostic = world.diagnostic {
         Text(diagnostic).font(.caption).foregroundStyle(HUDStyle.warning)
@@ -327,9 +301,6 @@ struct GameView: View {
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
       if let aim = world.controls.aimControlName { others.append("\(aim) · Aim") }
-    }
-    if world.showsSignature {
-      others.append("\(world.controls.signatureButtonName) · Disrupt")
     }
     if let next = world.session.nextLeader {
       others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
@@ -370,10 +341,8 @@ struct GameView: View {
     }
   }
 
-  /// The formation button's job: in a fight where the level has combat positioning it regroups
-  /// the companions, and otherwise after an order it calls everyone back (ADR 0003).
+  /// The formation button calls companions back after an order (ADR 0003).
   private var formationAction: String {
-    if world.session.formationPressRegroups { return "Regroup" }
     return world.session.orders.isEmpty ? "Formation" : "Follow"
   }
 

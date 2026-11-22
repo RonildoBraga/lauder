@@ -2,89 +2,71 @@
 
 An open-source, Apple-only survival exploration game about three travellers finding belonging through the ruins of a futuristic world.
 
-The player switches between three characters while the other two follow. Their distinct abilities support exploration and purposeful salvage; their connections and histories emerge through the journey. Humans may have discreet internal synthetic replacements or biological enhancements. The full cause of the warfare and infrastructure collapse remains uncertain.
-
 ## Project status
 
-The game opens on the snowbound **Brooklyn Bridge** ([ADR 0004](docs/decisions/0004-brooklyn-bridge-opening.md)): Miki crosses alone towards Manhattan and meets Tom and Laura as strangers, through a first fight, an ambush and a rescue, and the three reach the Manhattan end together. This opening is the first playable. It is built, it passed its phone checkpoint, and on 21 November 2026 the maintainer judged it worth building on; the [prototype plan](docs/prototype-plan.md) sets out its scope and what comes next. The maintainer has approved gameplay-first development, and on 20 November 2026 chose a minimalist low-poly look for a frozen world as the [visual direction](docs/visual-direction.md). The bridge moves to it in small steps from today's greybox, reusing the current scene and stand-ins where they serve.
+The **Brooklyn Bridge opening is the only playable scene**. On 22 November 2026 the maintainer asked to keep the bridge and remove all other scenes and their unused systems before reconsidering what makes the game enjoyable. The combat arena, salvage yard and Relay Run are removed, along with their menu entries, test weapons, elevation, tactical combat and salvage machinery. This is a smaller starting point for the next design discussion, not an assignment to rebuild those experiments.
 
-- **Blender holds the levels and models** ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). The bridge's source is its Blender file, `blender/levels/brooklyn-bridge.blend`. Saving it exports the scene file the game shows and the layout file it plays from, as [Editing a level in Blender](CONTRIBUTING.md#editing-a-level-in-blender) describes. Levels can link [models](CONTRIBUTING.md#models) from `blender/assets`, and the party and the hostiles are models the game creates.
-- **Companions move as a squad** ([ADR 0003](docs/decisions/0003-squad-movement.md), phases S1 to S3). Once Laura joins, the formation button cycles **Close**, **Spread** and **Column**, and tight places squeeze the group into single file until it can spread out again: the opening's M5. Squad orders send both companions, or one of them, to a marked point or hold them where they stand, and the formation button then calls them back. The combat design review settled a first squad combat experiment ([ADR 0005](docs/decisions/0005-squad-combat-experiment.md)), which the maintainer assigned on 21 November 2026: “Yes, build it”. It is built in a greybox combat yard outside the story, which the pause menu's **Combat test** opens. After its first session the maintainer chose cover next, “Yes, try cover next”, so the yard's companions now take cover near their places, which on build 0.1.0 (13) “Worked well”. The maintainer then chose to finish S4 there, “Yes, finish S4”: the yard now has all of ADR 0003's combat positioning, with each companion's own preferences in cover, routes that keep out of the shooters' sight, and **Regroup** on the formation button. On build 0.1.0 (15) that “Worked well”, the last of the experiment's three sessions. Next, the maintainer chose salvage and exploration, and settled a [first salvage and exploration experiment](docs/decisions/0006-salvage-and-exploration-experiment.md): a greybox salvage yard where the trio recovers a part for a repair, which the maintainer assigned, “Yes, build it”. It is built, and the pause menu's third choice reaches it from the combat yard. On build 0.1.0 (16) its first session “went well”, and for the second, each run deals the cabinets' contents afresh. Asked to play build 0.1.0 (17) in the Simulator instead, Claude found the rules sound but the yard unclear from the camera, and the maintainer chose to fix that, “Yes, do both”: the gate, its latch and panel, the transmitter and what the party knows of each cabinet now show in the palette's colours. On build 0.1.0 (18) the maintainer found that it “reads well”. The maintainer then asked for a better shooting system, which [ADR 0007](docs/decisions/0007-aiming-and-shot-feedback.md) records: on a controller the right stick aims Miki's carbine, shots that hit nobody strike the scenery, every shot shows a streak, flashes and impacts, and the lens narrows in a fight. Asked next to take combat further, with The Division 2 as the reference, the maintainer chose a five-phase plan, which [ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md) records, and its first phase is built: no aim line, Miki's pose shows her aim, shots spread, enemies flinch and fall, and fights have sound and vibration.
-- Changes are checked with tests, [scripted Simulator playtests](CONTRIBUTING.md#scripted-simulator-playtests) and a maintainer playtest, and milestones on the baseline iPhone 13 Pro Max, where the target is 60 fps. TestFlight builds reach internal testers; see [TestFlight builds](CONTRIBUTING.md#testflight-builds).
+Miki crosses the snowbound bridge towards Manhattan, meets Tom through a fight and ambush, helps Laura, and reaches the far end with both companions. The bridge keeps its movement, native weapons, encounters, recruitment, party switching, formations, orders, camera and controller/touch/keyboard inputs. Dialogue remains provisional. The [gameplay walkthrough](docs/gameplay-script.md) describes the current opening; the [prototype plan](docs/prototype-plan.md) records verification and the next gate.
 
-TestFlight **0.1.0 (26)**, source `25195e8`, is the latest verified delivery. It includes Relay Run, all five combat phases, the repeatable arena, six test weapons, map-wide fire and the combat balance/readability pass. The final standard check passed all eighteen headless scenarios and thirty-wave pool integration; four exact-source rendered routes passed. The signed Release archive was verified, and Apple confirmed upload **COMPLETE** with zero errors, processing **VALID** and **IN_BETA_TESTING**, available to the existing internal testers with group and tester membership unchanged. The build is internal-only. The [prototype plan](docs/prototype-plan.md#combat-balance-and-readability) records the source, delivery evidence, historical build 25 proof and remaining physical limits.
+Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/decisions/0001-engine.md)). Blender remains the source of the bridge and character models ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Use simple shapes and colours until a concrete gameplay need warrants art work.
 
-Build 24 expanded **Combat test** into a repeatable arena: a 52 × 60 m yard with a raised deck, a lower trench and ramps, repeated mixed waves with safe arrival warnings and resupply, and rifles that turn, burst and resolve actual shot rays without red aiming lines. [ADR 0014](docs/decisions/0014-continuous-combat-arena.md) records the scope; the [combat plan audit](docs/combat-plan-audit.md) maps all five phases and the six original goals to implementation and remaining limits. The extension is implemented, checked in Simulator, reviewed and merged in [PR #113](https://github.com/RonildoBraga/lauder/pull/113), and delivered in build 24. Its source `887963b` has the same tree as tested/reviewed `e031233`. Physical controls, sustained phone performance and the maintainer's judgement of readability and enjoyment remain unverified.
-
-The weapon/range pass, [issue #115](https://github.com/RonildoBraga/lauder/issues/115), separates map-wide fired shots from assistance and enemy acquisition, adds marksman/support pressures to a ten-slot pool capped at four active enemies, and introduces six arena test weapons through the existing Pause menu. [ADR 0015](docs/decisions/0015-weapon-variety-and-map-range.md) records the scope and tuning choices. It is implemented, checked, reviewed and merged in [PR #116](https://github.com/RonildoBraga/lauder/pull/116), main source `8128368`, whose tree matches checked/reviewed `08c0c4e`. The full check passed all eighteen headless scenarios; the final layout source also passed both rendered arsenal routes. Six earlier rendered regressions used the preceding source with identical combat code. It is delivered in build 25, with Apple processing and existing-tester availability verified. The [prototype plan](docs/prototype-plan.md#weapon-variety-and-map-wide-fire) records the exact-source distinction and completed evidence. The arena-only bench does not change the trio's story weapon identities or add a loot/inventory system.
-
-The current assigned [combat balance/readability pass](https://github.com/RonildoBraga/lauder/issues/118) measures the existing weapons and addresses demonstrated targeting, enemy preparation and companion-yielding issues. [ADR 0016](docs/decisions/0016-combat-balance-and-readability.md) records the provisional tuning and measurement limits. It is implemented, checked, reviewed and merged in [PR #119](https://github.com/RonildoBraga/lauder/pull/119), main source `25195e8`, with the exact tree of checked/reviewed `c80a7ac`. The standard check, all eighteen headless scenarios and four exact-source rendered routes passed. The signed **0.1.0 (26)** archive, completed upload, successful Apple processing and availability to the existing internal testers are verified. The [prototype plan](docs/prototype-plan.md#combat-balance-and-readability) distinguishes these results from the still-unverified physical controls, performance and enjoyment.
-
-The maintainer assigned completion, Simulator testing, reviewed integration and TestFlight delivery without repeated milestone approval ([ADR 0011](docs/decisions/0011-companion-combat.md)). Phase 4 shares cover and shields across the party, adds focus fire and replans unsafe cover. Phase 5 adds bounded cover-seeking and flanking shooters, a fixed grenade warning and companion escape ([ADR 0012](docs/decisions/0012-tactical-enemies.md)). Both first reached TestFlight in build 21. The maintainer then deferred personal testing and requested closure of the completed implementation issues. Physical weapon feel, touch combinations, baseline-phone performance and subjective playtest answers remain unchecked in the [deferred checklist](docs/prototype-plan.md#deferred-phone-and-playtest-checks). Exploration and salvage still lead, with occasional combat; this work adds no story encounters or character canon.
-
-The technical direction is Swift, RealityKit and SwiftUI, with iPhone first ([ADR 0001](docs/decisions/0001-engine.md)). The game plays with a PS5 or Xbox controller, with touch, or with the keyboard in the Simulator; the [input contract](docs/prototype-plan.md#input-and-interaction-contract) lists the controls, and [Touch controls](docs/touch-controls.md) describes the touch layout.
-
-The assigned **Relay Run** mission is implemented and delivered in build 23: a continuous shelter–depot–return journey joining exploration, useful salvage and an optional guarded shortcut ([ADR 0013](docs/decisions/0013-relay-run.md)). Its [walkthrough](docs/relay-run-walkthrough.md) describes the safe detour, either gate specialist opening access for everyone, the compatible part and the shared return to restore the transmitter. Story placement and dialogue remain provisional. Use the pause menu's level choice three times from the bridge: **Combat test → Salvage test → Relay mission**.
+TestFlight **0.1.0 (26)**, source `25195e8`, is the last verified delivery **before this reset**. It contains the retired experiments. Its accepted Apple processing does not establish validation or delivery of the bridge-only changes. Earlier decisions and delivery evidence remain in the [historical decision records](docs/decisions) and Git history; private release archives and evidence are preserved.
 
 ## Start here
 
-- [Story bible](docs/story/story-bible.md): current ensemble direction, proposed trio, enhancements and Chapter One outline.
-- [Gameplay walkthrough](docs/gameplay-script.md): the Brooklyn Bridge opening as the player meets it, and the future squad and combat design.
-- [Relay Run walkthrough](docs/relay-run-walkthrough.md): the assigned standalone exploration-and-salvage mission, with a safe route and optional guarded shortcut.
-- [The Quiet Yard](docs/encounters/the-quiet-yard.md): future optional salvage encounter with avoidance, coordinated combat and retreat, a proposal, not assigned for implementation.
-- [Combat plan coverage](docs/combat-plan-audit.md): the five combat phases, original goals, current arena extension and deliberately deferred features.
-- [Architecture](docs/architecture.md): ownership, input, movement, fights, scenes, Restart and later saving.
-- [Decision records](docs/decisions): the engine, Blender as the source of levels and models, squad movement, the Brooklyn Bridge opening, squad combat and salvage experiments, aiming and shot feedback, weapon feel with a plan for combat, active-character cover, squad weapons, coordinated companions, tactical enemies and the repeatable arena.
-- [First playable prototype](docs/prototype-plan.md): the scope, the input contract, the checks and what comes next.
-- [Visual direction](docs/visual-direction.md): the frozen, minimalist low-poly look the maintainer chose on 20 November 2026, with its palette, light, camera and rendering budget.
+- [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.
+- [Gameplay walkthrough](docs/gameplay-script.md): the retained bridge and the distinction between it and future design ideas.
+- [Architecture](docs/architecture.md): ownership, input, movement, weapons, encounters and lifecycle.
+- [Prototype plan](docs/prototype-plan.md): retained scope, controls, checks and the design gate.
+- [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
+- [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
+- [The Quiet Yard](docs/encounters/the-quiet-yard.md): an unimplemented encounter proposal, retained for narrative reference, not an active level or assignment.
 
-The proposed cast has Miki, Laura and Tom as the playable trio and Nina as a supporting character. The three meet as strangers on the Brooklyn Bridge; their role assignments, enhancement histories and relationships remain proposals that unfold through play. Narrative proposals do not imply implemented interactions or approval of every detail.
+The player controls one character at a time, switching leadership while the other recruited characters follow. Miki, Laura and Tom meet as strangers; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.
 
 ## Project structure
 
 ```text
-apple/                          The iPhone game: Swift, RealityKit and SwiftUI
-  Lauder.xcodeproj/             App/test targets and the shared Lauder scheme
+apple/
+  Lauder.xcodeproj/              App/test targets and shared Lauder scheme
   sources/
-    app/                        App entry point, world ownership and bundle configuration
-    interface/                  HUD, controller/keyboard/touch input and shared input rules
-    gameplay/                   Party identity, session-owned party, leadership, Pause and story beats
-    combat/                     Plain-Swift weapons, sight lines, aiming and hostiles
-    world/                      RealityKit bodies, squad movement, fights, shots' effects, camera and scene presentation
+    app/                         App entry, world ownership and bundle configuration
+    interface/                   HUD, controller/keyboard/touch input and InputRules
+    gameplay/                    Party identity, session, leadership, Pause and story beats
+    combat/                      Native weapons, targeting, ballistics and bridge hostiles
+    world/                       Bodies, squad movement, encounters, effects and camera
     content/
-      Level.swift               A playable place as a value, and the party's shared body
-      LevelLayout.swift         The shape of a layout file: where a level's parts stand, its camera and lights
-      BrooklynBridge.swift      The opening's greybox bridge: its places' names and lines, and the stranger
-      CombatYard.swift          The repeatable greybox combat arena, its terrain, cover and bounded enemy slots
-      SalvageYard.swift         The salvage experiment's temporary greybox yard, defined in Swift, and its salvage task
-      RelayRun.swift            One continuous greybox salvage journey with an optional guarded shortcut
-      LevelCycle.swift          The pause menu's cycle through the bridge and the two test yards
-      BrooklynBridgeLayout.swift Where everything that plays on the bridge stands, its camera and lights, exported by Blender
-      BrooklynBridge.usdz       Everything the player sees of the bridge, exported by Blender
-      models/                   The party's and the hostiles' looks, exported by Blender from their models
-      MissionScript.swift       Conversations; the lines are provisional
-  tests/                        Party/session, movement, input, combat, layout and look tests
-    support/                    The squad tests' yard and the helpers that play a world without rendering; not in the app target
-  scripts/                      Simulator playtests, Play and the app icon
-  .swift-format                 Swift formatting rules
-blender/                        The levels' Blender files, in levels/, the models, in assets/, and the Lauder extension for Blender, in extensions/lauder_levels, with its tests
-docs/                           Architecture, decision records, the prototype plan, the gameplay walkthrough, touch controls and the visual direction
-  story/                        Story bible
-  encounters/                   Encounter designs
-scripts/check                   Checks every part: the Blender extension's tests, then the app's formatting, build and tests
-.github/                        Pull request template
+      Level.swift                Typed bridge and test-fixture data
+      LevelLayout.swift          Blender layout schema
+      BrooklynBridge.swift       Bridge names, encounters, interactions and dialogue cues
+      BrooklynBridgeLayout.swift Generated bridge layout
+      BrooklynBridge.usdz        Exported bridge scene
+      MissionScript.swift        Provisional bridge conversations
+      models/                    Exported party/hostile figures
+      sounds/                    Generated combat sounds
+  tests/                         Bridge and shared input/movement/weapon regressions
+    support/                     Test-only navigation/range geometry and headless helpers
+  scripts/                       Simulator play/playtest and generated assets
+blender/
+  levels/                        Bridge Blender source
+  assets/                        Character model sources
+  extensions/lauder_levels/      Export extension and tests
+docs/                            Current design, architecture and prototype plan
+  story/                         Story bible
+  encounters/                    Unimplemented narrative proposals
+  decisions/                     Accepted decisions and clearly marked historical experiments
+scripts/check                    Blender, asset, formatting, app-build and Swift checks
+.github/                         Pull request template
 ```
 
-Each platform and tool keeps its own top-level folder, so that later platforms, such as Android or Steam, can sit beside `apple/`. What a second platform will share, such as the level layouts, stays in `apple/` until then, when it moves to a shared folder in a form both can read. The [architecture](docs/architecture.md) sets out which part owns what, and [Assets and attribution](CONTRIBUTING.md#assets-and-attribution) how to add art.
+Manually maintained folders use lowercase names; Swift filenames use PascalCase. Read [CONTRIBUTING.md](CONTRIBUTING.md) for naming, validation, Blender authoring, licensing and TestFlight procedures. Public documentation uses relative paths and contains no signing secrets or private device identifiers.
 
 ## Contribute
 
-People and AI-assisted contributors are welcome. Useful contributions now include story feedback, prototype-scope review, level-layout proposals, technical research and improvements to the documentation.
+Open `apple/Lauder.xcodeproj` with the shared `Lauder` scheme. Use Simulator for daily iteration and `./scripts/check` before a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md).
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md). Use issues for proposals and questions; maintainers review changes before merging. The project plans alone are not an assignment to start implementation.
-
-Open `apple/Lauder.xcodeproj` and the shared `Lauder` scheme to run the game, and run `./scripts/check` before a pull request; [Validation](CONTRIBUTING.md#validation) sets out the toolchain, the checks, local signing and the phone checkpoints.
+The next task is to agree on an enjoyable core loop using the bridge as a small test space. Story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
 
 ## Licence
 
-[MIT](LICENSE) applies to the repository's original code, story and documentation unless a file or directory explicitly states another licence. Third-party material retains its own licence and attribution notices.
+[MIT](LICENSE) applies to original code, story and documentation unless a file or directory states otherwise. Third-party material retains its own licence and attribution notices.

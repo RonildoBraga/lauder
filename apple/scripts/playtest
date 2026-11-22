@@ -32,9 +32,8 @@ from preflight import check_assets, iphone_simulator, mask  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
 SCENARIOS = [
-    "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening", "formations",
-    "orders", "combat-yard", "salvage-yard", "leader-cover", "squad-weapons", "tactical-enemies",
-    "arena-elevation", "relay-run-safe", "relay-run-retreat", "arsenal-bench", "enemy-arsenal",
+    "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening",
+    "formations", "orders",
 ]
 
 
@@ -177,21 +176,9 @@ def report(summary, images):
     frame, sim = summary["frameMilliseconds"], summary["simulationMilliseconds"]
     say(f"    frame time {frame['mean']:.1f} ms mean, {frame['p99']:.1f} ms p99, {frame['max']:.1f} ms max")
     say(f"    party update {sim['mean']:.3f} ms mean, {sim['max']:.3f} ms max (Simulator, not phone)")
-    for load in summary["worldLoads"]:
-        stages = ", ".join(f"{stage['name']} {stage['milliseconds']:.1f}" for stage in load["stages"])
-        say(f"    load {load['level']}: {load['totalMilliseconds']:.1f} ms initializer body ({stages}; ms)")
     say(f"    bodies overlapping {summary['overlapFraction'] * 100:.1f}% of frames; "
         f"within 0.6 m of slot while moving {summary['withinSlotWhileMoving'] * 100:.0f}%; "
         f"widest leader gap {summary['worstLeaderGap']:.2f} m")
-    if summary["highestArenaWave"]:
-        say(f"    arena wave {summary['highestArenaWave']}; "
-            f"peak arrival warnings {summary['peakArrivalWarnings']}; "
-            f"actual body floor {summary['lowestFloor']:.2f} to {summary['highestFloor']:.2f} m")
-    if summary["longestPartyTrace"]:
-        say(f"    actual shot travel {summary['longestPartyTrace']:.2f} m; "
-            f"longest scenery strike {summary['longestPartySceneryTrace']:.2f} m")
-        say(f"    party guns fired: {', '.join(summary['partyWeaponsFired'])}; "
-            f"hostile guns fired: {', '.join(summary['hostileWeaponsFired'])}")
     for image in images:
         say(f"    still: {image.relative_to(ROOT) if image.is_relative_to(ROOT) else image}")
 

@@ -59,20 +59,6 @@ struct Level {
       case shoot
       /// Runs at the leader at this speed, in metres per second.
       case charge(speed: Float)
-      /// A visible wind-up launches a delayed, marked grenade instead of a rifle shot.
-      case throwGrenade
-    }
-
-    /// Optional tactical movement in the combat yard. Stationary preserves the opening's
-    /// authored encounters; the fight chooses safe destinations for the other behaviours.
-    enum Behavior: Equatable, Sendable {
-      case stationary
-      case takeCover
-      case flank
-      /// Advances with a rifle to a closer firing position within its bounded home area.
-      case advance
-      /// Keeps a useful long firing lane and yields ground when the party closes in.
-      case keepDistance
     }
 
     let id: String
@@ -81,18 +67,6 @@ struct Level {
     let standAt: SIMD2<Float>
     let hits: Int
     var attack = Attack.shoot
-    /// The actual firearm used for handling, spread, props, feedback and damage. Existing
-    /// authored encounters retain their rifle unless the combat test assigns another kind.
-    var weapon = Weapon.Kind.rifle
-    var behavior = Behavior.stationary
-    /// A short pause after engagement before the first wind-up. Zero keeps older encounters
-    /// unchanged; the combat yard supplies its prototype reaction delay explicitly.
-    var reactionDelay: Float = 0
-    /// Rifle discharges after one wind-up. A single shot preserves the opening's authored
-    /// timing; the combat test supplies short bursts for different rifle roles.
-    var burst = 1
-    /// Seconds between the discharges of one rifle burst.
-    var burstGap: Float = 0.16
     /// The visible aim before each shot, long enough to take cover or answer.
     var windUp: Float = 0
     /// The pause after each shot before the next aim begins.
@@ -104,41 +78,6 @@ struct Level {
     var missLine: String?
     /// What searching the body yields once the hostile is down.
     var loot: Loot?
-    /// It waits in view where it fights from the start of a run, instead of unseen until a cue
-    /// reveals it, as the combat yard's shooters do beyond its wall (ADR 0005).
-    var inView = false
-    /// It aims at whichever member of the party is nearest in clear sight within its reach,
-    /// instead of always at the leader (ADR 0005).
-    var targetsAnyone = false
-    /// It becomes a target for assisted aim from its first wind-up, so that its first shot can
-    /// be answered, instead of from its first shot (ADR 0005).
-    var targetFromWindUp = false
-  }
-
-  /// How a level's fights go beyond what its hostiles do (ADR 0005). The defaults are the
-  /// opening's (ADR 0004): only the leader fires, only the leader takes hits, and the last
-  /// allowed hit starts the encounter again with everything restored.
-  struct Combat: Sendable {
-    /// The members' weapons as companions. Once a fight is under way, a companion with one
-    /// fires by themselves at their own assisted target, in clear sight and within reach. It
-    /// spends no rounds: only actual leader shots during encounters use the shared count.
-    var companionWeapons: [PartyMember: Weapon] = [:]
-    /// Every member takes hits, and the last allowed hit on anyone falls the whole party back
-    /// to the level's spawn points, while the hostiles keep the damage dealt, instead of
-    /// starting the encounter again.
-    var fallsBack = false
-    /// While Miki leads, Signature can Disrupt a hostile's wind-up within her reach and in her
-    /// clear sight.
-    var disrupt = false
-    /// ADR 0003's combat positioning, phase S4, tried in the combat yard. Once a fight is under
-    /// way, companions take cover near their formation slots or order points, each weighing the
-    /// spots by their own preferences, and step out to fire and back while a shooter aims at
-    /// them (`CoverPlanner`); they keep off open ground where another way exists (`OpenGround`);
-    /// and the formation button regroups them instead of changing the formation.
-    var combatPositioning = false
-    /// Shared party proximity cover, low-cover firing exposure and tall-edge peeking
-    /// (ADR 0009/0011), reused by Relay Run after the combat-yard experiment.
-    var leaderCover = false
   }
 
   /// What happens at a moment after an encounter begins.
@@ -188,19 +127,12 @@ struct Level {
     /// The encounter waits until every companion is close to the leader, so a scene for the
     /// whole party never begins with someone holding elsewhere (ADR 0003, phase S3).
     var gathersParty = false
-    /// A line shown once every hostile is down, such as the combat yard's.
-    var clearedLine: String?
-    /// A guarded shortcut: visible party members inside can start it, and leaving with the
-    /// whole party breaks contact. Nil preserves the opening and combat-yard rules.
-    var guardArea: PartyMotion.Box?
   }
 
   /// A short name, such as "brooklyn-bridge", for the scene and messages.
   let id: String
   /// The floor. It bounds the navigation grid and blocks nothing.
   let ground: Box
-  /// Optional terraces and ramps. Existing story places keep the flat floor at y = 0.
-  var terrain = Terrain()
   let boxes: [Box]
   /// The scene file that shows the level, exported by Blender (ADR 0002): the name of a USDZ in
   /// the app's bundle. Without one, such as in a test, the game draws the ground and boxes as
@@ -238,70 +170,6 @@ struct Level {
   let lookAround: String
   /// What the pause menu says Restart does.
   let restartNote: String
-  /// How its fights go; the opening's rules unless the level says otherwise.
-  var combat = Combat()
-  /// A salvage task, as in the salvage yard (ADR 0006); nil where there is none.
-  var salvage: Salvage?
-  /// A bounded, repeatable combat test. Story encounters retain their authored completion.
-  var arena: ArenaWaves.Configuration?
-
-  /// A salvage task (ADR 0006): a part to find for a repair, behind a gate that more than one
-  /// member can open. The session keeps what the party has done (`SalvageProgress`); the world
-  /// shows it.
-  struct Salvage {
-    /// What a cabinet holds.
-    enum Contents: Sendable {
-      /// A regulator that fits, in disconnected equipment.
-      case compatible
-      /// A regulator of a different model, which will not fit.
-      case otherModel
-      /// Equipment that still feeds a neighbouring shelter: it stays connected.
-      case live
-    }
-
-    /// A cabinet of equipment, with the area its approach covers.
-    struct Cabinet {
-      let id: String
-      let box: Box
-      let approach: PartyMotion.Box
-      let contents: Contents
-    }
-
-    /// The gate in the depot's fence: it blocks movement until opened. Laura opens it from its
-    /// latch, and Tom by shifting the loose panel beside it. It lies along the fence, in x, and
-    /// swings open into the depot, towards -z, about a hinge at its west end.
-    let gate: Box
-    let latch: PartyMotion.Box
-    let panel: PartyMotion.Box
-    /// The latch and the loose panel as the fence shows them, so the player sees where each
-    /// opens the gate from. Neither blocks anyone.
-    let latchMark: Box
-    let panelMark: Box
-    let cabinets: [Cabinet]
-    /// The broken transmitter, where a regulator is fitted.
-    let transmitter: Box
-    /// The transmitter's aerials, which mark it as the goal. They block no one.
-    let aerial: [Box]
-    let transmitterApproach: PartyMotion.Box
-    /// The objective once the repair is done.
-    let doneObjective: String
-    /// A journey's outward and return guidance; absent in the original compact salvage yard.
-    var depotGoal: Goal?
-    var returnGoal: Goal?
-    var returnObjective: String?
-    /// A provisional exchange after a successful repair with the party gathered.
-    var completion: MissionScript.Conversation?
-
-    /// Where the open gate stands: swung into the depot about its hinge, a thin wall along the
-    /// opening's west side, which blocks movement in place of the shut gate.
-    var openGate: PartyMotion.Box {
-      let hinge = SIMD2(gate.position.x - gate.size.x / 2, gate.position.z)
-      let half = gate.size.z / 2
-      return PartyMotion.Box(
-        minimum: [hinge.x - half, hinge.y - gate.size.x], maximum: [hinge.x + half, hinge.y])
-    }
-  }
-
   /// The floor's footprint, which the navigation grid covers.
   var bounds: PartyMotion.Box { ground.footprint }
 
@@ -318,9 +186,8 @@ struct Level {
     return point
   }
 
-  /// Movement blockers share the visible scenery's footprints. Cliff edges keep bodies on a
-  /// terrace until they reach a ramp, using the same collision and navigation as ordinary walls.
-  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + terrain.cliffs + edges }
+  /// Movement blockers share the visible scenery's footprints.
+  var obstacles: [PartyMotion.Box] { boxes.map(\.footprint) + edges }
 
   /// The ground's edges: a metre-thick wall just outside each side of its footprint, which
   /// nobody sees, so the party keeps to the ground, as on the buried bridge's road.

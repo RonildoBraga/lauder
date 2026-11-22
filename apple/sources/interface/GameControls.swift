@@ -26,8 +26,6 @@ final class GameControls {
   private(set) var panelButtonName = "Panel"
   /// The button that leads as the member before the leader; touch has none, and Next cycles.
   private(set) var previousButtonName = "Previous"
-  /// The button for the leader's signature, such as Miki's Disrupt.
-  private(set) var signatureButtonName = "Signature"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -144,7 +142,6 @@ final class GameControls {
       controllerFire: pad?.rightTrigger.isPressed == true,
       controllerFormation: pad?.buttonY.isPressed == true,
       controllerPanel: pad?.buttonB.isPressed == true,
-      controllerSignature: pad?.buttonX.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
@@ -152,18 +149,17 @@ final class GameControls {
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
       keyboardSwitch: pressed(.keyQ), keyboardPrevious: pressed(.keyZ),
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
-      keyboardPanel: pressed(.keyH), keyboardSignature: pressed(.keyX),
+      keyboardPanel: pressed(.keyH),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       aimUp: pressed(.keyI), aimDown: pressed(.keyK), aimLeft: pressed(.keyJ),
       aimRight: pressed(.keyL),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
-      touchRestart: touch.touchRestart, touchOtherLevel: touch.touchOtherLevel,
+      touchRestart: touch.touchRestart,
       touchVibration: touch.touchVibration,
-      touchTestWeapon: touch.touchTestWeapon,
       touchFire: touch.touchFire,
-      touchFormation: touch.touchFormation, touchSignature: touch.touchSignature,
+      touchFormation: touch.touchFormation,
       touchGround: touch.touchGround,
       touchMark: touch.touchMark, touchOrder: touch.touchOrder
     )
@@ -245,35 +241,34 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
-        previous: "L1", fire: "R2", aim: "Right stick", formation: "Triangle", panel: "Circle",
-        signature: "Square")
+        previous: "L1", fire: "R2", aim: "Right stick", formation: "Triangle", panel: "Circle")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
-        previous: "LB", fire: "RT", aim: "Right stick", formation: "Y", panel: "B", signature: "X")
+        previous: "LB", fire: "RT", aim: "Right stick", formation: "Y", panel: "B")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
         cycle: "Right shoulder", previous: "Left shoulder", fire: "Right trigger",
-        aim: "Right stick", formation: "Button Y", panel: "Button B", signature: "Button X")
+        aim: "Right stick", formation: "Button Y", panel: "Button B")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", previous: "Z",
-      fire: "F", aim: "IJKL", formation: "R", panel: "H", signature: "X")
+      fire: "F", aim: "IJKL", formation: "R", panel: "H")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", previous: "Next",
-      fire: "Fire", aim: nil, formation: "Formation", panel: "Panel", signature: "Signature")
+      fire: "Fire", aim: nil, formation: "Formation", panel: "Panel")
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, cycle: String, previous: String,
-    fire: String, aim: String?, formation: String, panel: String, signature: String
+    fire: String, aim: String?, formation: String, panel: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -284,7 +279,6 @@ final class GameControls {
     if aimControlName != aim { aimControlName = aim }
     if formationButtonName != formation { formationButtonName = formation }
     if panelButtonName != panel { panelButtonName = panel }
-    if signatureButtonName != signature { signatureButtonName = signature }
   }
 
   isolated deinit {

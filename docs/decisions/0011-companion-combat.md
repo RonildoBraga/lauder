@@ -3,6 +3,9 @@
 **Status:** Implemented and delivered in TestFlight 0.1.0 (21)\
 **Date:** 22 November 2026
 
+
+**Retired implementation:** The bridge-only reset removed this experiment and its dedicated runtime. This record preserves the assignment, decisions and historical delivery evidence; it is not current playable scope. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Assignment
 
 After phase 3, the maintainer instructed: **“Continue until the end where everything is delivered and continue testing using the simulator and continue to deliver to my phone using the test Flight but don’t stop on every milestone delivered unless you have questions for me”.** This assigns the remaining phases of the current [combat plan](0008-weapon-feel-and-combat-plan.md), integration of the reviewed work and TestFlight delivery without repeated milestone approval. It supersedes the earlier separate delivery/merge gates for this work. Physical-device evidence remains distinct from Simulator checks.

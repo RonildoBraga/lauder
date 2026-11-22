@@ -1,7 +1,7 @@
 import simd
 
-/// Shared straight shots through the actual world heights. Target assistance still chooses
-/// a direction in the ground plane; this query decides what that direction really strikes.
+/// Straight shots through the bridge's actual boxes and bodies. Assistance chooses a
+/// direction; this query traces the round to its nearest hit or the ground boundary.
 struct Ballistics {
   struct Target {
     let id: String
@@ -21,26 +21,23 @@ struct Ballistics {
   }
 
   private let boxes: [Level.Box]
-  let terrain: Terrain
   private let bounds: PartyMotion.Box
-  var gate: PartyMotion.Box?
 
   init(level: Level) {
     boxes = level.boxes
-    terrain = level.terrain
     bounds = level.bounds
   }
 
   func point(_ point: SIMD2<Float>, above height: Float = 1.25)
     -> SIMD3<Float>
   {
-    [point.x, terrain.height(at: point) + height, point.y]
+    [point.x, height, point.y]
   }
 
-  func isClear(from start: SIMD3<Float>, to end: SIMD3<Float>, ignoringLowCover: Bool = false)
+  func isClear(from start: SIMD3<Float>, to end: SIMD3<Float>)
     -> Bool
   {
-    firstBlock(from: start, to: end, ignoringLowCover: ignoringLowCover).map { $0 >= 0.9999 }
+    firstBlock(from: start, to: end).map { $0 >= 0.9999 }
       ?? true
   }
 
@@ -94,31 +91,17 @@ struct Ballistics {
     return Trace(start: start, end: start + (end - start) * distance, strike: strike)
   }
 
-  private func firstBlock(
-    from start: SIMD3<Float>, to end: SIMD3<Float>, ignoringLowCover: Bool = false
-  ) -> Float? {
-    var first = terrain.firstIntersection(from: start, to: end, within: bounds)
+  private func firstBlock(from start: SIMD3<Float>, to end: SIMD3<Float>) -> Float? {
+    let delta = end - start
+    // The opening's snow is a bounded flat plane at y = 0.
+    var first = LineOfSight.entry(
+      from: start, along: delta,
+      minimum: [bounds.minimum.x, -Float.greatestFiniteMagnitude, bounds.minimum.y],
+      maximum: [bounds.maximum.x, 0, bounds.maximum.y], limit: 1)
     for box in boxes {
-      if ignoringLowCover,
-        box.position.y + box.size.y / 2 - terrain.height(at: [box.position.x, box.position.z])
-          < LeaderCover.lowHeight
-      {
-        continue
-      }
       if let entry = LineOfSight.entry(
-        from: start, along: end - start, minimum: box.position - box.size / 2,
+        from: start, along: delta, minimum: box.position - box.size / 2,
         maximum: box.position + box.size / 2, limit: 1)
-      {
-        first = min(first ?? 1, entry)
-      }
-    }
-    if let gate {
-      let centre = (gate.minimum + gate.maximum) / 2
-      let base = terrain.height(at: centre)
-      if let entry = LineOfSight.entry(
-        from: start, along: end - start,
-        minimum: [gate.minimum.x, base, gate.minimum.y],
-        maximum: [gate.maximum.x, base + 3, gate.maximum.y], limit: 1)
       {
         first = min(first ?? 1, entry)
       }
@@ -127,7 +110,7 @@ struct Ballistics {
   }
 
   /// Cylinder intersection preserves the existing circular ground-plane hit radius, while
-  /// rejecting a shot that passes above or below a body on another tier or behind low cover.
+  /// rejecting a shot that passes above or below the body.
   private static func entry(from start: SIMD3<Float>, to end: SIMD3<Float>, target: Target)
     -> Float?
   {

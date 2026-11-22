@@ -65,15 +65,13 @@ final class ShotEffects {
   private let thickness: [Side: Float]
   private let flashSize: Float
   private let chipSize: Float
-  private let terrain: Terrain
 
   /// How many marks show on blocks now. Tests read it.
   var marksShown: Int { markRemaining.filter { $0 > 0 }.count }
 
   /// The effects' blocks, unseen until a shot shows them, in `container`; `style` gives their
   /// colours, and its marker scale their size, so they read from the level's camera.
-  init(style: SceneStyle, in container: Entity, terrain: Terrain = Terrain()) {
-    self.terrain = terrain
+  init(style: SceneStyle, in container: Entity) {
     let scale = style.markerScale
     thickness = [.party: 0.06 * scale, .hostile: 0.045 * scale]
     flashSize = 0.16 * scale
@@ -91,8 +89,7 @@ final class ShotEffects {
       let party = side == .party
       let material = party ? style.warm : style.threat
       let name = party ? "party" : "hostile"
-      // At ten discharges/second, four hostiles overlap at most two volleys during a
-      // 0.15-second flight. Fixed headroom also covers the leader and supporting companions.
+      // Fixed pools cover the leader's bursts and the opening's scripted shots.
       streakPools[side] = Pool(party ? 8 : 16) { block("\(name).streak", material) }
       flashPools[side] = Pool(party ? 6 : 8) { block("\(name).flash", material) }
     }
@@ -155,27 +152,6 @@ final class ShotEffects {
     }
   }
 
-  /// A grenade's brief ground flash and radial debris, reusing the same bounded effect pools.
-  /// The warning marker already showed the exact damage radius; this is presentation only.
-  func blast(at point: SIMD2<Float>) {
-    guard point.x.isFinite, point.y.isFinite else { return }
-    let centre = SIMD3(point.x, terrain.height(at: point) + 0.12, point.y)
-    flash(at: centre, side: .hostile, size: Grenade.radius)
-    let count = Self.chipsPerStrike * 2
-    for number in 0..<count {
-      let angle = 2 * Float.pi * Float(number) / Float(count)
-      let direction = SIMD3<Float>(sin(angle), 0, cos(angle))
-      let index = chipPool.take()
-      chips[index] = Chip(
-        position: centre + direction * Grenade.radius * 0.35,
-        velocity: direction * 3 + [0, 2, 0], remaining: Self.chipTime)
-      let entity = chipPool.entities[index]
-      entity.position = chips[index].position
-      entity.scale = [chipSize, chipSize, chipSize]
-      entity.isEnabled = true
-    }
-  }
-
   /// One frame: streaks fly on, flashes go out, chips fall and marks fade from sight.
   func update(dt: Float) {
     for side in [Side.party, .hostile] {
@@ -204,7 +180,7 @@ final class ShotEffects {
       chips[index].position += chips[index].velocity * dt
       let entity = chipPool.entities[index]
       let point = chips[index].position
-      if chips[index].remaining <= 0 || point.y < terrain.height(at: [point.x, point.z]) {
+      if chips[index].remaining <= 0 || point.y < 0 {
         chips[index].remaining = 0
         entity.isEnabled = false
       } else {

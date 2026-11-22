@@ -4,6 +4,9 @@
 **Date:** 21 November 2026\
 **Amended:** 22 November 2026, when [ADR 0008](0008-weapon-feel-and-combat-plan.md) removed the aim line, made shots leave the way the leader faces, within a spread, and gave shots sound and vibration
 
+
+**Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
+
 ## Context
 
 On 21 November 2026 the maintainer asked for a better shooting system: **“I think we need to improve the shooting system to make combat feel more responsive, realistic, and satisfying. At the moment, I can't see the bullets or projectiles when firing, and the right joystick doesn't seem to allow me to aim.”** The request named five changes:

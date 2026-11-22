@@ -124,10 +124,6 @@ struct WeaponPose: Sendable {
   /// From 1 as a shot fires, settling to 0.
   private(set) var kick: Float = 0
   private var held: Float = 0
-  /// Assisted vertical aim on the single-surface terraces; horizontal facing remains owned
-  /// by the actor's finite turn. The barrel follows the same slope as its shot.
-  var pitch: Float = 0
-
   init(kind: Weapon.Kind = .carbine) {
     self.kind = kind
   }
@@ -146,18 +142,6 @@ struct WeaponPose: Sendable {
       Profile(
         lowGrip: [0.18, -0.05, -0.12], raisedGrip: [0.17, 0.4, -0.16], barrel: 0.5,
         kickBack: 0.16, kickLift: 16 * .pi / 180)
-    case .submachineGun:
-      Profile(
-        lowGrip: [0.14, -0.01, -0.08], raisedGrip: [0.14, 0.4, -0.1], barrel: 0.26,
-        kickBack: 0.04, kickLift: 4 * .pi / 180)
-    case .marksman:
-      Profile(
-        lowGrip: [0.17, -0.05, -0.12], raisedGrip: [0.16, 0.4, -0.18], barrel: 0.76,
-        kickBack: 0.19, kickLift: 13 * .pi / 180)
-    case .supportGun:
-      Profile(
-        lowGrip: [0.2, -0.07, -0.12], raisedGrip: [0.18, 0.4, -0.16], barrel: 0.62,
-        kickBack: 0.09, kickLift: 8 * .pi / 180)
     }
   }
 
@@ -193,8 +177,7 @@ struct WeaponPose: Sendable {
     let held = simd_slerp(low, simd_quatf(angle: 0, axis: [0, 1, 0]), raise)
     let lift = simd_quatf(angle: profile.kickLift * kick, axis: [1, 0, 0])
     let grip = simd_mix(profile.lowGrip, profile.raisedGrip, SIMD3(repeating: raise))
-    let elevation = simd_quatf(angle: pitch * raise, axis: [1, 0, 0])
-    return (grip + SIMD3(0, 0, profile.kickBack * kick), held * elevation * lift)
+    return (grip + SIMD3(0, 0, profile.kickBack * kick), held * lift)
   }
 
   /// Where the raised weapon's muzzle is on the ground, for a figure at `position` facing

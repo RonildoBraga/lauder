@@ -7,7 +7,7 @@ import simd
 @MainActor
 struct MapShotRangeTests {
   @Test
-  func anUnobstructedRoundReachesTheArenaEdgeWithoutAnInvisibleImpact() {
+  func anUnobstructedRoundReachesTheMapEdgeWithoutAnInvisibleImpact() {
     let ballistics = Ballistics(level: level())
     let shot = ballistics.traceAcrossLevel(
       from: [0, 1.25, 6], direction: [0, 0, -1], targets: [])
@@ -26,7 +26,7 @@ struct MapShotRangeTests {
   }
 
   @Test
-  func aMuchLongerBridgeIsNotTruncatedAtTheArenaDiagonal() {
+  func theBridgeIsNotTruncatedAtASmallerMapsDiagonal() {
     let ground = BrooklynBridge.level.ground
     let ballistics = Ballistics(level: level(ground: ground))
     let bounds = ground.footprint
@@ -64,46 +64,6 @@ struct MapShotRangeTests {
   }
 
   @Test
-  func longerTravelStillRespectsActualCoverAndRetainingWalls() {
-    let deck = Terrain(patches: [
-      .flat(minimum: [-3, 4], maximum: [3, 12], height: 2.4)
-    ])
-    let low: [Level.Box] = [.box("low", at: [0, 0.55, 0], size: [4, 1.1, 1])]
-    let downhill = Ballistics(level: level(terrain: deck, boxes: low))
-    let start = downhill.point([0, 7])
-    let destination = downhill.point([0, -35])
-    let clear = downhill.traceAcrossLevel(
-      from: start, direction: destination - start,
-      targets: [.init(id: "lower", centre: destination)])
-    #expect(clear.strike == .body("lower"))
-    #expect(simd_distance(clear.start, clear.end) > 35)
-
-    let earlyDeck = Terrain(patches: [
-      .flat(minimum: [-3, -20], maximum: [3, 12], height: 2.4)
-    ])
-    let uphill = Ballistics(level: level(terrain: earlyDeck))
-    let lower = uphill.point([0, -35])
-    let upper = uphill.point([0, 5])
-    let blocked = uphill.traceAcrossLevel(
-      from: lower, direction: upper - lower, targets: [.init(id: "upper", centre: upper)])
-    #expect(blocked.strike == .scenery && abs(blocked.end.z + 20) < 0.0001)
-    #expect(blocked.end.y < 2.4)
-  }
-
-  @Test
-  func aDistantClosedGateStillStopsTheRound() {
-    var ballistics = Ballistics(level: level())
-    ballistics.gate = .init(minimum: [-3, -30], maximum: [3, -29])
-    let blocked = ballistics.traceAcrossLevel(
-      from: [0, 1.25, 6], direction: [0, 0, -1], targets: [])
-    #expect(blocked.strike == .scenery && abs(blocked.end.z + 29) < 0.0001)
-    ballistics.gate = nil
-    let clear = ballistics.traceAcrossLevel(
-      from: [0, 1.25, 6], direction: [0, 0, -1], targets: [])
-    #expect(clear.strike == .nothing && clear.end.z < blocked.end.z)
-  }
-
-  @Test
   func invalidAndOutwardBoundaryRaysCannotEscapeAsUnboundedShots() {
     let ballistics = Ballistics(level: level())
     for direction: SIMD3<Float> in [.zero, [0, 1, 0], [.nan, 0, 0], [.infinity, 0, 0]] {
@@ -118,12 +78,12 @@ struct MapShotRangeTests {
   }
 
   private func level(
-    ground: Level.Box? = nil, terrain: Terrain = Terrain(), boxes: [Level.Box] = []
+    ground: Level.Box? = nil, boxes: [Level.Box] = []
   ) -> Level {
     Level(
       id: "map-shot-range",
       ground: ground ?? .box("floor", at: [0, -0.15, -18], size: [52, 0.3, 60]),
-      terrain: terrain, boxes: boxes, interactions: [], triggers: [],
+      boxes: boxes, interactions: [], triggers: [],
       party: [.miki], spawns: [.miki: [0, 6]], heading: [0, -1],
       cameraOffset: [0, 10, 10], fieldOfView: 42,
       opening: "Range.", objective: "Range.", lookAround: "Range.", restartNote: "Restart.")

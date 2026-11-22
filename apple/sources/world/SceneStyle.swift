@@ -8,7 +8,7 @@ struct SceneStyle {
   // The level's look comes from its scene file, and the party's and the hostiles' from their
   // models' scene files, all exported by Blender (ADR 0002). The gameplay signals keep their own
   // colours here.
-  /// A level without a scene file, such as the combat yard or a test's: its boxes as plain
+  /// A test fixture without a scene file: its boxes as plain
   /// blocks.
   let scenery = SimpleMaterial(
     color: UIColor(red: 0.55, green: 0.57, blue: 0.56, alpha: 1), roughness: 0.9,
@@ -21,27 +21,14 @@ struct SceneStyle {
   let gear = SimpleMaterial(
     color: UIColor(red: 0.16, green: 0.25, blue: 0.25, alpha: 1), roughness: 0.9,
     isMetallic: false)
-  /// The palette's colours that the salvage yard's greybox adds (the visual direction): rust for
-  /// a barrier or a warning, ink for a pole, faded teal for old paintwork, and stone.
-  let rust = SceneStyle.palette(166, 90, 67)
+  /// Dark chips and marks left by shots.
   let ink = SceneStyle.palette(54, 65, 75)
-  let fadedTeal = SceneStyle.palette(94, 124, 128)
-  let stone = SceneStyle.palette(183, 172, 157)
   /// Amber: things to use, and the leader's disc.
   let warm = UnlitMaterial(color: UIColor(red: 1, green: 0.75, blue: 0.4, alpha: 1))
   /// Threats: a hostile's aim and shots, and the assisted target's marker.
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
 
-  func material(for look: Level.Box.Look) -> any Material {
-    switch look {
-    case .scenery: scenery
-    case .signal: signal
-    case .rust: rust
-    case .teal: fadedTeal
-    case .ink: ink
-    }
-  }
   /// How much larger than their authored sizes the world markers show: the leader's disc, order
   /// rings, the refusal cross, the aim marker and the aim and shot lines.
   let markerScale: Float
@@ -123,9 +110,6 @@ struct SceneStyle {
       case .carbine, .rifle: [0.07, 0.08, 0.55]
       case .lightBurst: [0.065, 0.07, 0.4]
       case .closeScatter: [0.13, 0.11, 0.65]
-      case .submachineGun: [0.065, 0.075, 0.32]
-      case .marksman: [0.065, 0.08, 0.86]
-      case .supportGun: [0.12, 0.13, 0.72]
       }
     grip.name =
       switch kind {
@@ -133,23 +117,11 @@ struct SceneStyle {
       case .lightBurst: "weapon.light-burst"
       case .closeScatter: "weapon.close-scatter"
       case .rifle: "weapon.rifle"
-      case .submachineGun: "weapon.submachine-gun"
-      case .marksman: "weapon.marksman"
-      case .supportGun: "weapon.support-gun"
       }
     let barrel = WeaponPose.profile(for: kind).barrel
     grip.addChild(
       block(
         size: size, at: [0, 0, size.z / 2 - barrel], material: gear))
-    if kind == .marksman {
-      let scope = block(size: [0.075, 0.07, 0.2], at: [0, 0.075, -0.29], material: ink)
-      scope.name = "weapon.scope"
-      grip.addChild(scope)
-    } else if kind == .supportGun {
-      let magazine = block(size: [0.18, 0.16, 0.2], at: [0, -0.11, -0.22], material: ink)
-      magazine.name = "weapon.box-magazine"
-      grip.addChild(magazine)
-    }
     return grip
   }
 
@@ -199,17 +171,9 @@ struct SceneStyle {
   /// and copied for every figure that shows it.
   private static var models: [String: Entity] = [:]
 
-  /// Only the bridge currently has a bundled level scene. Keep one pristine template,
-  /// replacing it when another name is requested, and give every world its own hierarchy.
-  private static var levelScene: (name: String, template: Entity)?
-
+  /// The bridge is loaded once; Restart resets its state in place.
   static func scene(named name: String) throws -> Entity {
-    if let levelScene, levelScene.name == name {
-      return levelScene.template.clone(recursive: true)
-    }
-    let template = try Entity.load(named: name, in: .main)
-    levelScene = (name, template)
-    return template.clone(recursive: true)
+    try Entity.load(named: name, in: .main)
   }
 
   /// A figure from its model. The model stands on the ground at its origin and faces Blender's

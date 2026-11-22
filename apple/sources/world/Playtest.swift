@@ -9,139 +9,34 @@
   /// simulated frame and writes a trace and a summary into the app's Documents/playtest folder.
   struct PlaytestRunner {
     enum Step {
-      /// Steer the leader to a point; fails after two minutes, long enough to walk between the
-      /// bridge's towers. A conversation that starts on the way, as at the end of the opening,
-      /// ends the walk.
       case walk(SIMD2<Float>)
-      /// Follow a legal navigation route through the same movement input as a player.
-      case navigate(SIMD2<Float>, defending: Bool = false)
       case wait(seconds: Float)
-      /// A named moment, for stills cut from the screen recording.
       case mark(String)
-      /// Press the action for one frame. While paused it confirms the menu's choice.
       case act
-      /// Press the action to start a conversation, then once per line until play resumes.
       case talk
-      /// Press Pause for one frame.
       case pause
-      /// Move the pause menu's choice: -1 up, 1 down.
       case menu(Int)
-      /// Everyone back where a new run starts, with the level's starting party and no progress.
       case expectRestarted
-      /// How many trigger areas have shown their line in this run.
       case expectTriggers(Int)
-      /// Hold Fire, which draws the weapon and then shoots at the assisted target.
       case fire(seconds: Float)
-      /// Hold the right stick towards this direction on the ground, and Fire, for this long
-      /// (ADR 0007).
-      case fireAimed(SIMD2<Float>, seconds: Float)
-      /// Keep aiming and firing until the current weapon starts its automatic reload.
-      case fireUntilReloading(SIMD2<Float>, seconds: Float)
-      /// Wait without Fire until a new magazine is ready.
-      case awaitReloaded(seconds: Float)
-      /// The active weapon and its mechanical magazine; nil accepts any loaded count.
-      case expectWeapon(Weapon.Kind, loaded: ClosedRange<Int>?, reloading: Bool)
-      case rememberWeapon
-      case expectRememberedWeapon
-      case expectPartyWeaponFired(Weapon.Kind)
-      case expectEnemyWeaponFired(Weapon.Kind)
-      case expectShotTravel(atLeast: Float, scenery: Bool)
-      case rememberShotMetrics
-      case expectShotMetricsHeld
-      case expectNoShotMetrics
-      /// Let new weapons complete their real wind-ups; no forced damage or spawn changes.
-      case observeEnemyWeapons(Set<Weapon.Kind>, seconds: Float)
-      case expectEnemyRecovery(Weapon.Kind)
-      case expectMarksmanRetreated
-      /// How many player-fired rounds the party has left.
-      case expectAmmo(Int)
-      /// At least this many shots' marks show on blocks (ADR 0007).
-      case expectMarks(atLeast: Int)
       case expectBeat(GameSession.Beat)
-      /// How many hostiles are down in this run.
       case expectDefeated(Int)
-      /// How many hits the leader has taken in the current encounter.
       case expectHits(Int)
-      /// Who travels together, in switching order.
       case expectParty([PartyMember])
-      /// Press the formation button for one frame.
       case formation
       case expectFormation(GameSession.Formation)
-      /// Press a D-pad direction for one frame: a squad order (ADR 0003, phase S3).
       case order(GameSession.Command)
-      /// Give an order from the touch menu, pressing where this point of the ground shows.
       case touchOrder(GameSession.Command, at: SIMD2<Float>)
-      /// Press R1 for one frame, to lead as the next member.
       case switchLeader
-      /// A member's order: "following", "going" or "holding".
       case expectOrder(PartyMember, String)
-      /// What the squad is doing, as the HUD says it, such as "following" or "regrouping".
-      case expectSquad(String)
-      /// Wait until the squad is doing this, as the HUD says it; fails after this many seconds.
-      case awaitSquad(String, seconds: Float)
-      /// A member stands within this distance of a point.
-      case expectNear(PartyMember, SIMD2<Float>, within: Float)
-      /// A member stands at least this far from the leader.
-      case expectApart(PartyMember, atLeast: Float)
-      /// How many orders were refused in this run, each with a brief cross.
-      case expectRefused(Int)
-      /// Wait until a conversation begins; fails after this many seconds.
       case awaitConversation(seconds: Float)
-      /// The level in play, by its id, such as "combat-yard" after the pause menu's third choice.
-      case expectLevel(String)
-      case expectFighting(Bool)
-      case expectRepaired(Bool)
-      /// The active member's cover and whether firing has exposed them (ADR 0009). Nil means
-      /// no nearby cover; the stance and visibility checks then do not apply.
-      case expectCover(String?, firing: Bool?, exposed: Bool)
-      /// The real committed tall-edge offset clears a shot towards the level's heading.
-      case expectCoverPeek(atLeast: Float)
-      /// Press Square for one frame: the leader's signature, such as Miki's Disrupt.
-      case signature
-      /// Wait until the HUD says Miki can Disrupt; fails after this many seconds.
-      case awaitDisrupt(seconds: Float)
-      /// How many wind-ups Disrupt has cancelled in this run.
-      case expectDisrupts(Int)
-      /// A member has fired by themselves as a companion in this run.
-      case expectFired(PartyMember)
-      /// Wait until the party has fallen back this many times in this run; fails after this
-      /// many seconds.
-      case awaitFallBacks(Int, seconds: Float)
-      /// How many times the party has fallen back in this run.
-      case expectFallBacks(Int)
-      /// Hold Fire until this many hostiles are down in this run; fails after this many seconds.
-      case fireUntilDefeated(Int, seconds: Float)
-      case awaitCombatClear(seconds: Float)
-      /// The HUD's latest line, exactly, such as what an action just did.
-      case expectLine(String)
-      /// Wait for an active, warned grenade; fails after this many seconds.
-      case awaitGrenade(seconds: Float)
-      /// Remember the warned landing points and fuses for the Pause and escape checks.
-      case rememberGrenades
-      /// The remembered grenades still have exactly the same fuses while paused.
-      case expectGrenadesHeld
-      /// The leader has left every remembered grenade's marked blast radius.
-      case expectOutsideGrenadeMarkers
-      /// Wait until this many grenades have exploded; fails after this many seconds.
-      case awaitExplosions(Int, seconds: Float)
-      /// At least this many hostiles have moved tactically in this run.
-      case expectMovedEnemies(atLeast: Int)
-      /// Fight through complete arena packs using normal movement, aim and Fire input.
-      case battleUntilWave(Int, seconds: Float)
-      case awaitArenaWarnings(seconds: Float)
-      case expectArenaWave(Int)
-      case rememberArena
-      case expectArenaHeld
-      /// The actual leader body's floor height, rather than a layout-only query.
-      case expectHeight(ClosedRange<Float>)
-      /// Steer the leader to the cabinet that holds these contents in this run, which the run
-      /// dealt in a random order (ADR 0006), as `walk` steers to a point.
-      case walkToCabinet(Level.Salvage.Contents)
+      case expectNear(PartyMember, SIMD2<Float>, within: Float)
+      case expectApart(PartyMember, atLeast: Float)
+      case expectRefused(Int)
     }
 
     /// What the runner can see of the game each frame.
     struct Snapshot {
-      /// The level in play, which the pause menu's third choice can change.
       let level: Level
       let leader: PartyMember
       let party: [PartyMember]
@@ -151,7 +46,6 @@
       let beat: GameSession.Beat
       let hitsTaken: Int
       let defeated: Int
-      let isFighting: Bool
       let ammo: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
@@ -159,33 +53,11 @@
       let squadState: String
       /// The HUD's latest line.
       let line: String
-      /// What each salvage cabinet holds in this run, by id.
-      let salvageContents: [String: Level.Salvage.Contents]
-      let salvageRepaired: Bool
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
-      /// Whether the HUD says Miki can Disrupt.
-      let canDisrupt: Bool
-      let disrupts: Int
-      let companionShots: [PartyMember: Int]
-      let fallBacks: Int
-      /// How many shots' marks show on blocks.
-      let shotMarks: Int
-      /// The leader's cover stance and directional protection, tried only in the combat yard.
-      let leaderCover: FightSimulation.CoverState?
-      /// The current leader's weapon, including an automatic reload's remaining time.
+      /// Native weapon state, observed by headless Pause/reload regressions.
       let weapon: FightSimulation.WeaponStatus
-      let grenades: [Grenade]
-      let grenadesThrown: Int
-      let grenadesExploded: Int
-      let movedEnemies: Set<String>
-      let arenaWave: Int?
-      let arenaWarnings: [String: Float]
-      let hostiles: [String: HostileState]
-      let enemyCover: [String: FightSimulation.CoverState]
-      let heights: [PartyMember: Float]
-      let shotMetrics: ArsenalPlaytest.ShotMetrics
     }
 
     struct Frame {
@@ -220,23 +92,10 @@
       let steps: Int
       let frameMilliseconds: Timing
       let simulationMilliseconds: Timing
-      /// Initial construction and each level replacement, in order. Renderer start-up is
-      /// outside these elapsed timings; compare them with frame times rather than adding them.
-      let worldLoads: [WorldLoadTiming]
       let warningFrames: Int
       let overlapFraction: Double
       let withinSlotWhileMoving: Double
       let worstLeaderGap: Double
-      let highestArenaWave: Int
-      let peakArrivalWarnings: Int
-      let lowestFloor: Float
-      let highestFloor: Float
-      let longestPartyTrace: Float
-      let longestPartySceneryTrace: Float
-      let partyWeaponsFired: [String]
-      let hostileWeaponsFired: [String]
-      let hostileWeaponsRecovered: [String]
-      let marksmanRetreated: Bool
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -262,44 +121,18 @@
     private var failures: [String] = []
     private var trace =
       "t,dt,leader,miki_x,miki_z,laura_x,laura_z,tom_x,tom_z,"
-      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning,wave,ammo,enemies\n"
-    private var arenaTrace = ",,"
+      + "miki_tx,miki_tz,laura_tx,laura_tz,tom_tx,tom_tz,warning\n"
     private var frameTimes: [Double] = []
     private var simulationTimes: [Double] = []
-    private var worldLoads: [WorldLoadTiming] = []
     private var warningFrames = 0
     private var overlapFrames = 0
     private var movingSamples = 0
     private var withinSlot = 0
     private var worstGap: Float = 0
     private var previousLeaderPosition: SIMD2<Float>?
-    /// The actual warned grenades, retained across Pause and the walk out of their markers.
-    private var watchedGrenades: [Grenade] = []
-    private var arenaPilot = ArenaPlaytest.Pilot()
-    private var watchedArena: Snapshot?
-    private var highestArenaWave = 0
-    private var peakArrivalWarnings = 0
-    private var lowestFloor: Float = 0
-    private var highestFloor: Float = 0
-    private var arsenalObserver = ArsenalPlaytest.Observer()
-    private var rememberedWeapon: FightSimulation.WeaponStatus?
-    private var rememberedShotMetrics: ArsenalPlaytest.ShotMetrics?
-    private var longestPartyTrace: Float = 0
-    private var longestPartySceneryTrace: Float = 0
-    private var partyWeaponsFired: Set<String> = []
-    private var hostileWeaponsFired: Set<String> = []
-    private var hostileWeaponsRecovered: Set<String> = []
-    private var marksmanRetreated = false
     private(set) var summary: Summary?
     /// Set by the world from the window scene; recorded in the summary.
     var orientation = "unknown"
-
-    /// Construction happens between worlds' frames. Keep its timing with the runner as it
-    /// carries on in the new world, without treating a load as a gameplay update.
-    mutating func recordLoad(_ timing: WorldLoadTiming) {
-      guard summary == nil else { return }
-      worldLoads.append(timing)
-    }
 
     init?(scenario: String) {
       guard let steps = Self.steps(for: scenario) else { return nil }
@@ -327,62 +160,9 @@
       let leader = snapshot.leader
       let positions = snapshot.positions
       let leaderPosition = positions[leader] ?? .zero
-      let enemies = snapshot.hostiles.values.filter { $0.isVisible && !$0.isDown }
-        .sorted { $0.spec.id < $1.spec.id }.map { state in
-          let cover = snapshot.enemyCover[state.spec.id]
-          let point = state.position + (cover?.offset ?? .zero)
-          return "\(state.spec.id):\(Self.decimal(point.x)):\(Self.decimal(point.y))"
-            + ":\(cover?.isLow == true ? "low" : "standing"):\(cover?.firing == true ? "up" : "down")"
-        }.joined(separator: ";")
-      arenaTrace = "\(snapshot.arenaWave.map(String.init) ?? ""),\(snapshot.ammo),\(enemies)"
-      highestArenaWave = max(highestArenaWave, snapshot.arenaWave ?? 0)
-      peakArrivalWarnings = max(peakArrivalWarnings, snapshot.arenaWarnings.count)
-      if let height = snapshot.heights[leader] {
-        lowestFloor = min(lowestFloor, height)
-        highestFloor = max(highestFloor, height)
-      }
-      longestPartyTrace = max(longestPartyTrace, snapshot.shotMetrics.longestPartyTrace)
-      longestPartySceneryTrace = max(
-        longestPartySceneryTrace, snapshot.shotMetrics.longestPartySceneryTrace)
-      partyWeaponsFired.formUnion(snapshot.shotMetrics.partyWeapons.keys.map(\.name))
-      hostileWeaponsFired.formUnion(snapshot.shotMetrics.hostileWeapons.keys.map(\.name))
-      for state in snapshot.hostiles.values {
-        if case .recovering = state.phase,
-          snapshot.shotMetrics.hostileActors[state.spec.id, default: 0] > 0
-        {
-          hostileWeaponsRecovered.insert(state.spec.weapon.name)
-        }
-        if state.spec.weapon == .marksman, snapshot.movedEnemies.contains(state.spec.id) {
-          marksmanRetreated = true
-        }
-      }
       while index < steps.count {
         switch steps[index] {
         case .walk(let target):
-          if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
-        case .navigate(let target, let defending):
-          if simd_distance(target, leaderPosition) < 0.25 {
-            advance()
-            continue
-          }
-          if stepTime > Self.walkTimeout {
-            failures.append("navigation did not reach \(Self.describe(target)) within two minutes")
-            advance()
-            continue
-          }
-          let raw = arenaPilot.navigate(to: target, snapshot: snapshot, seconds: elapsed)
-          return defending ? arenaPilot.defend(raw, snapshot: snapshot, seconds: elapsed) : raw
-        case .walkToCabinet(let contents):
-          guard
-            let cabinet = snapshot.level.salvage?.cabinets.first(where: {
-              snapshot.salvageContents[$0.id] == contents
-            })
-          else {
-            failures.append("no cabinet holds \(contents) in this run")
-            advance()
-            continue
-          }
-          let target = (cabinet.approach.minimum + cabinet.approach.maximum) / 2
           if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
         case .wait(let seconds):
           guard stepTime < seconds else {
@@ -432,113 +212,6 @@
         case .expectOrder(let member, let word):
           let actual = snapshot.orders[member]?.word ?? "following"
           expect(actual == word, "\(member.displayName) was \(actual) instead of \(word)")
-        case .expectLine(let line):
-          expect(snapshot.line == line, "the line was \"\(snapshot.line)\" instead of \"\(line)\"")
-        case .awaitGrenade(let seconds):
-          if !snapshot.grenades.isEmpty {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append("no grenade was warned within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .rememberGrenades:
-          watchedGrenades = snapshot.grenades
-          expect(!watchedGrenades.isEmpty, "there was no active grenade to remember")
-        case .expectGrenadesHeld:
-          let held =
-            !watchedGrenades.isEmpty && snapshot.grenades.count == watchedGrenades.count
-            && watchedGrenades.allSatisfy { remembered in
-              snapshot.grenades.contains {
-                $0.id == remembered.id && $0.position == remembered.position
-                  && abs($0.remaining - remembered.remaining) < 0.000001
-              }
-            }
-          expect(snapshot.mode == .paused && held, "Pause did not hold the warned grenade fuses")
-        case .expectOutsideGrenadeMarkers:
-          expect(
-            !watchedGrenades.isEmpty && watchedGrenades.allSatisfy { !$0.contains(leaderPosition) },
-            "the leader remained inside a warned grenade's blast radius")
-        case .awaitExplosions(let count, let seconds):
-          if snapshot.grenadesExploded >= count {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append(
-              "only \(snapshot.grenadesExploded) grenade(s) exploded within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .expectMovedEnemies(let count):
-          expect(
-            snapshot.movedEnemies.count >= count,
-            "only \(snapshot.movedEnemies.count) hostile(s) moved tactically instead of at least \(count)"
-          )
-        case .battleUntilWave(let wave, let seconds):
-          if (snapshot.arenaWave ?? 0) >= wave {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append(
-              "arena reached wave \(snapshot.arenaWave ?? 0), not \(wave), within \(Int(seconds)) s"
-            )
-            advance()
-            continue
-          }
-          return arenaPilot.fight(snapshot: snapshot, seconds: elapsed)
-        case .awaitArenaWarnings(let seconds):
-          if !snapshot.arenaWarnings.isEmpty {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append("no arena arrival was warned within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .expectArenaWave(let wave):
-          expect(
-            snapshot.arenaWave == wave, "arena wave was \(snapshot.arenaWave ?? 0), not \(wave)")
-        case .rememberArena:
-          watchedArena = snapshot
-          expect(snapshot.arenaWave != nil, "there was no arena state to remember")
-        case .expectArenaHeld:
-          let held =
-            watchedArena.map { old in
-              old.arenaWave == snapshot.arenaWave && old.arenaWarnings == snapshot.arenaWarnings
-                && old.hostiles.mapValues(\.phase) == snapshot.hostiles.mapValues(\.phase)
-                && old.hostiles.mapValues(\.position) == snapshot.hostiles.mapValues(\.position)
-                && old.positions == snapshot.positions && old.hitsTaken == snapshot.hitsTaken
-                && old.ammo == snapshot.ammo && old.defeated == snapshot.defeated
-            } ?? false
-          expect(
-            snapshot.mode == .paused && held, "Pause advanced arena warnings, actors or combat")
-        case .expectHeight(let range):
-          let actual = snapshot.heights[leader] ?? .infinity
-          expect(
-            range.contains(actual), "the leader's floor height was \(actual), not within \(range)")
-        case .expectSquad(let state):
-          expect(
-            snapshot.squadState == state,
-            "the squad was \(snapshot.squadState) instead of \(state)")
-        case .awaitSquad(let state, let seconds):
-          if snapshot.squadState == state {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append("the squad was not \(state) within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
         case .expectNear(let member, let point, let distance):
           let position = positions[member] ?? [.nan, .nan]
           expect(
@@ -608,19 +281,12 @@
             || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
             || snapshot.mode != .exploring || snapshot.formation != .close
             || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
-            || !snapshot.grenades.isEmpty || snapshot.grenadesThrown != 0
-            || snapshot.grenadesExploded != 0 || !snapshot.movedEnemies.isEmpty
-            || (start.arena != nil
-              && (snapshot.arenaWave != 1 || !snapshot.arenaWarnings.isEmpty
-                || snapshot.hostiles.values.contains(where: \.isVisible)))
+
           {
             failures.append(
               "after Restart \(snapshot.leader.displayName) led a party of "
                 + "\(snapshot.party.count) in \(snapshot.formation.name), the story was at "
-                + "\(snapshot.beat) and \(snapshot.firedTriggers) trigger(s) had fired; "
-                + "grenades active/thrown/exploded: \(snapshot.grenades.count)/"
-                + "\(snapshot.grenadesThrown)/\(snapshot.grenadesExploded), "
-                + "moved hostiles: \(snapshot.movedEnemies.count)")
+                + "\(snapshot.beat) and \(snapshot.firedTriggers) trigger(s) had fired")
           }
           for (member, position) in positions
           where simd_distance(position, start.spawn(member)) > 0.3 {
@@ -638,110 +304,6 @@
             return InputRules.Raw()
           }
           return InputRules.Raw(controllerFire: true)
-        case .fireAimed(let direction, let seconds):
-          guard stepTime < seconds else {
-            advance()
-            return InputRules.Raw()
-          }
-          return InputRules.Raw(
-            aimStick: Movement.stick(towards: direction, cameraOffset: snapshot.level.cameraOffset),
-            controllerFire: true)
-        case .fireUntilReloading(let direction, let seconds):
-          if snapshot.weapon.reloadRemaining > 0 {
-            advance()
-            return InputRules.Raw()
-          }
-          if stepTime > seconds {
-            failures.append("the weapon did not reload within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw(
-            aimStick: Movement.stick(towards: direction, cameraOffset: snapshot.level.cameraOffset),
-            controllerFire: true)
-        case .awaitReloaded(let seconds):
-          if snapshot.weapon.reloadRemaining == 0 && snapshot.weapon.loaded > 0 {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append("the reload did not finish within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .expectWeapon(let kind, let loaded, let reloading):
-          let weapon = snapshot.weapon
-          expect(
-            weapon.kind == kind && (loaded?.contains(weapon.loaded) ?? true)
-              && (weapon.reloadRemaining > 0) == reloading,
-            "weapon was \(weapon.kind), loaded \(weapon.loaded), reload \(weapon.reloadRemaining); "
-              + "expected \(kind), loaded \(String(describing: loaded)), reloading \(reloading)")
-        case .rememberWeapon:
-          rememberedWeapon = snapshot.weapon
-          advance()
-        case .expectRememberedWeapon:
-          expect(
-            rememberedWeapon.map {
-              $0.kind == snapshot.weapon.kind && $0.loaded == snapshot.weapon.loaded
-                && $0.isDrawn == snapshot.weapon.isDrawn
-            } ?? false, "leadership changed or refilled the remembered weapon")
-        case .expectPartyWeaponFired(let kind):
-          expect(
-            snapshot.shotMetrics.partyWeapons[kind, default: 0] > 0,
-            "no actual party discharge used \(kind.name)")
-        case .expectEnemyWeaponFired(let kind):
-          expect(
-            hostileWeaponsFired.contains(kind.name), "no actual hostile discharge used \(kind.name)"
-          )
-        case .expectEnemyRecovery(let kind):
-          expect(
-            hostileWeaponsRecovered.contains(kind.name),
-            "\(kind.name) never entered recovery after firing")
-        case .expectMarksmanRetreated:
-          expect(marksmanRetreated, "the marksman never actually yielded ground")
-        case .expectShotTravel(let minimum, let scenery):
-          let distance =
-            scenery
-            ? snapshot.shotMetrics.longestPartySceneryTrace : snapshot.shotMetrics.longestPartyTrace
-          expect(
-            distance >= minimum,
-            "the longest actual \(scenery ? "wall strike" : "shot") was \(distance) m, below \(minimum) m"
-          )
-        case .rememberShotMetrics:
-          rememberedShotMetrics = snapshot.shotMetrics
-          advance()
-        case .expectShotMetricsHeld:
-          expect(
-            snapshot.mode == .paused && rememberedShotMetrics == snapshot.shotMetrics,
-            "Pause advanced a discharge or its recorded range")
-        case .expectNoShotMetrics:
-          expect(
-            snapshot.shotMetrics == ArsenalPlaytest.ShotMetrics(),
-            "Restart retained discharge counters")
-        case .observeEnemyWeapons(let kinds, let seconds):
-          if kinds.allSatisfy({
-            hostileWeaponsFired.contains($0.name) && hostileWeaponsRecovered.contains($0.name)
-          }), marksmanRetreated {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append(
-              "new hostile weapon/recovery/retreat observations did not finish within \(Int(seconds)) s"
-            )
-            advance()
-            continue
-          }
-          return arsenalObserver.input(
-            needing: kinds, marksmanRetreated: marksmanRetreated,
-            snapshot: snapshot, seconds: elapsed)
-        case .expectAmmo(let count):
-          expect(snapshot.ammo == count, "the party had \(snapshot.ammo) round(s), not \(count)")
-        case .expectMarks(let count):
-          expect(
-            snapshot.shotMarks >= count,
-            "\(snapshot.shotMarks) shot mark(s) showed instead of at least \(count)")
         case .expectBeat(let beat):
           expect(snapshot.beat == beat, "the story was at \(snapshot.beat) instead of \(beat)")
         case .expectDefeated(let count):
@@ -756,95 +318,6 @@
           expect(
             snapshot.hitsTaken == count,
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
-        case .expectLevel(let id):
-          expect(snapshot.level.id == id, "the level was \(snapshot.level.id) instead of \(id)")
-        case .expectFighting(let expected):
-          expect(
-            snapshot.isFighting == expected,
-            "fighting was \(snapshot.isFighting) instead of \(expected)")
-        case .expectRepaired(let expected):
-          expect(
-            snapshot.salvageRepaired == expected,
-            "repair was \(snapshot.salvageRepaired) instead of \(expected)")
-        case .expectCover(let box, let firing, let exposed):
-          let cover = snapshot.leaderCover
-          expect(
-            cover?.boxID == box
-              && (box == nil
-                || ((firing == nil || cover?.firing == firing) && cover?.exposed == exposed)),
-            "cover was \(cover?.boxID ?? "none"), firing \(cover?.firing ?? false), "
-              + "exposed \(cover?.exposed ?? false); expected \(box ?? "none"), "
-              + "firing \(firing.map(String.init) ?? "any"), exposed \(exposed)")
-        case .expectCoverPeek(let distance):
-          let cover = snapshot.leaderCover
-          let origin = (cover?.position ?? leaderPosition) + (cover?.offset ?? .zero)
-          let ballistics = Ballistics(level: snapshot.level)
-          expect(
-            cover?.firing == true && simd_length(cover?.offset ?? .zero) >= distance
-              && ballistics.isClear(
-                from: ballistics.point(origin),
-                to: ballistics.point(origin + snapshot.level.heading * 3)),
-            "the committed tall-edge peek did not clear the wall")
-        case .signature:
-          return press(InputRules.Raw(controllerSignature: true))
-        case .awaitDisrupt(let seconds):
-          if snapshot.canDisrupt {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append("Miki could not Disrupt within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .expectDisrupts(let count):
-          expect(
-            snapshot.disrupts == count,
-            "Disrupt had cancelled \(snapshot.disrupts) wind-up(s) instead of \(count)")
-        case .expectFired(let member):
-          expect(
-            snapshot.companionShots[member, default: 0] > 0,
-            "\(member.displayName) had not fired by themselves")
-        case .awaitFallBacks(let count, let seconds):
-          if snapshot.fallBacks >= count {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append(
-              "the party had not fallen back \(count) time(s) within \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .expectFallBacks(let count):
-          expect(
-            snapshot.fallBacks == count,
-            "the party had fallen back \(snapshot.fallBacks) time(s) instead of \(count)")
-        case .awaitCombatClear(let seconds):
-          if !snapshot.isFighting {
-            advance()
-            continue
-          }
-          if stepTime > seconds {
-            failures.append("combat remained active after \(Int(seconds)) s")
-            advance()
-            continue
-          }
-          return InputRules.Raw()
-        case .fireUntilDefeated(let count, let seconds):
-          if snapshot.defeated >= count {
-            advance()
-            return InputRules.Raw()
-          }
-          if stepTime > seconds {
-            failures.append(
-              "\(snapshot.defeated) hostile(s) were down after \(Int(seconds)) s of fire")
-            advance()
-            return InputRules.Raw()
-          }
-          return InputRules.Raw(controllerFire: true)
         }
       }
       finish()
@@ -931,7 +404,7 @@
         let point = frame.targets[member]
         row += ",\(Self.decimal(point?.x)),\(Self.decimal(point?.y))"
       }
-      row += ",\(frame.warning == nil ? 0 : 1),\(arenaTrace)\n"
+      row += ",\(frame.warning == nil ? 0 : 1)\n"
       trace += row
     }
 
@@ -975,18 +448,11 @@
         marks: marks, startedAt: startedAt?.timeIntervalSince1970 ?? 0,
         seconds: Double(elapsed), frames: simulationTimes.count, stepsCompleted: index,
         steps: steps.count, frameMilliseconds: Self.timing(frameTimes),
-        simulationMilliseconds: Self.timing(simulationTimes), worldLoads: worldLoads,
+        simulationMilliseconds: Self.timing(simulationTimes),
         warningFrames: warningFrames,
         overlapFraction: Double(overlapFrames) / Double(max(1, simulationTimes.count)),
         withinSlotWhileMoving: Double(withinSlot) / Double(max(1, movingSamples)),
-        worstLeaderGap: Double(worstGap), highestArenaWave: highestArenaWave,
-        peakArrivalWarnings: peakArrivalWarnings, lowestFloor: lowestFloor,
-        highestFloor: highestFloor, longestPartyTrace: longestPartyTrace,
-        longestPartySceneryTrace: longestPartySceneryTrace,
-        partyWeaponsFired: partyWeaponsFired.sorted(),
-        hostileWeaponsFired: hostileWeaponsFired.sorted(),
-        hostileWeaponsRecovered: hostileWeaponsRecovered.sorted(),
-        marksmanRetreated: marksmanRetreated)
+        worstLeaderGap: Double(worstGap))
       summary = result
       write(result)
     }
@@ -1156,180 +622,12 @@
         .mark("Manhattan, together"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki])]
 
-    /// The pause menu's third choice: Pause, down twice, confirm.
-    private static let otherLevel: [Step] = [
-      .pause, .wait(seconds: 0.5), .menu(1), .wait(seconds: 0.3), .menu(1), .wait(seconds: 0.3),
-      .mark("third choice"), .wait(seconds: 0.6), .act, .wait(seconds: 1),
+    /// Every bridge scenario, by the name `apple/scripts/playtest` gives it.
+    private static let scenarios: [(name: String, steps: [Step])] = [
+      ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
+      ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
+      ("orders", orders),
     ]
-
-    /// The repeatable arena, through real controls. An arrival warning freezes on Pause;
-    /// leaving the companions safely at the entrance forces a real fallback. The reunited
-    /// squad then completes two full packs, receives resupply, and sees the third wave begin.
-    /// Restart clears the pool and cadence before the ordinary level cycle continues.
-    private static let combatYard: [Step] =
-      [.mark("the bridge")] + otherLevel + [
-        .expectLevel("combat-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
-        .fireAimed([0, -1], seconds: 1.5), .expectAmmo(60), .expectMarks(atLeast: 2),
-        .mark("practice on the wall"), .order(.hold), .expectOrder(.tom, "holding"),
-        .walk([6.5, 2.5]), .walk([6.5, -2.2]), .expectBeat(.stranger),
-        .awaitArenaWarnings(seconds: 3), .mark("reinforcements are warned"),
-        .pause, .rememberArena, .wait(seconds: 0.6), .expectArenaHeld,
-        .mark("Pause freezes arrivals and actors"), .pause, .wait(seconds: 2.3),
-        .expectArenaWave(1), .navigate([3, -7.5]), .awaitFallBacks(1, seconds: 40),
-        .mark("falling back"), .wait(seconds: 0.3), .expectHits(0), .expectSquad("following"),
-        .expectOrder(.laura, "following"), .expectNear(.miki, [0, 6], within: 0.3),
-        .expectArenaWave(1), .mark("the same wave retries safely"),
-        .battleUntilWave(2, seconds: 150), .expectArenaWave(2), .mark("first pack complete"),
-        .battleUntilWave(3, seconds: 180), .expectArenaWave(3), .expectAmmo(60),
-        .expectFired(.laura), .expectFired(.tom), .mark("second pack complete and resupplied"),
-        .awaitArenaWarnings(seconds: 7), .mark("the third wave continues"),
-      ] + restartRun + [.expectLevel("combat-yard")] + otherLevel + [
-        .expectLevel("salvage-yard"), .mark("on to the salvage yard"),
-      ] + otherLevel + [.expectLevel("relay-run")] + otherLevel + [
-        .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
-      ]
-
-    /// ADR 0009's leader cover, driven through the same controls as the player: the centre of
-    /// the tall wall stops fire, its edge permits a peek, and firing over a low block exposes
-    /// the leader before they duck again. Pause freezes exposure; a new leader and Restart
-    /// cannot inherit the previous stance. Companions hold back to leave this test to Miki.
-    private static let leaderCover: [Step] =
-      [.mark("the bridge")] + otherLevel + [
-        .expectLevel("combat-yard"), .order(.hold), .walk([0, -0.25]), .wait(seconds: 0.5),
-        .expectCover("wall", firing: false, exposed: false), .mark("sheltered at the tall wall"),
-        .fireAimed([0, -1], seconds: 0.7), .expectMarks(atLeast: 1),
-        .expectCover("wall", firing: nil, exposed: false), .mark("the wall stops the shot"),
-        .walk([4.2, -0.25]), .fireAimed([0, -1], seconds: 0.85),
-        .expectCover("wall", firing: true, exposed: false), .expectCoverPeek(atLeast: 0.5),
-        .mark("practice peek clears the tall wall"),
-        .wait(seconds: 0.45), .expectCover("wall", firing: false, exposed: false),
-      ] + restartRun + [
-        .order(.hold), .walk([9, 2]), .walk([8.55, -3.55]), .wait(seconds: 0.5),
-        .expectCover("block-east", firing: false, exposed: false),
-        .mark("sheltered behind the low block"), .fireAimed([0, -1], seconds: 0.85),
-        .expectCover("block-east", firing: true, exposed: true),
-        .mark("firing over low cover"), .pause, .wait(seconds: 0.6),
-        .expectCover("block-east", firing: true, exposed: true),
-        .mark("pause holds the exposed stance"), .pause, .wait(seconds: 0.45),
-        .expectCover("block-east", firing: false, exposed: true), .mark("back behind cover"),
-        .switchLeader, .expectCover(nil, firing: false, exposed: false),
-        .switchLeader, .switchLeader, .wait(seconds: 0.1),
-        .expectCover("block-east", firing: false, exposed: true),
-        .walk([8.55, -2]), .expectCover(nil, firing: false, exposed: false),
-        .mark("walking away leaves cover"),
-      ] + restartRun + [.expectCover(nil, firing: false, exposed: false)]
-
-    /// All three travellers fire at the wall, without spending shared rounds. Laura empties
-    /// a magazine, Pause holds the reload, and switching cannot refill the other weapons.
-    private static let squadWeapons: [Step] =
-      [.mark("the bridge")] + otherLevel + [
-        .expectLevel("combat-yard"), .order(.hold),
-        .expectWeapon(.carbine, loaded: 12...12, reloading: false),
-        .fireAimed([0, -1], seconds: 0.9),
-        .expectWeapon(.carbine, loaded: 1...11, reloading: false), .expectAmmo(60),
-        .mark("Miki fires her carbine"), .wait(seconds: 0.3), .switchLeader,
-        .expectWeapon(.closeScatter, loaded: 4...4, reloading: false),
-        .fireAimed([0, -1], seconds: 0.9),
-        .expectWeapon(.closeScatter, loaded: 1...3, reloading: false), .expectAmmo(60),
-        .mark("Tom fires his scatter weapon"), .wait(seconds: 0.3), .switchLeader,
-        .expectWeapon(.lightBurst, loaded: 18...18, reloading: false),
-        .fireAimed([0, -1], seconds: 0.9),
-        .expectWeapon(.lightBurst, loaded: 1...17, reloading: false), .expectAmmo(60),
-        .mark("Laura fires a burst"), .fireUntilReloading([0, -1], seconds: 18),
-        .expectWeapon(.lightBurst, loaded: 0...0, reloading: true),
-        .pause, .wait(seconds: 0.6),
-        .expectWeapon(.lightBurst, loaded: 0...0, reloading: true), .mark("Pause holds the reload"),
-        .pause, .awaitReloaded(seconds: 3),
-        .expectWeapon(.lightBurst, loaded: 18...18, reloading: false), .expectAmmo(60),
-        .mark("Laura reloads automatically"), .switchLeader,
-        .expectWeapon(.carbine, loaded: 1...11, reloading: false), .switchLeader,
-        .expectWeapon(.closeScatter, loaded: 1...3, reloading: false), .switchLeader,
-        .expectWeapon(.lightBurst, loaded: 18...18, reloading: false),
-      ] + restartRun + [.expectWeapon(.carbine, loaded: 12...12, reloading: false)]
-
-    /// Tactical enemies in the combat yard (ADR 0012): companions hold at the entrance while
-    /// Miki draws a warned grenade. Pause freezes its fuse, then she walks out of its marked
-    /// ground behind the wall before it bursts. At least one hostile has found another angle,
-    /// and Restart clears the grenades, their counters and the remembered tactical movement.
-    private static let tacticalEnemies: [Step] =
-      [.mark("the bridge")] + otherLevel + [
-        .expectLevel("combat-yard"), .order(.hold),
-        .expectOrder(.tom, "holding"), .expectOrder(.laura, "holding"),
-        .walk([6.5, 2.5]), .walk([6.5, -3]), .formation,
-        .battleUntilWave(2, seconds: 150), .mark("the grenadier pack is next"),
-        .navigate([0, -17]), .awaitGrenade(seconds: 12),
-        .mark("grenade warning"), .wait(seconds: 0.3), .pause, .rememberGrenades,
-        .wait(seconds: 0.6), .expectGrenadesHeld, .mark("Pause holds the grenade fuse"),
-        .pause, .navigate([4, -17]), .expectOutsideGrenadeMarkers,
-        .mark("clear of the grenade marker"),
-        .awaitExplosions(1, seconds: 5), .expectMovedEnemies(atLeast: 1),
-        .mark("the blast and a new enemy angle"), .wait(seconds: 0.3),
-      ] + restartRun + [.expectLevel("combat-yard")]
-
-    /// Both height changes use the broad authored ramps. Heights come from the real bodies;
-    /// the pilot does not teleport onto a terrace or bypass the ordinary collision resolver.
-    private static let arenaElevation: [Step] =
-      [.mark("the bridge")] + otherLevel + [
-        .expectLevel("combat-yard"),
-        .navigate([-18, -4], defending: true), .expectHeight(0.45...0.75),
-        .mark("climbing the west ramp"),
-        .navigate([-18, -20], defending: true), .expectHeight(2.35...2.45),
-        .mark("on the raised deck"),
-        .navigate([-18, -42], defending: true), .expectHeight(0.2...0.4),
-        .mark("descending the north ramp"),
-        .navigate([18, -44], defending: true), .expectHeight(-0.05...0.05),
-        .navigate([18, -20], defending: true), .expectHeight(-1.85 ... -1.75),
-        .mark("inside the lower trench"),
-        .navigate([18, -3], defending: true), .expectHeight(-0.4 ... -0.05),
-        .mark("climbing out of the trench"),
-        .navigate([18, 2], defending: true), .expectHeight(-0.05...0.05),
-        .mark("back on the main floor"),
-      ] + restartRun + [.expectHeight(-0.05...0.05)]
-
-    /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
-    /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
-    /// loose panel and it swings open. Tom searches the cabinet that holds the wrong model in this
-    /// run without knowing it, and at the transmitter it does not fit; Fit is then withdrawn, and
-    /// Look there says who could tell the models apart. Miki inspects the live cabinet and the
-    /// right one, wherever this run dealt them, takes the right regulator and fits it. Restart
-    /// begins the yard again, and the third choice returns to the bridge.
-    private static let salvageYard: [Step] =
-      [.mark("the bridge")] + otherLevel + [.expectLevel("combat-yard")] + otherLevel + [
-        .expectLevel("salvage-yard"), .expectParty([.miki, .tom, .laura]), .mark("the yard"),
-        .walk([-1.7, -3.2]), .act, .expectLine("Laura could reach the latch."),
-        .mark("Miki at the gate"), .switchLeader, .wait(seconds: 0.5), .walk([1.7, -3.2]), .act,
-        .expectLine("Tom shifts the loose panel, and the gate swings open."),
-        .wait(seconds: 1), .mark("the gate opens"), .walk([0, -2]), .walk([0, -6]),
-        .walkToCabinet(.otherModel), .act,
-        .expectLine("Tom takes a regulator, but only Miki can tell its model."),
-        .mark("a blind search"), .walk([0, -6]), .walk([0, -2]), .walk([-2, 5]), .act,
-        .expectLine("This regulator is a different model. It won't fit."), .act,
-        .expectLine("This regulator won't fit. Miki could tell the models apart."),
-        .mark("the wrong model"), .switchLeader, .switchLeader, .wait(seconds: 0.5),
-        .walk([0, -2]), .walk([0, -6]), .walkToCabinet(.live), .act,
-        .expectLine("Live: it still feeds the next shelter. Leave it connected."),
-        .walkToCabinet(.compatible), .act,
-        .expectLine("A compatible regulator, disconnected. Safe to take."), .act,
-        .expectLine("Miki takes the regulator."), .mark("the right regulator"),
-        .walk([0, -6]), .walk([0, -2]), .walk([-2, 5]), .act,
-        .expectLine("The regulator fits, and the transmitter answers."),
-        .mark("the transmitter works"), .wait(seconds: 1),
-      ] + restartRun + [.expectLevel("salvage-yard")] + otherLevel + [.expectLevel("relay-run")]
-      + otherLevel + [
-        .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
-      ]
-
-    /// Every scenario, by the name `apple/scripts/playtest` gives it.
-    private static let scenarios: [(name: String, steps: [Step])] =
-      [
-        ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
-        ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-        ("orders", orders), ("combat-yard", combatYard), ("leader-cover", leaderCover),
-        ("salvage-yard", salvageYard),
-        ("squad-weapons", squadWeapons),
-        ("tactical-enemies", tacticalEnemies),
-        ("arena-elevation", arenaElevation),
-      ] + RelayRunPlaytest.scenarios + ArsenalPlaytest.scenarios
 
     static func steps(for scenario: String) -> [Step]? {
       scenarios.first { $0.name == scenario }?.steps
