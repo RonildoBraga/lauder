@@ -1,6 +1,6 @@
 # Relay Run — gameplay walkthrough
 
-**Status:** Standalone prototype prepared; Simulator and release verification pending\
+**Status:** Standalone prototype implemented and delivered in TestFlight 0.1.0 (23)\
 **Date:** 22 November 2026
 
 The maintainer approved this next mission with **“Proceed with your recommendation”**. [ADR 0013](decisions/0013-relay-run.md) owns its scope, technical defaults, implementation sequence and acceptance criteria.
@@ -84,4 +84,4 @@ No relationship reveal, global explanation or promise of a new destination is es
 - Does the optional threat create a choice while avoidance and a whole-party retreat remain credible?
 - Does returning and repairing give the outward journey a satisfying end?
 
-Scripted Simulator routes verify the flow and state rules first. Actual phone performance, physical controls and the maintainer's answers remain unverified until tested and recorded; implementation or TestFlight delivery alone supplies none of those answers.
+The scripted safe and guarded Simulator routes passed, including the return repair and Restart; the [prototype plan](prototype-plan.md#verification-and-performance) records build 23's checked delivery. Actual phone performance, physical controls and the maintainer's answers remain unverified until tested and recorded; implementation or TestFlight delivery alone supplies none of those answers.
