@@ -32,9 +32,9 @@ apple/
   sources/
     app/                         App entry, world ownership and bundle configuration
     interface/                   HUD, controller/keyboard/touch input and InputRules
-    gameplay/                    Party identity, session, leadership, Pause and story beats
-    combat/                      Native weapons, targeting, ballistics and bridge hostiles
-    world/                       Bodies, squad movement, encounters, effects and camera
+    gameplay/                    Session authority, BridgeProgress and EncounterSimulation
+    combat/                      Weapon, spread, aiming, ray geometry and hostile rules
+    world/                       Bodies, squad movement, presentation, WorldCamera and CameraRig
     content/
       Level.swift                Typed bridge and test-fixture data
       LevelLayout.swift          Blender layout schema
@@ -42,6 +42,7 @@ apple/
       BrooklynBridgeLayout.swift Generated bridge layout
       BrooklynBridge.usdz        Exported bridge scene
       MissionScript.swift        Provisional bridge conversations
+      StoryBeat.swift            Authored progression markers independent of the session
       models/                    Exported party/hostile figures
       sounds/                    Generated combat sounds
   tests/                         Bridge and shared input/movement/weapon regressions
@@ -56,7 +57,7 @@ docs/                            Current design, architecture and prototype plan
   encounters/                    Unimplemented narrative proposals
   decisions/                     Accepted decisions and clearly marked historical experiments
 scripts/check                    Blender, asset, formatting, app-build and Swift checks
-.github/                         Pull request template
+.github/                         Pull request template and standard-check workflow
 ```
 
 Manually maintained folders use lowercase names; Swift filenames use PascalCase. Read [CONTRIBUTING.md](CONTRIBUTING.md) for naming, validation, Blender authoring, licensing and TestFlight procedures. Public documentation uses relative paths and contains no signing secrets or private device identifiers.
@@ -65,7 +66,7 @@ Manually maintained folders use lowercase names; Swift filenames use PascalCase.
 
 Open `apple/Lauder.xcodeproj` with the shared `Lauder` scheme. Use Simulator for daily iteration and `./scripts/check` before a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md).
 
-The next task is to agree on an enjoyable core loop using the bridge as a small test space. Story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
+The maintainer approved focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md), tracked in [issue #124](https://github.com/RonildoBraga/lauder/issues/124). The next gameplay task remains agreeing on an enjoyable core loop using the bridge as a small test space. Story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
 
 ## Licence
 

@@ -1,7 +1,7 @@
 import simd
 
 /// A bridge hostile: it reveals itself, then fires from its authored place or charges the
-/// leader. Its encounter supplies the timeline, and FightSimulation resolves the actual shot.
+/// leader. Its encounter supplies the timeline, and EncounterSimulation resolves the actual shot.
 struct HostileState {
   enum Phase: Equatable {
     case hidden

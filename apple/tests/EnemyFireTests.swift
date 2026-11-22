@@ -9,7 +9,7 @@ struct EnemyFireTests {
   func aWindUpIsPermissionToFireNotAGuaranteedHitOnAMovingTarget() throws {
     let level = range(windUp: 0.1)
     let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
     _ = step(fight, session: session, at: [0, 5], dt: HostileState.stepOutTime)
@@ -26,11 +26,11 @@ struct EnemyFireTests {
   func aSettledShotHitsTheFirstBodyItActuallyMeets() throws {
     let level = range(windUp: 1)
     let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
     _ = step(fight, session: session, at: [0, 5], dt: HostileState.stepOutTime)
-    var incoming: FightSimulation.Shot?
+    var incoming: EncounterSimulation.Shot?
     for _ in 0..<140 {
       _ = step(fight, session: session, at: [0, 5], dt: 1 / 120)
       if let shot = fight.shots.first {
@@ -48,7 +48,7 @@ struct EnemyFireTests {
   func anAuthoredWarningCannotHitEvenAnotherPartyMember() throws {
     let level = range(windUp: 0.1, firstMiss: true)
     let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
     _ = step(fight, session: session, at: [0, 5], dt: HostileState.stepOutTime)
@@ -58,9 +58,9 @@ struct EnemyFireTests {
   }
 
   private func step(
-    _ fight: FightSimulation, session: GameSession, at point: SIMD2<Float>, dt: Float
+    _ fight: EncounterSimulation, session: GameSession, at point: SIMD2<Float>, dt: Float
   )
-    -> FightSimulation.Outcome
+    -> EncounterSimulation.Outcome
   {
     fight.step(
       dt: dt, leader: point, facing: [0, -1], aiming: false, fireHeld: false,

@@ -5,12 +5,12 @@ import simd
 
 /// Fight rules and their presentation values can run without making a world or any entities.
 @MainActor
-struct FightSimulationTests {
+struct EncounterSimulationTests {
   @Test
   func practiceFireProducesOneShotAndDrainableFeedbackWithoutSpendingRounds() throws {
     let level = TestRange.practice
     let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     let ammo = session.ammo
     let shot = try #require(fireOnce(fight, session: session))
 
@@ -34,7 +34,7 @@ struct FightSimulationTests {
   func aScriptedShotProducesTheTakedownAndItsPresentationValues() throws {
     let level = range(cues: [(0, .shot(by: .tom, at: "shooter"))])
     let session = GameSession(level: level)
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     let encounter = try #require(level.encounters.first)
     #expect(session.beginEncounter(encounter.beat))
     fight.begin(encounter)
@@ -61,7 +61,9 @@ struct FightSimulationTests {
   }
 
   /// Drive the production simulation until the carbine fires, respecting its draw and cooldown.
-  private func fireOnce(_ fight: FightSimulation, session: GameSession) -> FightSimulation.Shot? {
+  private func fireOnce(_ fight: EncounterSimulation, session: GameSession) -> EncounterSimulation
+    .Shot?
+  {
     for frame in 0..<120 {
       _ = step(fight, session: session, fire: true, pressed: frame == 0, aiming: true)
       if let shot = fight.shots.first { return shot }
@@ -71,9 +73,9 @@ struct FightSimulationTests {
 
   @discardableResult
   private func step(
-    _ fight: FightSimulation, session: GameSession, fire: Bool = false, pressed: Bool = false,
+    _ fight: EncounterSimulation, session: GameSession, fire: Bool = false, pressed: Bool = false,
     aiming: Bool = false
-  ) -> FightSimulation.Outcome {
+  ) -> EncounterSimulation.Outcome {
     fight.step(
       dt: 1 / 120, leader: leader, facing: [0, -1], aiming: aiming, fireHeld: fire,
       firePressed: pressed,

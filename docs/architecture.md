@@ -8,6 +8,8 @@
 
 Use Swift for rules and gameplay, RealityKit for the 3D world and SwiftUI for the interface ([ADR 0001](decisions/0001-engine.md)). The iPhone app targets iOS 27.0 or later in landscape with Xcode 27.2. The target is 60 fps on the baseline iPhone 13 Pro Max; a target is not a measured result.
 
+The maintainer approved these focused separations in [ADR 0018](decisions/0018-runtime-boundaries.md). They preserve the bridge's current behaviour.
+
 ## Shape of the project
 
 Keep one app target and one hosted Swift Testing target, with ordinary feature folders under `apple/`. Xcode folder-synchronised groups include sources and tests without per-file project edits. Blender source and its export extension live under `blender/`; no new package hierarchy, dependency, custom ECS or rendering framework is needed.
@@ -15,9 +17,11 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | Owner | Responsibility | Boundary |
 |---|---|---|
 | Game | Hold the bridge's stable GameWorld | SwiftUI reevaluation does not rebuild it; no level-switch flow |
-| GameSession | Mode, party/leader, formations/orders, story beats, triggers, hits, rounds, defeated hostiles, searched bodies, inventory, dialogue and pause choice | Plain rules and values, no entities |
+| GameSession | Mode, party/leader, formations/orders, inventory, combat checkpoints, dialogue and accepted commands | Authority over live session progress; no entities |
+| BridgeProgress / StoryBeat | Bridge progression, action eligibility/costs and recruitment policy / authored story markers | Checkpointable rules and independent content data |
+| WorldCamera / CameraRig | Camera entity and landmark fading / follow, lean, switching, lens and projection | Presentation owner and value-only camera motion |
 | GameWorld | Bodies, scene, camera, movement, companion routing, encounters and one owned update subscription | Spatial state; no duplicate session progress |
-| FightSimulation | Native weapon handling, targeting, actual rays, hostile timing, cues, recoil/hit/fall values and feedback events | Plain Swift, no RealityKit or sound/haptic playback |
+| EncounterSimulation | Native weapon handling, targeting, actual rays, hostile timing, cues, recoil/hit/fall values and feedback events | Plain Swift, no RealityKit or sound/haptic playback |
 | EncounterStage | Reusable hostile/weapon entities, target markers and shot effects | Presentation only |
 | GameControls / InputRules | Device sampling, touch state, command edges, source arbitration and neutral gates | Intents only; no second pause/dialogue policy |
 | Content | Bridge layout, words, encounters, interactions, models and sounds | Typed definitions and bundle resources |
@@ -39,9 +43,9 @@ The world loads the bridge synchronously and retains it across Restart. Figure m
 
 ## Runtime ownership
 
-GameSession owns exploring/dialogue/paused mode, the recruited party in switching order and active leader, Close/Spread/Column, each companion's following/going/holding order, one-shot trigger progress, bridge story beat, shared ammunition/medical kits, fight checkpoint/hits/defeated IDs and dialogue cursor. Recruiting takes effect after the corresponding exchange. It accepts commands only in the correct mode.
+GameSession composes a BridgeProgress value and owns exploring/dialogue/paused mode, the recruited party in switching order and active leader, Close/Spread/Column, each companion's following/going/holding order, one-shot trigger progress, bridge story beat, shared ammunition/medical kits, fight checkpoint/hits/defeated IDs and dialogue cursor. BridgeProgress plans concrete bridge actions and recruitment; the session validates mode, creates checkpoints before costs, and applies accepted effects. Recruiting takes effect after the corresponding exchange. StoryBeat is shared content data without a dependency on GameSession.
 
-GameWorld owns a body for every stable member ID, their visibility and position, companion routes/motors/targets, the navigation grid and flat movement blockers. Unrecruited figures stay hidden except Laura lying where the bridge places her. It owns the camera and one FightSimulation/EncounterStage pair. App activity, input availability and input readiness are operational gates, not extra gameplay modes.
+GameWorld owns a body for every stable member ID, their visibility and position, companion routes/motors/targets, the navigation grid and flat movement blockers. Unrecruited figures stay hidden except Laura lying where the bridge places her. It owns a WorldCamera and one EncounterSimulation/EncounterStage pair. WorldCamera owns camera/landmark presentation; CameraRig computes its motion and projection without scene entities. App activity, input availability and input readiness are operational gates, not extra gameplay modes.
 
 The owned update samples controls, resolves InputRules using session mode, handles the accepted intent and advances fixed-step movement/combat while allowed. Entity transforms do not publish through SwiftUI every frame. UI observes coarse state and plays emitted feedback while active.
 
@@ -96,6 +100,8 @@ Persistence remains unimplemented later hardening. Define versioned value snapsh
 ## Checks
 
 Tests cover bridge beats/interactions/recruitment/retry, session authority and input priority/release, camera mapping, native weapon timing and feedback, actual long rays/neutral safety, collision and squad motion. A test-only yard with a narrow doorway exercises clearance the bridge cannot provide; a flat range exercises weapon rules without changing app content.
+
+Portable contract checks compare scenario and resource declarations across Swift, Python and Blender. The same standard check runs in CI on the selected compatible Xcode image; the PR records the actual result.
 
 Eight DEBUG scripted routes use ordinary input in headless and rendered Simulator runs. See [verification](prototype-plan.md#verification-and-performance). Pointer-driven touch is not physical multi-touch, and Simulator controller enumeration does not prove live input forwarding. Physical behaviour, performance and enjoyment require separately recorded evidence.
 

@@ -11,7 +11,7 @@ struct SquadWeaponTests {
     let level = range()
     let session = GameSession(level: level)
     while session.leader != member { session.cycleLeader() }
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     let shot = try #require(fireOnce(fight, session: session, level: level))
     let weapon = Weapon.forMember(member)
@@ -35,7 +35,7 @@ struct SquadWeaponTests {
       target: [0, 1], hits: 2, spawns: [.miki: [-2, 3], .tom: [0, 2], .laura: [2, 3]])
     let session = GameSession(level: level)
     session.cycleLeader()
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     let shot = try #require(fireOnce(fight, session: session, level: level))
     #expect(shot.path.strike == .body("target") && fight.shots.count == 1)
@@ -48,7 +48,7 @@ struct SquadWeaponTests {
     let session = GameSession(level: level)
     session.cycleLeader()
     session.cycleLeader()
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     _ = try #require(fireOnce(fight, session: session, level: level))
     let loaded = fight.status(for: .laura).loaded
@@ -70,7 +70,7 @@ struct SquadWeaponTests {
     let level = range()
     let session = GameSession(level: level)
     session.cycleLeader()
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     try fireUntilReload(fight, session: session, level: level)
     let remaining = fight.status(for: .tom).reloadRemaining
@@ -93,7 +93,7 @@ struct SquadWeaponTests {
     let level = range()
     let session = GameSession(level: level)
     session.cycleLeader()
-    let fight = FightSimulation(level: level)
+    let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     try fireUntilReload(fight, session: session, level: level)
     session.restart()
@@ -134,7 +134,7 @@ struct SquadWeaponTests {
     }
   #endif
 
-  private func begin(_ fight: FightSimulation, session: GameSession, level: Level) throws {
+  private func begin(_ fight: EncounterSimulation, session: GameSession, level: Level) throws {
     let encounter = try #require(level.encounters.first)
     #expect(session.beginEncounter(encounter.beat))
     fight.begin(encounter)
@@ -143,9 +143,9 @@ struct SquadWeaponTests {
 
   @discardableResult
   private func step(
-    _ fight: FightSimulation, session: GameSession, level: Level,
+    _ fight: EncounterSimulation, session: GameSession, level: Level,
     fire: Bool = false, pressed: Bool = false
-  ) -> FightSimulation.Outcome {
+  ) -> EncounterSimulation.Outcome {
     let leader = level.spawn(session.leader)
     let target = level.encounters[0].hostiles[0].standAt
     return fight.step(
@@ -154,8 +154,8 @@ struct SquadWeaponTests {
       figures: level.spawns, session: session)
   }
 
-  private func fireOnce(_ fight: FightSimulation, session: GameSession, level: Level)
-    -> FightSimulation.Shot?
+  private func fireOnce(_ fight: EncounterSimulation, session: GameSession, level: Level)
+    -> EncounterSimulation.Shot?
   {
     for frame in 0..<240 {
       step(fight, session: session, level: level, fire: true, pressed: frame == 0)
@@ -166,7 +166,8 @@ struct SquadWeaponTests {
     return nil
   }
 
-  private func fireUntilReload(_ fight: FightSimulation, session: GameSession, level: Level) throws
+  private func fireUntilReload(_ fight: EncounterSimulation, session: GameSession, level: Level)
+    throws
   {
     for frame in 0..<(120 * 12) {
       step(fight, session: session, level: level, fire: true, pressed: frame == 0)

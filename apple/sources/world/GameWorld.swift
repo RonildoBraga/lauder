@@ -77,7 +77,7 @@ final class GameWorld {
   /// What the touch order menu marked as it opened: its point on the screen, and what the ray
   /// through it met then. The order that follows uses it, though the camera has moved since.
   @ObservationIgnored private var touchMark: (screen: InputRules.ScreenPoint, hit: SIMD3<Float>?)?
-  @ObservationIgnored private let camera = PerspectiveCamera()
+  @ObservationIgnored private let camera: WorldCamera
   /// Movement against the bridge's blockers.
   @ObservationIgnored private let motion: PartyMotion
   @ObservationIgnored private let grid: NavigationGrid
@@ -101,19 +101,14 @@ final class GameWorld {
   @ObservationIgnored private var isApplicationActive = false
   @ObservationIgnored private var skipNextStep = true
   @ObservationIgnored private var wasRunning = false
-  @ObservationIgnored private var cameraTarget: SIMD3<Float>
   /// The line and objective the status panel last saw change, and for how long they have shown.
   @ObservationIgnored private var agedLineCount = 0
   @ObservationIgnored private var agedObjective = ""
   @ObservationIgnored private var lineAge: Float = 0
   @ObservationIgnored private var objectiveAge: Float = 0
-  @ObservationIgnored private var cameraStart: SIMD3<Float>?
-  /// Tall landmarks, such as the towers, that fade while they hide the party.
-  @ObservationIgnored private var landmarkFade = LandmarkFade()
-  @ObservationIgnored private var cameraElapsed: Float = 0
   @ObservationIgnored private var unsimulatedTime: Float = 0
   /// The level's fight rules and presentation, kept separate (ADR 0004, ADR 0008).
-  @ObservationIgnored private let fight: FightSimulation
+  @ObservationIgnored private let fight: EncounterSimulation
   @ObservationIgnored private let stage: EncounterStage
   @ObservationIgnored private var fireHeld = false
   /// Where the right stick aims, in the stick's terms, and where that is on the ground while the
@@ -128,21 +123,13 @@ final class GameWorld {
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
-  /// The camera's lens now, in degrees: the level's own while exploring, narrowing in a fight or
-  /// while the right stick aims (ADR 0007).
-  @ObservationIgnored private var lens: Float
   @ObservationIgnored private var firePressPending = false
   /// Where the current encounter's retry places the leader.
   @ObservationIgnored private var retrySpot: SIMD2<Float>?
   /// Time into an encounter's retry: the fade out, the reset, the fade back in.
   @ObservationIgnored private var retryElapsed: Float?
-  /// How far the camera's target leans from the leader towards a fight, eased.
-  @ObservationIgnored private var cameraLean: SIMD2<Float> = .zero
-
   static let retryFadeOut: Float = 0.6
   static let retryFadeIn: Float = 0.4
-  /// How quickly the camera's lean follows a fight: about 95% of the way in a second.
-  static let cameraLeanRate: Float = 3
   /// How far a lying stand-in sits below a standing one, so it rests on the deck.
   static let lyingDrop: Float = -0.67
   /// How far ahead of the leader the D-pad marks its point, before a wall shortens it (ADR 0003).
@@ -159,11 +146,6 @@ final class GameWorld {
   static let gatherRadius: Float = 5
   /// How long a new line or objective shows in the status panel, in seconds of play.
   static let lineTime: Float = 6
-  /// How much the lens narrows in a fight or while the right stick aims, and roughly how long
-  /// it takes to get there, in seconds (ADR 0007): about 14° from the bridge's 20°.
-  static let fightLens: Float = 0.7
-  static let lensTime: Float = 0.3
-
   var isPaused: Bool { session.isPaused }
   /// Every member of the playable party carries a weapon (ADR 0010).
   var showsWeapon: Bool { session.party.contains(session.leader) }
@@ -197,7 +179,7 @@ final class GameWorld {
   /// How many shots' marks show on blocks now (ADR 0007). Tests and playtests read it.
   var shotMarks: Int { stage.effects.marksShown }
   /// The camera's lens now, in degrees (ADR 0007). Tests read it.
-  var cameraLens: Float { lens }
+  var cameraLens: Float { camera.lens }
   /// The direction on the ground a member faces. Tests read it.
   func facing(of member: PartyMember) -> SIMD2<Float> { Movement.facing(yaw: yaw[member] ?? 0) }
   /// The HUD's objective changes with the story's current beat.
@@ -209,7 +191,6 @@ final class GameWorld {
     self.level = level
     session = GameSession(level: level)
     shownLine = level.opening
-    lens = level.fieldOfView
     motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
     grid = NavigationGrid(level: level)
     squadLeader = level.party[0]
@@ -218,11 +199,11 @@ final class GameWorld {
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
     let spawn = level.spawn(level.party[0])
-    cameraTarget = Self.cameraTarget(over: spawn)
+    camera = WorldCamera(level: level, over: spawn)
     let style = SceneStyle(
       markerScale: SceneStyle.markerScale(
         cameraOffset: level.cameraOffset, fieldOfView: level.fieldOfView))
-    fight = FightSimulation(level: level)
+    fight = EncounterSimulation(level: level)
     stage = EncounterStage(level: level, style: style)
     stage.reset(fight)
     root.name = level.id
@@ -238,16 +219,12 @@ final class GameWorld {
         root.addChild(entity)
       }
     }
-    landmarkFade = LandmarkFade(look: root)
+    camera.attach(to: root)
     // The session refers to each action by its name, so no action is defined twice.
     let actions = level.interactions.map(\.id)
     precondition(Set(actions).count == actions.count, "\(level.id) defines an action twice.")
     root.addChild(stage.container)
     style.addLights(level.lights, to: root)
-    camera.camera.fieldOfViewInDegrees = level.fieldOfView
-    camera.name = "camera"
-    root.addChild(camera)
-    landmarkFade.prepare(before: camera)
     for member in PartyMember.allCases {
       let body = Entity()
       body.name = "party.\(member.rawValue)"
@@ -289,12 +266,6 @@ final class GameWorld {
     }
   }
 
-  /// Where the camera looks while it is settled behind a leader standing at this point: just
-  /// above the body's centre.
-  private static func cameraTarget(over point: SIMD2<Float>) -> SIMD3<Float> {
-    [point.x, PartyBody.height / 2 + 0.1, point.y]
-  }
-
   func attach(_ subscription: EventSubscription) {
     self.subscription?.cancel()
     self.subscription = subscription
@@ -329,7 +300,7 @@ final class GameWorld {
 
   /// The frame's feedback context. Only the interface plays the events; headless simulation
   /// keeps no sound, vibration or controller-trigger dependency.
-  var listenerPoint: SIMD2<Float> { SIMD2(cameraTarget.x, cameraTarget.z) }
+  var listenerPoint: SIMD2<Float> { SIMD2(camera.target.x, camera.target.z) }
   var screenRight: SIMD2<Float> { Movement.axes(cameraOffset: level.cameraOffset).right }
   var canFire: Bool {
     session.mode == .exploring && showsWeapon && !fight.holdsParty
@@ -454,8 +425,7 @@ final class GameWorld {
   /// joins a holding squad holds where they stand.
   private func followNewLeader() {
     pinHolds()
-    cameraStart = cameraTarget
-    cameraElapsed = 0
+    camera.switchLeader()
     showLeaderMarker()
     updatePromptAndCompass()
   }
@@ -545,11 +515,7 @@ final class GameWorld {
     motors = Self.freshMotors()
     companionTargets = [:]
     unsimulatedTime = 0
-    cameraStart = nil
-    cameraElapsed = 0
-    cameraLean = .zero
-    cameraTarget = Self.cameraTarget(over: spot)
-    lens = level.fieldOfView
+    camera.reset(over: spot)
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
   }
@@ -854,7 +820,7 @@ final class GameWorld {
   private func refuse(at point: SIMD3<Float>) {
     refusedOrders += 1
     crossRemaining = Self.crossTime
-    let eye = cameraTarget + level.cameraOffset
+    let eye = camera.eye
     let toCamera = simd_normalize(eye - point)
     let standing = point + toCamera * 0.3 + [0, point.y < 0.01 ? 0.4 : 0, 0]
     refusalCross.look(at: eye, from: standing, relativeTo: nil)
@@ -891,9 +857,7 @@ final class GameWorld {
   /// The camera's mapping between the screen and the ground, for a screen of this shape, through
   /// its lens as it is now.
   func projection(aspect: Float) -> CameraProjection {
-    return CameraProjection(
-      eye: cameraTarget + level.cameraOffset, target: cameraTarget, fieldOfView: lens,
-      aspect: aspect)
+    camera.projection(aspect: aspect)
   }
 
   /// Where a member's body stands on the ground.
@@ -1128,32 +1092,11 @@ final class GameWorld {
 
   private func updateCamera(deltaTime: Float) {
     guard let leader = position(of: session.leader) else { return }
-    // During a fight the target leans towards the threat, so both stay on screen.
-    let wanted = fight.cameraLean(leader: leader)
-    cameraLean += (wanted - cameraLean) * min(1, deltaTime * Self.cameraLeanRate)
-    let target = Self.cameraTarget(over: leader + cameraLean)
-    if let start = cameraStart {
-      cameraElapsed = min(0.25, cameraElapsed + deltaTime)
-      let amount = cameraElapsed / 0.25
-      let eased = amount * amount * (3 - 2 * amount)
-      cameraTarget = start + (target - start) * eased
-      if cameraElapsed >= 0.25 { cameraStart = nil }
-    } else {
-      cameraTarget = target
-    }
-    let eye = cameraTarget + level.cameraOffset
-    camera.look(at: cameraTarget, from: eye, relativeTo: nil)
-    // In a fight, or while the right stick aims, the lens narrows so the camera comes closer
-    // through it, keeping its height and angle (ADR 0007, the visual direction); a scene keeps
-    // the level's lens for its framing.
     let close = (session.inEncounter && !fight.holdsParty) || aimDirection != nil
-    let goal = level.fieldOfView * (close ? Self.fightLens : 1)
-    lens += (goal - lens) * min(1, deltaTime / Self.lensTime)
-    if abs(camera.camera.fieldOfViewInDegrees - lens) > 0.001 {
-      camera.camera.fieldOfViewInDegrees = lens
-    }
     let party = ([session.leader] + session.companions).compactMap { bodies[$0]?.position }
-    landmarkFade.update(eye: eye, seeing: party + [cameraTarget], deltaTime: deltaTime)
+    camera.update(
+      over: leader, lean: fight.cameraLean(leader: leader), close: close, party: party,
+      deltaTime: deltaTime)
   }
 
   /// A new line or objective shows in the status panel for `lineTime` seconds of play, then
