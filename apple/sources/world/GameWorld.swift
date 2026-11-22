@@ -26,18 +26,10 @@ final class GameWorld {
     set {
       shownLine = newValue
       lineCount &+= 1
-      #if DEBUG
-        gameLine = newValue
-      #endif
     }
   }
   private var shownLine: String
   @ObservationIgnored private var lineCount = 0
-  #if DEBUG
-    /// The latest line the game itself showed, which a scripted playtest's status then covers
-    /// on the HUD. Playtests read it.
-    @ObservationIgnored private(set) var gameLine = ""
-  #endif
   private(set) var diagnostic: String?
   /// The leader's contextual action here, such as "Search"; nil when there is none.
   private(set) var actionName: String?
@@ -1216,8 +1208,7 @@ final class GameWorld {
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count,
         ammo: session.ammo,
-        formation: session.formation, orders: session.orders, squadState: session.squadState,
-        line: gameLine, refusedOrders: refusedOrders,
+        formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader))
     }
@@ -1271,7 +1262,7 @@ final class GameWorld {
           disc.position = [target.x, 0.012, target.y]
         }
       }
-      // The playtest's status covers the HUD's line, while the game's own stays in `gameLine`.
+      // The playtest's progress takes the status line while a scripted run is active.
       if let status = playtest?.status, shownLine != status {
         shownLine = status
         lineCount &+= 1

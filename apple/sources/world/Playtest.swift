@@ -49,10 +49,6 @@
       let ammo: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
-      /// What the squad is doing, as the HUD says it.
-      let squadState: String
-      /// The HUD's latest line.
-      let line: String
       let refusedOrders: Int
       /// The camera as it is now, for a screen of `screenAspect`, to aim touch orders.
       let camera: CameraProjection
