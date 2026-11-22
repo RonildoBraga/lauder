@@ -30,15 +30,16 @@ struct GameView: View {
       .realityViewCameraControls(.none)
       .ignoresSafeArea()
 
-      if let compass = world.compass, !world.isPaused {
-        compassChip(compass)
-      }
-
-      HStack(alignment: .top) {
+      HStack(alignment: .top, spacing: 8) {
         if world.showsPanel {
           status(talking: talking)
+            .layoutPriority(1)
         }
-        Spacer()
+        Spacer(minLength: 0)
+        if let compass = world.compass, !world.isPaused {
+          compassChip(compass)
+        }
+        Spacer(minLength: 0)
         VStack(alignment: .trailing, spacing: 10) {
           if world.controls.touchControlsEnabled {
             // The touch surface owns Pause/Resume in this top-right space.
@@ -66,6 +67,7 @@ struct GameView: View {
             .buttonStyle(.plain)
           }
         }
+        .fixedSize(horizontal: true, vertical: false)
       }
       .padding()
 
@@ -234,13 +236,16 @@ struct GameView: View {
     HStack(spacing: 6) {
       Image(systemName: "location.north.fill")
         .rotationEffect(.radians(Double(compass.angle)))
+        .fixedSize()
       Text("\(compass.name) · \(compass.metres) m")
+        .lineLimit(2)
+        .truncationMode(.tail)
     }
     .font(.footnote.weight(.semibold))
     .padding(.horizontal, 12)
     .padding(.vertical, 6)
     .frostedPanel(cornerRadius: 14)
-    .padding(.top)
+    .frame(maxWidth: 280)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Goal: \(compass.name), \(compass.metres) metres")
     .allowsHitTesting(false)
