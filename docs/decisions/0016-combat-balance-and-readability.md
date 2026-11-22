@@ -1,6 +1,6 @@
 # ADR 0016 — Combat balance and readable counterplay
 
-**Status:** Assigned; standard check passed; rendered validation/review/delivery pending\
+**Status:** Implemented, checked, reviewed, merged and delivered in TestFlight 0.1.0 (26)\
 **Date:** 22 November 2026
 
 ## Assignment
@@ -48,6 +48,8 @@ A settled companion at a static order/cover anchor could wake for an approaching
 
 ## Validation and delivery
 
-The standard check passed: 51 Blender tests, ten generated sounds, strict formatting, the app build and Swift Testing, including all 18 headless scenarios and 30-wave integration. Coverage includes the measured weapon roles, passive/explicit targeting at both terrain tiers, aim-away safety, movement-carried aim and bursts, warning priority/ties, preparation presentation, yielding, Pause, Restart and bounded entities. Ordinary-input rendered arena/finite-level regressions, exact-source review and signed release verification remain pending. [The prototype plan](../prototype-plan.md) owns actual results and delivery status. The latest verified release remains **0.1.0 (25)** until the new delivery is confirmed.
+The standard check passed: 51 Blender tests, ten generated sounds, strict formatting, the app build and Swift Testing, including all 18 headless scenarios and 30-wave integration. Coverage includes the measured weapon roles, passive/explicit targeting at both terrain tiers, aim-away safety, movement-carried aim and bursts, warning priority/ties, preparation presentation, yielding, Pause, Restart and bounded entities. [PR #119](https://github.com/RonildoBraga/lauder/pull/119) merged as `25195e8`, with the exact tree of checked/reviewed `c80a7ac`. Four ordinary-input rendered routes passed on that source: `arsenal-bench` **167/167**, `combat-yard` **101/101** through wave 3, `enemy-arsenal` **35/35** with actual firing/recovery and retreat, and `relay-run-retreat` **104/104**. The world-space preparation bar was inspected above its actor with the same HUD/bearing warning. Automatic source review completed without findings; Claude had not replied to the GitHub request at integration, so no completed Claude review is claimed.
+
+The signed **0.1.0 (26)** archive from main `25195e8` passed bundle, version/build, team, signature and matching-dSYM verification. API-authenticated upload is **COMPLETE** with zero errors, processing is **VALID**, and the unexpired build is **IN_BETA_TESTING**, **INTERNAL_ONLY** and available to the existing internal testers with group/tester membership unchanged. [The prototype plan](../prototype-plan.md#combat-balance-and-readability) owns exact-source results, measurements and delivery proof, preserving the earlier build 25 evidence as historical.
 
 These measurements establish repeatable mechanics. Phone frame pacing, thermals, physical controls/haptics and whether combat is enjoyable remain unverified in the [deferred checklist](../prototype-plan.md#deferred-phone-and-playtest-checks).

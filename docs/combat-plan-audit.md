@@ -1,14 +1,14 @@
 # Combat plan coverage
 
 **Updated:** 22 November 2026\
-**Current work:** [ADR 0016](decisions/0016-combat-balance-and-readability.md), standard check passed; rendered validation, review and delivery pending.\
-**Latest verified delivery:** **0.1.0 (25)**, source `8128368`, as recorded in the [prototype plan](prototype-plan.md#weapon-variety-and-map-wide-fire).
+**Current work:** [ADR 0016](decisions/0016-combat-balance-and-readability.md), implemented, checked, reviewed, merged and delivered in build 26.\
+**Latest verified delivery:** **0.1.0 (26)**, source `25195e8`, as recorded in the [prototype plan](prototype-plan.md#combat-balance-and-readability).
 
 The original five combat phases are implemented and delivered. That is an implementation result, not a finding that combat already feels finished. This audit distinguishes the delivered prototype, the current arena extension and deliberately deferred features. Exploration and salvage still lead the game; the combat yard is a separate place to repeat and tune encounters.
 
 ## Current balance/readability pass
 
-[Issue #118](https://github.com/RonildoBraga/lauder/issues/118) assigns tuning the existing arena. [ADR 0016](decisions/0016-combat-balance-and-readability.md) records the repeated production-path measurements, close scatter cadence adjustment, bounded passive/companion precision targeting, preserved explicit height-aware aim, readable preparation and settled-companion yielding. The standard check and all eighteen headless scenarios passed; rendered checks, review and the next release remain pending. These are provisional mechanical improvements, with physical and subjective checks still deferred. The build 25 evidence below remains historical for this pass.
+[Issue #118](https://github.com/RonildoBraga/lauder/issues/118) assigns tuning the existing arena. [ADR 0016](decisions/0016-combat-balance-and-readability.md) records the repeated production-path measurements, close scatter cadence adjustment, bounded passive/companion precision targeting, preserved explicit height-aware aim, readable preparation and settled-companion yielding. [PR #119](https://github.com/RonildoBraga/lauder/pull/119) merged as `25195e8`, with the exact tree of checked/reviewed `c80a7ac`. The final standard check passed 51 Blender tests, ten generated sounds, strict formatting, the app build and Swift Testing, including all **18 headless scenarios** and **30-wave integration**. Four exact-source rendered routes passed: `arsenal-bench` **167/167**, `combat-yard` **101/101** through wave 3, `enemy-arsenal` **35/35** and `relay-run-retreat` **104/104**. Source review completed without findings; Claude had not replied to the GitHub request at integration. The [prototype plan](prototype-plan.md#combat-balance-and-readability) records the source, presentation inspection and timing limits. The signed **0.1.0 (26)** archive passed bundle, version/build, team, signature and matching-dSYM verification. API-authenticated upload is **COMPLETE** with zero errors, processing is **VALID**, and the unexpired build is **IN_BETA_TESTING**, **INTERNAL_ONLY** and available to the existing internal testers with group/tester membership unchanged. These are provisional mechanical improvements, with physical and subjective checks still deferred. The build 25 evidence below remains historical for this pass.
 
 ## Weapon/range extension
 
