@@ -1,6 +1,6 @@
 # ADR 0013 — Relay Run, a complete salvage mission
 
-**Status:** Implementation prepared; Simulator and release verification pending\
+**Status:** Implemented and delivered in TestFlight 0.1.0 (23)\
 **Date:** 22 November 2026
 
 ## Assignment and boundary
@@ -60,6 +60,10 @@ Restart starts a fresh run: close the gate, reshuffle the cabinets, clear the ba
 - Repair completes once; the short exchange remains provisional. Restart, Pause, input recovery and level changes reset or preserve the intended state without duplicate entities or stale commands.
 - Focused rule/navigation/integration tests pass. Rendered runs cover a no-shot repair, guard contact and withdrawal/re-entry, and optional combat with onward salvage. Existing opening, combat and salvage scenarios remain regressions.
 - Signed Release and TestFlight verification pass before delivery is reported. Simulator timings and screenshots do not establish physical multi-touch, controller feel, baseline-phone 60 fps or whether the mission is enjoyable.
+
+## Verification and delivery
+
+Source `2199ad7` passed the full standard check, all fifteen headless scenarios and focused mission tests. Rendered safe/guarded journeys passed 105/105 and 104/104 steps; the prior combat/salvage regressions passed 113/113 and 106/106 through the extended cycle. Automatic and independent source reviews have no outstanding findings. A fresh signed Release archive was verified and uploaded with API authentication. Apple confirmed **0.1.0 (23)** as **VALID**, **IN_BETA_TESTING** and available to the existing internal testers with membership unchanged. The [prototype plan](../prototype-plan.md#verification-and-performance) records the measurements and remaining limits. Physical-phone performance, controller/touch behaviour and the maintainer's judgement remain unverified; story placement and dialogue remain provisional.
 
 ## Scope kept for later
 
