@@ -10,7 +10,7 @@ Miki crosses the snowbound bridge towards Manhattan, meets Tom through a fight a
 
 Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/decisions/0001-engine.md)). Blender remains the source of the bridge and character models ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Use simple shapes and colours until a concrete gameplay need warrants art work.
 
-The bridge-only reset is merged in [PR #122](https://github.com/RonildoBraga/lauder/pull/122) and delivered in **TestFlight 0.1.0 (27)**, app source `de4d0db`. The standard check and rendered Simulator checks passed; automatic review found no issues. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records sources, checks and delivery proof. Physical-phone behaviour, performance and enjoyment remain unverified for this build.
+The bridge-only prototype's structural preparation is delivered in **TestFlight 0.1.0 (28)**, app/archive source `7158f29`. The standard check and rendered Simulator checks passed; source review has no outstanding findings. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records exact sources, checks and delivery proof. Physical-phone behaviour, performance and enjoyment remain unverified for this build.
 
 ## Start here
 
@@ -56,7 +56,7 @@ docs/                            Current design, architecture and prototype plan
   story/                         Story bible
   encounters/                    Unimplemented narrative proposals
   decisions/                     Accepted decisions and clearly marked historical experiments
-scripts/check                    Blender, asset, formatting, app-build and Swift checks
+scripts/check                    Contract, Blender, asset, formatting, app-build and Swift checks
 .github/                         Pull request template and standard-check workflow
 ```
 
@@ -66,7 +66,7 @@ Manually maintained folders use lowercase names; Swift filenames use PascalCase.
 
 Open `apple/Lauder.xcodeproj` with the shared `Lauder` scheme. Use Simulator for daily iteration and `./scripts/check` before a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md).
 
-The maintainer approved focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md), tracked in [issue #124](https://github.com/RonildoBraga/lauder/issues/124). The next gameplay task remains agreeing on an enjoyable core loop using the bridge as a small test space. Story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
+The focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md) are implemented in [PR #125](https://github.com/RonildoBraga/lauder/pull/125), with reproducible release tooling in [PR #126](https://github.com/RonildoBraga/lauder/pull/126). The next gameplay task remains agreeing on an enjoyable core loop using the bridge as a small test space. Story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
 
 ## Licence
 

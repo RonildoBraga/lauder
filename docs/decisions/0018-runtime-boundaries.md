@@ -1,6 +1,6 @@
 # ADR 0018 — Smaller runtime responsibilities and shared contract checks
 
-**Status:** Accepted; verification and integration tracked in [issue #124](https://github.com/RonildoBraga/lauder/issues/124)
+**Status:** Accepted, implemented in [PR #125](https://github.com/RonildoBraga/lauder/pull/125) and [PR #126](https://github.com/RonildoBraga/lauder/pull/126), and delivered in TestFlight 0.1.0 (28); tracked in [issue #124](https://github.com/RonildoBraga/lauder/issues/124)
 
 **Date:** 22 November 2026
 
@@ -46,6 +46,15 @@ credentials and release evidence stay private.
 
 Preserve camera framing/transition/reset, story eligibility and costs, recruitment, checkpoint
 retry, Observation delivery, shared input authority and foreground lifecycle. Run
-`./scripts/check` and representative rendered bridge routes before integration. Existing
-TestFlight build 27 proves the prior source only. A new delivery needs its own checked/reviewed
-source and Apple processing/tester proof. Phone checks remain deferred by the maintainer.
+`./scripts/check` and representative rendered bridge routes before integration. Each delivery
+needs its own checked/reviewed source and Apple processing/tester proof. Phone checks remain
+deferred by the maintainer.
+
+The structural and release-tooling changes are integrated as `7158f29`, matching the exact tree
+of reviewed `c01dd03`. The local standard check and hosted CI passed; review has no outstanding
+findings. Rendered opening and orders routes passed on unchanged app, Swift-test and Blender
+sources. The source-bound check and signed archive verification also passed on integrated
+source. At 2026-11-22 08:38:25 UTC, Apple confirmed build 0.1.0 (28) processed and available to
+the existing internal testers, with membership unchanged. The
+[prototype plan](../prototype-plan.md#verification-and-performance) records exact commits,
+CI, Simulator and delivery results. No new physical-phone or enjoyment result is claimed.
