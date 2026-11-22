@@ -69,6 +69,9 @@
       case awaitConversation(seconds: Float)
       /// The level in play, by its id, such as "combat-yard" after the pause menu's third choice.
       case expectLevel(String)
+      /// The active member's cover and whether firing has exposed them (ADR 0009). Nil means
+      /// no nearby cover; the stance and visibility checks then do not apply.
+      case expectCover(String?, firing: Bool?, exposed: Bool)
       /// Press Square for one frame: the leader's signature, such as Miki's Disrupt.
       case signature
       /// Wait until the HUD says Miki can Disrupt; fails after this many seconds.
@@ -122,6 +125,8 @@
       let fallBacks: Int
       /// How many shots' marks show on blocks.
       let shotMarks: Int
+      /// The leader's cover stance and directional protection, tried only in the combat yard.
+      let leaderCover: FightSimulation.CoverState?
     }
 
     struct Frame {
@@ -437,6 +442,15 @@
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
         case .expectLevel(let id):
           expect(snapshot.level.id == id, "the level was \(snapshot.level.id) instead of \(id)")
+        case .expectCover(let box, let firing, let exposed):
+          let cover = snapshot.leaderCover
+          expect(
+            cover?.boxID == box
+              && (box == nil
+                || ((firing == nil || cover?.firing == firing) && cover?.exposed == exposed)),
+            "cover was \(cover?.boxID ?? "none"), firing \(cover?.firing ?? false), "
+              + "exposed \(cover?.exposed ?? false); expected \(box ?? "none"), "
+              + "firing \(firing.map(String.init) ?? "any"), exposed \(exposed)")
         case .signature:
           return press(InputRules.Raw(controllerSignature: true))
         case .awaitDisrupt(let seconds):
@@ -828,6 +842,35 @@
         .expectLevel("brooklyn-bridge"), .expectParty([.miki]), .mark("back on the bridge"),
       ]
 
+    /// ADR 0009's leader cover, driven through the same controls as the player: the centre of
+    /// the tall wall stops fire, its edge permits a peek, and firing over a low block exposes
+    /// the leader before they duck again. Pause freezes exposure; a new leader and Restart
+    /// cannot inherit the previous stance. Companions hold back to leave this test to Miki.
+    private static let leaderCover: [Step] =
+      [.mark("the bridge")] + otherLevel + [
+        .expectLevel("combat-yard"), .order(.hold), .walk([0, -0.25]), .wait(seconds: 0.5),
+        .expectCover("wall", firing: false, exposed: false), .mark("sheltered at the tall wall"),
+        .fireAimed([0, -1], seconds: 0.7), .expectMarks(atLeast: 1),
+        .expectCover("wall", firing: nil, exposed: false), .mark("the wall stops the shot"),
+        .walk([4.2, -0.25]), .fireAimed([0, -1], seconds: 0.85),
+        .expectCover("wall", firing: true, exposed: true), .mark("peeking past the tall edge"),
+        .wait(seconds: 0.45), .expectCover("wall", firing: false, exposed: false),
+      ] + restartRun + [
+        .order(.hold), .walk([9, 2]), .walk([8.55, -3.55]), .wait(seconds: 0.5),
+        .expectCover("block-east", firing: false, exposed: false),
+        .mark("sheltered behind the low block"), .fireAimed([0, -1], seconds: 0.85),
+        .expectCover("block-east", firing: true, exposed: true),
+        .mark("firing over low cover"), .pause, .wait(seconds: 0.6),
+        .expectCover("block-east", firing: true, exposed: true),
+        .mark("pause holds the exposed stance"), .pause, .wait(seconds: 0.45),
+        .expectCover("block-east", firing: false, exposed: false), .mark("back behind cover"),
+        .switchLeader, .expectCover(nil, firing: false, exposed: false),
+        .switchLeader, .switchLeader, .wait(seconds: 0.1),
+        .expectCover("block-east", firing: false, exposed: false),
+        .walk([8.55, -2]), .expectCover(nil, firing: false, exposed: false),
+        .mark("walking away leaves cover"),
+      ] + restartRun + [.expectCover(nil, firing: false, exposed: false)]
+
     /// The salvage yard (ADR 0006), entered from the bridge through the combat yard by the pause
     /// menu's third choice. Miki cannot open the depot's gate and hears who can; Tom shifts its
     /// loose panel and it swings open. Tom searches the cabinet that holds the wrong model in this
@@ -864,7 +907,8 @@
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-      ("orders", orders), ("combat-yard", combatYard), ("salvage-yard", salvageYard),
+      ("orders", orders), ("combat-yard", combatYard), ("leader-cover", leaderCover),
+      ("salvage-yard", salvageYard),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

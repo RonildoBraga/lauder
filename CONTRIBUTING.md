@@ -70,6 +70,8 @@ It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records 
 
 The scenario input goes through the normal controls and input rules, and the HUD shows the step and result. Small discs mark where each companion is heading. The runner exists only in Debug builds, so phone and Release builds are unaffected. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Simulator frame times and Debug-build costs are not phone performance, and a scripted route does not replace a person playing.
 
+`leader-cover` checks the active-character prototype of [ADR 0009](docs/decisions/0009-leader-cover.md) separately: shots stopped by the tall wall, a peek at its edge, low-cover firing exposure and recovery, Pause freezing the stance, leadership changes, walking away and Restart. It reaches the combat yard through the same pause menu; companions hold behind the wall so they cannot mask the leader's cover behaviour.
+
 Playtest reports also list elapsed construction times for the initial world and each level change, in order: navigation, fight entities, scene, party and remaining setup. These timings are saved in `summary.json` under `worldLoads`. They cover the initializer body, excluding earlier stored-property initialisation and later SwiftUI/RealityView presentation and renderer start-up, so compare them with frame times to investigate a level-switch hitch. They are Debug Simulator measurements, not phone performance or evidence that a hitch is fixed. Release builds contain no load-timing instrumentation.
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.

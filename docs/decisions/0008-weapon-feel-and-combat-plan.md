@@ -38,7 +38,7 @@ Each phase is built and tested in the Simulator, then checked on the baseline iP
 
 This record decides only the first phase. The others are the working proposal each starts from, and each gets its own record when it begins:
 1. **The shot:** this record.
-2. **Cover for the leader:**
+2. **Cover for the leader:** now assigned and recorded in [ADR 0009](0009-leader-cover.md).
    - no cover button: standing near a block between the leader and a threat is cover;
    - firing rises over a low block or steps out at a tall block's edge, and the leader is exposed while firing;
    - cover protects only from the side it faces;

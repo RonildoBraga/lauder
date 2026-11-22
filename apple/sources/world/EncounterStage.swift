@@ -17,6 +17,7 @@ final class EncounterStage {
   private var visuals: [String: Entity] = [:]
   private var aimLines: [String: Entity] = [:]
   private let targetMarker: Entity
+  private let coverShield: CoverShield?
   /// How much larger than authored the aim marker and the aim and shot lines show.
   private let markerScale: Float
 
@@ -27,10 +28,12 @@ final class EncounterStage {
     weaponProp = style.carbine()
     markerScale = style.markerScale
     targetMarker = style.targetMarker()
+    coverShield = level.combat.leaderCover ? CoverShield(style: style) : nil
     container.name = "combat"
     targetMarker.name = "combat.target"
     container.addChild(targetMarker)
     container.addChild(shots)
+    if let coverShield { container.addChild(coverShield.entity) }
 
     for spec in level.encounters.flatMap(\.hostiles) {
       let body = Entity()
@@ -73,6 +76,11 @@ final class EncounterStage {
 
   /// Applies the state without advancing it or choosing a target, pose, shot or outcome.
   private func show(_ fight: FightSimulation) {
+    if let cover = fight.coverState {
+      coverShield?.show(at: cover.position, toward: -cover.normal, exposed: cover.exposed)
+    } else {
+      coverShield?.hide()
+    }
     for (id, state) in fight.hostiles {
       if let body = bodies[id] {
         body.isEnabled = state.isVisible
