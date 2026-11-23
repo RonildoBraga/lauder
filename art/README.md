@@ -7,7 +7,7 @@ The subsequent scene-first assignment is implemented in the bridge's [Blender so
 - [Frozen Brooklyn Bridge](bridge/README.md): the selected high gameplay-view concept.
 - [Robot enemy](robot/README.md): earlier dark armed references and three [bulkier alternatives](robot/bulk-studies/README.md), with C selected for modelling and A retained for later.
 - [C finish comparison](robot/finish-study/README.md): an AI-edited reference based on the actual Blender render, subsequently used to guide an assigned sensor-socket and armour-construction pass; the resulting mesh has its own review and verification.
-- [Party appearance concepts](characters/README.md): the new [angular graphic trio proposal](characters/angular-study/README.md), guided by the maintainer's supplied references. Earlier rounded concepts and the Miki Blender study remain comparisons; review the new silhouettes before rebuilding a mesh.
+- [Party appearance concepts](characters/README.md): the selected [angular graphic trio direction](characters/angular-study/README.md), guided by the maintainer's supplied references, and the assigned [static Miki Blender blockout](../blender/studies/miki-angular/README.md). Review the blockout's silhouette before rig fitting; earlier rounded concepts remain comparisons.
 
 Superseded images were removed at the maintainer's request. The [first-tower encounter record](../docs/encounters/bridge-spider-bot.md) describes the implemented guard and remaining playtest questions. The finish comparison proposes no gameplay changes.
 

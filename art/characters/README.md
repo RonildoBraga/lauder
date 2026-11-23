@@ -1,6 +1,6 @@
 # Party appearance concepts
 
-**Current review:** The maintainer supplied four geometric character references and asked to revamp the style after the rounded Miki models remained unsatisfactory. The new [angular graphic character study](angular-study/README.md) explores small simplified heads, exaggerated ratios, hard colour planes and strongly different Miki/Laura/Tom silhouettes. Review that sheet before another mesh rebuild. The earlier concept and [Miki Blender study](../../blender/studies/miki-concept/README.md) below are retained comparisons, not the new modelling target. Runtime models and motion remain unchanged.
+**Current review:** The maintainer selected the [angular graphic direction](angular-study/README.md) after the rounded Miki models remained unsatisfactory, then authorised a [static Miki Blender blockout](../../blender/studies/miki-angular/README.md) before animation fitting. Review its proportions and silhouette beside the concept and through camera B. The earlier concept and [rounded Miki study](../../blender/studies/miki-concept/README.md) below remain comparisons. The blockout is unrigged and awaits visual review; canonical models, shared motion, runtime rendering and gameplay remain unchanged.
 
 ## Earlier rounded-proportion concept
 
@@ -27,4 +27,4 @@ The large views explore identity; the smaller high rear views explore the shapes
 - **Prompt and process:** The [exact generation prompt](prompts.md) is preserved. One opaque PNG was generated and copied unchanged into this folder; no image editing or 3D export was performed.
 - **File:** `party-lineup-v1.png`, 1536 × 1024 pixels, 1,649,790 bytes. It exceeds 1 MiB and has an explicit Git LFS rule under the [storage policy](../../CONTRIBUTING.md#git-lfs-and-cloning).
 
-Review the [new angular trio](angular-study/README.md) before rebuilding Miki, then the other characters. The earlier [animated Blender study](../../blender/studies/miki-concept/README.md) remains a motion and appearance comparison, not evidence that the new proportions fit the existing bind pose. The game and shared Blender animation source retain their current accepted assets.
+Review the [static angular Miki blockout](../../blender/studies/miki-angular/README.md) before rig and animation fitting, then use the verified approach for the other characters. The earlier [animated Blender study](../../blender/studies/miki-concept/README.md) remains a motion and appearance comparison, not evidence that the new proportions fit the existing bind pose. The game and shared Blender animation source retain their current accepted assets.

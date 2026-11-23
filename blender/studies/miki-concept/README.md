@@ -1,6 +1,6 @@
 # Miki signature mesh review
 
-**Status:** Retained Blender comparison, revised on 24 November 2026. The maintainer subsequently found this direction unsatisfactory and supplied angular character references for an art-style reset. The new [trio concept study](../../../art/characters/angular-study/README.md) is the current review proposal. This source is preserved without further edits; its rig, motion and validation below describe this earlier salvage-traveller mesh, not the new proportions. Review the new direction before rebuilding Miki or the other characters.
+**Status:** Retained Blender comparison, revised on 24 November 2026. The maintainer subsequently selected the [angular trio direction](../../../art/characters/angular-study/README.md) and authorised a separate [static Miki blockout](../miki-angular/README.md), which is now the appearance-review target before rig fitting. This earlier source is preserved without further edits; its rig, motion and validation below describe the salvage-traveller experiment, not the new proportions.
 
 Open `miki-concept.blend`, enter its camera view and play the timeline. The model is centred without the concept card. A curious portrait pose is followed by running, sneaking, aiming and shooting.
 
