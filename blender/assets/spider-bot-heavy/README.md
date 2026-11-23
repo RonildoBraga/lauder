@@ -1,37 +1,76 @@
 # spider-bot-heavy
 
-**Status:** Concept C selected and built as a Blender proportion study, awaiting maintainer visual review. The maintainer retained A as a possible later variant with different guns; that variant is not assigned. Camera B remains approved.
+**Status:** The maintainer accepted C's form and assigned Blender walking, turning and visual shooting studies before bridge placement. Those studies and reusable symmetric components are built and technically checked, with a rendered motion reel ready for maintainer review. A remains a possible later different-weapon variant, outside this task. Camera B remains approved.
 
-![Actual Blender render of the C heavy-walker form study](preview.png)
+![Actual Blender render of the C heavy walker](preview.png)
 
-- **Source:** New geometry authored for Lauder by Codex in Blender on 23 November 2026, following the selected [C — Heavy walker](../../../art/robot/bulk-studies/c-heavy-walker.png) and its [exact prompt](../../../art/robot/bulk-studies/prompts.md). This retains the [reference chain](../../../art/robot/attribution.md) to **Low-poly Spider Bot (Rigged)** by **rznn7**, from the [creator's asset page](https://rznn7.itch.io/low-poly-spider-bot). No creator model, rig or texture was downloaded or imported. No endorsement is implied.
-- **Licence:** This reference-derived model and its rendered previews are shared under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/), with credit to rznn7 and the Lauder concept studies. Changes include new faceted geometry, a larger connected torso, substantial hip housings and legs, compact twin guns and a square sensor. This file-level notice does not replace the repository's licence for code or unrelated assets.
+- **Source:** New geometry and rigid-part motion authored for Lauder by Codex in Blender on 23 November 2026, following the selected [C — Heavy walker](../../../art/robot/bulk-studies/c-heavy-walker.png) and its [exact prompt](../../../art/robot/bulk-studies/prompts.md). This retains the [reference chain](../../../art/robot/attribution.md) to **Low-poly Spider Bot (Rigged)** by **rznn7**, from the [creator's asset page](https://rznn7.itch.io/low-poly-spider-bot). No creator model, rig, animation or texture was downloaded or imported. No endorsement is implied.
+- **Licence:** This reference-derived model, its authored motion and rendered previews are shared under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/), with credit to rznn7 and the Lauder concept studies. Changes include new faceted geometry, a connected torso, substantial hip housings and legs, twin guns, square sensor, linked components and new walking, turning, bracing and recoil motion. This file-level notice does not replace the repository's licence for code or unrelated assets.
 
-The earlier [spider-bot](../spider-bot/README.md) is retained as a rejected proportion study. This new source is a static form review before animation or runtime work. It is not registered as spawned, exported into the app or placed in a playable encounter. The current app still uses the human encounter; combat rules remain proposed.
+The earlier [spider-bot](../spider-bot/README.md) remains a rejected historical study. C is not registered as spawned, exported into the app or placed in a playable encounter. The app still has the human encounter. Runtime movement, AI, attacks and encounter rules remain separate work.
 
-## Shape and source structure
+## Reusable components and symmetry
 
-The `spider-bot-heavy` collection uses metres, stands on z = 0 at its centred origin and faces Blender −y. A root Empty holds a connected faceted torso and pelvis, four thick upper-leg assemblies, stout lower links and flat feet. Two side gun housings each have one recessed barrel and a muzzle marker at its tip. The front has a burgundy mask and pale square sensor; two short antennae sit on the roof.
+The self-contained `spider-bot-heavy` collection uses metres, stands on z = 0 at its centred origin and faces Blender −y. Its **41 mesh Objects share 17 unique Mesh datablocks**, with **2,428 evaluated triangles and five materials**. Reuse is an authoring property, not measured runtime instancing or draw calls.
 
-The source has **2,428 triangles, 41 separate mesh parts and five materials**, with no textures, lights, cameras, armatures, constraints, shape keys or animation. These are authoring counts, not measured runtime draw calls. The saved timeline contains only the neutral frame 1. Separate parts allow a later motion pass; this model includes no walking or firing animation.
+All four legs use the same six shared meshes: socket armour, hip hinge, upper armour, knee hinge, lower link and foot. Editing a component's Mesh in Edit Mode updates its four instances. Moving or posing an Object affects that instance only. Neutral left/right geometry mirrors across x = 0, including material assignments. Proper rotations place each assembly; object scales stay positive and unit. Independently posed legs during a step do not alter this shared geometry.
 
-Exact vertex bounds measure **2.83 m across × 2.51 m long × 2.35 m high**, including antennae. The main torso reaches 2.00 m. This is a provisional modelling scale for review beside Miki, not an agreed enemy size or collision footprint. The concept image's human inset was illustrative and is not a metric source. Gameplay placement and passage clearance still need validation before integration.
+```text
+root
+  front-left connector          Also front-right, rear-left, rear-right
+    socket mesh                 Shared socket Mesh
+    hip pivot
+      hip mesh                  Shared hip Mesh
+      upper pivot
+        upper armour mesh       Shared upper Mesh
+        knee pivot
+          knee mesh             Shared knee Mesh
+          lower pivot
+            lower mesh          Shared lower Mesh
+            ankle pivot
+              foot mesh         Shared foot Mesh; stays level
+  gun-left recoil               Matching gun-right recoil
+    housing, top plate, barrel   Shared corresponding Mesh data
+    muzzle-left                 Moves with its barrel
+```
 
-Five matte Principled materials use the earlier robot palette, with sRGB values converted to scene-linear: armour `#30343E`, slate `#4B5260`, joints `#151D24`, face `#662E30` and sensor `#E9DFCA`. Roughness is 1, metallic and emission are 0. This does not recolour party or bridge assets.
+Connectors sit at `(±0.58, ±0.42, 1.28)` m. Joint pivots meet at their link endpoints; the upper/lower links measure **1.01 / 0.57 m**. Opening the knees slightly gives the accepted shape room to step: neutral vertex bounds are about **3.00 × 2.53 × 2.35 m**, versus the static study's 2.83 × 2.51 × 2.35 m. Intake's conservative transformed-box bounds are slightly larger. These are provisional authoring dimensions, not approved collision or clearance measurements.
 
-## Rendered review
+To attach another assembly, select its connector and descendants, duplicate with linked data and place the new connector. Preserve the hierarchy, joint-local origins and unit scales. Make mesh data single-user only for a deliberate new component. Paired roof ridges, antennae, mounts and gun parts also share data. Each gun's separate recoil root carries its housing, plate, barrel and muzzle marker together, providing an attachment point for later variants without building those variants now.
 
-[Beside Miki](scale-preview.png) shows the actual model and existing Miki stand-in at their authored sizes. The [camera B scale study](camera-b-preview.png) uses the approved offset `[0, 56, 44]` in game coordinates and 22° vertical lens. Both are Blender review renders on a snow plane, not game screenshots or runtime integration.
+There are no textures, lights, cameras, armatures, constraints, shape keys or runtime solvers in the source. Its five matte Principled materials retain the robot palette: armour `#30343E`, slate `#4B5260`, joints `#151D24`, face `#662E30`, sensor `#E9DFCA`, converted from sRGB to scene-linear, with roughness 1, metallic 0 and emission 0.
 
-The previews use the bridge's two suns and an authoring exposure of +0.7. Ground, Miki, lights and cameras were added only in an unsaved review copy and are absent from the model source. PNG metadata was removed without changing rendered pixels, keeping local source paths out of public files.
+## Motion studies
 
-| File | Dimensions | Size in bytes | Storage |
-|---|---|---:|---|
-| `spider-bot-heavy.blend` | 2.83 × 2.51 × 2.35 m | 110,451 | Git LFS |
-| `preview.png` | 1600 × 1100 | 370,175 | Ordinary Git |
-| `scale-preview.png` | 1800 × 1100 | 433,672 | Ordinary Git |
-| `camera-b-preview.png` | 2622 × 1206 | 89,376 | Ordinary Git |
+The scene is **30 fps**, with a **120 Hz transform bake** and linear interpolation, saved at neutral **frame 1**. Timeline markers identify separate takes:
 
-Standalone intake reports zero problems. Final independent saved-file inspection verifies closed manifold solids with positive volume, no degenerate faces, connected parts, four flat feet on the ground, bilateral symmetry and muzzle markers exactly at barrel tips. The decompressed source and public PNGs contain no private-path markers. The rejected model, live Blender session, bridge source and runtime exports remain unchanged. The standard `./scripts/check` passed the application build and Simulator tests during this authoring pass. These technical results do not replace maintainer visual approval, runtime compatibility checks or phone performance evidence.
+| Frames | Study | Review intent |
+|---|---|---|
+| 2–242 | Walk, 8 s | Start, advance 1.55 m one leg at a time, then settle |
+| 244–484 | Turn left, 8 s | Step through 90° while stance feet keep position and yaw |
+| 486–726 | Turn right, 8 s | Mirror the left turn's placement, cadence and range |
+| 728–908 | Brace and fire, 6 s | Step wider, lower the body, alternate recoil, fire both, recover |
 
-Review the torso-to-leg balance and size before animation. The [first-tower encounter proposal](../../../docs/encounters/bridge-spider-bot.md) remains a separate design gate; no new weapon type, AI, shots, damage or encounter handoff is implemented here.
+Frames 243, 485, 727 and 909 reset to neutral between independent takes. These are editorial resets, not continuous movement or seamless loops. Each take starts and stops cleanly; travel and turning end in a neutral stance at their new position or heading.
+
+Walking uses a four-beat crawl with at least three feet supporting the body. Feet lift 12 cm, travel and plant before taking load. During turns each stance foot keeps its world-space position and yaw until its next step. A two-link solve was used during authoring, then baked into ordinary object-transform keys; the hierarchy keeps joint endpoints connected and foot pivots compensate for leg pitch.
+
+Firing plants all four feet before recoil starts. Both guns use matching stroke/recovery curves; their alternating timing is an authoring candidate. No muzzle flash, projectile, aim line, damage, warning or ammunition logic is implemented. This is visual shooting, not approved combat balance.
+
+## Review and validation
+
+The [30-second motion reel](motion-preview.mp4) presents separate labelled shots: walk at 0–8 s, turn left at 8–16 s, turn right at 16–24 s, brace/fire/recover at 24–30 s. It is H.264, 960 × 720, 24 fps, with 720 decoded frames. Recoil is restrained; judge its strength in playback before adding gameplay cues. [Beside Miki](scale-preview.png) shows current provisional size; the [camera B study](camera-b-preview.png) uses the approved offset `[0, 56, 44]` and 22° lens. These are Blender renders, not game screenshots.
+
+They use the bridge's two suns and an authoring exposure of +0.7. Ground, Miki, lights and cameras exist only in unsaved render copies. Public PNG metadata is removed without changing pixels. The Blender source and movie use Git LFS; PNGs below 1 MiB use ordinary Git under the [storage policy](../../../CONTRIBUTING.md#git-lfs-and-cloning).
+
+The standard `./scripts/check` passes contracts, 51 Blender tests, sound fingerprints, Swift formatting, the shared app build and hosted Simulator tests on this source-only pass. Final independent saved-file inspection sampled 7,204 poses at 240 Hz, including half-key subframes: stance drift stays below 0.029 mm, stance yaw drift below 0.000060°, foot tilt below 0.0053° and sole penetration below 0.012 mm. Joint gaps are zero; link-length error is below 0.00000023 m. Neutral geometry/material symmetry error is below 0.00000029 m and mirrored-turn error below 0.0000036 m. These are floating-point residuals, not visible intended sliding. Shared-data identity, positive unit scales, topology, part contact, materials, muzzle placement, intake and privacy checks pass. Sampled rendered poses were inspected; all 720 movie frames decode successfully. Prior static checks remain historical in the [prototype plan](../../../docs/prototype-plan.md#concept-c-proportion-study). The exporter still writes a selected frame and disables animation/instancing. Runtime clip delivery, hierarchy/muzzle preservation after export, integration and phone performance remain unverified.
+
+Review this movement before assigning bridge integration. The [first-tower proposal](../../../docs/encounters/bridge-spider-bot.md) retains its separate gate for AI, attacks, damage and encounter progression.
+
+| File | Size in bytes | Storage |
+|---|---:|---|
+| `spider-bot-heavy.blend` | 1,714,534 | Git LFS |
+| `motion-preview.mp4` | 1,274,401 | Git LFS |
+| `preview.png` | 375,158 | Ordinary Git |
+| `scale-preview.png` | 436,880 | Ordinary Git |
+| `camera-b-preview.png` | 91,715 | Ordinary Git |

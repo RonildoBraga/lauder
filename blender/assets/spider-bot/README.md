@@ -1,6 +1,6 @@
 # spider-bot
 
-**Status:** Rejected proportion study, retained as historical reference. The maintainer subsequently selected **C, Heavy walker**, from the [bulkier concepts](../../../art/robot/bulk-studies/README.md) for a new Blender proportion study in the separate [spider-bot-heavy source](../spider-bot-heavy/README.md). This old model is not an accepted appearance or a size/triangle-budget target for C. A is retained for a possible later different-weapon variant, not an assignment; B is unselected. No new animation or runtime combat work is assigned. Camera B remains approved.
+**Status:** Rejected proportion study, retained as historical reference. The maintainer subsequently selected **C, Heavy walker**, from the [bulkier concepts](../../../art/robot/bulk-studies/README.md) for a new Blender proportion study in the separate [spider-bot-heavy source](../spider-bot-heavy/README.md). This old model is not an accepted appearance or a size/triangle-budget target for C. A is retained for a possible later different-weapon variant, not an assignment; B is unselected. No further work on this rejected asset is assigned. The accepted C source has its own Blender motion assignment; runtime combat remains separate. Camera B remains approved.
 
 A low-poly Blender model and authoring-only motion study of the earlier dark armed [spider-bot concept](../../../art/robot/README.md). This source is not registered as a spawned model, exported into the app or placed in the playable encounter. The current human encounter and its gameplay remain separate.
 

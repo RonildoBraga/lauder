@@ -24,4 +24,4 @@ Preserve this source credit, licence link and indication of changes when sharing
 
 The later [bulkier studies](bulk-studies/README.md) use the v3 sheet for identity and the bridge concept for art direction. Their additional changes redistribute mass into larger connected bodies, hip housings and thick articulated legs, with three different silhouettes. Their [exact prompts](bulk-studies/prompts.md) are preserved separately. The maintainer subsequently selected C for a new Blender form study and retained A for a possible later different-weapon variant. The human figures and high-angle insets do not establish metric scale.
 
-The [C heavy-walker model and renders](../../blender/assets/spider-bot-heavy/README.md) retain the same source chain and CC BY 4.0 file-level notice, with newly authored geometry and their own measurements and limitations.
+The [C heavy-walker model, authored motion and renders](../../blender/assets/spider-bot-heavy/README.md) retain the same source chain and CC BY 4.0 file-level notice, with newly authored geometry, walking, turning, bracing and recoil, and their own measurements and limitations.

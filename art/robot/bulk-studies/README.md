@@ -1,6 +1,6 @@
 # Bulkier robot concepts
 
-**Status:** Generated on 23 November 2026. The maintainer selected **C, Heavy walker**, for the next Blender proportion study. **A, Armoured crawler**, is retained for a possible later variant with different gun types; no A modelling or weapon work is assigned. **B, Low siege bot**, is unselected. The current assignment is model form first, with no animation or runtime combat assignment. Camera B remains approved.
+**Status:** Generated on 23 November 2026. The maintainer selected **C, Heavy walker**, and accepted its Blender form. Walking, turning and visual shooting studies are now assigned, together with exact mirrored left/right rest geometry and reusable identical leg and connector parts. Those studies are built and technically checked, ready for maintainer motion review. **A, Armoured crawler**, remains a possible later variant with different gun types, with no A modelling or weapon work assigned. **B, Low siege bot**, is unselected. Runtime AI, weapon rules, bridge placement and releases are not assigned. Camera B remains approved.
 
 The first [Blender blockout](../../../blender/assets/spider-bot/README.md) was rejected for its proportions. These studies explore a denser body, substantial hip housings and thicker articulated legs. They retain the dark matte palette, four legs, twin compact guns, burgundy mask and pale square sensor of the [earlier reference](../README.md). The old model is retained as a rejected reference; its dimensions and triangle count do not constrain the next design.
 
@@ -22,7 +22,7 @@ The lowest, broadest option: a sloping beetle-like shell, folded heavy legs and 
 
 ## C — Heavy walker
 
-Selected for the next Blender proportion study. The separate [heavy-walker source](../../../blender/assets/spider-bot-heavy/README.md) starts with model form; its rendered previews and measured, provisional scale are recorded in that README.
+Selected and built in the separate [heavy-walker source](../../../blender/assets/spider-bot-heavy/README.md), with its form accepted by the maintainer. Its rendered form previews, provisional scale and historical technical checks are recorded there. The assigned Blender walking, turning and visual shooting studies, symmetric rest geometry and reusable linked leg/connector parts are built; the [motion reel](../../../blender/assets/spider-bot-heavy/motion-preview.mp4) and new verification are now available.
 
 The tallest option: a forward-leaning torso, strong hip frame and substantial load-bearing legs. It has a more upright, alert stance than A or B.
 
@@ -30,7 +30,7 @@ The tallest option: a forward-leaning torso, strong hip frame and substantial lo
 
 ## Selection and next review
 
-The C selection authorises its Blender proportion study. Review the resulting body mass and silhouette before animation or runtime work. The weapons and face keep a shared identity across all three studies; retaining A for a possible different-weapon variant does not assign new gun types now. The selection does not settle metric dimensions, a triangle cap, combat rules or a playable robot encounter.
+C's form has been accepted. Review the assigned walking, turning and visual shooting motion and the mirrored, reusable component structure before bridge placement. The weapons and face keep a shared identity across all three studies; retaining A for a possible different-weapon variant does not assign new gun types now. Blender motion studies do not settle gameplay collision dimensions, weapon rules, combat tuning or a playable robot encounter.
 
 The small high-angle views and human figures are illustrative. They are not actual game frames, metric scale specifications or exact camera B projections. Ground clearance, walking footprint, animation, phone readability and performance need their own modelling and later gameplay validation. No mesh, rig or runtime asset is included in these PNGs.
 
