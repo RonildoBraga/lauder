@@ -67,7 +67,7 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 ### Robot blockout palette
 
-The rejected first robot blockout used asset-specific matte materials from the earlier [dark armed concept](../art/robot/README.md). Its Principled BSDF materials have roughness 1 and metallic 0, with no emission or textures. The palette remains a reference for the [bulkier proportion studies](../art/robot/bulk-studies/README.md); C is now selected for a new [heavy-walker form study](../blender/assets/spider-bot-heavy/README.md), with A retained for a possible later different-weapon variant. These colours apply to the robot's own materials; the existing world palette remains as listed above.
+The rejected first robot blockout used asset-specific matte materials from the earlier [dark armed concept](../art/robot/README.md). Its Principled BSDF materials have roughness 1 and metallic 0, with no emission or textures. The table below records that historical palette, also shown in the [bulkier proportion studies](../art/robot/bulk-studies/README.md) and retained motion reel. It is not the current C finish. A remains a possible later different-weapon variant; the existing world palette is unchanged.
 
 | Part | Base colour |
 |---|---|
@@ -76,6 +76,10 @@ The rejected first robot blockout used asset-specific matte materials from the e
 | Joints and muzzles | `#151D24` |
 | Burgundy face | `#662E30` |
 | Pale sensor | `#E9DFCA` |
+
+### Current C finish
+
+After accepting the refined body and legs, the maintainer requested removal of the reddish-brown face colour and a red sensor. The current [C source and previews](../blender/assets/spider-bot-heavy/README.md) use **charcoal face `#30343E`**, matching the armour, and **red sensor `#C83C38`**. Armour, slate facets and joints otherwise retain the values above. Materials remain matte, with roughness 1, metallic 0 and emission 0; the red square adds no light or glow effect. This finish and the 12% smaller cannons await visual review. Historical artwork, movie colours and build 29 are unchanged.
 
 ## Light and shadow
 

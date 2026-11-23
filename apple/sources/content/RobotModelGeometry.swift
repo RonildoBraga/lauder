@@ -18,8 +18,8 @@ enum RobotModelGeometry {
     [-0.78, 1.52, -0.28],
   ]
   static let muzzles: [SIMD3<Float>] = [
-    [0.78, 1.52, -0.94],
-    [-0.78, 1.52, -0.94],
+    [0.78, 1.52, -0.8608],
+    [-0.78, 1.52, -0.8608],
   ]
 
   // Rigid-joint calculations retain Blender's local x/y ground plane and z up.
