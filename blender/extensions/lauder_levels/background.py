@@ -9,6 +9,7 @@ from .common import (
     _and, bpy, EXPORT_MODEL_SCRIPT, EXPORT_SCRIPT, LEVELS, model_file, PLAY_SCRIPT, SPAWNED,
 )
 from .exports import levels_using, stale_exports, stale_model_export
+from .party_animation import PARTY_MODELS
 
 
 #: Work running in the background, one step after another, so that Blender stays usable: the
@@ -53,6 +54,19 @@ def background_steps(repository, key, play):
         steps.append(("play", [sys.executable, "-I", str(Path(repository) / PLAY_SCRIPT)],
                       "play.log", key))
     return steps
+
+
+def party_export_steps(repository):
+    """Saving the exact shared motion library refreshes the three ordinary model exports."""
+    return [_export_model_step(repository, name) for name in PARTY_MODELS
+            if stale_model_export(repository, name) is not None]
+
+
+def _export_party_animation(repository):
+    steps = party_export_steps(repository)
+    _queue(repository, steps)
+    return ("Exporting the three party models from their shared motion…" if steps
+            else "The party models' shared motion exports are up to date.")
 
 
 #: The background steps that export, a level or a model that the game creates.

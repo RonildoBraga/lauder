@@ -21,19 +21,26 @@
   "models/laura": {
     "format": 1,
     "made from": {
-      "blender/assets/laura/laura.blend": "292ebf6e6a77f34750bdeedb891e3b2953067ba6a75e397bc1b55e07c1892130"
+      "blender/animations/party.blend": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
+      "blender/assets/laura/laura.blend": "48952298b0cb86d6897e9ab4212016d9519b0f138afdf88e6314ef0ea10fd4d9",
+      "blender/extensions/lauder_levels/exports.py": "14f072e94c536f3968a71a3bd7ad6e57264d3fe0f59e0e9e27e45ce83cdb9255",
+      "blender/extensions/lauder_levels/party_animation.py": "9b8896bcb178736155a1a3a2949214e7cf3d13968b80f817a190920062454999"
     },
     "wrote": {
-      "apple/sources/content/models/laura.usdz": "c6c15f667239a0a5dc16fdb1a726003ce743fbf71532e52badb2bb988633651a"
+      "apple/sources/content/models/laura.usdz": "7a77e39c90f911ae2ba19a149c4462cbafb1f2f97f07ed2e2d10174001b63e0e"
     }
   },
   "models/miki": {
     "format": 1,
     "made from": {
-      "blender/assets/miki/miki.blend": "9bc3d548aa95219302c3b65417b0144b8a173400e14e070c2895e6e33a854d13"
+      "blender/animations/party.blend": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
+      "blender/assets/miki/miki.blend": "d513c61baa9792e309df6c3f75311c19db0ee4dc8f32d77fa0719f5b94b84115",
+      "blender/extensions/lauder_levels/exports.py": "14f072e94c536f3968a71a3bd7ad6e57264d3fe0f59e0e9e27e45ce83cdb9255",
+      "blender/extensions/lauder_levels/party_animation.py": "9b8896bcb178736155a1a3a2949214e7cf3d13968b80f817a190920062454999"
     },
     "wrote": {
-      "apple/sources/content/models/miki.usdz": "a74a575534fab68e6477cec380cbe07809d442c77af685d5b8816837c9eef039"
+      "apple/sources/content/PartyModelClips.swift": "484eade74854b0aaaece3e1724deca20d01c56884b175054c5adfa736a6a467b",
+      "apple/sources/content/models/miki.usdz": "516ffc17ec9948d73e8daa4b07ebca9af9f6ceb4bf2820577df7f14ef412563c"
     }
   },
   "models/spider-bot-heavy": {
@@ -50,10 +57,13 @@
   "models/tom": {
     "format": 1,
     "made from": {
-      "blender/assets/tom/tom.blend": "116e654622f34ecfd031767e240be89af8deffeb997b240db61a3de6881bdc52"
+      "blender/animations/party.blend": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
+      "blender/assets/tom/tom.blend": "f1743b1a056a26c80f581ffffe097618b669374c89ad292d52c661af6624ed2e",
+      "blender/extensions/lauder_levels/exports.py": "14f072e94c536f3968a71a3bd7ad6e57264d3fe0f59e0e9e27e45ce83cdb9255",
+      "blender/extensions/lauder_levels/party_animation.py": "9b8896bcb178736155a1a3a2949214e7cf3d13968b80f817a190920062454999"
     },
     "wrote": {
-      "apple/sources/content/models/tom.usdz": "9ad84f118b8abbe1b434aac31471735284f538b3deb2493ba2f4eea3b452705a"
+      "apple/sources/content/models/tom.usdz": "6d27edc4ff0b87bae4752e572e528868bb236b2832a21bf004dd278b4a7f244f"
     }
   }
 }

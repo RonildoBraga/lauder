@@ -64,6 +64,8 @@ final class GameWorld {
 
   @ObservationIgnored private var bodies: [PartyMember: Entity] = [:]
   @ObservationIgnored private var visuals: [PartyMember: Entity] = [:]
+  /// Joint presentation reads resolved movement and combat state; it never moves a body.
+  @ObservationIgnored private var animations: [PartyMember: PartyAnimation] = [:]
   @ObservationIgnored private var markers: [PartyMember: Entity] = [:]
   /// Rings where going companions are heading, in their colours (ADR 0003, phase S3).
   @ObservationIgnored private var orderMarkers: [PartyMember: Entity] = [:]
@@ -86,6 +88,7 @@ final class GameWorld {
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
+  @ObservationIgnored private var sneaking = false
   /// Members lying hurt where they wait, until a scene stands them up (Laura, M4).
   @ObservationIgnored private var lying: Set<PartyMember>
   /// Where each companion is heading in the latest step. Tests read it.
@@ -118,8 +121,6 @@ final class GameWorld {
   /// Where the fight last asked the leader to turn, such as towards the assisted target while
   /// Fire is held, until she faces it (ADR 0008).
   @ObservationIgnored private var facingGoal: SIMD2<Float>?
-  /// Members still rocking from a shot or a hit in the latest step (ADR 0008).
-  @ObservationIgnored private var joltedMembers: Set<PartyMember> = []
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -130,8 +131,6 @@ final class GameWorld {
   @ObservationIgnored private var retryElapsed: Float?
   static let retryFadeOut: Float = 0.6
   static let retryFadeIn: Float = 0.4
-  /// How far a lying stand-in sits below a standing one, so it rests on the deck.
-  static let lyingDrop: Float = -0.67
   /// How far ahead of the leader the D-pad marks its point, before a wall shortens it (ADR 0003).
   static let orderReach: Float = 6
   /// How far a marked point may move to reach somewhere a companion can stand.
@@ -248,6 +247,7 @@ final class GameWorld {
     refusalCross.isEnabled = false
     root.addChild(refusalCross)
     for (member, weapon) in stage.weaponProps { visuals[member]?.addChild(weapon) }
+    for (member, visual) in visuals { animations[member] = PartyAnimation(visual: visual) }
     placeParty()
     updateCamera(deltaTime: 0)
     updatePromptAndCompass()
@@ -494,8 +494,8 @@ final class GameWorld {
   private func resetPlay(around spot: SIMD2<Float>) {
     fight.reset()
     stage.reset(fight)
+    for animation in animations.values { animation.reset() }
     for member in PartyMember.allCases { showPose(member) }
-    joltedMembers = []
     updateWeaponStatus()
     resetSquad(around: spot)
   }
@@ -509,6 +509,7 @@ final class GameWorld {
     aimDirection = nil
     facingGoal = nil
     firePressPending = false
+    sneaking = false
     squadLeader = session.leader
     route = RouteMemory(start: spot)
     planner = SquadPlanner(heading: level.heading)
@@ -565,6 +566,14 @@ final class GameWorld {
   }
 
   private func simulateStep(movement: SIMD2<Float>, dt: Float) {
+    // Capture before movement and scripted cues. The deferred presentation sees only actual
+    // displacement, including a blocked step, and keeps the same pause/interruption clock.
+    let before = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
+        position(of: member).map { (member, $0) }
+      })
+    var reactions = EncounterSimulation.Outcome()
+    defer { animateParty(from: before, reactions: reactions, dt: dt) }
     if squadLeader != session.leader { changeLeader() }
     pinHolds()
     let leader = session.leader
@@ -575,8 +584,12 @@ final class GameWorld {
     // turn anyone, and switching leader during it moves no one.
     let held = fight.holdsParty
     let movement = held ? .zero : movement
+    sneaking = held ? false : Movement.sneaking(for: movement, wasSneaking: sneaking)
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
-    let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
+    var velocity = SIMD2(direction.x, direction.z) * PartyBody.speed
+    let speed = simd_length(velocity)
+    if sneaking, speed > Movement.sneakSpeed { velocity *= Movement.sneakSpeed / speed }
+    let leaderDelta = velocity * dt
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
     // Each leader aims their own weapon, whichever way they move. A scripted scene still
@@ -590,7 +603,7 @@ final class GameWorld {
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
-    stepStage(leader: leader, at: leaderEnd, armed: armed, dt: dt)
+    reactions = stepStage(leader: leader, at: leaderEnd, armed: armed, dt: dt)
     if retryElapsed != nil { return }
     // The hold lasts through the step whose cue ends the scene and begins its exchange.
     if held || session.mode != .exploring {
@@ -626,7 +639,7 @@ final class GameWorld {
       let context = CompanionMotor.Context(
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
-        speed: PartyBody.speed, dt: dt,
+        speed: sneaking ? Movement.companionSneakSpeed : PartyBody.speed, dt: dt,
         targetMoves: order == .following)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = motion.resolve(start: start, delta: delta)
@@ -906,7 +919,7 @@ final class GameWorld {
   /// Advance the bridge fight, its cues, feedback and retry.
   private func stepStage(
     leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
-  ) {
+  ) -> EncounterSimulation.Outcome {
     // The authored west-side exit ends this bounded encounter even after pursuit or cover
     // changes the guard's sight line. Clear pending fire before the next hostile tick/ambush.
     if session.inEncounter,
@@ -930,13 +943,6 @@ final class GameWorld {
     firePressPending = false
     // The leader turns there in the steps to come, at her turn rate (ADR 0008).
     if let facing = outcome.facing { facingGoal = facing }
-    // Members still rocking from a shot or a hit show it, and those that just settled stand
-    // straight again.
-    let jolted = Set(fight.jolts.keys)
-    for member in jolted.union(joltedMembers) {
-      showPose(member)
-    }
-    joltedMembers = jolted
     combatEvents.append(contentsOf: fight.takeEvents())
     if combatEvents.count > Self.keptEvents {
       combatEvents.removeFirst(combatEvents.count - Self.keptEvents)
@@ -955,6 +961,7 @@ final class GameWorld {
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if outcome.retry { retryElapsed = 0 }
+    return outcome
   }
 
   /// A member who has not joined appears where they wait, turned towards the nearest hostile
@@ -1070,20 +1077,47 @@ final class GameWorld {
     showPose(member)
   }
 
-  /// A member's facing, whether they lie face down on the deck, and how they rock for a moment
-  /// after firing or being hit (ADR 0008).
+  /// A member's facing and whether they lie hurt on the deck. Joint animation supplies party
+  /// recoil and hit reactions without applying a second whole-figure lean.
   private func showPose(_ member: PartyMember) {
     let facing = simd_quatf(angle: yaw[member] ?? 0, axis: [0, 1, 0])
     if lying.contains(member) {
       visuals[member]?.scale = [1, 1, 1]
       visuals[member]?.orientation = facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
-      visuals[member]?.position = [0, Self.lyingDrop, 0]
+      if let visual = visuals[member], let body = bodies[member],
+        let model = visual.findEntity(named: "\(member.rawValue).model")
+      {
+        // The larger head has a different depth from the old stand-in. Rest the authored
+        // model on the deck rather than carrying forward a stand-in-specific drop distance.
+        visual.position = .zero
+        visual.position.y = -PartyBody.height / 2 - model.visualBounds(relativeTo: body).min.y
+      }
       return
     }
-    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
     visuals[member]?.scale = [1, 1, 1]
-    visuals[member]?.orientation = jolt.tilt * facing
-    visuals[member]?.position = jolt.offset
+    visuals[member]?.orientation = facing
+    visuals[member]?.position = .zero
+  }
+
+  private func animateParty(
+    from before: [PartyMember: SIMD2<Float>], reactions: EncounterSimulation.Outcome, dt: Float
+  ) {
+    for member in PartyMember.allCases {
+      guard let animation = animations[member], bodies[member]?.isEnabled == true else { continue }
+      if lying.contains(member) {
+        animation.reset()
+        continue
+      }
+      let velocity =
+        position(of: member).flatMap { point in
+          before[member].map { (point - $0) / dt }
+        } ?? .zero
+      let weapon = stage.weaponProps[member]?.isEnabled == true ? fight.weaponPoses[member] : nil
+      animation.update(
+        velocity: velocity, facing: yaw[member] ?? 0, weapon: weapon,
+        fired: reactions.firedMembers.contains(member), hit: reactions.hitMembers.contains(member),
+        sneaking: sneaking && session.party.contains(member), dt: dt)
+    }
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.

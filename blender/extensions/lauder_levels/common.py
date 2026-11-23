@@ -59,8 +59,11 @@ MODEL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 #: SPAWNED_SCENES, named after it, which the game loads by the model's name.
 SPAWNED = ("hostile", "laura", "miki", "spider-bot-heavy", "tom")
 SPAWNED_SCENES = "apple/sources/content/models"
-#: The robot's geometry values travel with its static, articulated scene file.
-MODEL_METADATA = {"spider-bot-heavy": "apple/sources/content/RobotModelGeometry.swift"}
+#: Typed model metadata. Miki owns the one shared party clip table; the robot owns its geometry.
+MODEL_METADATA = {
+    "miki": "apple/sources/content/PartyModelClips.swift",
+    "spider-bot-heavy": "apple/sources/content/RobotModelGeometry.swift",
+}
 
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"

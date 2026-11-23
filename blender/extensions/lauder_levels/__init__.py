@@ -50,12 +50,12 @@ point (x, y, z) sits at (x, -z, y).
 """
 
 from . import (
-    common, lights, layouts, looks, models, robot_geometry, exports, occlusion, shadows, background, interface,
+    common, lights, layouts, looks, models, robot_geometry, party_animation, exports, occlusion, shadows, background, interface,
 )
 
 # The package keeps every name that its modules define, so that the scripts and the tests
 # can use lauder_levels.<name> wherever it lives.
-for _module in (common, lights, layouts, looks, models, robot_geometry, exports, occlusion, shadows, background,
+for _module in (common, lights, layouts, looks, models, robot_geometry, party_animation, exports, occlusion, shadows, background,
                 interface):
     globals().update({name: value for name, value in vars(_module).items()
                       if not (name.startswith("__") and name.endswith("__"))})

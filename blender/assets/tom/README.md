@@ -1,7 +1,11 @@
 # tom
 
-Tom's stand-in: a body in his colour, a head, two legs and two feet, and a front mark that shows which way he faces. The game creates it from its own scene file, `apple/sources/content/models/tom.usdz`, which saving this file exports ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)). The Brooklyn Bridge shows it in its Preview collection, at his start.
+The accepted original low-poly Tom model: broader blue coat, sleeves and boots, larger-head proportions and a human exterior. The game loads `apple/sources/content/models/tom.usdz`; saving this canonical source triggers the existing model export workflow ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)).
 
-- **Source:** Made for Lauder with Claude's assistance on 19 November 2026, from the sizes and colours that the game's code drew the stand-ins with until then (`SceneStyle`). No third-party models or textures were used.
+- **Source:** Original geometry, manual skin weights and motion authored for Lauder by Codex in Blender 5.3, promoted on 24 November 2026 from the accepted [party study](../../studies/party-characters/README.md). The later run and sneak Actions were authored for the assigned locomotion extension on the same date. No third-party model, texture, rig or animation was imported.
 - **Licence:** The repository's [MIT licence](../../../LICENSE).
-- **Size:** 0.49 m across, 0.34 m long and 1.58 m high, facing −y; seven parts, 1,032 triangles in all, 960 of them the head; four materials, `tom clothing`, `tom head`, `tom gear` and `tom mark`, the mark glowing as the game drew it, unlit; no textures. About 105 KB, stored with Git LFS.
+- **Size:** Rest height 1.74 m, metres, Z up, front −Y; 179 source vertices and 336 triangles; one skinned mesh, five matte material slots, no textures or emission. Source and USDZ are Git LFS assets.
+
+The exact `tom` collection contains its local rig Object and body mesh. Its 17-bone Armature and eleven source Actions link relatively from [the shared party animation library](../../animations/README.md). Every model has independent pose state; skeleton and motion edits happen in that one library, while appearance edits remain in this model. The original study remains a separate review scene.
+
+Export reconstructs a one-cycle timeline from the saved shared Actions and preserves a held final USD skeletal sample. Miki's export also generates the single `PartyModelClips.swift` table; the export ledger fingerprints each model, the shared library and the generator. Use `blender/scripts/export-model.py -- tom` in a background Blender after editing. Do not edit USDZs or Swift timings by hand. Source animation is in place; gameplay remains authoritative for movement, shots and damage. The static hostile and articulated robot use their existing separate paths.

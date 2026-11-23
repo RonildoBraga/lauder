@@ -1,8 +1,8 @@
 import simd
 
 /// How a figure's body moves for a moment when it fires or is hit (ADR 0008): it rocks back from
-/// its own shot and away from a shot that hits it, then settles. The figures have no rig, so the
-/// whole figure leans, turning about its feet.
+/// its own shot and away from a shot that hits it, then settles. Static human hostiles use the
+/// whole-figure pose, turning about their feet; the rigged party uses joint reactions instead.
 struct BodyJolt: Sendable {
   /// How far a shot rocks its shooter back, and a hit rocks its target, in radians.
   static let recoil: Float = 3 * .pi / 180

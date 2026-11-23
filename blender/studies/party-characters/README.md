@@ -1,6 +1,6 @@
 # Party character and animation study
 
-**Status:** Blender asset review, 23 November 2026. The maintainer assigned playable-character models and animations and selected **more stylised proportions with larger heads**. These are original candidates for Miki, Laura and Tom. Clothing, faces and motion remain proposals for visual review; the game's canonical party sources and runtime avatars are unchanged.
+**Status:** Retained Blender asset review from 23 November 2026. The maintainer assigned playable-character models and animations and selected **more stylised proportions with larger heads**. After this review pass they said to proceed with integration, then requested running and sneaking cycles. The [current integration record](../../../docs/prototype-plan.md#party-runtime-animation-integration) and [shared animation source](../../animations/README.md) describe that later work. This file retains its original nine-clip review timeline and geometry.
 
 ![Actual Blender render of Miki, Laura and Tom](lineup.png)
 
@@ -58,7 +58,7 @@ The final source motion was sampled at **240 Hz** for all three characters: zero
 
 A separate scratch export of the same three meshes and nine one-cycle motions passed a **native macOS RealityKit** proof: **3,267 poses**, 1,089 per character. This checked actual joint evaluation and reconstructed skinned vertices, not just animation enumeration. All 17 joints survive, all nine clips trim to their intended duration, entity roots stay fixed and cloned figures have independent animation state while sharing immutable mesh resources. Maximum loop seam is **0.033 mm**; lowest sole is **−0.250 mm**. This is an import/deformation proof, not a rendered Simulator run, physical-phone test or performance measurement. The one-cycle export timeline is separate from this longer repeated review timeline.
 
-The current registered party exporter remains static. Future integration needs a focused animated-party path, leaving the bridge and rigid robot paths intact. The scratch proof established these Blender USD options:
+At the time of this study, the registered party exporter was static. The later integration adds a focused animated-party path, leaving the bridge and rigid robot paths intact. The original scratch proof established these Blender USD options:
 
 ```python
 dict(export_animation=True, export_armatures=True, only_deform_bones=False,
@@ -75,11 +75,11 @@ Blender exports the active scene timeline, not the nine Actions as separate name
 
 **Preserve the final sample:** Blender 5.3's sparse USD output can omit a held final rotation/translation sample. In the proof, this shortened the imported resource and broke the last hit recovery. Author an identical held sample at the intended final time on the animated `UsdSkel.Animation` attributes before packaging USDZ. Verify imported duration covers every clip. Padding preserved the intended pose and timing and restored the full **7.766667-second** one-cycle resource. Unpadded scratch exports are not delivery assets. Runtime joint evaluation in the proof used an entity attached to `RealityRenderer` and explicit updates; a detached playback controller alone did not establish animation delivery.
 
-## Review and next integration gate
+## Later runtime integration
 
-Review the larger-head proportions, silhouette differences, arm swing and recoil in Blender first. The playable characters still use their existing canonical files; no Swift, registered exporter, bridge layout or runtime asset changed in this pass.
+The larger-head proportions, silhouette differences, arm swing and recoil were presented in Blender first. No Swift, registered exporter, bridge layout or runtime asset changed in that original study pass. The later integration assignment promotes the meshes and shared motion to canonical sources without exporting this review context.
 
-After visual review, a focused integration can promote each accepted character to its canonical source, add animated-party export and clip metadata, and drive presentation from existing authoritative movement/combat state. It must handle actual-speed playback, directional motion, upper-body aim/fire, weapon contact, pause/restart and independent party instances. Validate feet, navigation clearance, camera readability, whole-scene budgets and rendered Simulator routes before the next agreed phone checkpoint. Simulation retains command, movement, shot-origin and damage authority; animation does not introduce gameplay root motion or event timing.
+The [prototype plan](../../../docs/prototype-plan.md#party-runtime-animation-integration) records actual-speed playback, directional motion, upper-body aim/fire, weapon contact, pause/restart, independent party instances and verification for that integration, including the subsequently assigned run/sneak clips. Simulation retains command, movement, shot-origin and damage authority; animation does not introduce gameplay root motion or event timing. This nine-clip source and its reel remain historical review material rather than an alternative runtime source.
 
 ## Files and storage
 

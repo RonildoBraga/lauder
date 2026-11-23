@@ -39,6 +39,8 @@ enum InputRules {
     var right = false
     var up = false
     var down = false
+    /// Shift: a light movement-key deflection for the same sneak path as an analog stick.
+    var keyboardSneak = false
     var keyboardAction = false
     var keyboardPause = false
     var keyboardSwitch = false
@@ -84,7 +86,7 @@ enum InputRules {
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardPrevious
         || keyboardFire || keyboardFormation || keyboardPanel || hasArrowKey
-        || hasAimKey
+        || hasAimKey || keyboardSneak
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
     var hasControllerInput: Bool {
@@ -171,12 +173,16 @@ enum InputRules {
     let down = raw.dpadDown || raw.arrowDown
     let left = raw.dpadLeft || raw.arrowLeft
     let right = raw.dpadRight || raw.arrowRight
-    let movement =
+    var movement =
       raw.hasMovementKey
       ? SIMD2<Float>(
         Float(raw.right ? 1 : 0) - Float(raw.left ? 1 : 0),
         Float(raw.up ? 1 : 0) - Float(raw.down ? 1 : 0))
       : raw.touchIsTouching ? raw.touchStick : raw.stick
+    if mode == .exploring, raw.hasMovementKey, raw.keyboardSneak {
+      let length = simd_length(movement)
+      if length > 0 { movement = movement / length * Movement.keyboardSneakPressure }
+    }
     let aimKeys = SIMD2<Float>(
       Float(raw.aimRight ? 1 : 0) - Float(raw.aimLeft ? 1 : 0),
       Float(raw.aimUp ? 1 : 0) - Float(raw.aimDown ? 1 : 0))

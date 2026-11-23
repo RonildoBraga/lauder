@@ -24,7 +24,9 @@ The latest TestFlight delivery is the bridge-only prototype with the Blender env
 
 **C style study:** The AI-generated [finish study](art/robot/finish-study/README.md) supplied the direction for the assigned Blender pass. It remains a visual reference, separate from the actual mesh and its verification. Snow and wear remain deferred.
 
-**Playable character study, 23 November 2026:** The maintainer assigned character models and animations and selected more stylised proportions with larger heads. The [Blender party study](blender/studies/party-characters/README.md) contains original Miki, Laura and Tom candidates, distinct winter clothing, a shared 17-bone skeleton and nine reusable motion clips. Each mesh is below 400 triangles. Saved-source motion checks and a native RealityKit import/deformation proof pass. This is an asset review pass: appearance remains pending review, the canonical party models and game avatars are unchanged, and runtime animation integration, Simulator readability and phone performance remain unverified.
+**Playable character study, 23 November 2026:** The maintainer assigned character models and animations and selected more stylised proportions with larger heads. The retained [Blender party study](blender/studies/party-characters/README.md) contains original Miki, Laura and Tom candidates, distinct winter clothing, a shared 17-bone skeleton and nine reusable motion clips. Each mesh is below 400 triangles. Saved-source motion checks and a native RealityKit import/deformation proof passed for that asset review. It preceded the integration assignment below and remains a separate review reference.
+
+**Party animation integration, 24 November 2026:** The maintainer subsequently said to proceed, then requested distinct running and sneaking cycles and chose light stick pressure with a keyboard modifier for sneaking. The accepted models now use their canonical files and one [shared animation source](blender/animations/README.md). Joint presentation follows resolved movement and accepted combat reactions at the existing simulation step; weapons and gameplay retain their authority. Light stick pressure sneaks, medium pressure walks, full pressure runs, and Shift with WASD supplies light keyboard pressure. The full local check and rendered combat, retry, opening and orders routes pass; direct Simulator keyboard checks verify Shift-sneak, full-speed movement and Pause. Enemy hearing and detection remain separate design work. Review, merge, phone validation and release remain pending. Exact verification is recorded in the [prototype plan](docs/prototype-plan.md#party-runtime-animation-integration).
 
 ## Start here
 
@@ -68,6 +70,7 @@ apple/
 blender/
   levels/                        Bridge Blender source
   assets/                        Character model sources
+  animations/                    Shared party skeleton, Actions and export timeline
   studies/                       Unregistered Blender asset/animation review scenes
   extensions/lauder_levels/      Export extension and tests
 art/                             Concept proposals, previews and generation provenance

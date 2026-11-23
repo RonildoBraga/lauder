@@ -146,6 +146,7 @@ final class GameControls {
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
+      keyboardSneak: pressed(.leftShift) || pressed(.rightShift),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
       keyboardSwitch: pressed(.keyQ), keyboardPrevious: pressed(.keyZ),
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
@@ -256,7 +257,8 @@ final class GameControls {
 
   private func showKeyboard() {
     showSource(
-      "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", previous: "Z",
+      "Keyboard · WASD · Shift sneak", action: "e.square", pause: "Escape", cycle: "Q",
+      previous: "Z",
       fire: "F", aim: "IJKL", formation: "R", panel: "H")
   }
 

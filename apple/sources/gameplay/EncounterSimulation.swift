@@ -26,6 +26,9 @@ final class EncounterSimulation {
     var stood: [PartyMember] = []
     var shooter: (member: PartyMember, facing: SIMD2<Float>)?
     var face: (PartyMember, PartyMember)?
+    /// Presentation edges from accepted combat events, never inferred from a recoil curve.
+    var firedMembers: Set<PartyMember> = []
+    var hitMembers: Set<PartyMember> = []
   }
 
   static let aimHeight: Float = 1.25
@@ -56,7 +59,6 @@ final class EncounterSimulation {
   }
 
   private(set) var threat: String?
-  private(set) var jolts: [PartyMember: BodyJolt] = [:]
   private(set) var weaponPoses: [PartyMember: WeaponPose] = [:]
   var pose: WeaponPose { weaponPoses[weaponLeader] ?? WeaponPose(kind: leaderWeapon.kind) }
   private(set) var events: [CombatEvent] = []
@@ -110,7 +112,6 @@ final class EncounterSimulation {
     weaponLeader = startingLeader
     falls = [:]
     hostileJolts = [:]
-    jolts = [:]
     enemyHandling = specs.mapValues { _ in HostileHandling(facing: lookout) }
     enemyRandom = Dictionary(
       uniqueKeysWithValues: specs.keys.sorted().enumerated().map {
@@ -220,8 +221,8 @@ final class EncounterSimulation {
         shots.append(Shot(path: path, side: .party))
         handling[member]?.draw()
         weaponPoses[member]?.fired()
+        outcome.firedMembers.insert(member)
         report(path, firedBy: Weapon.forMember(member).kind, byLeader: false)
-        rock(member, awayFrom: state.position, at: from)
         session.defeat(id)
         knockDown(id, from: from)
         let offset = state.position - from
@@ -344,7 +345,7 @@ final class EncounterSimulation {
       aimed, by: weaponLeader, weapon: weapon, motion: motion)
     let path = trace.path
     weaponPoses[weaponLeader]?.fired()
-    jolts[session.leader, default: BodyJolt()].push(towards: -facing, by: BodyJolt.recoil)
+    outcome.firedMembers.insert(weaponLeader)
     shots.append(
       Shot(
         path: path, side: .party,
@@ -471,11 +472,6 @@ final class EncounterSimulation {
     if let down = hostiles[id] { faceHostile(id, down) }
   }
 
-  private func rock(_ member: PartyMember, awayFrom target: SIMD2<Float>, at position: SIMD2<Float>)
-  {
-    jolts[member, default: BodyJolt()].push(towards: position - target, by: BodyJolt.recoil)
-  }
-
   private func report(_ path: ShotPath, firedBy kind: Weapon.Kind, byLeader: Bool) {
     events.append(.fired(kind, at: path.start, byLeader: byLeader))
     switch path.strike {
@@ -521,10 +517,6 @@ final class EncounterSimulation {
   }
 
   private func settleBodies(dt: Float) {
-    for member in Array(jolts.keys) {
-      jolts[member]?.settle(dt: dt)
-      if jolts[member]?.isSettled == true { jolts[member] = nil }
-    }
     var moving = Set(hostileJolts.keys)
     for id in Array(hostileJolts.keys) {
       hostileJolts[id]?.settle(dt: dt)
@@ -589,8 +581,7 @@ final class EncounterSimulation {
     if case .body(let id) = trace.strike, let member = PartyMember(rawValue: id),
       state.acceptRobotBurstHit()
     {
-      jolts[member, default: BodyJolt()].push(
-        towards: [direction.x, direction.z], by: BodyJolt.hit)
+      outcome.hitMembers.insert(member)
       if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
       if session.takeHit(member) { outcome.retry = true }
     }
@@ -614,7 +605,7 @@ final class EncounterSimulation {
     report(trace.path, firedBy: .rifle, byLeader: false)
     hostileJolts[id, default: BodyJolt()].push(towards: -discharge.direction, by: BodyJolt.recoil)
     if case .body(let body) = trace.strike, let member = PartyMember(rawValue: body) {
-      jolts[member, default: BodyJolt()].push(towards: discharge.direction, by: BodyJolt.hit)
+      outcome.hitMembers.insert(member)
       if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
       if session.takeHit(member) { outcome.retry = true }
     }

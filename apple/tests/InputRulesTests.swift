@@ -4,6 +4,23 @@ import Testing
 
 struct InputRulesTests {
   @Test
+  func shiftUsesTheSameLightPressureInEveryDirectionAndKeepsPauseNavigationFullStrength() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let cardinal = sample(.init(up: true, keyboardSneak: true), state: &state)
+    #expect(cardinal.movement == [0, Movement.keyboardSneakPressure])
+    let diagonal = sample(.init(right: true, up: true, keyboardSneak: true), state: &state)
+    let squared =
+      diagonal.movement.x * diagonal.movement.x + diagonal.movement.y * diagonal.movement.y
+    #expect(
+      abs(squared - Movement.keyboardSneakPressure * Movement.keyboardSneakPressure) < 0.00001)
+    let opposed = sample(.init(up: true, down: true, keyboardSneak: true), state: &state)
+    #expect(opposed.movement == .zero)
+    let paused = InputRules.resolve(
+      .init(up: true, keyboardSneak: true), mode: .paused, state: .init(needsNeutralInput: false))
+    #expect(paused.input.menuMove == -1)
+  }
+
+  @Test
   func opposingHeldKeysCannotClearTheReleaseGate() {
     var state = InputRules.State()
     var raw = InputRules.Raw(up: true, down: true)
@@ -300,6 +317,7 @@ struct InputRulesTests {
     InputRules.Raw(keyboardAction: true),
     InputRules.Raw(keyboardPause: true),
     InputRules.Raw(keyboardSwitch: true),
+    InputRules.Raw(keyboardSneak: true),
     InputRules.Raw(touchAction: true),
     InputRules.Raw(touchPause: true),
     InputRules.Raw(touchSwitch: true),

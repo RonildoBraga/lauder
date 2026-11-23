@@ -164,6 +164,86 @@ class RobotGeometryTests(unittest.TestCase):
                 _foot_radius(boots)
 
 
+class PartyAnimationTests(unittest.TestCase):
+    def sample(self):
+        spec = dict(version=1, fps=30, root_motion=False, clips=[
+            dict(name=name, source_action=f"party.{name}", nominal_speed=index / 2,
+                 loop=name not in ("fire", "hit"))
+            for index, name in enumerate(L.PARTY_CASES)])
+        ranges = {entry["source_action"]: (1, index + 4)
+                  for index, entry in enumerate(spec["clips"])}
+        return spec, ranges
+
+    def test_clip_offsets_and_durations_follow_saved_actions_not_review_repetitions(self):
+        spec, ranges = self.sample()
+        manifest = L.party_manifest(spec, ranges)
+        frame = 1
+        for clip in manifest["clips"]:
+            count = ranges[clip["source_action"]][1] - 1
+            self.assertEqual((clip["start_frame"], clip["end_frame"]), (frame, frame + count))
+            self.assertEqual(clip["duration"], count / 30)
+            frame += count + 1
+        self.assertEqual(manifest["end_frame"], frame - 1)
+        ranges["party.walk"] = (1, 31)
+        changed = L.party_manifest(spec, ranges)
+        self.assertEqual(changed["clips"][1]["duration"], 1)
+        self.assertNotEqual(changed["clips"][2]["start_frame"],
+                            manifest["clips"][2]["start_frame"])
+
+    def test_invalid_clip_declarations_and_action_bounds_are_refused(self):
+        for field, values in (("fps", (0, -1, True, 30.5)), ("version", (0, 2)),
+                              ("root_motion", (True, 0, None))):
+            for value in values:
+                spec, ranges = self.sample()
+                spec[field] = value
+                with self.subTest(field=field, value=value), self.assertRaises(L.LayoutError):
+                    L.party_manifest(spec, ranges)
+        for bounds in ((0, 10), (1, 1), (1, 2.5), (1, float("inf"))):
+            spec, ranges = self.sample()
+            ranges["party.walk"] = bounds
+            with self.subTest(bounds=bounds), self.assertRaises(L.LayoutError):
+                L.party_manifest(spec, ranges)
+        for field, value in (("nominal_speed", -1), ("nominal_speed", float("nan")),
+                             ("nominal_speed", True), ("loop", "yes"),
+                             ("source_action", "review.timeline")):
+            spec, ranges = self.sample()
+            spec["clips"][0][field] = value
+            with self.subTest(field=field, value=value), self.assertRaises(L.LayoutError):
+                L.party_manifest(spec, ranges)
+        for entries in ([], ["idle"], list(reversed(L.PARTY_CASES))):
+            spec, ranges = self.sample()
+            spec["clips"] = [dict(name=name) for name in entries]
+            with self.subTest(entries=entries), self.assertRaises(L.LayoutError):
+                L.party_manifest(spec, ranges)
+
+    def test_generated_swift_uses_the_derived_ranges_and_declared_speed(self):
+        spec, ranges = self.sample()
+        text = L.emit_party_clips(L.party_manifest(spec, ranges))
+        self.assertIn('case strafeLeft = "strafe_left"', text)
+        self.assertIn('case strafeRight = "strafe_right"', text)
+        self.assertIn('Take(start: 0, end: 0.1, nominalSpeed: 0, loop: true, eventStart: 0)', text)
+        self.assertIn('start: 0.133333333, end: 0.266666667, nominalSpeed: 0.5, loop: true, eventStart: 0', text)
+        self.assertIn('var duration: TimeInterval { end - start }', text)
+        self.assertIn(L.PARTY_ANIMATIONS, text)
+
+    def test_source_reaction_offsets_are_local_validated_and_zero_by_default(self):
+        spec, ranges = self.sample()
+        self.assertTrue(all(clip["event_start"] == 0
+                            for clip in L.party_manifest(spec, ranges)["clips"]))
+        spec["clips"][list(L.PARTY_CASES).index("fire")]["event_start"] = 0.1
+        spec["clips"][list(L.PARTY_CASES).index("hit")]["event_start"] = 0.08
+        manifest = L.party_manifest(spec, ranges)
+        text = L.emit_party_clips(manifest)
+        self.assertIn("eventStart: 0.1)", text)
+        self.assertIn("eventStart: 0.08)", text)
+        for name, value in (("fire", -1), ("hit", float("inf")), ("fire", True),
+                            ("hit", 100), ("walk", 0.01)):
+            changed, ranges = self.sample()
+            changed["clips"][list(L.PARTY_CASES).index(name)]["event_start"] = value
+            with self.subTest(name=name, value=value), self.assertRaises(L.LayoutError):
+                L.party_manifest(changed, ranges)
+
+
 class LayoutTests(unittest.TestCase):
     """Writing the layout file from what the level's Blender file holds, after the game's rules."""
 
@@ -381,6 +461,30 @@ class ExportRecordTests(unittest.TestCase):
             self.assertIn("changed since the spider-bot-heavy model was exported",
                           L.stale_model_export(repository, "spider-bot-heavy"))
 
+    def test_shared_party_motion_and_generated_metadata_are_bound_to_each_export(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            shared = repository / L.PARTY_ANIMATIONS
+            with shared.open("ab") as stream:
+                stream.write(b"changed shared motion")
+            for name in L.PARTY_MODELS:
+                self.assertIn(f"{L.PARTY_ANIMATIONS} changed",
+                              L.stale_model_export(repository, name))
+            self.assertIsNone(L.stale_model_export(repository, "hostile"))
+            self.assertIsNone(L.stale_model_export(repository, "spider-bot-heavy"))
+            self.assertIsNone(L.stale_exports(repository))
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            metadata = repository / L.MODEL_METADATA["miki"]
+            metadata.write_text(metadata.read_text() + "\n// changed outside Blender\n")
+            self.assertIn("changed since it was exported", L.stale_model_export(repository, "miki"))
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            generator = repository / "blender/extensions/lauder_levels/party_animation.py"
+            generator.write_text(generator.read_text() + "\n# changed clip export\n")
+            for name in L.PARTY_MODELS:
+                self.assertIn("changed since", L.stale_model_export(repository, name))
+
     def test_exports_go_stale_when_the_level_file_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             repository = scratch(folder)
@@ -473,6 +577,23 @@ class BackgroundTests(unittest.TestCase):
             # Saving exports only the level.
             self.assertEqual([step[0] for step in
                               L.background_steps(repository, BRIDGE.key, play=False)], ["export"])
+
+    def test_shared_motion_save_queues_only_its_three_ordinary_exports(self):
+        self.assertEqual(L.party_animation_of_file(ROOT / L.PARTY_ANIMATIONS), str(ROOT))
+        for path in ("", ROOT / "blender/studies/party-characters/character-study.blend",
+                     ROOT / ".local/animations/party.blend", ROOT / L.model_file("miki")):
+            self.assertIsNone(L.party_animation_of_file(path))
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            self.assertEqual(L.party_export_steps(repository), [])
+            with (repository / L.PARTY_ANIMATIONS).open("ab") as stream:
+                stream.write(b"shared animation saved")
+            steps = L.party_export_steps(repository)
+            self.assertEqual([(step[0], step[3]) for step in steps],
+                             [("export model", name) for name in L.PARTY_MODELS])
+            for step in steps:
+                self.assertIn(str(repository / L.EXPORT_MODEL_SCRIPT), step[1])
+                self.assertEqual(step[1][-2:], ["--", step[3]])
 
     def test_an_export_running_or_waiting_stands_in_for_a_new_one(self):
         export = ("export", ["blender"], "export.log", "bridge")

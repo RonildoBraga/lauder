@@ -10,10 +10,12 @@ from .common import (
 from .lights import lights_outside_the_level
 from .models import available_models, check_model, _model_file_of, place_model, report_text
 from .exports import check_level
+from .party_animation import party_animation_of_file
 from .occlusion import bake_level, BAKED, clear_occlusion
 from .shadows import bake_shadows, SHADOW_OF
 from .background import (
-    _announce, background_steps, _export_if_stale, _export_levels_using, _queue, _queued,
+    _announce, background_steps, _export_if_stale, _export_levels_using, _export_party_animation,
+    _queue, _queued,
 )
 
 
@@ -40,16 +42,24 @@ if bpy is not None:
 
     @persistent
     def _forget_local_paths_before_save(path=None, *_):
-        """A level or model file keeps no local paths in the repository (forget_local_paths)."""
+        """Source files keep no local paths in the repository (forget_local_paths)."""
         path = path if isinstance(path, str) and path else bpy.data.filepath
-        if level_of_file(path) or model_of_file(path):
+        if level_of_file(path) or model_of_file(path) or party_animation_of_file(path):
             forget_local_paths(path)
 
     @persistent
     def _export_after_save(_):
         """Saving a level's Blender file exports it in the background, once the game's rules hold;
-        saving a model's exports the levels that use it. The Blender file is saved whatever the
-        rules find."""
+        saving a model's exports the levels that use it, and shared motion exports the party.
+        The Blender file is saved whatever the rules find."""
+        party = party_animation_of_file(bpy.data.filepath)
+        if party is not None:
+            try:
+                _announce(_export_party_animation(party))
+            except OSError as error:
+                _announce(f"The shared motion is saved, but the party was not exported: {error}",
+                          error=True)
+            return
         model = model_of_file(bpy.data.filepath)
         if model is not None:
             try:
@@ -107,11 +117,20 @@ if bpy is not None:
 
         def execute(self, context):
             found, model = _open_level(), model_of_file(bpy.data.filepath)
-            if found is None and model is None:
+            party = party_animation_of_file(bpy.data.filepath)
+            if found is None and model is None and party is None:
                 self.report({"ERROR"}, _OPEN_LEVEL_FIRST)
                 return {"CANCELLED"}
             if bpy.data.is_dirty:
                 bpy.ops.wm.save_mainfile()  # Its handler checks the rules and exports.
+                return {"FINISHED"}
+            if party is not None:
+                try:
+                    message = _export_party_animation(party)
+                except OSError as error:
+                    self.report({"ERROR"}, str(error))
+                    return {"CANCELLED"}
+                _tell(self, context, message)
                 return {"FINISHED"}
             if model is not None:
                 try:
@@ -390,7 +409,11 @@ if bpy is not None:
             layout.operator("lauder.open_level", icon="FILE_BLEND")
             level, model = _open_level(), model_of_file(bpy.data.filepath)
             item = context.active_object
-            if model is not None:
+            if party_animation_of_file(bpy.data.filepath) is not None:
+                layout.label(text="Shared party animation", icon="ARMATURE_DATA")
+                layout.operator("lauder.export", icon="EXPORT")
+                layout.label(text="Saving exports all three party models.")
+            elif model is not None:
                 layout.label(text=f"The model {model[1]}", icon="MESH_DATA")
                 layout.operator("lauder.check_model", icon="CHECKMARK")
                 layout.operator("lauder.export", icon="EXPORT")

@@ -64,8 +64,8 @@ struct LevelLookTests {
   }
 
   /// Each member of the party, and each hostile, shows the model that Blender exports to a scene
-  /// file of its own (ADR 0002): standing on the ground below its body's centre, 1.58 m
-  /// tall, and facing the figure's -z, where its front mark is.
+  /// file of its own (ADR 0002). The party uses the new skinned models; the human hostile
+  /// retains the smaller static stand-in and its front mark.
   @Test
   func thePartyAndTheHostilesComeFromTheirModels() throws {
     let world = GameWorld(level: BrooklynBridge.level)
@@ -80,12 +80,24 @@ struct LevelLookTests {
   private func expectFigure(in body: Entity, from name: String) throws {
     let model = try #require(body.findEntity(named: "\(name).model"))
     let figure = try #require(model.parent)
-    let mark = try #require(model.findEntity(named: "\(name)_mark"))
-    let ahead = mark.position(relativeTo: figure)
-    #expect(abs(ahead.x) < 0.001 && abs(ahead.z + 0.16) < 0.001, "\(name) faces -z")
+    if name == "hostile" {
+      let mark = try #require(model.findEntity(named: "\(name)_mark"))
+      let ahead = mark.position(relativeTo: figure)
+      #expect(abs(ahead.x) < 0.001 && abs(ahead.z + 0.16) < 0.001, "\(name) faces -z")
+    } else {
+      var pending = [model]
+      var skin: ModelEntity?
+      while let part = pending.popLast() {
+        if let bound = part as? ModelEntity, !bound.jointNames.isEmpty { skin = bound }
+        pending.append(contentsOf: part.children)
+      }
+      #expect(try #require(skin).jointNames.count == 17)
+    }
     let bounds = model.visualBounds(relativeTo: figure)
     #expect(abs(bounds.min.y + PartyBody.height / 2) < 0.001, "\(name) stands on the ground")
-    #expect(abs(bounds.max.y - bounds.min.y - 1.58) < 0.001, "\(name) is 1.58 m tall")
+    let height: Float = name == "hostile" ? 1.58 : 1.74
+    #expect(
+      abs(bounds.max.y - bounds.min.y - height) < 0.001, "\(name) retains its authored height")
   }
 
   /// World markers keep a readable size on screen (the visual direction). From the bridge's far

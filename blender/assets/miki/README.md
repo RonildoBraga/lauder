@@ -1,7 +1,11 @@
 # miki
 
-Miki's stand-in: a body in her colour, a head, two legs and two feet, and a front mark that shows which way she faces. The game creates it from its own scene file, `apple/sources/content/models/miki.usdz`, which saving this file exports ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)). The Brooklyn Bridge shows it in its Preview collection, at her start.
+The accepted original low-poly Miki model: teal work parka and cream collar, larger-head proportions and a human exterior. The game loads `apple/sources/content/models/miki.usdz`; saving this canonical source triggers the existing model export workflow ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)).
 
-- **Source:** Made for Lauder with Claude's assistance on 19 November 2026, from the sizes and colours that the game's code drew the stand-ins with until then (`SceneStyle`). No third-party models or textures were used.
+- **Source:** Original geometry, manual skin weights and motion authored for Lauder by Codex in Blender 5.3, promoted on 24 November 2026 from the accepted [party study](../../studies/party-characters/README.md). The later run and sneak Actions were authored for the assigned locomotion extension on the same date. No third-party model, texture, rig or animation was imported.
 - **Licence:** The repository's [MIT licence](../../../LICENSE).
-- **Size:** 0.39 m across, 0.34 m long and 1.58 m high, facing −y; seven parts, 1,032 triangles in all, 960 of them the head; four materials, `miki clothing`, `miki head`, `miki gear` and `miki mark`, the mark glowing as the game drew it, unlit; no textures. About 105 KB, stored with Git LFS.
+- **Size:** Rest height 1.74 m, metres, Z up, front −Y; 187 source vertices and 348 triangles; one skinned mesh, five matte material slots, no textures or emission. Source and USDZ are Git LFS assets.
+
+The exact `miki` collection contains its local rig Object and body mesh. Its 17-bone Armature and eleven source Actions link relatively from [the shared party animation library](../../animations/README.md). Every model has independent pose state; skeleton and motion edits happen in that one library, while appearance edits remain in this model. The original study remains a separate review scene.
+
+Export reconstructs a one-cycle timeline from the saved shared Actions and preserves a held final USD skeletal sample. Miki's export also generates the single `PartyModelClips.swift` table; the export ledger fingerprints each model, the shared library and the generator. Use `blender/scripts/export-model.py -- miki` in a background Blender after editing. Do not edit USDZs or Swift timings by hand. Source animation is in place; gameplay remains authoritative for movement, shots and damage. The static hostile and articulated robot use their existing separate paths.

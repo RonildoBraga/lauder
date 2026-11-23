@@ -5,6 +5,15 @@ import simd
 
 struct MovementTests {
   @Test
+  func deliberateLightPressureSneaksWithoutFlickeringOrStandingOnRelease() {
+    #expect(Movement.sneaking(for: [0.3, 0], wasSneaking: false))
+    #expect(Movement.sneaking(for: [0.45, 0], wasSneaking: true))
+    #expect(!Movement.sneaking(for: [0.45, 0], wasSneaking: false))
+    #expect(Movement.sneaking(for: .zero, wasSneaking: true))
+    #expect(!Movement.sneaking(for: [1, 0], wasSneaking: true))
+  }
+
+  @Test
   func stickAxesFollowTheFixedCameraWithoutDiagonalSpeedBoost() {
     let offset: SIMD3<Float> = [0, 5, 5]
     #expect(Movement.direction(for: [1, 0], cameraOffset: offset) == [1, 0, 0])

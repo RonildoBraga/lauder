@@ -5,6 +5,20 @@ import simd
 enum Movement {
   /// Stick or touch movement smaller than this counts as none.
   static let deadZone: Float = 0.15
+  /// A deliberate light input enters the cautious gait. The wider exit band avoids flicker
+  /// around its edge; releasing the stick keeps the last stance until fresh movement.
+  static let sneakPressure: Float = 0.4
+  static let sneakExitPressure: Float = 0.5
+  static let keyboardSneakPressure: Float = 0.3
+  static let sneakSpeed: Float = 0.65
+  static let companionSneakSpeed: Float = 0.82
+
+  static func sneaking(for input: SIMD2<Float>, wasSneaking: Bool) -> Bool {
+    guard input.x.isFinite, input.y.isFinite else { return wasSneaking }
+    let pressure = simd_length(input)
+    guard pressure > deadZone else { return wasSneaking }
+    return pressure <= (wasSneaking ? sneakExitPressure : sneakPressure)
+  }
   /// How fast the leader turns, in radians a second: two full turns, quick but never a snap
   /// (ADR 0008). Companions turn a little slower.
   static let leaderTurnRate: Float = 4 * .pi

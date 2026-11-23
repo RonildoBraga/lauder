@@ -14,6 +14,9 @@ from .layouts import emit_layout, layout_from_blender
 from .looks import visual_problems, what_collection_shows
 from .models import check_model
 from .robot_geometry import emit_robot_geometry, ROBOT
+from .party_animation import (
+    emit_party_clips, package_party_animation, PARTY_MODELS, prepare_party_animation,
+)
 
 
 def _records(repository):
@@ -284,12 +287,27 @@ def export_model(repository, name, made_from=None):
     # hidden from renders stay out, as the intake check says.
     model = next(each for each in bpy.data.collections
                  if each.library is None and each.name == name)
+    if name in PARTY_MODELS:
+        generator = "blender/extensions/lauder_levels/party_animation.py"
+        made_from[generator] = file_fingerprint(root / generator)
+        generator = "blender/extensions/lauder_levels/exports.py"
+        made_from[generator] = file_fingerprint(root / generator)
+        manifest = prepare_party_animation(model, root)
+        if name == "miki":
+            metadata = emit_party_clips(manifest)
+        options.update(export_animation=True, export_armatures=True,
+                       only_deform_bones=False, merge_parent_xform=False)
     _keep_only(model, set(model.all_objects))
     target = root / spawned_scene(name)
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as folder:
         exported = Path(folder) / target.name
-        bpy.ops.wm.usd_export(filepath=str(exported), **options)
+        if name in PARTY_MODELS:
+            source = Path(folder) / f"{name}.usdc"
+            bpy.ops.wm.usd_export(filepath=str(source), **options)
+            package_party_animation(source, exported)
+        else:
+            bpy.ops.wm.usd_export(filepath=str(exported), **options)
         shutil.copyfile(exported, target)
     wrote = {spawned_scene(name): file_fingerprint(target)}
     if metadata is not None:

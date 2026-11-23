@@ -33,6 +33,7 @@ Only the bridge is available. Pause has Resume, Restart and Vibration. There is 
 | Intent | PS5 / Xbox | Touch | Keyboard |
 |---|---|---|---|
 | Move active character | Left stick | Bottom-left analog stick | WASD |
+| Sneak / walk / run | Light / medium / full stick pressure | Light / medium / full stick pressure | Shift + WASD sneaks; WASD runs |
 | Contextual action, advance dialogue or confirm menu | Cross / A | Look, Search, Help, Continue, or Restart while paused | E |
 | Next leader, after someone joins | R1 / RB | Next: name | Q |
 | Previous leader | L1 / LB | Next cycles | Z |
@@ -61,6 +62,33 @@ Nine shared Actions cover idle, walk, jog, backward, left/right strafe, aim, fir
 Final source motion checks at 240 Hz pass for all three figures: zero joint gaps, maximum ankle interpolation error **0.624 mm**, sole penetration **0.250 mm** and foot-up error below **0.012°**. A separate native macOS RealityKit proof of the same meshes and nine one-cycle motions passes **3,267 evaluated poses**, including actual skinned deformation, exact clip trims, all 17 joints, fixed entity roots and independent clone animation. Loop seam displacement is below **0.033 mm**. The proof exposed sparse USD endpoint omission; explicitly preserving the held last sample restores the full timeline and hit recovery. The model README records export requirements rather than claiming the current registered exporter supports these clips.
 
 Saved-file checks cover retained source Actions, shared data, weights, review-manifest ranges, relative lighting links and privacy. These are Blender authoring and native import checks; no application code or runtime assets changed, and no new app build, rendered Simulator route, phone test or performance claim is made. Visual review precedes canonical promotion, focused party export/clip integration, actual-speed and upper-body presentation, lifecycle checks and gameplay-camera validation.
+
+### Party runtime animation integration
+
+**Implemented and locally verified 24 November 2026; review, merge and release pending.** After reviewing the larger-head study, the maintainer said to proceed, requested running and sneaking animations, and selected **light stick pressure with a keyboard modifier** for sneaking. This authorises canonical model/animation integration and the corresponding movement styles. It adds no enemy hearing, detection system, new weapon or scene, and does not authorise merge or release of the stacked work.
+
+Miki, Laura and Tom retain the study's accepted geometry and share one editable animation library. Separate canonical meshes link that library rather than maintaining three copies of the motion. The original nine clips are retained with additional run and sneak cycles. A focused party export supplies skeletal USDZs and generated clip metadata while preserving the bridge, rigid robot and static-hostile paths.
+
+Runtime joint presentation follows actual fixed-step displacement, local facing and accepted combat reactions. Walking/running phase follows actual speed, including a blocked stop. A cautious stance follows light input and persists when the stick returns to centre; firm input stands the squad up. Shift + WASD supplies the same light-pressure path, with no diagonal speed boost. The leader's cautious speed is capped at 0.65 m/s; companions use a 0.82 m/s base with the existing 1.25 catch-up factor, up to 1.025 m/s to recover formation. Paused, inactive, dialogue and input-release gates freeze the presentation; retry and Restart reset it. Weapon transforms and combat outcomes remain authoritative.
+
+The full `./scripts/check` passes on the frozen runtime/asset source: **13 declaration-contract tests**, **28 offline release-contract tests**, **62 Blender tests**, **seven generated sound fingerprints**, strict Swift formatting, the shared app build and hosted Swift Testing. The Swift suite includes all eight retained headless routes and new real-skin, grip, cloned-instance, grounding, cautious-input, pause/reset and blocked-stop regressions. The legacy appearance check now distinguishes the new 1.74 m skinned party from the 1.58 m static hostile. Accepted shot/hit outcomes drive reaction edges; source-authored event offsets remove the review lead-in from runtime reactions, with a two-fixed-step response regression.
+
+Fresh native macOS RealityKit checks pass **13,785 imported skin poses** across the three final eleven-clip exports, preserving ROOT, clip duration and independent clones. A separate **15,120-pose runtime presentation sweep** passes actual skin grounding and authoritative wrist contact through directional blends, weapon changes, recoil, hit reactions and cautious movement. Lowest sole vertices measure **−0.839 mm** in the source export and **−0.762 mm** in runtime blending; wrist-target error remains below **0.001 mm**. Sideways boot-separation checks cover all three actual meshes, with an additional 25-direction polygon check for Miki. Original nine Action curves, accepted character geometry, bridge, robot and static-hostile assets are preserved.
+
+Rendered iPhone 17 / iOS 27.0 Simulator routes pass with **zero failures and companion warning frames**:
+
+| Route | Steps | Seconds | Frame time mean / p99 / maximum |
+|---|---:|---:|---|
+| first-fight | 50/50 | 133.0 | 16.7 / 16.7 / 83.3 ms |
+| fight-retry | 15/15 | 67.0 | 16.7 / 16.7 / 67.6 ms |
+| opening | 56/56 | 265.3 | 16.7 / 16.7 / 215.6 ms |
+| orders | 130/130 | 332.1 | 16.7 / 16.7 / 261.7 ms |
+
+The mean and p99 do not erase the recorded maximum-frame hitches. These are Simulator observations, not physical-phone frame pacing. Screenshots were inspected for combat, Tom/Laura recruitment, Laura resting above snow and standing, the full trio, leader switching, orders, tower ghosting, arrival and Restart. Wide stills establish coarse pose/material/HUD readability; fine hand contact is checked separately from the imported mesh data.
+
+A direct Device Hub keyboard check on the same installed build verifies Shift + W moving roughly 1 m over two seconds versus roughly 5 m for W, returning from cautious movement, ignored movement while paused and fresh movement after resume. Keyboard capture was restored to its previous off state. This establishes Simulator keyboard delivery, not controller forwarding or phone multi-touch. Runtime/asset fingerprints stayed unchanged through the full check, rendered routes and manual check. Private logs, traces, footage and native proof data are retained; the [run/sneak reel](../blender/animations/run-sneak-preview.mp4) shows the source motion separately in Blender.
+
+One known visual limit remains: animated boots and barrels can extend beyond the navigation circle near walls. The body collision rules are unchanged; ground/boot-pair checks do not establish full foot-versus-cover clearance. Physical-phone controls, performance and enjoyment remain unverified for this pass; no phone installation or TestFlight delivery is included.
 
 ### Bridge environment pass
 

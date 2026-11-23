@@ -212,7 +212,7 @@ struct Level {
   }
 }
 
-/// The stand-ins' shared body: every member has the same footprint and walking speed.
+/// The party's shared navigation body: every member has the same footprint and ordinary speed.
 enum PartyBody {
   static let height: Float = 1.7
   static let radius: Float = 0.26

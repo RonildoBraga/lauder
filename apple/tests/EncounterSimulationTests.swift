@@ -41,10 +41,11 @@ struct EncounterSimulationTests {
     let result = step(fight, session: session)
 
     #expect(result.shooter?.member == .tom)
+    #expect(result.firedMembers == [.tom] && result.hitMembers.isEmpty)
     #expect(result.line == "Shooter is down.")
     #expect(session.defeated == ["shooter"])
     #expect(fight.hostiles["shooter"]?.isDown == true)
-    #expect(fight.falls["shooter"] != nil && fight.jolts[.tom] != nil)
+    #expect(fight.falls["shooter"] != nil && fight.weaponPoses[.tom]?.kick == 1)
     let shot = try #require(fight.shots.first)
     #expect(fight.shots.count == 1)
     #expect(shot.path.start == figures[.tom] && shot.path.strike == .body("shooter"))
