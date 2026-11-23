@@ -90,6 +90,14 @@ A direct Device Hub keyboard check on the same installed build verifies Shift + 
 
 One known visual limit remains: animated boots and barrels can extend beyond the navigation circle near walls. The body collision rules are unchanged; ground/boot-pair checks do not establish full foot-versus-cover clearance. Physical-phone controls, performance and enjoyment remain unverified for this pass; no phone installation or TestFlight delivery is included.
 
+### Miki concept mesh review
+
+On 24 November 2026 the maintainer reviewed the [new character concepts](../art/characters/README.md) and assigned Miki's mesh, reusing the existing skeleton and animations, with running, sneaking and shooting shown in Blender before work on Laura and Tom. The [unregistered review scene](../blender/studies/miki-concept/README.md) places the concept beside the new mesh and plays those takes, with a short Aim setup. This is a visual-review assignment, not canonical promotion or new runtime work.
+
+The saved mesh has **400 triangles, 233 vertices and five untextured matte materials**. Its 17-bone rest skeleton and all eleven source Action curves are identical to the linked shared library. An independent **2,303-pose audit at 240 Hz** passes valid normalized skin weights, finite deformation and joint continuity. The corrected hem has zero detected strict coat/trouser crossings across all eleven clips; the lowest sampled sole is −0.250 mm, rounded outwards. Front, side and rear renders recheck the previously visible trouser patches, and live Blender playback shows Run, Sneak and Shoot beside the reference. These are sampled authoring checks, not proof of all self-intersections or native runtime behaviour.
+
+The existing **62 Blender/export tests pass**, including public-path hygiene; the reference image and linked animation/lighting libraries resolve relatively. All 48 construction-start canonical/source/export fingerprints remain unchanged. The [review video](../blender/studies/miki-concept/motion-preview.mp4) is an actual saved-source render: 1080 × 810, H.264, 30 fps, 322 decoded frames and about 10.73 seconds. No app build, Simulator test, phone test, merge or release is claimed for this study. Visual acceptance precedes integration or modelling Laura and Tom.
+
 ### Bridge environment pass
 
 On 23 November 2026 the maintainer assigned the bridge scene in Blender before implementing the robot. The [level source](../blender/levels/README.md) and its USDZ now contain faceted pointed arches, weathered stone bases, four local cable fans and two low off-route snow meshes. The complete scene has 2,724 triangles, six materials and 33 used object/material partitions. These counts fit the authoring budget; they do not establish GPU draw calls or phone performance.

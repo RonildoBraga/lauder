@@ -28,6 +28,8 @@ The latest TestFlight delivery is the bridge-only prototype with the Blender env
 
 **Party animation integration, 24 November 2026:** The maintainer subsequently said to proceed, then requested distinct running and sneaking cycles and chose light stick pressure with a keyboard modifier for sneaking. The accepted models now use their canonical files and one [shared animation source](blender/animations/README.md). Joint presentation follows resolved movement and accepted combat reactions at the existing simulation step; weapons and gameplay retain their authority. Light stick pressure sneaks, medium pressure walks, full pressure runs, and Shift with WASD supplies light keyboard pressure. The full local check and rendered combat, retry, opening and orders routes pass; direct Simulator keyboard checks verify Shift-sneak, full-speed movement and Pause. Enemy hearing and detection remain separate design work. Review, merge, phone validation and release remain pending. Exact verification is recorded in the [prototype plan](docs/prototype-plan.md#party-runtime-animation-integration).
 
+**Miki appearance review, 24 November 2026:** After reviewing the [new party concepts](art/characters/README.md), the maintainer assigned Miki's new mesh before work on Laura and Tom. The separate [Blender study](blender/studies/miki-concept/README.md) compares the concept with a 400-triangle mesh and the existing running, sneaking and shooting motion. It reuses the shared skeleton and Actions. Canonical models and runtime exports remain unchanged; visual review precedes integration.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.
