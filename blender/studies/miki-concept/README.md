@@ -1,6 +1,6 @@
 # Miki signature mesh review
 
-**Status:** Blender-first visual proposal, revised on 24 November 2026. The maintainer found the rounded cartoon candidate improved but still boring and Lego-like, then authorised creative changes towards a distinctive Lauder character. This pass develops Miki as a salvage traveller through strong costume construction and asymmetry. It proposes a visual language, not a settled game identity or new biography. Laura and Tom await their own mesh work after this review. Earlier candidates remain in Git history.
+**Status:** Retained Blender comparison, revised on 24 November 2026. The maintainer subsequently found this direction unsatisfactory and supplied angular character references for an art-style reset. The new [trio concept study](../../../art/characters/angular-study/README.md) is the current review proposal. This source is preserved without further edits; its rig, motion and validation below describe this earlier salvage-traveller mesh, not the new proportions. Review the new direction before rebuilding Miki or the other characters.
 
 Open `miki-concept.blend`, enter its camera view and play the timeline. The model is centred without the concept card. A curious portrait pose is followed by running, sneaking, aiming and shooting.
 
