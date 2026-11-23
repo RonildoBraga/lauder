@@ -1,12 +1,16 @@
 # Robot enemy — concept proposal
 
-**Status:** Dark armed v3 look selected by the maintainer. A first [Blender blockout and motion study](../../blender/assets/spider-bot/README.md) is built. Gameplay movement and combat in the [encounter proposal](../../docs/encounters/bridge-spider-bot.md) remain under review.
+**Status:** The first [Blender blockout and motion study](../../blender/assets/spider-bot/README.md) was built and technically checked, then rejected by the maintainer for its proportions. Bulkier [concept options](bulk-studies/README.md) are now under review; none is selected. The earlier v3 images and rejected model are retained as references, not an accepted final appearance. Further modelling and runtime work await concept selection. Camera B remains approved.
 
 **Updated:** 23 November 2026.
 
-After the first study, the maintainer supplied [Low-poly Spider Bot (Rigged) by rznn7](https://rznn7.itch.io/low-poly-spider-bot) as the shape reference, then requested guns and darker colours. The selected revision uses that upright head and leggy stance in the preferred [bridge gameplay view](../bridge/bridge-gameplay-v1.png)'s matte low-poly style. Its history, allegiance and combat behaviour remain undecided.
+After the first study, the maintainer supplied [Low-poly Spider Bot (Rigged) by rznn7](https://rznn7.itch.io/low-poly-spider-bot) as the shape reference, then requested guns and darker colours. The earlier selected revision used that upright head and leggy stance in the preferred [bridge gameplay view](../bridge/bridge-gameplay-v1.png)'s matte low-poly style. After seeing the resulting Blender blockout, the maintainer requested bulkier proportions and concept art options before another modelling pass. Its history, allegiance and combat behaviour remain undecided.
 
-## Current design — dark armed spider bot
+## Bulkier proportions — current review
+
+Review the new [concept options](bulk-studies/README.md) for body mass, limb proportions and readability from the approved camera B. These are alternative visual proposals. No option, metric size, triangle cap or implementation is selected by this review.
+
+## Earlier dark armed spider-bot reference
 
 ![Dark armed spider-robot concept sheet with multiple views and body poses](robot-design-v3.png)
 
@@ -14,7 +18,7 @@ The upright chamfered head has a square front sensor, two antennae, a small disk
 
 The upper row shows three-quarter, side and overhead views. The lower row explores body poses only. Adding guns does not settle whether the robot lunges, how it fires, or how attacks and recovery work.
 
-## Current bridge-scale study
+## Earlier bridge-scale study
 
 ![One dark armed spider robot on the snowbound bridge at a high gameplay angle](robot-bridge-scale-v3.png)
 
@@ -25,10 +29,10 @@ The three travellers are shown for visual scale. The selected first-encounter re
 ## Review boundaries
 
 - Preserve the sparse, matte, untextured, faceted look and clear separation from the party.
-- Keep the central head, four-leg stance and square sensor readable before adding detail.
+- Judge body mass, limb proportions and front-facing readability before adding detail.
 - Guns are visual proposals. Targeting, detection, firing, ammunition, damage, attack timing, movement, collision and retreat rules remain undecided.
 - No aim lines, warning zones, muzzle flashes, projectiles or effects are depicted.
-- The concept images themselves contain no mesh, rig or animation data. The subsequent [Blender model](../../blender/assets/spider-bot/README.md) has 298 triangles and authoring-only object motion; runtime motion and phone performance are unverified.
+- The concept images themselves contain no mesh, rig or animation data. The rejected [Blender model](../../blender/assets/spider-bot/README.md) has 298 triangles and authoring-only object motion. Its technical checks do not establish visual acceptance; its measurements are not targets for the next design. Runtime motion and phone performance are unverified.
 
 ## Current provenance and licensing
 

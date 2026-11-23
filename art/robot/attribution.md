@@ -6,6 +6,9 @@ The following reference-derived AI-generated concept images are shared under [Cr
 
 - [robot-design-v3.png](robot-design-v3.png)
 - [robot-bridge-scale-v3.png](robot-bridge-scale-v3.png)
+- [A — Armoured crawler](bulk-studies/a-armoured-crawler.png)
+- [B — Low siege bot](bulk-studies/b-low-siege-bot.png)
+- [C — Heavy walker](bulk-studies/c-heavy-walker.png)
 
 This file-level notice does not change the licences of project code, documentation or the bridge study.
 
@@ -18,3 +21,5 @@ Based on **Low-poly Spider Bot (Rigged)** by **rznn7**, available from the [crea
 Lauder's AI-generated changes include a simplified four-leg interpretation, a darker matte palette, altered panel and sensor treatment, two added gun pods, body-pose studies and composition into the original [Lauder bridge concept](../bridge/README.md). The bridge background follows the project [MIT licence](../../LICENSE). No creator endorsement is implied.
 
 Preserve this source credit, licence link and indication of changes when sharing the reference-derived PNGs. The original creator's asset is distinct from these AI-generated adaptations. Exact generation prompts and input roles are in [prompts-v3.md](prompts-v3.md).
+
+The later [bulkier studies](bulk-studies/README.md) use the v3 sheet for identity and the bridge concept for art direction. Their additional changes redistribute mass into larger connected bodies, hip housings and thick articulated legs, with three different silhouettes. Their [exact prompts](bulk-studies/prompts.md) are preserved separately. None is selected yet; the human figures and high-angle insets do not establish metric scale.

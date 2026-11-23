@@ -30,3 +30,6 @@
 art/bridge/bridge-gameplay-v1.png filter=lfs diff=lfs merge=lfs -text
 art/robot/robot-bridge-scale-v3.png filter=lfs diff=lfs merge=lfs -text
 art/robot/robot-design-v3.png filter=lfs diff=lfs merge=lfs -text
+art/robot/bulk-studies/a-armoured-crawler.png filter=lfs diff=lfs merge=lfs -text
+art/robot/bulk-studies/b-low-siege-bot.png filter=lfs diff=lfs merge=lfs -text
+art/robot/bulk-studies/c-heavy-walker.png filter=lfs diff=lfs merge=lfs -text
