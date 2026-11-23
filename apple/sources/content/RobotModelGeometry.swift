@@ -11,7 +11,7 @@ enum RobotModelGeometry {
 
   // Combat offsets use game axes, facing -z. Gun 0 is the source's left gun.
   static let bodyRadius: Float = 1.298624
-  static let halfHeight: Float = 1.174272
+  static let halfHeight: Float = 1.234272
   static let navigationRadius: Float = 2.067892
   static let gunMounts: [SIMD3<Float>] = [
     [0.78, 1.52, -0.28],
