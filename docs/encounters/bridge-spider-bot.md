@@ -18,7 +18,7 @@ The accepted [C model](../../blender/assets/spider-bot-heavy/README.md) has four
 
 Swift combat owns position, facing, sight, attack timing and actual rays. A focused presenter poses the loaded parts from actual movement and turns, with a four-beat crawl and planted-foot step turns. It does not play the authoring reel's fixed travel or editorial resets. Runtime movement starts at **0.55 m/s**, with **0.8 rad/s** body turning, matching the heavy gait better than the earlier 1.6 m/s proposal. No new animation framework or geometry authored in Swift is needed.
 
-The front-facing sight cone is **100°**, with detection within **14 m** and attack initiation within **12 m**. Losing sight before commitment cancels the attempt. Brief search uses the last seen point within the guard bounds, then patrol resumes. Retreat preserves received damage and spent ammunition; only an actual encounter retry restores its checkpoint.
+The front-facing sight cone is **100°**, with detection within **14 m** and attack initiation within **12 m**. Losing sight before commitment cancels the attempt. Brief search uses the last seen point within the guard bounds, then patrol resumes. While the encounter remains unresolved, retreat preserves the robot's damage, Miki's injuries and spent ammunition; only an actual encounter retry restores its checkpoint.
 
 ## Prototype attack cycle
 
@@ -39,7 +39,7 @@ Start with **six carbine hits** against Miki's **12 starting rounds**. This is a
 
 ## Bypass, supply case and story handoff
 
-The west arch offers a zero-ammunition route. The authored safe exit is `robot.exit`, game coordinates **[-12, -12] to [-7.5, -7.5]**. Every point in it is beyond the guard's 14 m acquisition radius for its entire allowed position envelope. Reaching it resolves this first encounter once, without recording a defeated machine, restoring ammunition or resetting damage. Pending attacks are cancelled before the case/ambush can begin. The bypassed machine stops tracking and cannot reactivate this encounter until Restart.
+The west arch offers a zero-ammunition route. The authored safe exit is `robot.exit`, game coordinates **[-12, -12] to [-7.5, -7.5]**. Every point in it is beyond the guard's 14 m acquisition radius for its entire allowed position envelope. Reaching it resolves this first encounter once, without recording a defeated machine, restoring ammunition or resetting the robot's recorded damage. Both defeat and completed bypass recover Miki's encounter-local injuries under the existing bridge rules; unresolved retreat does not. Pending attacks are cancelled before the case/ambush can begin. The bypassed machine stops tracking and cannot reactivate this encounter until Restart.
 
 A small **nonblocking supply case** at **[-8.5, -8]** replaces searching the stranger. It is authored in the bridge's Visual collection, with its marker and interaction area in Gameplay; it adds no cover or collision box. Search becomes available after defeat or safe bypass, grants **six rounds and one medical kit once**, and starts the existing ambush. Tom's arrival marker is closer at **[2, -3]** so his intervention and Miki remain in view. The attacker and recruitment sequence remain otherwise intact, and Laura receives the same kit later.
 

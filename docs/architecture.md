@@ -70,11 +70,11 @@ The camera follows the active leader and eases on a switch, retaining the elevat
 
 ## The opening
 
-The bridge starts with Miki alone. Timed encounter cues reveal/engage the stranger, script the ambush and Tom's shot, help Laura stand and begin brief conversations. Content owns text and authored points. The session owns which beats have completed; the world owns where bodies stand.
+The bridge starts with Miki alone. Timed encounter cues reveal/engage the first-tower robot, grant the separate case's supplies, script the ambush and Tom's shot, help Laura stand and begin brief conversations. Content owns text and authored points. The session owns which beats have completed; the world owns where bodies stand. The internal `stranger` beat and `searchStranger` action retain their stable identifiers across the robot replacement.
 
 ### Interactions
 
-Search and Help check the leader's accessible approach and session progress again on press. Search takes the downed stranger's rounds/kit once and begins the ambush. Help spends the shared kit and begins Laura's scene. These rules need no generic quest or inventory framework.
+Search and Help check the leader's accessible approach and session progress again on press. Search opens the supply case once after the guard is defeated or bypassed, granting rounds/a kit and beginning the ambush. Help spends the shared kit and begins Laura's scene. These rules need no generic quest or inventory framework.
 
 ### Fights
 
@@ -82,7 +82,7 @@ Every recruited leader carries their native weapon: Miki's precision carbine, La
 
 Manual aim turns the leader at a bounded rate; without it, assistance picks a visible target in effective reach and Fire waits until facing it. Spread follows movement, turning and recent shots. Ballistics traces actual shots through the flat level bounds, body cylinders and real box heights; a miss can strike scenery and a long ray is not truncated at assistance reach. Unengaged people hold deliberate fire. No line exposes an enemy's exact aim.
 
-The bridge's shooter reveals, winds up, fires a deliberate first miss, then recovers and fires again. Finite barrel tracking and seeded spread resolve actual rays. A nonlethal hit briefly delays a wind-up; downed figures fall. The tower's geometry supplies cover without a proximity stance/shield system. A third hit invokes the bridge encounter's retry. Companions have no autonomous combat or signature ability in this scene; Tom's ambush shot is an authored cue.
+The first-tower robot patrols a bounded area, notices a visible target, braces and tracks, then commits its aim point before an alternating three-round burst. Its gun transforms supply the actual 3D ray origins/directions; seeded spread and the tower's geometry resolve hits without a proximity stance/shield system. A burst can cause at most one injury, and a third injury invokes the bridge encounter's retry. Six carbine hits disable the robot without a human fall animation. Reaching the authored west exit instead clears the encounter and pending fire without recording a kill, restoring ammunition or resetting the robot's recorded damage. Both completed resolutions recover the party's encounter-local injuries; retreat while the encounter remains active preserves them. Companions have no autonomous combat or signature ability in this scene; Tom's ambush shot is an authored cue. Generic human rifle timing, including its deliberate first miss, remains covered by test fixtures rather than the first bridge encounter.
 
 EncounterStage projects poses, tracers/flashes/impacts and reusable target markers. Feedback events select the retained native weapon/impact sounds and leader haptic cues. Sound/haptic playback follows lifecycle and the Vibration preference.
 

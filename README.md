@@ -27,7 +27,7 @@ The bridge-only prototype's structural preparation is delivered in **TestFlight 
 - [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
 - [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
 - [Art studies](art/README.md): the selected bridge and robot concept C, earlier references and alternatives, with prompts and source credits.
-- [First-tower robot proposal](docs/encounters/bridge-spider-bot.md): behaviour and encounter progression under discussion before implementation.
+- [First-tower robot encounter](docs/encounters/bridge-spider-bot.md): implemented guard behaviour, supply-case/bypass progression and remaining playtest questions.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): an unimplemented encounter proposal, retained for narrative reference, not an active level or assignment.
 
 The player controls one character at a time, switching leadership while the other recruited characters follow. Miki, Laura and Tom meet as strangers; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.
@@ -64,7 +64,7 @@ blender/
 art/                             Concept proposals, previews and generation provenance
 docs/                            Current design, architecture and prototype plan
   story/                         Story bible
-  encounters/                    Unimplemented encounter and narrative proposals
+  encounters/                    Encounter records and narrative proposals
   decisions/                     Accepted decisions and clearly marked historical experiments
 scripts/check                    Contract, Blender, asset, formatting, app-build and Swift checks
 .github/                         Pull request template and standard-check workflow

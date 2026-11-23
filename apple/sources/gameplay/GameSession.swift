@@ -387,7 +387,7 @@ final class GameSession {
     self.checkpoint = nil
   }
 
-  /// The encounter is won; everyone's hits recover.
+  /// The encounter is resolved by victory or safe bypass; everyone's temporary hits recover.
   func endEncounter() {
     checkpoint = nil
     hits = [:]

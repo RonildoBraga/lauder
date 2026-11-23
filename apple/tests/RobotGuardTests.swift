@@ -224,21 +224,56 @@ struct RobotGuardTests {
   }
 
   @Test
+  func retreatKeepsTheUnresolvedEncountersInjuriesRobotDamageAndSpentRounds() throws {
+    let level = range()
+    let session = GameSession(level: level)
+    let fight = EncounterSimulation(level: level)
+    #expect(session.beginEncounter(.stranger))
+    fight.begin(try #require(level.encounters.first))
+    for _ in 0..<400 {
+      _ = step(fight, session: session)
+      if session.hitsTaken == 1 { break }
+    }
+    #expect(session.hitsTaken == 1)
+    #expect(session.spendRound())
+    #expect(!session.hit("robot", toughness: 6))
+    // Leave sight/range without taking the authored safe exit. The active encounter's
+    // search and return to patrol must not restore either side's damage or ammunition.
+    for _ in 0..<1_200 {
+      _ = fight.step(
+        dt: dt, leader: [0, 24], facing: [0, -1], aiming: false,
+        fireHeld: false, firePressed: false, figures: [.miki: [0, 24]], session: session)
+    }
+    #expect(session.inEncounter && session.hitsTaken == 1 && session.ammo == 11)
+    #expect(fight.hostiles["robot"]?.robot?.phase == .patrol)
+    for _ in 0..<4 { #expect(!session.hit("robot", toughness: 6)) }
+    #expect(session.hit("robot", toughness: 6))
+  }
+
+  @Test
   func aBypassEndsAuthorityWithoutInventingAKillAndRestartRestoresTheGuard() throws {
     let level = range()
     let session = GameSession(level: level)
     let fight = EncounterSimulation(level: level)
     #expect(session.beginEncounter(.stranger))
     fight.begin(try #require(level.encounters.first))
-    for _ in 0..<100 { _ = step(fight, session: session) }
+    for _ in 0..<400 {
+      _ = step(fight, session: session)
+      if session.hitsTaken == 1 { break }
+    }
+    #expect(session.hitsTaken == 1)
     #expect(session.spendRound())
     let ammo = session.ammo
     #expect(fight.resolveRobotBypass(id: "robot", session: session))
     #expect(!session.inEncounter && session.defeated.isEmpty && session.ammo == ammo)
+    // Injuries are encounter-local: both victory and the completed safe bypass recover
+    // them. Spent ammunition stays spent, and the bypass does not count as a robot kill.
+    #expect(session.hitsTaken == 0)
     #expect(fight.hostiles["robot"]?.robot?.isCleared == true && fight.threat == nil)
     for _ in 0..<600 {
       _ = step(fight, session: session)
       #expect(fight.shots.isEmpty)
+      #expect(session.hitsTaken == 0)
     }
     #expect(!fight.resolveRobotBypass(id: "robot", session: session))
     // A later empty scene must not lean back towards the old, cleared guard.

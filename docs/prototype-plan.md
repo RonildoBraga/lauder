@@ -14,15 +14,15 @@ The approved structural preparation is merged: [PR #125](https://github.com/Roni
 
 Use the retained bridge to decide what is enjoyable before expanding again. This cleanup preserves its existing opening, party movement, native weapons and input paths. It does not redesign the story or author a replacement core loop.
 
-The story's foundations remain in the [story bible](story/story-bible.md). Exploration and salvage lead the intended game, with occasional combat; the current opening only samples movement, a small fight, a body search and recruitment. Later narrative proposals are reference material, not playable content or assignments.
+The story's foundations remain in the [story bible](story/story-bible.md). Exploration and salvage lead the intended game, with occasional combat; the current opening samples movement, a guard that can be fought or bypassed, a supply case and recruitment. Later narrative proposals are reference material, not playable content or assignments.
 
 ## The opening
 
 The [walkthrough](gameplay-script.md#the-brooklyn-bridge-opening) follows Miki from the Brooklyn end to Manhattan:
 
 1. Move and look while alone on the snowbound bridge.
-2. Meet the stranger at the first tower. His first shot deliberately misses; fight using the tower as cover. A third hit retries that fight.
-3. Search the body for rounds and a medical kit. A scripted ambush introduces Tom, who joins afterwards.
+2. Meet the C robot at the first tower. Fight using the tower as cover, or take the west arch to its safe exit. Each committed burst can cause at most one injury; a third injury retries that fight.
+3. Search the outgoing supply case for rounds and a medical kit after either resolution. A scripted ambush introduces Tom, who joins afterwards.
 4. Find Laura, help her with the kit and hear her name. She joins after the short exchange.
 5. Cross the second tower with both companions. Switch leaders, try Close/Spread/Column and move/hold orders, then gather at the Manhattan end.
 
@@ -48,7 +48,7 @@ Touch is automatic without an extended controller. An attached controller is pre
 
 Switching preserves positions and progress; held movement can continue on the new leader. Next wins over Previous in one sample. Switch, formation and order commands consume a simultaneous action. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
-Search and Help are revalidated on press against the leader's position and current progress. Searching the downed stranger happens once and starts the ambush. Helping Laura uses the shared medical kit and starts her recruitment exchange.
+Search and Help are revalidated on press against the leader's position and current progress. The supply case can be searched once after defeating or bypassing the guard, starting the ambush. Helping Laura uses the shared medical kit and starts her recruitment exchange.
 
 ## Verification and performance
 
@@ -105,6 +105,8 @@ Rendered Simulator checks passed with zero failures or companion warning frames:
 Mean frame time was 16.7 ms in each Simulator run, with p99 between 16.8 and 17.1 ms. These are Simulator measurements, not baseline-phone evidence. The loaded USDZ tests verify grounded feet/joints, 3D barrel/ray agreement including yaw/pitch/recoil, and Pause/reset. Actual-guard motion regressions also verify planted feet stay reachable during combined translation and turning; the small fix uses a 1° stop-turn-advance gate and an earlier step trigger, rather than masking an unreachable foot through clamping. Private captures, summaries, hashes and logs are retained.
 
 No new phone or release evidence is recorded for this task. The frozen application and asset source was tested; later documentation edits do not change that runtime tree.
+
+The follow-up review for [PR #134](https://github.com/RonildoBraga/lauder/pull/134) checked combat, progression and the rig/export pipeline independently. It corrected stale human-shooter/body-search descriptions and clarified the existing injury policy: unresolved retreat preserves damage and ammunition; completed defeat or safe bypass recovers encounter-local injuries. An injured-bypass regression and a retreat-through-search-to-patrol regression verify that distinction. `./scripts/check` passed again, as did all 49 local links/anchors in the four changed Markdown documents. This follow-up changes tests, comments and documentation only; it adds no phone or rendered-performance claim.
 
 ### Architecture checks
 
