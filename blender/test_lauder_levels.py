@@ -21,6 +21,7 @@ sys.path.insert(0, str(HERE / "extensions"))
 sys.dont_write_bytecode = True
 
 import lauder_levels as L  # noqa: E402
+from lauder_levels.robot_geometry import _foot_radius  # noqa: E402
 
 ROOT = HERE.parent
 BRIDGE = L.LEVELS["brooklyn-bridge"]
@@ -129,6 +130,38 @@ def read(shapes=None, camera=None, lights=None, required=()):
 
 def without(shapes, name):
     return [shape for shape in shapes if shape.name != name]
+
+
+class RobotGeometryTests(unittest.TestCase):
+    def test_foot_clearance_contains_the_widest_boot_at_its_own_ankle(self):
+        boots = [
+            ((10, -20, 7), [(10.3, -19.6, 6.8), (9.7, -20.4, 7.2)]),
+            ((-40, 9, 12), [(-40.6, 9.8, 11.9)]),
+            ((0, 0, -5), [(0.3, 0.4, 200)]),
+            ((3, 8, 15), [(2.25, 9, 14.8)]),
+        ]
+        self.assertEqual(_foot_radius(boots), 1.25)
+        self.assertEqual(_foot_radius(reversed(boots)), 1.25)
+
+    def test_foot_clearance_is_independent_of_translation_and_lift(self):
+        vertices = [(0.3, 0.4, -0.1), (-0.3, -0.4, 0.1)]
+        translated = [(x + 17, y - 23, z + 9) for x, y, z in vertices]
+        self.assertEqual(_foot_radius([((0, 0, 0), vertices)]),
+                         _foot_radius([((17, -23, 9), translated)]))
+
+    def test_exported_foot_clearance_rounds_outward(self):
+        corner = (0.1000001, 0.2, -0.15)
+        actual = math.hypot(corner[0], corner[1])
+        exported = _foot_radius([((0, 0, 0), [corner])])
+        self.assertGreaterEqual(exported, actual)
+        self.assertLess(exported - actual, 0.000001)
+
+    def test_missing_empty_or_nonfinite_boots_are_refused(self):
+        for boots in ([], [((0, 0, 0), [])], [((0, 0, 0), [(0, 0, 1)])],
+                      [((0, 0, 0), [(float("nan"), 1, 0)])],
+                      [((float("inf"), 0, 0), [(1, 1, 0)])]):
+            with self.subTest(boots=boots), self.assertRaises(L.LayoutError):
+                _foot_radius(boots)
 
 
 class LayoutTests(unittest.TestCase):

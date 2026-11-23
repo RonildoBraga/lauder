@@ -18,7 +18,6 @@ final class RobotPresentation {
   private let guns: [Entity]
   private let gunPositions: [SIMD3<Float>]
   private let sensor: Entity
-  private var motion = RobotMotion()
 
   init(visual: Entity) {
     self.visual = visual
@@ -44,24 +43,24 @@ final class RobotPresentation {
   }
 
   func reset(position: SIMD2<Float>, facing: SIMD2<Float>) {
+    var motion = RobotMotion()
     motion.reset(position: position, facing: facing)
     update(
-      position: position, facing: facing, brace: 0, gunDirections: [], gunRecoil: .zero,
-      down: false, dt: 0)
+      position: position, facing: facing, motion: motion, gunDirections: [], gunRecoil: .zero,
+      down: false)
   }
 
   func update(
-    position: SIMD2<Float>, facing: SIMD2<Float>, brace: Float,
-    gunDirections: [SIMD3<Float>], gunRecoil: SIMD2<Float>, down: Bool, dt: Float
+    position: SIMD2<Float>, facing: SIMD2<Float>, motion: RobotMotion,
+    gunDirections: [SIMD3<Float>], gunRecoil: SIMD2<Float>, down: Bool
   ) {
     let bodyYaw = Movement.yaw(towards: facing)
-    visual.orientation = simd_quatf(angle: bodyYaw, axis: [0, 1, 0])
+    let yaw = simd_quatf(angle: bodyYaw, axis: [0, 1, 0])
+    visual.orientation = yaw
     visual.position = .zero
-    let lowered = down ? 1 : max(0, min(1, brace))
-    root.position.z = -RobotModelGeometry.braceDepth * lowered
-    let poses = motion.advance(
-      position: position, facing: facing, brace: lowered, dt: down ? 0 : dt)
-    for (leg, pose) in zip(legs, poses) {
+    root.position = motion.bodyPose.sourceOffset
+    root.orientation = motion.bodyPose.sourceRotation
+    for (leg, pose) in zip(legs, motion.legPoses) {
       leg.swivel.orientation = simd_quatf(angle: pose.swivel, axis: [0, 0, 1])
       leg.upper.orientation = simd_quatf(angle: pose.upper, axis: [0, 1, 0])
       leg.lower.orientation = simd_quatf(angle: pose.lower, axis: [0, 1, 0])
@@ -70,13 +69,13 @@ final class RobotPresentation {
     for index in guns.indices {
       let direction =
         gunDirections.indices.contains(index) ? gunDirections[index] : SIMD3<Float>.zero
-      let yaw =
-        simd_length(direction) > 0.001
-        ? Movement.yaw(towards: [direction.x, direction.z]) - bodyYaw : 0
-      let pitch = simd_length(direction) > 0.001 ? asin(max(-1, min(1, direction.y))) : 0
+      let local = (yaw * motion.bodyPose.rotation).inverse.act(direction)
+      let gunYaw =
+        simd_length(local) > 0.001 ? Movement.yaw(towards: [local.x, local.z]) : 0
+      let pitch = simd_length(local) > 0.001 ? asin(max(-1, min(1, local.y))) : 0
       // Source +z maps to game +y; source +x maps to game -x.
       let rotation =
-        simd_quatf(angle: yaw, axis: [0, 0, 1])
+        simd_quatf(angle: gunYaw, axis: [0, 0, 1])
         * simd_quatf(angle: -pitch, axis: [1, 0, 0])
       let recoil = gunRecoil[index]
       guns[index].orientation = rotation

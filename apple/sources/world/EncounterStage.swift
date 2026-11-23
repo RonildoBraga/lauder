@@ -78,9 +78,9 @@ final class EncounterStage {
       }
       if let presentation = robots[id], let robot = state.robot {
         presentation.update(
-          position: state.position, facing: robot.facing, brace: robot.brace,
+          position: state.position, facing: robot.facing, motion: robot.motion,
           gunDirections: robot.gunDirections, gunRecoil: robot.gunRecoil,
-          down: state.isDown, dt: dt)
+          down: state.isDown)
       } else if let visual = visuals[id], let pose = fight.hostilePoses[id] {
         visual.orientation = pose.orientation
         visual.position = pose.position

@@ -54,14 +54,30 @@ struct RobotPresentationTests {
   @Test
   func theRealFeetRemainLevelWhileWalkingTurningAndBracing() throws {
     let (body, visual, presenter) = fixture()
+    var motion = RobotMotion()
+    var position = SIMD2<Float>.zero
+    var yaw: Float = 0
+    motion.reset(position: position, facing: Movement.facing(yaw: yaw))
     for frame in 1...420 {
       let t = Float(frame) / 60
-      let yaw = min(Float.pi / 2, max(0, t - 3) * 0.7)
-      let position = SIMD2<Float>(0, -min(t, 3) * 0.55)
+      let brace: Float = t > 6 ? 1 : 0
+      let proposedYaw = Movement.turn(
+        from: yaw, towards: min(Float.pi / 2, max(0, t - 3) * 0.7), limit: 0.7 / 60)
+      if motion.canPlaceBody(
+        position: position, facing: Movement.facing(yaw: proposedYaw), brace: brace)
+      {
+        yaw = proposedYaw
+      }
+      let proposed = position + SIMD2<Float>(0, t < 3 ? -0.55 / 60 : 0)
+      if motion.canPlaceBody(position: proposed, facing: Movement.facing(yaw: yaw), brace: brace) {
+        position = proposed
+      }
+      motion.advance(
+        position: position, facing: Movement.facing(yaw: yaw), brace: brace, dt: 1 / 60)
       body.position = [position.x, PartyBody.height / 2, position.y]
       presenter.update(
-        position: position, facing: Movement.facing(yaw: yaw), brace: t > 6 ? 1 : 0,
-        gunDirections: [], gunRecoil: .zero, down: false, dt: 1 / 60)
+        position: position, facing: Movement.facing(yaw: yaw), motion: motion,
+        gunDirections: [], gunRecoil: .zero, down: false)
       for leg in RobotModelGeometry.legs {
         let foot = try part("\(leg.name) foot", in: visual)
         let up = simd_normalize(foot.convert(direction: [0, 0, 1], to: nil))
@@ -86,10 +102,11 @@ struct RobotPresentationTests {
           * simd_quatf(angle: pitch, axis: [1, 0, 0])).act([0, 0, -1])
       }
       body.position = [position.x, PartyBody.height / 2, position.y]
-      presenter.reset(position: position, facing: Movement.facing(yaw: yaw))
+      var motion = RobotMotion()
+      motion.reset(position: position, facing: Movement.facing(yaw: yaw), brace: brace)
       presenter.update(
-        position: position, facing: Movement.facing(yaw: yaw), brace: brace,
-        gunDirections: directions, gunRecoil: recoil, down: false, dt: 0)
+        position: position, facing: Movement.facing(yaw: yaw), motion: motion,
+        gunDirections: directions, gunRecoil: recoil, down: false)
       for index in 0..<2 {
         let marker = try part(index == 0 ? "muzzle-left" : "muzzle-right", in: visual)
         let gun =
@@ -108,19 +125,67 @@ struct RobotPresentationTests {
   }
 
   @Test
+  func theGuardAndVisibleBarrelsShareTheSpringBodyAndRecoilTransform() throws {
+    let (body, visual, presenter) = fixture()
+    var guardBot = RobotGuard(home: .zero)
+    guardBot.reveal()
+    guardBot.engage()
+    var sawTilt = false
+    var sawCompression = false
+    var sawBrace = false
+    var sawRecoil = false
+    var shots = 0
+    for frame in 0..<1800 {
+      let time = Float(frame) / 60
+      let shot = guardBot.step(
+        dt: 1 / 60, target: [3 * sin(time * 0.3), 8 + 2 * cos(time * 0.25)],
+        hasSight: true, obstacles: [], party: [])
+      body.position = [guardBot.position.x, PartyBody.height / 2, guardBot.position.y]
+      presenter.update(
+        position: guardBot.position, facing: guardBot.facing, motion: guardBot.motion,
+        gunDirections: guardBot.gunDirections, gunRecoil: guardBot.gunRecoil, down: false)
+      sawTilt = sawTilt || simd_length(guardBot.motion.bodyPose.rotation.imag) > 0.0005
+      sawCompression =
+        sawCompression
+        || guardBot.motion.bodyPose.offset.y + RobotModelGeometry.braceDepth * guardBot.brace
+          < -0.001
+      sawBrace = sawBrace || guardBot.brace > 0.5
+      sawRecoil = sawRecoil || simd_length(guardBot.gunRecoil) > 0.01
+      if shot != nil { shots += 1 }
+      for index in 0..<2 {
+        let marker = try part(index == 0 ? "muzzle-left" : "muzzle-right", in: visual)
+        #expect(
+          simd_distance(marker.position(relativeTo: nil), guardBot.muzzle(gun: index)) < 0.001)
+        let forward = simd_normalize(marker.convert(direction: [0, -1, 0], to: nil))
+        #expect(simd_dot(forward, guardBot.gunDirections[index]) > 0.9999)
+      }
+      if let shot {
+        #expect(simd_distance(shot.origin, guardBot.muzzle(gun: shot.gun)) < 0.001)
+      }
+    }
+    #expect(sawTilt && sawCompression && sawBrace && sawRecoil)
+    #expect(shots > 0)
+  }
+
+  @Test
   func pauseHoldsTheFeetAndResetRestoresTheNeutralStance() {
     var motion = RobotMotion()
     motion.reset(position: .zero, facing: [0, -1])
     _ = motion.advance(position: [0, -0.1], facing: [0, -1], brace: 0, dt: 1 / 60)
     let before = motion.footPositions
+    let body = motion.bodyPose
     for _ in 0..<60 {
       _ = motion.advance(position: [0, -0.1], facing: [0, -1], brace: 0, dt: 0)
     }
     #expect(motion.footPositions == before)
+    #expect(motion.bodyPose.offset == body.offset)
+    #expect(motion.bodyPose.rotation.vector == body.rotation.vector)
     motion.reset(position: .zero, facing: [0, -1])
     #expect(
       motion.footPositions
         == RobotModelGeometry.legs.map { SIMD3(-$0.foot.x, $0.foot.z, $0.foot.y) })
+    #expect(motion.legPoses.count == 4)
+    #expect(motion.bodyPose.offset == .zero)
   }
 
   /// Reconstruct real endpoints independently: a clamped inverse solve must not silently move
@@ -130,8 +195,6 @@ struct RobotPresentationTests {
     var guardBot = RobotGuard(home: .zero)
     guardBot.reveal()
     guardBot.engage()
-    var motion = RobotMotion()
-    motion.reset(position: .zero, facing: guardBot.facing)
     var maxError: Float = 0
     var maxReach: Float = 0
     var maxDrift: Float = 0
@@ -143,12 +206,12 @@ struct RobotPresentationTests {
       _ = guardBot.step(
         dt: 1 / 60, target: target, hasSight: combat && Int(time) % 20 < 14,
         obstacles: [], party: [])
+      let motion = guardBot.motion
       let position = guardBot.position
       let yaw = Movement.yaw(towards: guardBot.facing)
       let turn = simd_quatf(angle: yaw, axis: [0, 1, 0])
-      let origin = SIMD3(position.x, -RobotModelGeometry.braceDepth * guardBot.brace, position.y)
-      let poses = motion.advance(
-        position: position, facing: guardBot.facing, brace: guardBot.brace, dt: 1 / 60)
+      let origin = SIMD3(position.x, 0, position.y)
+      let poses = motion.legPoses
       let wanted = motion.footPositions
       var actual: [SIMD3<Float>] = []
       for index in poses.indices {
@@ -161,10 +224,14 @@ struct RobotPresentationTests {
         let source =
           leg.hip + upper.act([0, 0, RobotModelGeometry.upperLength])
           + lower.act([0, 0, RobotModelGeometry.lowerLength])
-        let endpoint = origin + turn.act([-source.x, source.z, source.y])
+        let endpoint =
+          origin
+          + turn.act(
+            motion.bodyPose.offset + motion.bodyPose.rotation.act([-source.x, source.z, source.y]))
         actual.append(endpoint)
         maxError = max(maxError, simd_distance(endpoint, wanted[index]))
-        let local = turn.inverse.act(wanted[index] - origin)
+        let local = motion.bodyPose.rotation.inverse.act(
+          turn.inverse.act(wanted[index] - origin) - motion.bodyPose.offset)
         maxReach = max(maxReach, simd_length(SIMD3(-local.x, local.z, local.y) - leg.hip))
         if oldWanted.count == wanted.count,
           simd_distance(oldWanted[index], wanted[index]) < 0.000001,
@@ -175,6 +242,7 @@ struct RobotPresentationTests {
       }
       oldWanted = wanted
       oldActual = actual
+      #expect(motion.isReachable)
     }
     #expect(maxReach < RobotModelGeometry.upperLength + RobotModelGeometry.lowerLength - 0.0001)
     #expect(maxError < 0.0001)

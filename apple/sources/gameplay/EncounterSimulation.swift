@@ -72,6 +72,7 @@ final class EncounterSimulation {
   private let specs: [String: Level.Hostile]
   private let blockers: [PartyMotion.Box]
   private let movementObstacles: [PartyMotion.Box]
+  private let coverBoxes: [Level.Box]
   private let lookout: SIMD2<Float>
   private var encounter: Level.Encounter?
   private var director = StoryDirector()
@@ -92,6 +93,7 @@ final class EncounterSimulation {
     weaponLeader = level.party[0]
     blockers = Aim.blockers(level.boxes, above: Self.aimHeight)
     movementObstacles = level.obstacles
+    coverBoxes = level.boxes
     lookout = -level.heading
     specs = Dictionary(
       uniqueKeysWithValues: level.encounters.flatMap(\.hostiles).map { ($0.id, $0) })
@@ -238,7 +240,7 @@ final class EncounterSimulation {
           from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
         if let discharge = state.stepRobot(
           dt: dt, target: leader, hasSight: hasSight, obstacles: movementObstacles,
-          party: Array(party.values))
+          party: Array(party.values), coverBoxes: coverBoxes)
         {
           fireRobot(discharge, state: &state, party: party, session: session, outcome: &outcome)
         }
@@ -248,6 +250,10 @@ final class EncounterSimulation {
           case .committed: threatNow = "\(spec.name) has committed. Move or use cover."
           case .burst: threatNow = "\(spec.name) is firing."
           case .recovering: threatNow = "\(spec.name) is recovering."
+          case .pursuing: threatNow = "\(spec.name) is advancing."
+          case .takingCover: threatNow = "\(spec.name) is moving behind stone."
+          case .covered: threatNow = "\(spec.name) is sheltering."
+          case .peeking: threatNow = "\(spec.name) is returning to engage."
           default: break
           }
           hostiles[spec.id] = state

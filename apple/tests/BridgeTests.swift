@@ -229,7 +229,7 @@ struct BridgeTests {
   }
 
   @Test
-  func theSupplyCaseIsVisibleNonblockingAndOutsideTheWholeGuardEnvelope() throws {
+  func theSupplyCaseIsVisibleNonblockingAndOutsideTheGuardsMovementEnvelope() throws {
     let level = BrooklynBridge.level
     let world = GameWorld(level: level)
     let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
@@ -249,7 +249,10 @@ struct BridgeTests {
       for y in [exit.minimum.y, exit.maximum.y] {
         let corner = SIMD2(x, y)
         let closest = simd_min(simd_max(corner, guardArea.minimum), guardArea.maximum)
-        #expect(simd_distance(corner, closest) > RobotGuard.detectionRange)
+        // Bypass clears combat before the next hostile tick; the expanded pursuit area must
+        // still keep the machine's full footprint out of the supply-case exit.
+        #expect(
+          simd_distance(corner, closest) > RobotModelGeometry.navigationRadius + PartyBody.radius)
       }
     }
   }

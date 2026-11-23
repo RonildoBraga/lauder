@@ -907,8 +907,8 @@ final class GameWorld {
   private func stepStage(
     leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
   ) {
-    // The authored west-side exit lies beyond the entire guard's acquisition envelope. Close
-    // the encounter before another fixed-step shot or supply-case action can begin the ambush.
+    // The authored west-side exit ends this bounded encounter even after pursuit or cover
+    // changes the guard's sight line. Clear pending fire before the next hostile tick/ambush.
     if session.inEncounter,
       let encounter = level.encounters.first(where: { $0.beat == session.beat }),
       let exit = encounter.safeExit, exit.contains(position),
@@ -1157,6 +1157,27 @@ final class GameWorld {
     /// What a scripted playtest can see each frame.
     var playtestSnapshot: PlaytestRunner.Snapshot {
       let robot = fight.hostiles["stranger"]?.robot
+      var robotCovered = false
+      var robotHasClearance = true
+      if let robot, let leaderPoint = positions[session.leader] {
+        let toward = robot.position - leaderPoint
+        let side =
+          simd_length_squared(toward) > 0.000001
+          ? SIMD2(-toward.y, toward.x) / simd_length(toward) * RobotModelGeometry.bodyRadius
+          : SIMD2<Float>.zero
+        let query = Ballistics(level: level)
+        // Independently trace to the body's top and both sides. A low object or a phase label
+        // alone does not establish cover against the leader's actual line of fire.
+        robotCovered = [-side, .zero, side].allSatisfy { offset in
+          !query.isClear(
+            from: query.point(leaderPoint),
+            to: query.point(
+              robot.position + offset, above: RobotModelGeometry.halfHeight * 2 + 0.1))
+        }
+        robotHasClearance = PartyMotion(
+          radius: RobotModelGeometry.navigationRadius, obstacles: level.obstacles
+        ).canTraverse(from: robot.position, to: robot.position)
+      }
       return PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
@@ -1165,7 +1186,9 @@ final class GameWorld {
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader),
-        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0)
+        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0,
+        robotPosition: robot?.position, robotCoverGoal: robot?.coverGoal,
+        robotCovered: robotCovered, robotHasClearance: robotHasClearance)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

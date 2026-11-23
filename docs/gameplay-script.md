@@ -35,7 +35,7 @@ The robot turns toward Miki at a limited rate, gives notice, stops and braces wh
 
 **Fire** draws Miki's carbine and uses the existing assisted target in sight; the right stick gives manual aim. The robot is a valid target when engaged, without waiting for a human's deliberate warning miss. Six carbine hits disable it in this prototype. Miki can take three hits, with at most one injury from a robot burst. A third mistake fades the screen and retries from the existing first-tower checkpoint with the encounter's initial inventory restored.
 
-The machine remains within its small guard area. Miki can break sight, withdraw and return without resetting her spent ammunition or the robot's damage. She can also take the west arch and reach the authored safe exit beyond the whole guard envelope. That resolves the encounter without pretending that the robot was killed and cancels any queued fire before the next scene. This route remains available with no ammunition.
+The machine can close the distance within its local first-tower area. If Miki breaks sight, it checks her last-seen position without knowing where she has gone. Taking damage can send it behind the tower's stone; it holds briefly, then emerges and gives a fresh warning before firing again. Cover does not repair it. Miki can withdraw and return without resetting her spent ammunition or the robot's damage. She can also take the west arch and reach the authored safe exit, which ends this bounded encounter even if the robot has moved. That resolves the encounter without recording a kill and cancels queued fire before the next scene. This route remains available with no ammunition.
 
 ### 3. The supply case, and Tom (M3)
 

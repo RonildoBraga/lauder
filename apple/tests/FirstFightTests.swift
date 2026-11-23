@@ -92,7 +92,7 @@ struct FirstFightTests {
   func theGuardCanBeDisabledWithoutAnAuthoredHumanWarningShot() {
     let world = GameWorld(level: BrooklynBridge.level)
     walk(world, to: [6.5, 10])
-    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(disableGuard(world))
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
     #expect(world.session.ammo <= 6 && world.session.ammo >= 0)
     #expect(world.session.hitsTaken == 0 && world.threat == nil)
@@ -171,7 +171,7 @@ struct FirstFightTests {
     #expect(world.root.findEntity(named: "hostile.stranger")?.isEnabled == false)
     #expect(count(world.root) == entities)
     walk(world, to: [6.5, 10])
-    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(disableGuard(world))
   }
 
   @Test
@@ -202,7 +202,7 @@ struct FirstFightTests {
           && simd_dot(simd_normalize(actual), simd_normalize(towards)) > 0.99
       })
     #expect(lean() < EncounterSimulation.cameraLeanLimit + 0.01)
-    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(disableGuard(world))
     #expect(run(world, upTo: 3) { abs(lean()) < 0.05 })
   }
 
@@ -220,5 +220,29 @@ struct FirstFightTests {
     #expect(!world.weaponDrawn && world.threat == nil && !body.isEnabled)
     #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
     #expect(count(world.root) == entities)
+  }
+
+  /// A player releases Fire while stone hides the target, then resumes on its return.
+  /// These are ordinary inputs, not direct damage or a scripted defeat.
+  private func disableGuard(_ world: GameWorld) -> Bool {
+    let query = Ballistics(level: BrooklynBridge.level)
+    var held = false
+    for _ in 0..<2700 {
+      if world.session.defeated.contains("stranger") { return true }
+      let snapshot = world.playtestSnapshot
+      let fire =
+        snapshot.robotPosition.map {
+          query.isClear(from: query.point(position(world, .miki)), to: query.point($0))
+        } ?? false
+      if world.isRetrying {
+        world.update(with: .neutral, sampledIn: world.session.mode, deltaTime: 1 / 60)
+        held = false
+      } else {
+        world.advanceParty(
+          movement: .zero, fireHeld: fire, firePressed: fire && !held, deltaTime: 1 / 60)
+        held = fire
+      }
+    }
+    return world.session.defeated.contains("stranger")
   }
 }

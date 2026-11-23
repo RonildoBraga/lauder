@@ -21,6 +21,26 @@ def _canonical(point):
     return (-point.x, point.z, point.y)
 
 
+def _foot_radius(boots):
+    """A conservative source-XY circle around each ankle, independent of placement/lift."""
+    maximum = 0
+    for ankle, points in boots:
+        radius = 0
+        for point in points:
+            across = point[0] - ankle[0]
+            along = point[1] - ankle[1]
+            if not math.isfinite(across) or not math.isfinite(along):
+                raise LayoutError("The robot's foot vertices and ankle pivots must be finite.")
+            radius = max(radius, math.hypot(across, along))
+        if radius <= 0:
+            raise LayoutError("Every robot foot needs vertices with a positive ankle radius.")
+        maximum = max(maximum, radius)
+    if maximum <= 0:
+        raise LayoutError("The robot needs feet to measure its ankle clearance.")
+    # The generated decimal must contain the measured corners rather than rounding inward.
+    return math.ceil(maximum * 1_000_000) / 1_000_000
+
+
 def emit_robot_geometry():
     """Typed geometry in game axes, with local source axes retained for rigid joint solves."""
     scene = bpy.context.scene
@@ -40,11 +60,16 @@ def emit_robot_geometry():
 
     root = part("root")
     legs = []
+    boots = []
     for label in ("front-left", "front-right", "rear-left", "rear-right"):
         connector = part(f"{label} connector")
         foot = part(f"{label} ankle pivot")
         legs.append((label, connector.location.copy(), foot.matrix_world.translation.copy(),
                      connector.rotation_euler.z))
+        boot = part(f"{label} foot")
+        if boot.type != "MESH":
+            raise LayoutError(f"The robot's {label} foot must be a mesh.")
+        boots.append((foot, boot))
     upper = part("front-left knee pivot").location.z
     lower = part("front-left ankle pivot").location.z
     mounts = [_canonical(part(f"gun-{side} recoil").matrix_world.translation)
@@ -67,7 +92,7 @@ def emit_robot_geometry():
                     radius = max(radius, math.hypot(point.x, point.y))
     if radius <= 0 or upper <= 0 or lower <= 0:
         raise LayoutError("The robot's body slice and two leg links must have positive size.")
-    navigation, lift, brace_depth = 0, 0, 0
+    navigation, lift, brace_depth, foot_radius = 0, 0, 0, 0
     try:
         # Include the complete authored crawl/turn/brace envelope, then 5 cm of clearance.
         for frame in range(scene.frame_start, scene.frame_end + 1):
@@ -81,6 +106,10 @@ def emit_robot_geometry():
                     navigation = max(navigation, math.hypot(point.x, point.y))
             for label, _, foot, _ in legs:
                 lift = max(lift, part(f"{label} ankle pivot").matrix_world.translation.z - foot.z)
+            foot_radius = max(foot_radius, _foot_radius(
+                (ankle.matrix_world.translation,
+                 (boot.matrix_world @ vertex.co for vertex in boot.data.vertices))
+                for ankle, boot in boots))
     finally:
         scene.frame_set(previous)
         bpy.context.view_layer.update()
@@ -93,6 +122,7 @@ def emit_robot_geometry():
         f"  static let bodyRadius: Float = {_number(radius, 6)}",
         f"  static let halfHeight: Float = {_number(half_height, 6)}",
         f"  static let navigationRadius: Float = {_number(navigation + 0.05, 6)}",
+        f"  static let footRadius: Float = {_number(foot_radius, 6)}",
         "  static let gunMounts: [SIMD3<Float>] = [",
         *[f"    {_vector(point)}," for point in mounts], "  ]",
         "  static let muzzles: [SIMD3<Float>] = [",

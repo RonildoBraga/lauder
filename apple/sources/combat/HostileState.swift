@@ -93,17 +93,21 @@ struct HostileState {
 
   mutating func stepRobot(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
-    party: [SIMD2<Float>]
+    party: [SIMD2<Float>], coverBoxes: [Level.Box] = []
   ) -> RobotGuard.Discharge? {
     let shot = robot?.step(
-      dt: dt, target: target, hasSight: hasSight, obstacles: obstacles, party: party)
+      dt: dt, target: target, hasSight: hasSight, obstacles: obstacles, party: party,
+      coverBoxes: coverBoxes)
     if let robot { position = robot.position }
     return shot
   }
 
   /// A hit delays an unfinished wind-up, with a limit on the total delay from repeated hits.
   mutating func flinch() {
-    guard robot == nil else { return }
+    if robot != nil {
+      robot?.notifyHit()
+      return
+    }
     guard case .aiming(let remaining) = phase else { return }
     let delay = min(Self.flinchDelay, Self.flinchLimit - flinched)
     guard delay > 0 else { return }

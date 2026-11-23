@@ -108,6 +108,226 @@ struct RobotGuardTests {
   }
 
   @Test
+  func anObservedTravellerBeyondFiringRangeCausesARealBoundedPursuit() {
+    let level = BrooklynBridge.level
+    var robot = RobotGuard(home: BrooklynBridge.stranger.standAt)
+    robot.reveal()
+    robot.engage()
+    let start = robot.position
+    let target = SIMD2<Float>(6.5, 17)
+    let ballistics = Ballistics(level: level)
+    let mover = PartyMotion(radius: RobotModelGeometry.navigationRadius, obstacles: level.obstacles)
+    var pursued = false
+    var fired = false
+    for _ in 0..<1_800 {
+      let before = robot.position
+      let sight = ballistics.isClear(
+        from: ballistics.point(robot.position, above: 1.52), to: ballistics.point(target))
+      let shot = robot.step(
+        dt: dt, target: target, hasSight: sight, obstacles: level.obstacles, party: [target],
+        coverBoxes: level.boxes)
+      pursued = pursued || robot.phase == .pursuing
+      fired = fired || shot != nil
+      #expect(robot.guardArea.contains(robot.position))
+      #expect(mover.canTraverse(from: before, to: robot.position))
+    }
+    #expect(pursued && fired)
+    #expect(simd_distance(start, robot.position) > 2)
+    #expect(simd_distance(robot.position, target) < simd_distance(start, target))
+  }
+
+  @Test
+  func losingSightNeverUpdatesTheRememberedPointFromTheUnseenActor() {
+    var first = readyRobot()
+    for _ in 0..<120 {
+      _ = first.step(dt: dt, target: [0, 13], hasSight: true, obstacles: [], party: [])
+    }
+    var second = first
+    let remembered = first.lastKnownPosition
+    #expect(remembered == [0, 13] && first.phase == .pursuing)
+    for _ in 0..<1_200 {
+      #expect(
+        first.step(dt: dt, target: [100, 100], hasSight: false, obstacles: [], party: []) == nil)
+      #expect(
+        second.step(dt: dt, target: [-100, -100], hasSight: false, obstacles: [], party: []) == nil)
+      #expect(first.position == second.position && first.facing == second.facing)
+      #expect(first.lastKnownPosition == second.lastKnownPosition)
+    }
+    #expect(first.phase == .patrol && first.lastKnownPosition == nil)
+  }
+
+  @Test
+  func reacquiringBeyondFiringRangeContinuesPursuitWithoutAnotherWarningTurn() {
+    var robot = readyRobot()
+    _ = robot.step(dt: dt, target: [0, 13], hasSight: true, obstacles: [], party: [])
+    #expect(robot.phase == .pursuing)
+    _ = robot.step(dt: dt, target: [0, 13], hasSight: false, obstacles: [], party: [])
+    #expect(robot.phase == .searching)
+    _ = robot.step(dt: dt, target: [0, 13], hasSight: true, obstacles: [], party: [])
+    #expect(robot.phase == .pursuing)
+    #expect(robot.shotSerial == 0)
+  }
+
+  @Test
+  func anEngagedGuardRetainsRealSightWhileTurningButCannotTrackThroughAWall() {
+    var robot = readyRobot()
+    _ = robot.step(dt: dt, target: [0, 13], hasSight: true, obstacles: [], party: [])
+    _ = robot.step(dt: dt, target: [13, 0], hasSight: true, obstacles: [], party: [])
+    #expect(robot.lastKnownPosition == [13, 0] && robot.phase == .pursuing)
+    _ = robot.step(dt: dt, target: [0, -13], hasSight: false, obstacles: [], party: [])
+    #expect(robot.lastKnownPosition == [13, 0] && robot.phase == .searching)
+    #expect(robot.shotSerial == 0)
+  }
+
+  @Test
+  func bridgeCoverHidesTheTallBodyAndHasAReachableExposedPeek() throws {
+    let level = BrooklynBridge.level
+    let robot = RobotGuard(home: BrooklynBridge.stranger.standAt)
+    let target = SIMD2<Float>(6.5, 16)
+    let tactics = RobotTactics(
+      area: robot.guardArea, obstacles: level.obstacles, boxes: level.boxes)
+    let cover = try #require(tactics.cover(from: robot.position, against: target))
+    let mover = PartyMotion(radius: RobotModelGeometry.navigationRadius, obstacles: level.obstacles)
+    var previous = robot.position
+    for next in cover.route {
+      #expect(mover.canTraverse(from: previous, to: next))
+      previous = next
+    }
+    #expect(previous == cover.position && tactics.isCovered(previous, against: target))
+    #expect(tactics.route(from: previous, to: cover.peek) != nil)
+    #expect(simd_distance(cover.peek, target) <= RobotGuard.detectionRange)
+    let rays = Ballistics(level: level)
+    let direction = simd_normalize(target - cover.position)
+    let side = SIMD2(-direction.y, direction.x) * RobotModelGeometry.bodyRadius
+    for point in [cover.position, cover.position + side, cover.position - side] {
+      #expect(
+        !rays.isClear(
+          from: rays.point(target),
+          to: rays.point(point, above: 2 * RobotModelGeometry.halfHeight + 0.1)))
+    }
+    #expect(rays.isClear(from: rays.point(cover.peek, above: 1.52), to: rays.point(target)))
+  }
+
+  @Test
+  func damageMakesTheGuardRetreatHoldAndPeekBeforeAFreshWarning() throws {
+    let level = BrooklynBridge.level
+    var robot = RobotGuard(home: BrooklynBridge.stranger.standAt)
+    robot.reveal()
+    robot.engage()
+    let target = SIMD2<Float>(6.5, 16)
+    let rays = Ballistics(level: level)
+    _ = robot.step(
+      dt: dt, target: target, hasSight: true, obstacles: level.obstacles, party: [target],
+      coverBoxes: level.boxes)
+    robot.notifyHit()
+    var phases: [RobotGuard.Phase] = []
+    for _ in 0..<4_800 {
+      let sight = rays.isClear(
+        from: rays.point(robot.position, above: 1.52), to: rays.point(target))
+      let shot = robot.step(
+        dt: dt, target: target, hasSight: sight, obstacles: level.obstacles, party: [target],
+        coverBoxes: level.boxes)
+      if phases.last != robot.phase { phases.append(robot.phase) }
+      if [.takingCover, .covered, .peeking].contains(robot.phase) {
+        #expect(shot == nil)
+        robot.notifyHit()
+        #expect(!robot.coverRequested)
+      }
+      if phases.contains(.peeking), robot.phase == .notice { break }
+    }
+    #expect(phases.prefix(3).elementsEqual([.takingCover, .covered, .peeking]))
+    #expect(robot.phase == .notice && robot.shotSerial == 0)
+    #expect(robot.coverGoal == nil && robot.elapsed < 0.01)
+    for _ in 0..<120 {
+      #expect(
+        robot.step(
+          dt: dt, target: target, hasSight: true, obstacles: level.obstacles, party: [target],
+          coverBoxes: level.boxes) == nil)
+    }
+  }
+
+  @Test
+  func damageAfterPursuitStillHasReachableCoverAndAFiniteReengagement() throws {
+    let level = BrooklynBridge.level
+    let target = SIMD2<Float>(6.5, 17)
+    var robot = RobotGuard(home: BrooklynBridge.stranger.standAt)
+    let tactics = RobotTactics(
+      area: robot.guardArea, obstacles: level.obstacles, boxes: level.boxes)
+    let cover = try #require(
+      tactics.cover(from: [5.106764, 8.109933], against: target))
+    #expect(tactics.isCovered(cover.position, against: target))
+    #expect(simd_distance(cover.peek, target) <= RobotGuard.detectionRange)
+    robot.reveal()
+    robot.engage()
+    let rays = Ballistics(level: level)
+    for _ in 0..<2_400 {
+      _ = robot.step(
+        dt: dt, target: target, hasSight: true, obstacles: level.obstacles, party: [target],
+        coverBoxes: level.boxes)
+      if robot.phase == .notice { break }
+    }
+    #expect(robot.phase == .notice && simd_distance(robot.position, robot.home) > 2)
+    robot.notifyHit()
+    var covered = false
+    var peeked = false
+    for _ in 0..<7_200 {
+      let sight = rays.isClear(
+        from: rays.point(robot.position, above: 1.52), to: rays.point(target))
+      _ = robot.step(
+        dt: dt, target: target, hasSight: sight, obstacles: level.obstacles, party: [target],
+        coverBoxes: level.boxes)
+      covered = covered || robot.phase == .covered
+      peeked = peeked || robot.phase == .peeking
+      if peeked, robot.phase == .notice { break }
+    }
+    #expect(covered && peeked && robot.phase == .notice)
+    #expect(robot.shotSerial == 0)
+  }
+
+  @Test
+  func aCoverRequestCannotCancelOrRetargetACommittedBurst() {
+    let level = BrooklynBridge.level
+    var robot = RobotGuard(home: BrooklynBridge.stranger.standAt)
+    robot.reveal()
+    robot.engage()
+    let target = SIMD2<Float>(6.5, 10)
+    for _ in 0..<600 {
+      _ = robot.step(
+        dt: dt, target: target, hasSight: true, obstacles: level.obstacles, party: [],
+        coverBoxes: level.boxes)
+      if robot.phase == .committed { break }
+    }
+    #expect(robot.phase == .committed)
+    let committed = robot.committedPoint
+    robot.notifyHit()
+    var shots: [RobotGuard.Discharge] = []
+    for _ in 0..<180 {
+      if let shot = robot.step(
+        dt: dt, target: [8, 9], hasSight: false, obstacles: level.obstacles, party: [],
+        coverBoxes: level.boxes)
+      {
+        shots.append(shot)
+        #expect(robot.committedPoint == committed)
+      }
+      if robot.phase == .takingCover { break }
+    }
+    #expect(shots.map(\.gun) == [0, 1, 0])
+    #expect(robot.phase == .takingCover)
+  }
+
+  @Test
+  func lowCoverAndCoverWithoutAnyReachablePeekAreRejected() {
+    let area = PartyMotion.Box(minimum: [-4, -4], maximum: [4, 4])
+    let low = Level.Box(name: "low", position: [0, 0.5, 1], size: [4, 1, 1])
+    let lowTactics = RobotTactics(area: area, obstacles: [low.footprint], boxes: [low])
+    #expect(lowTactics.cover(from: [0, -3], against: [0, 4]) == nil)
+    let wall = Level.Box(name: "sealed", position: [0, 4, 0], size: [0.6, 8, 16])
+    let sealed = RobotTactics(area: area, obstacles: [wall.footprint], boxes: [wall])
+    #expect(sealed.cover(from: [-3, 0], against: [3, 0]) == nil)
+    #expect(sealed.route(from: [-3, 0], to: [3, 0]) == nil)
+  }
+
+  @Test
   func attackInitiationRangeStaysVisibleWhileCameraBLeansAndNarrows() throws {
     // The guard's 12 m acquisition-for-fire radius is shorter than the visible area after
     // the ordinary encounter lean. Check its complete perimeter during the lens transition,
@@ -239,7 +459,8 @@ struct RobotGuardTests {
     #expect(!session.hit("robot", toughness: 6))
     // Leave sight/range without taking the authored safe exit. The active encounter's
     // search and return to patrol must not restore either side's damage or ammunition.
-    for _ in 0..<1_200 {
+    let retreatTicks = Int((RobotGuard.searchTime + RobotGuard.recoveryTime + 2) / dt)
+    for _ in 0..<retreatTicks {
       _ = fight.step(
         dt: dt, leader: [0, 24], facing: [0, -1], aiming: false,
         fireHeld: false, firePressed: false, figures: [.miki: [0, 24]], session: session)

@@ -18,7 +18,6 @@
       case menu(Int)
       case expectRestarted
       case expectTriggers(Int)
-      case fire(seconds: Float)
       case expectBeat(StoryBeat)
       case expectDefeated(Int)
       case expectHits(Int)
@@ -36,6 +35,10 @@
       /// Observe the real simulation state, bounded so a broken guard fails the route.
       case waitForRobotPhase(RobotGuard.Phase, seconds: Float)
       case expectRobotShots(atLeast: Int)
+      case waitForRobotApproach(metres: Float, seconds: Float)
+      case fireUntilRobotPhase(RobotGuard.Phase, seconds: Float)
+      case fireUntilDefeated(Int, seconds: Float)
+      case expectRobotCovered
     }
 
     /// What the runner can see of the game each frame.
@@ -60,6 +63,10 @@
       /// Observed first-tower guard state. Defaults preserve unrelated test fixtures.
       var robotPhase: RobotGuard.Phase? = nil
       var robotShots = 0
+      var robotPosition: SIMD2<Float>? = nil
+      var robotCoverGoal: SIMD2<Float>? = nil
+      var robotCovered = false
+      var robotHasClearance = true
     }
 
     struct Frame {
@@ -77,6 +84,10 @@
         let seconds: Double
         var robotPhase: String? = nil
         var robotShots = 0
+        var robotPosition: [Float]? = nil
+        var robotCoverGoal: [Float]? = nil
+        var robotCovered = false
+        var robotHasClearance = true
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -134,6 +145,7 @@
     private var withinSlot = 0
     private var worstGap: Float = 0
     private var previousLeaderPosition: SIMD2<Float>?
+    private var robotStartDistance: Float?
     private(set) var summary: Summary?
     /// Set by the world from the window scene; recorded in the summary.
     var orientation = "unknown"
@@ -179,7 +191,10 @@
             Summary.Mark(
               name: label, seconds: Double(elapsed),
               robotPhase: snapshot.robotPhase.map { String(describing: $0) },
-              robotShots: snapshot.robotShots))
+              robotShots: snapshot.robotShots,
+              robotPosition: snapshot.robotPosition.map { [$0.x, $0.y] },
+              robotCoverGoal: snapshot.robotCoverGoal.map { [$0.x, $0.y] },
+              robotCovered: snapshot.robotCovered, robotHasClearance: snapshot.robotHasClearance))
           announce(label)
           advance()
         case .act:
@@ -263,6 +278,54 @@
           expect(
             snapshot.robotShots >= count,
             "the guard fired \(snapshot.robotShots) shot(s), fewer than \(count)")
+        case .waitForRobotApproach(let metres, let seconds):
+          if let point = snapshot.robotPosition {
+            let distance = simd_distance(point, leaderPosition)
+            if robotStartDistance == nil { robotStartDistance = distance }
+            if let start = robotStartDistance, start - distance >= metres {
+              advance()
+              continue
+            }
+          }
+          if stepTime > seconds {
+            failures.append("the guard did not approach by \(metres) m within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .fireUntilRobotPhase(let phase, let seconds):
+          if snapshot.robotPhase == phase {
+            advance()
+            return InputRules.Raw()
+          }
+          if stepTime > seconds {
+            failures.append("firing did not produce guard phase \(phase) within \(Int(seconds)) s")
+            advance()
+            return InputRules.Raw()
+          }
+          return InputRules.Raw(controllerFire: true)
+        case .fireUntilDefeated(let count, let seconds):
+          if snapshot.defeated >= count {
+            advance()
+            return InputRules.Raw()
+          }
+          if stepTime > seconds {
+            failures.append("firing did not defeat \(count) hostile(s) within \(Int(seconds)) s")
+            advance()
+            return InputRules.Raw()
+          }
+          // Releasing Fire while stone hides the robot is an ordinary player decision. Aim
+          // deliberately permits forward fire without assistance, so holding here would spend
+          // the route's limited rounds on the pier instead of observing a cover/peek cycle.
+          let query = Ballistics(level: snapshot.level)
+          guard let point = snapshot.robotPosition,
+            query.isClear(from: query.point(leaderPosition), to: query.point(point))
+          else { return InputRules.Raw() }
+          return InputRules.Raw(controllerFire: true)
+        case .expectRobotCovered:
+          expect(
+            snapshot.robotCovered && snapshot.robotHasClearance,
+            "the guard lacked occluding cover or whole-footprint clearance")
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -323,12 +386,6 @@
           expect(
             snapshot.firedTriggers == count,
             "\(snapshot.firedTriggers) trigger(s) had fired instead of \(count)")
-        case .fire(let seconds):
-          guard stepTime < seconds else {
-            advance()
-            return InputRules.Raw()
-          }
-          return InputRules.Raw(controllerFire: true)
         case .expectBeat(let beat):
           expect(snapshot.beat == beat, "the story was at \(snapshot.beat) instead of \(beat)")
         case .expectDefeated(let count):
@@ -439,6 +496,7 @@
       pressFrame = 0
       presses = 0
       talking = false
+      robotStartDistance = nil
     }
 
     /// Append the mark to marks.log as it happens, so `apple/scripts/playtest` can take a
@@ -509,7 +567,8 @@
       [
         .mark("start"), .walk([6.5, 66]), .mark("buried road"), .walk([6.5, 20]),
         .mark("first tower"), .walk([6.5, 10]), .expectBeat(.stranger),
-        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
+        .fireUntilDefeated(1, seconds: 30), .expectDefeated(1), .mark("guard disabled"),
+        .walk([6.5, -12]),
         .mark("beyond the first tower"), .walk([6.5, -206.15]), .mark("mid-span"),
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .mark("Manhattan end"),
         .expectTriggers(5), .walk([-7, -494.3]), .walk([-7, -502.3]), .expectTriggers(5),
@@ -524,20 +583,29 @@
     ]
 
     /// Observe patrol from the covered west arch, then approach through the east arch and
-    /// let a warned burst/recovery play before returning fire. Captures show actual motion and
-    /// shooting, rather than killing the robot before its pattern can be seen.
+    /// invite pursuit from outside attack reach, observe a warned burst, then damage it into
+    /// real stone cover. Its bounded peek returns to combat before Miki disables it.
     private static let firstFight: [Step] =
       [
         .mark("start"), .walk([6.5, 66]), .walk([-6.5, 30]), .walk([-6.5, 15]),
         .expectBeat(.stranger), .waitForRobotPhase(.patrol, seconds: 3),
         .wait(seconds: 1.8), .mark("guard patrol"),
-        .walk([-6.5, 30]), .walk([6.5, 30]), .walk([6.5, 10]),
+        .walk([-6.5, 30]), .walk([6.5, 30]), .walk([6.5, 16]),
+        .waitForRobotPhase(.pursuing, seconds: 15), .mark("guard pursuing"),
+        .walk([6.5, 17]), .waitForRobotApproach(metres: 0.5, seconds: 15),
+        .mark("guard approached"),
         .waitForRobotPhase(.tracking, seconds: 30), .mark("guard tracking"),
         .waitForRobotPhase(.committed, seconds: 3), .mark("guard committed"),
         .waitForRobotPhase(.burst, seconds: 2), .mark("guard burst"),
         .waitForRobotPhase(.recovering, seconds: 2), .expectRobotShots(atLeast: 3),
         .mark("guard recovery"),
-        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .expectHits(0),
+        .waitForRobotPhase(.tracking, seconds: 15),
+        .fireUntilRobotPhase(.takingCover, seconds: 2), .mark("guard taking cover"),
+        .waitForRobotPhase(.covered, seconds: 30), .expectRobotCovered,
+        .mark("guard covered"), .waitForRobotPhase(.peeking, seconds: 10),
+        .mark("guard peeking"), .waitForRobotPhase(.tracking, seconds: 30),
+        .mark("guard reengaged"), .fireUntilDefeated(1, seconds: 30),
+        .expectDefeated(1), .mark("guard disabled"), .expectHits(0),
         .wait(seconds: 1),
       ] + restartRun
 
@@ -546,14 +614,14 @@
     private static let fightRetry: [Step] =
       toTheStranger + [
         .wait(seconds: 20), .expectBeat(.alone), .expectHits(0), .expectDefeated(0), .mark("retry"),
-        .walk([6.5, 10]), .expectBeat(.stranger), .fire(seconds: 4),
+        .walk([6.5, 10]), .expectBeat(.stranger), .fireUntilDefeated(1, seconds: 30),
         .expectDefeated(1), .mark("won after the retry"),
       ]
 
     /// Resolve the guard, cross the clear outgoing floor to the case, then Tom's ambush.
     private static let toTom: [Step] =
       toTheStranger + [
-        .fire(seconds: 4), .expectDefeated(1), .walk([6.5, -4]),
+        .fireUntilDefeated(1, seconds: 30), .expectDefeated(1), .walk([6.5, -4]),
         .walk(BrooklynBridge.supplyCasePosition), .mark("at the supply case"),
         .act, .wait(seconds: 2.3), .mark("the attacker"),
         .wait(seconds: 1.3), .talk, .expectBeat(.withTom), .expectParty([.miki, .tom]),
