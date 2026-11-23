@@ -24,6 +24,8 @@ The latest TestFlight delivery is the bridge-only prototype with the Blender env
 
 **C style study:** The AI-generated [finish study](art/robot/finish-study/README.md) supplied the direction for the assigned Blender pass. It remains a visual reference, separate from the actual mesh and its verification. Snow and wear remain deferred.
 
+**Playable character study, 23 November 2026:** The maintainer assigned character models and animations and selected more stylised proportions with larger heads. The [Blender party study](blender/studies/party-characters/README.md) contains original Miki, Laura and Tom candidates, distinct winter clothing, a shared 17-bone skeleton and nine reusable motion clips. Each mesh is below 400 triangles. Saved-source motion checks and a native RealityKit import/deformation proof pass. This is an asset review pass: appearance remains pending review, the canonical party models and game avatars are unchanged, and runtime animation integration, Simulator readability and phone performance remain unverified.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.
@@ -66,6 +68,7 @@ apple/
 blender/
   levels/                        Bridge Blender source
   assets/                        Character model sources
+  studies/                       Unregistered Blender asset/animation review scenes
   extensions/lauder_levels/      Export extension and tests
 art/                             Concept proposals, previews and generation provenance
 docs/                            Current design, architecture and prototype plan

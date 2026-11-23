@@ -2,7 +2,7 @@
 
 **Updated:** 23 November 2026
 
-**Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. The later C robot assignment below authorises focused walking, pursuit and cover work on this bridge; other new mechanics and scenes await a design decision.
+**Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. The later C robot assignment below authorises focused walking, pursuit and cover work on this bridge; the separately assigned party asset study below adds models and motion for review. Other new mechanics and scenes await a design decision.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaces the first human shooter while Miki is alone. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
@@ -51,6 +51,16 @@ Switching preserves positions and progress; held movement can continue on the ne
 Search and Help are revalidated on press against the leader's position and current progress. The supply case can be searched once after defeating or bypassing the guard, starting the ambush. Helping Laura uses the shared medical kit and starts her recruitment exchange.
 
 ## Verification and performance
+
+### Party character models and animations — Blender review
+
+On 23 November 2026 the maintainer assigned playable-character models and animations and selected **more stylised proportions with larger heads**. The [party study](../blender/studies/party-characters/README.md) contains original Miki, Laura and Tom candidates with distinct winter silhouettes and the existing teal/orange/blue accents. Their appearance is a working proposal; it confirms no biography or enhancement history. All three are 1.74 m tall in rest geometry, with 348/348/336 triangles, one skinned mesh each, one shared 17-bone rest skeleton and independent rig objects.
+
+Nine shared Actions cover idle, walk, jog, backward, left/right strafe, aim, fire and hit. A marked 120-fps review timeline repeats them over roughly 17.6 seconds; a 30-fps rendered reel preserves real-time movement. Locomotion is in place with declared nominal speeds, not gameplay root motion. Review weapon boxes match current presentation dimensions without introducing new production weapons. The source is deliberately unregistered; canonical party sources, runtime exports and the existing static exporter remain unchanged.
+
+Final source motion checks at 240 Hz pass for all three figures: zero joint gaps, maximum ankle interpolation error **0.624 mm**, sole penetration **0.250 mm** and foot-up error below **0.012°**. A separate native macOS RealityKit proof of the same meshes and nine one-cycle motions passes **3,267 evaluated poses**, including actual skinned deformation, exact clip trims, all 17 joints, fixed entity roots and independent clone animation. Loop seam displacement is below **0.033 mm**. The proof exposed sparse USD endpoint omission; explicitly preserving the held last sample restores the full timeline and hit recovery. The model README records export requirements rather than claiming the current registered exporter supports these clips.
+
+Saved-file checks cover retained source Actions, shared data, weights, review-manifest ranges, relative lighting links and privacy. These are Blender authoring and native import checks; no application code or runtime assets changed, and no new app build, rendered Simulator route, phone test or performance claim is made. Visual review precedes canonical promotion, focused party export/clip integration, actual-speed and upper-body presentation, lifecycle checks and gameplay-camera validation.
 
 ### Bridge environment pass
 

@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "source": "character-study.blend",
+  "units": "metres",
+  "up_axis": "Z",
+  "forward_axis": "-Y",
+  "root_motion": false,
+  "scope": "Blender review timeline; cuts are not runtime transitions",
+  "clips": [
+    {
+      "name": "idle",
+      "start_frame": 1,
+      "end_frame": 241,
+      "duration": 2.0,
+      "cycle_duration": 2.0,
+      "loop": true,
+      "nominal_speed": 0.0,
+      "source_action": "party.idle",
+      "review_repeats": 1
+    },
+    {
+      "name": "walk",
+      "start_frame": 242,
+      "end_frame": 626,
+      "duration": 3.2,
+      "cycle_duration": 0.8,
+      "loop": true,
+      "nominal_speed": 1.0129310344827587,
+      "source_action": "party.walk",
+      "review_repeats": 4
+    },
+    {
+      "name": "jog",
+      "start_frame": 627,
+      "end_frame": 915,
+      "duration": 2.4,
+      "cycle_duration": 0.6,
+      "loop": true,
+      "nominal_speed": 2.1333333333333333,
+      "source_action": "party.jog",
+      "review_repeats": 4
+    },
+    {
+      "name": "backward",
+      "start_frame": 916,
+      "end_frame": 1132,
+      "duration": 1.8,
+      "cycle_duration": 0.6,
+      "loop": true,
+      "nominal_speed": 2.1333333333333333,
+      "source_action": "party.backward",
+      "review_repeats": 3
+    },
+    {
+      "name": "strafe_left",
+      "start_frame": 1133,
+      "end_frame": 1313,
+      "duration": 1.5,
+      "cycle_duration": 0.5,
+      "loop": true,
+      "nominal_speed": 2.0,
+      "source_action": "party.strafe_left",
+      "review_repeats": 3
+    },
+    {
+      "name": "strafe_right",
+      "start_frame": 1314,
+      "end_frame": 1494,
+      "duration": 1.5,
+      "cycle_duration": 0.5,
+      "loop": true,
+      "nominal_speed": 2.0,
+      "source_action": "party.strafe_right",
+      "review_repeats": 3
+    },
+    {
+      "name": "aim",
+      "start_frame": 1495,
+      "end_frame": 1675,
+      "duration": 1.5,
+      "cycle_duration": 1.5,
+      "loop": true,
+      "nominal_speed": 0.0,
+      "source_action": "party.aim",
+      "review_repeats": 1
+    },
+    {
+      "name": "fire",
+      "start_frame": 1676,
+      "end_frame": 1964,
+      "duration": 2.4,
+      "cycle_duration": 0.6,
+      "loop": false,
+      "nominal_speed": 0.0,
+      "source_action": "party.fire",
+      "review_repeats": 4
+    },
+    {
+      "name": "hit",
+      "start_frame": 1965,
+      "end_frame": 2109,
+      "duration": 1.2,
+      "cycle_duration": 0.6,
+      "loop": false,
+      "nominal_speed": 0.0,
+      "source_action": "party.hit",
+      "review_repeats": 2
+    }
+  ],
+  "fps": 120,
+  "end_frame": 2109
+}
