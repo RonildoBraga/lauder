@@ -1,10 +1,12 @@
 # Bulkier robot concepts
 
-**Status:** Three alternatives for maintainer review, generated on 23 November 2026. None is selected. Further robot modelling and runtime work await a choice. Camera B remains approved.
+**Status:** Generated on 23 November 2026. The maintainer selected **C, Heavy walker**, for the next Blender proportion study. **A, Armoured crawler**, is retained for a possible later variant with different gun types; no A modelling or weapon work is assigned. **B, Low siege bot**, is unselected. The current assignment is model form first, with no animation or runtime combat assignment. Camera B remains approved.
 
 The first [Blender blockout](../../../blender/assets/spider-bot/README.md) was rejected for its proportions. These studies explore a denser body, substantial hip housings and thicker articulated legs. They retain the dark matte palette, four legs, twin compact guns, burgundy mask and pale square sensor of the [earlier reference](../README.md). The old model is retained as a rejected reference; its dimensions and triangle count do not constrain the next design.
 
 ## A — Armoured crawler
+
+Retained for a possible later different-weapon variant; not the current modelling assignment.
 
 The balanced option: a broad shoulder collar, connected chest and belly, thick upper legs and short sturdy lower legs. Most of the weight sits in the body and shoulders.
 
@@ -12,21 +14,25 @@ The balanced option: a broad shoulder collar, connected chest and belly, thick u
 
 ## B — Low siege bot
 
+Unselected alternative.
+
 The lowest, broadest option: a sloping beetle-like shell, folded heavy legs and guns integrated into the shoulders. Its silhouette suggests a stable, walking armoured vehicle.
 
 ![B: squat low-poly siege bot with a broad shell and folded heavy legs](b-low-siege-bot.png)
 
 ## C — Heavy walker
 
+Selected for the next Blender proportion study. The separate [heavy-walker source](../../../blender/assets/spider-bot-heavy/README.md) starts with model form; its rendered previews and measured, provisional scale are recorded in that README.
+
 The tallest option: a forward-leaning torso, strong hip frame and substantial load-bearing legs. It has a more upright, alert stance than A or B.
 
 ![C: tall low-poly heavy walker with a dense torso and substantial legs](c-heavy-walker.png)
 
-## What this review decides
+## Selection and next review
 
-Choose the mass distribution and silhouette, or identify a combination worth refining. The weapons and face keep a shared identity across all three. This review does not select combat rules or authorise a playable robot encounter.
+The C selection authorises its Blender proportion study. Review the resulting body mass and silhouette before animation or runtime work. The weapons and face keep a shared identity across all three studies; retaining A for a possible different-weapon variant does not assign new gun types now. The selection does not settle metric dimensions, a triangle cap, combat rules or a playable robot encounter.
 
-The small high-angle views and human figures are illustrative. They are not actual game frames, metric scale specifications or exact camera B projections. Ground clearance, walking footprint, animation, phone readability and performance must be established after selection. No mesh, rig or runtime asset is included in these PNGs.
+The small high-angle views and human figures are illustrative. They are not actual game frames, metric scale specifications or exact camera B projections. Ground clearance, walking footprint, animation, phone readability and performance need their own modelling and later gameplay validation. No mesh, rig or runtime asset is included in these PNGs.
 
 ## Generation and provenance
 

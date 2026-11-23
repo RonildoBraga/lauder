@@ -2,7 +2,7 @@
 
 **Updated:** 23 November 2026.
 
-**Status:** Behaviour draft for maintainer review. Replacing the first human shooter remains selected. The first Blender blockout of the dark armed [v3 reference](../../art/robot/README.md) was rejected for its proportions. Three [bulkier concept options](../../art/robot/bulk-studies/README.md) now await selection; further modelling and runtime work are paused. The gameplay movement, combat rules and tuning below remain proposals; no playable robot encounter is assigned or reported complete.
+**Status:** Behaviour draft for maintainer review. Replacing the first human shooter remains selected. After rejecting the first Blender blockout, the maintainer selected [concept C, Heavy walker](../../art/robot/bulk-studies/README.md#c--heavy-walker), for a new Blender proportion study. A is retained for a possible later different-weapon variant, not an assignment; B is unselected. Model form comes first. The gameplay movement, animation, combat rules and tuning below remain proposals; no playable robot encounter is assigned or reported complete. Camera B remains unchanged.
 
 ## Goal and placement
 
@@ -85,4 +85,4 @@ These are checks for a later assigned implementation, not results from this plan
 
 ## Before implementation
 
-Choose a bulkier concept before another modelling pass. Before assigning the playable tower encounter, review the attack cycle, damage cap, six-hit candidate and supply-case/bypass handoff. The earlier modelling assignment and selected first-encounter placement do not approve all these rules. The rejected model's technical checks do not establish visual approval or authorise continued implementation.
+The selected C Blender proportion study is assigned; review its form before animation or runtime work. Before assigning the playable tower encounter, review the attack cycle, damage cap, six-hit candidate and supply-case/bypass handoff. Selecting C, retaining A for a possible later different-weapon variant and choosing the first-encounter placement do not approve these gameplay rules. The rejected model's technical checks do not establish visual approval or validate the new C source.

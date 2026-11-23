@@ -4,7 +4,7 @@
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
-The bridge concept and camera B remain selected. The maintainer chose the robot to **replace the first human shooter**, with Miki alone. After the first Blender blockout and motion study were built and checked, the maintainer rejected its proportions and requested bulkier [concept options](../art/robot/bulk-studies/README.md) for review first. No new option is selected. Further robot modelling and runtime work await concept selection. The [first-tower behaviour proposal](encounters/bridge-spider-bot.md) remains the separate combat design discussion; its rules and tuning are not approved or implemented.
+The bridge concept and camera B remain selected. The maintainer chose the robot to **replace the first human shooter**, with Miki alone. After rejecting the first Blender blockout's proportions and reviewing the bulkier [concept options](../art/robot/bulk-studies/README.md), the maintainer selected **C, Heavy walker**, for a new Blender proportion study. A is retained for a possible later different-weapon variant, which is not assigned; B is unselected. The current assignment is model form first, without animation or runtime combat. The [first-tower behaviour proposal](encounters/bridge-spider-bot.md) remains the separate combat design discussion; its rules and tuning are not approved or implemented.
 
 ## Structural preparation
 
@@ -74,7 +74,11 @@ The retained first [robot source](../blender/assets/spider-bot/README.md) has 29
 
 On the canonical camera-B source, `./scripts/check` passed source/release contracts, 51 Blender tests, sound fingerprints, formatting, the app build and hosted Swift Testing, including all eight headless routes. The rendered `opening` passed **56/56**, with zero failures and companion warning frames. The robot passed standalone intake with zero problems. Neutral, front, side, brace/recovery and camera-B scale renders were inspected, alongside a rendered walk study. Post-save Blender/privacy checks also passed. These are technical checks, not visual approval. The maintainer subsequently rejected the blockout's proportions. Camera B remains adopted; the rejected model and motion are retained as reference, with runtime integration and phone performance unverified.
 
-The current robot task is art-only: compare bulkier concept options, review body mass and proportions, then choose a direction. Further robot modelling and runtime work are deferred until that choice. The new concepts do not approve metric dimensions, a triangle cap, combat tuning or implementation.
+### Concept C proportion study
+
+The maintainer selected **C, Heavy walker**, for the next Blender proportion study. The new source is `blender/assets/spider-bot-heavy/spider-bot-heavy.blend`, with its own [model README](../blender/assets/spider-bot-heavy/README.md). Model form and silhouette come first. The static source is built with 2,428 triangles, 41 mesh parts, five matte materials and no textures or animation. Exact vertex bounds are 2.83 × 2.51 × 2.35 m, a provisional review scale, not approved collision dimensions. Three-quarter, front, side, Miki-scale and camera-B Blender renders were inspected. Standalone intake reports zero problems; mesh inspection confirms closed solids and flat feet on z = 0. The technical checks above describe camera B and the rejected earlier model; they are not validation or visual approval of C. The standard `./scripts/check` also passed during this source-only modelling pass, including the app build and Simulator tests; no application or runtime level data changed. Final saved-file intake and geometry checks are recorded in the model README. No new rendered Simulator route or phone run was needed for this static authoring asset, which is not loaded by the game.
+
+**A, Armoured crawler**, is retained for a possible later variant with different gun types; no A modelling or new weapon work is assigned. **B, Low siege bot**, is unselected. Camera B is a separate approved framing choice and remains unchanged. The C assignment does not approve metric dimensions, a triangle cap, animation, runtime combat or encounter tuning.
 
 ### Architecture checks
 
@@ -119,11 +123,11 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
-Further robot modelling and runtime work await selection from the new [bulkier concept options](../art/robot/bulk-studies/README.md). Review the [first-tower robot proposal](encounters/bridge-spider-bot.md) before assigning combat or encounter implementation. It proposes a readable brace/commit/burst/recovery pattern using existing tower cover, and a supply-case handoff that preserves Tom's introduction and Laura's medical kit. The bypass route, handoff, hit allowance and tuning still require agreement and geometry validation. The existing app and TestFlight build 28 continue to describe the human encounter.
+The selected C Blender proportion study is assigned. Review its model form, then the [first-tower robot proposal](encounters/bridge-spider-bot.md) before assigning motion, combat or encounter implementation. The proposal describes a brace/commit/burst/recovery pattern using existing tower cover, and a supply-case handoff that preserves Tom's introduction and Laura's medical kit. The bypass route, handoff, hit allowance and tuning still require agreement and geometry validation. The existing app and TestFlight build 28 continue to describe the human encounter.
 
 The requested coordinated-squad direction and the trio's [combat identities](story/story-bible.md#combat-identities) remain design context. The bridge keeps formations and orders from [ADR 0003](decisions/0003-squad-movement.md), phases S1–S3. Its removed S4 experiments are not a current assignment. [The Quiet Yard](encounters/the-quiet-yard.md) and the Relay House screenplay remain unimplemented story proposals.
 
-Next, review the bulkier concepts and select the robot's proportions. Further modelling and a bounded playable prototype follow their own assignments; the tower loop and its concrete playtest questions still need agreement. A plan, historical assignment or review recommendation does not independently authorise implementation or bringing retired systems back.
+Next, review the selected C model's proportions from the approved camera B. Animation, runtime integration and a bounded playable encounter follow their own assignments; the tower loop and its concrete playtest questions still need agreement. The possible A variant remains future reference. A plan, historical assignment or review recommendation does not independently authorise implementation or bringing retired systems back.
 
 ## Outside the first playable
 

@@ -1,14 +1,14 @@
 # Robot enemy — concept proposal
 
-**Status:** The first [Blender blockout and motion study](../../blender/assets/spider-bot/README.md) was built and technically checked, then rejected by the maintainer for its proportions. Bulkier [concept options](bulk-studies/README.md) are now under review; none is selected. The earlier v3 images and rejected model are retained as references, not an accepted final appearance. Further modelling and runtime work await concept selection. Camera B remains approved.
+**Status:** The maintainer selected **concept C, Heavy walker**, for the next Blender proportion study. **A, Armoured crawler**, is retained for a possible later variant with different gun types; that work is not assigned. Concept B is unselected. The first [Blender blockout and motion study](../../blender/assets/spider-bot/README.md), rejected for its proportions, remains historical reference. The new [heavy-walker source](../../blender/assets/spider-bot-heavy/README.md) is a separate form study, now built with rendered previews for visual review; see its README for measurements and technical checks. No animation or runtime combat is assigned. Camera B remains approved.
 
 **Updated:** 23 November 2026.
 
 After the first study, the maintainer supplied [Low-poly Spider Bot (Rigged) by rznn7](https://rznn7.itch.io/low-poly-spider-bot) as the shape reference, then requested guns and darker colours. The earlier selected revision used that upright head and leggy stance in the preferred [bridge gameplay view](../bridge/bridge-gameplay-v1.png)'s matte low-poly style. After seeing the resulting Blender blockout, the maintainer requested bulkier proportions and concept art options before another modelling pass. Its history, allegiance and combat behaviour remain undecided.
 
-## Bulkier proportions — current review
+## Bulkier proportions — C selected
 
-Review the new [concept options](bulk-studies/README.md) for body mass, limb proportions and readability from the approved camera B. These are alternative visual proposals. No option, metric size, triangle cap or implementation is selected by this review.
+The maintainer chose [C, Heavy walker](bulk-studies/README.md#c--heavy-walker), to develop its body mass, limb proportions and silhouette in Blender first. Review that model from the approved camera B before animation or runtime work. A remains a possible later different-weapon variant, not a current modelling or weapon assignment; B remains an unselected alternative. The concept selection does not settle metric size, a triangle cap or combat implementation.
 
 ## Earlier dark armed spider-bot reference
 

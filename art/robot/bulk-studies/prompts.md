@@ -1,6 +1,6 @@
 # Bulkier robot concept prompts
 
-Generated with the built-in image-generation tool on 23 November 2026. These are three separate proportion studies after the maintainer rejected the first Blender blockout. No option is selected, and these images do not assign modelling or combat implementation.
+Generated with the built-in image-generation tool on 23 November 2026. These are three separate proportion studies after the maintainer rejected the first Blender blockout. No option had been selected at generation time. The maintainer subsequently chose C for a Blender proportion study and retained A for a possible later different-weapon variant; see the [current selection](README.md). The prompts below are the original generation inputs, unchanged.
 
 Each call uses the common prompt below followed by its option-specific prompt, verbatim. Both input images are visual references, not edit targets:
 

@@ -12,4 +12,6 @@ A model's file follows the contract between Blender and the game:
 
 The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The runtime-spawned models are the stand-ins that the game creates itself: the party's `miki`, `tom` and `laura`, and `hostile`. Saving one of them also exports its own scene file, as [CONTRIBUTING](../../CONTRIBUTING.md#models) describes.
 
-The [spider-bot](spider-bot/README.md) is a separate authoring model and motion study. It is not registered as spawned or placed in a level, so saving it creates no runtime export. Its README records the reference-derived CC BY 4.0 licence, proportions, mesh budget and source-only motion. The other models keep their existing licences.
+The [spider-bot](spider-bot/README.md) is a rejected authoring model and motion study, retained as historical reference. It is not registered as spawned or placed in a level, so saving it creates no runtime export. Its README records the reference-derived CC BY 4.0 licence, proportions, mesh budget and source-only motion. The other models keep their existing licences.
+
+The selected C [heavy walker](spider-bot-heavy/README.md) is a separate static proportion study with reference-derived CC BY 4.0 source and renders. It is not registered, exported or placed in a level. A remains a possible later different-weapon variant, not a current asset assignment.
