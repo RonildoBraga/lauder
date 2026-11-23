@@ -81,6 +81,8 @@ The rejected first robot blockout used asset-specific matte materials from the e
 
 After accepting the refined body and legs, the maintainer requested removal of the reddish-brown face colour and a red sensor. The current [C source and previews](../blender/assets/spider-bot-heavy/README.md) use **charcoal face `#30343E`**, matching the armour, and **red sensor `#C83C38`**. Armour, slate facets and joints otherwise retain the values above. Materials remain matte, with roughness 1, metallic 0 and emission 0; the red square adds no light or glow effect. This finish and the 12% smaller cannons await visual review. Historical artwork, movie colours and build 29 are unchanged.
 
+The subsequent [finish study](../art/robot/finish-study/README.md) is an assigned concept comparison before another Blender pass: a broad recessed sensor socket and clearer stepped/chamfered roof and shoulder plates. It is AI-generated and remains a proposal. Current model geometry/materials and the runtime are unchanged by that study; the intended proportions, small guns, structural symmetry and shared components remain constraints for any later modelling. Snow/wear is deferred.
+
 ## Light and shadow
 
 - One sun for the whole game: warm white, 25° to 35° high, from the south-west, so that shadows fall towards the top right of the screen. The sun's direction never changes within a level, so shadows are a consistent part of the composition.

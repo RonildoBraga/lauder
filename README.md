@@ -20,6 +20,8 @@ The latest TestFlight delivery is the bridge-only prototype with the Blender env
 
 **C finish and cannons, pending review:** The maintainer accepted the refined body and legs, then requested a charcoal face, a red sensor and slightly smaller cannons. The current [Blender source and four PNG previews](blender/assets/spider-bot-heavy/README.md) apply that finish and a 12% reduction in each cannon dimension, preserving the accepted body, legs, joint/recoil rig and motion keys. Muzzle markers move with the shortened barrels. The preceding body pass at `0148131` passed the full check and rendered first-fight test (35/35); the current finish/cannon revision also passes the full check and a fresh rendered first-fight test (35/35). Its visual review, merge and release remain pending. Build 29 retains the previous form. A's later variation remains deferred.
 
+**C style study:** The maintainer assigned a concept comparison before another Blender pass. The new [finish study](art/robot/finish-study/README.md) proposes a recessed red sensor and clearer stepped/chamfered armour construction. It is AI-generated concept art for visual review, separate from the current Blender model and tested runtime. Snow and wear remain deferred.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.

@@ -9,6 +9,7 @@ The following reference-derived AI-generated concept images are shared under [Cr
 - [A — Armoured crawler](bulk-studies/a-armoured-crawler.png)
 - [B — Low siege bot](bulk-studies/b-low-siege-bot.png)
 - [C — Heavy walker](bulk-studies/c-heavy-walker.png)
+- [C finish proposal](finish-study/robot-finish-v1.png)
 
 This file-level notice does not change the licences of project code, documentation or the bridge study.
 
@@ -25,3 +26,5 @@ Preserve this source credit, licence link and indication of changes when sharing
 The later [bulkier studies](bulk-studies/README.md) use the v3 sheet for identity and the bridge concept for art direction. Their additional changes redistribute mass into larger connected bodies, hip housings and thick articulated legs, with three different silhouettes. Their [exact prompts](bulk-studies/prompts.md) are preserved separately. The maintainer subsequently selected C for a new Blender form study and retained A for a possible later different-weapon variant. The human figures and high-angle insets do not establish metric scale.
 
 The [C heavy-walker model, authored motion and renders](../../blender/assets/spider-bot-heavy/README.md) retain the same source chain and CC BY 4.0 file-level notice, with newly authored geometry, walking, turning, bracing and recoil, and their own measurements and limitations.
+
+The later [C finish proposal](finish-study/README.md) edits the actual C Blender hero render from source commit `2df4b45be850b3a1aaff8a103547e502b83a9bd8`. Its AI-generated changes explore a protected red-sensor socket and stepped, chamfered armour construction. A correction restores a larger red area and plain leg surfaces. The [two exact prompts and input roles](finish-study/prompts.md) are retained. It remains a concept proposal; it does not change the underlying model or establish runtime performance.
