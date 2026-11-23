@@ -1,6 +1,6 @@
 # Robot enemy — concept proposal
 
-**Status:** The maintainer accepted the **concept C, Heavy walker**, Blender form and assigned walking, turning and visual shooting studies, with exact mirrored left/right rest geometry and reusable identical leg and connector parts. The motion studies and linked components are built and technically checked, with the [rendered reel](../../blender/assets/spider-bot-heavy/motion-preview.mp4) ready for maintainer review. **A, Armoured crawler**, remains a possible later different-weapon variant, which is not assigned; concept B is unselected. The first [Blender blockout and motion study](../../blender/assets/spider-bot/README.md), rejected for its proportions, remains historical reference. The accepted [C heavy-walker source](../../blender/assets/spider-bot-heavy/README.md) has its own measurements and technical checks. Runtime AI, weapon rules, bridge placement and releases are not assigned. Camera B remains approved.
+**Status:** The maintainer accepted **concept C, Heavy walker**, and its Blender walking/turning/shooting studies, then assigned the first-tower runtime integration and Simulator checks. Its [source and linked components](../../blender/assets/spider-bot-heavy/README.md) remain the model authority; the [encounter record](../../docs/encounters/bridge-spider-bot.md) describes the bounded guard and supply-case handoff. **A, Armoured crawler**, stays a possible later different-weapon variant; B is unselected. The first rejected blockout remains historical reference. Camera B is unchanged. Integration checks and rendered Simulator scenarios pass; no release is assigned.
 
 **Updated:** 23 November 2026.
 
@@ -8,7 +8,7 @@ After the first study, the maintainer supplied [Low-poly Spider Bot (Rigged) by 
 
 ## Bulkier proportions — C selected
 
-The maintainer chose [C, Heavy walker](bulk-studies/README.md#c--heavy-walker), then accepted the resulting Blender form. The current review is walking, turning and visual shooting motion, with mirrored rest geometry and shared linked leg/connector parts, before bridge placement. A remains a possible later different-weapon variant, not a current modelling or weapon assignment; B remains an unselected alternative. Form acceptance and Blender animation do not settle gameplay collision dimensions, weapon rules or combat implementation.
+The maintainer chose [C, Heavy walker](bulk-studies/README.md#c--heavy-walker), then accepted the resulting Blender form. Those motion studies were accepted, followed by the first-tower runtime integration with the same mirrored rest geometry and shared component source. A remains a possible later different-weapon variant, not a current modelling or weapon assignment; B remains an unselected alternative. Form acceptance and Blender animation do not settle gameplay collision dimensions, weapon rules or combat implementation.
 
 ## Earlier dark armed spider-bot reference
 

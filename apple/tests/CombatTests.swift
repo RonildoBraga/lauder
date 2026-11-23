@@ -8,6 +8,10 @@ import simd
 @MainActor
 struct CombatTests {
   private let box = PartyMotion.Box(minimum: [-1, -1], maximum: [1, 1])
+  /// Generic human timing remains tested independently of the robot bridge content.
+  private let rifle = Level.Hostile(
+    id: "rifle-fixture", name: "Rifle", hiddenAt: [1.2, 5.2], standAt: [4.4, 3.6],
+    hits: 2, windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true)
 
   @Test
   func aLineIsBlockedOnlyByABoxItCrosses() {
@@ -31,12 +35,8 @@ struct CombatTests {
     #expect(!LineOfSight.isClear(from: [-4, 10], to: stranger, obstacles: obstacles))
     // Out beyond the tower, on the west side, nothing does.
     #expect(LineOfSight.isClear(from: [-4, 3], to: stranger, obstacles: obstacles))
-    // He waits unseen behind the pier as Miki comes through the east arch.
-    for miki: SIMD2<Float> in [[6.5, 30], [6.5, 16]] {
-      #expect(
-        !LineOfSight.isClear(
-          from: miki, to: BrooklynBridge.stranger.hiddenAt, obstacles: obstacles))
-    }
+    // C appears already planted beyond the pier; it never slides through hidden geometry.
+    #expect(BrooklynBridge.stranger.hiddenAt == BrooklynBridge.stranger.standAt)
   }
 
   @Test
@@ -71,24 +71,24 @@ struct CombatTests {
 
   @Test
   func theStrangerStepsOutWaitsThenAimsAndHisFirstShotMisses() {
-    var stranger = HostileState(spec: BrooklynBridge.stranger)
+    var stranger = HostileState(spec: rifle)
     #expect(!stranger.isVisible && !stranger.isTargetable)
     #expect(stranger.step(dt: 1, canHit: true, toward: .zero) == nil)
     stranger.reveal()
     #expect(stranger.isVisible)
     _ = run(&stranger, seconds: HostileState.stepOutTime + 0.05, canHit: true)
     #expect(stranger.phase == .waiting)
-    #expect(simd_distance(stranger.position, BrooklynBridge.stranger.standAt) < 0.001)
+    #expect(simd_distance(stranger.position, rifle.standAt) < 0.001)
     // Waiting, he never shoots: the moment Miki hesitates.
     #expect(run(&stranger, seconds: 5, canHit: true).isEmpty)
     #expect(!stranger.isTargetable)
     stranger.engage()
-    let windUp = BrooklynBridge.stranger.windUp
+    let windUp = rifle.windUp
     #expect(run(&stranger, seconds: windUp - 0.05, canHit: true).isEmpty)
     #expect(run(&stranger, seconds: 0.1, canHit: true) == [.miss])
     #expect(stranger.isTargetable)
     // After recovering and aiming again, a clear line hits and cover blocks.
-    let cycle = BrooklynBridge.stranger.recovery + windUp
+    let cycle = rifle.recovery + windUp
     #expect(run(&stranger, seconds: cycle, canHit: true) == [.hit])
     #expect(run(&stranger, seconds: cycle, canHit: false) == [.blocked])
     stranger.knockDown()
@@ -98,7 +98,7 @@ struct CombatTests {
 
   @Test
   func engagedBeforeSteppingOutHeAimsAsSoonAsHeIsInPlace() {
-    var stranger = HostileState(spec: BrooklynBridge.stranger)
+    var stranger = HostileState(spec: rifle)
     stranger.engage()
     stranger.reveal()
     _ = run(&stranger, seconds: HostileState.stepOutTime + 0.02, canHit: true)
@@ -112,10 +112,10 @@ struct CombatTests {
   func cuesPlayInTimeOrderOnce() {
     var director = StoryDirector()
     director.start(BrooklynBridge.strangerEncounter.cues)
-    #expect(director.step(dt: 0.01).count == 1)
+    #expect(director.step(dt: 0.01).count == 2)
     #expect(director.step(dt: 0.5).isEmpty)
     #expect(director.step(dt: 0.2).count == 1)
-    #expect(director.step(dt: 1).count == 1)
+    #expect(director.step(dt: 1).isEmpty)
     #expect(!director.isPlaying)
     #expect(director.step(dt: 10).isEmpty)
     director.start(BrooklynBridge.strangerEncounter.cues)

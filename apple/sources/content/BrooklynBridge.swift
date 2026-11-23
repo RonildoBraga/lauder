@@ -4,7 +4,7 @@ import simd
 /// Brooklyn is at +z and Manhattan at -z. The road and everything on it lie under a white plain
 /// level with the old deck, and only the two towers stand above it. The party keeps to the line
 /// of the buried road, inside an invisible edge at its width. The towers are the only cover: the
-/// stranger and the man who runs at Miki wait behind the first tower's pier.
+/// machine guards the first tower; a knife attacker later runs out of its west arch.
 ///
 /// Where everything stands, the decoration, the camera and the lights are in `layout`
 /// (BrooklynBridgeLayout.swift), which Blender exports (ADR 0002). This file adds the words: what
@@ -27,16 +27,17 @@ enum BrooklynBridge {
     trigger("manhattan-end", "The Manhattan end. The city lies buried beyond it."),
   ]
 
-  /// The stranger (M2). He waits unseen behind the first tower's pier, steps out beyond the
-  /// north end of its east arch as Miki comes within about 10 m through the arch, and after her
-  /// "Friendly!" opens fire. His first shot is a deliberate miss. Out on the snow only the pier
-  /// gives cover, to whoever keeps it between them. His reach, like her carbine's, is less than
-  /// the 19 m or so that the camera shows ahead of her, so neither is hit from off screen ahead.
+  /// C guards the outgoing side of the first tower. The stable "stranger" identifiers retain
+  /// the existing authored marker and progression references; the visible encounter is a robot.
+  /// It warns, commits its aim and fires a short burst, with the tower's stone as real cover.
   static let stranger = Level.Hostile(
-    id: "stranger", name: "The stranger", hiddenAt: layout.marker(named: "stranger.hidden"),
-    standAt: layout.marker(named: "stranger.stand"), hits: 2, windUp: 1.5, recovery: 1.4,
-    range: 14, firstShotMisses: true, missLine: "He opened fire. Fire back, or take cover.",
-    loot: Level.Loot(rounds: 6, medicalKits: 1))
+    id: "stranger", name: "The guard robot", hiddenAt: layout.marker(named: "stranger.stand"),
+    standAt: layout.marker(named: "stranger.stand"), hits: 6, attack: .robot,
+    windUp: 1, recovery: 1.8, range: 12)
+
+  static let supplyCaseID = "bridge-supply-case"
+  static let supplies = Level.Loot(rounds: 6, medicalKits: 1)
+  static var supplyCasePosition: SIMD2<Float> { layout.marker(named: "supply.case") }
 
   /// The first fight, as Miki walks through the first tower. A retry starts just outside its
   /// area, in the east arch.
@@ -45,15 +46,16 @@ enum BrooklynBridge {
     retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger],
     cues: [
       (0, .reveal(stranger.id)),
-      (0.6, .say(speaker: "Miki", line: "Friendly!")),
-      (1.6, .engage(stranger.id)),
-    ])
+      (0, .engage(stranger.id)),
+      (0.6, .say(speaker: "Miki", line: "Still guarding something.")),
+    ], safeExit: layout.area(named: "robot.exit"))
 
-  /// Searching the stranger once he is down (M3). It takes the time the ambush's cues give it.
+  /// A nonblocking supply case on the safe outgoing side. Defeating or bypassing the guard
+  /// offers the same one-time supplies and starts Tom's existing ambush scene.
   static let searchStranger = Level.Interaction(
-    id: .searchStranger, name: "Search",
-    approach: layout.area(named: "search.stranger"), result: "Miki searches the stranger.",
-    repeated: "Nothing more on him.", early: "Not while he's standing.")
+    id: .searchStranger, name: "Search case",
+    approach: layout.area(named: "search.stranger"), result: "Miki opens the supply case.",
+    repeated: "The case is empty.", early: "Get clear of the guard first.")
 
   /// The man who runs at Miki out of the tower's west arch while she searches (M3).
   static let attacker = Level.Hostile(
@@ -62,14 +64,14 @@ enum BrooklynBridge {
 
   /// The ambush (M3), a short scene that plays the same way every time: the search begins it
   /// and holds Miki still. The attacker steps out of the west arch and runs at her round the
-  /// pier; she finishes the search; Tom appears in the east arch and drops the attacker before he
+  /// pier; she finishes the search; Tom appears beyond the tower and drops the attacker before he
   /// reaches her. They turn to each other, and the exchange that follows ends with Tom joining.
   static let ambush = Level.Encounter(
     beat: .ambush, start: .action(.searchStranger), retryAt: nil, hostiles: [attacker],
     cues: [
       (0.2, .reveal(attacker.id)),
       (0.6, .engage(attacker.id)),
-      (1.5, .loot(stranger.id)),
+      (1.5, .supplies(id: supplyCaseID, loot: supplies)),
       (2.0, .appear(.tom)),
       (2.6, .shot(by: .tom, at: attacker.id)),
       (3.0, .face(.miki, .tom)),
@@ -89,7 +91,7 @@ enum BrooklynBridge {
     ],
     focus: layout.marker(named: "spawn.laura"))
 
-  /// Helping Laura uses the medical kit from the stranger's body. Whoever leads can help.
+  /// Helping Laura uses the medical kit from the supply case. Whoever leads can help.
   static let helpLaura = Level.Interaction(
     id: .helpLaura, name: "Help", approach: layout.area(named: "help.laura"),
     result: "She gets the medical kit.", repeated: "She's on her feet now.",

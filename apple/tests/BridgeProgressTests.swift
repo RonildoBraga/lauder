@@ -8,6 +8,27 @@ import Testing
 @MainActor
 struct BridgeProgressTests {
   @Test
+  func aResolvedBypassOffersTheCaseWithoutInventingARobotDefeat() {
+    let session = GameSession(level: BrooklynBridge.level)
+    #expect(
+      !session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
+    #expect(session.beginEncounter(.stranger))
+    #expect(!session.offers(.searchStranger))
+    #expect(session.perform(.searchStranger) == .notYet)
+    for _ in 0..<12 { #expect(session.spendRound()) }
+    // EncounterSimulation closes a verified safe bypass without marking the guard defeated.
+    session.endEncounter()
+    #expect(session.defeated.isEmpty && session.ammo == 0)
+    #expect(session.offers(.searchStranger))
+    #expect(session.perform(.searchStranger) == .done)
+    #expect(session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
+    #expect(
+      !session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
+    #expect(session.ammo == 6 && session.medicalKits == 1)
+    #expect(session.defeated.isEmpty && session.searched == [BrooklynBridge.supplyCaseID])
+  }
+
+  @Test
   func retryingHelpRestoresTheStoryAndTheKitFromBeforeTheCost() {
     let session = readyToHelp()
     #expect(session.perform(.helpLaura) == .done)
@@ -16,7 +37,7 @@ struct BridgeProgressTests {
     session.retryEncounter()
     #expect(session.beat == .lauraFound && !session.inEncounter)
     #expect(session.medicalKits == 1 && session.offers(.helpLaura))
-    #expect(session.party == [.miki, .tom] && session.searched == ["stranger"])
+    #expect(session.party == [.miki, .tom] && session.searched == [BrooklynBridge.supplyCaseID])
     #expect(session.perform(.helpLaura) == .done)
     #expect(session.medicalKits == 0)
     #expect(session.perform(.helpLaura) == .alreadyDone)
@@ -81,7 +102,7 @@ struct BridgeProgressTests {
     session.defeat("stranger")
     session.endEncounter()
     #expect(session.perform(.searchStranger) == .done)
-    #expect(session.search("stranger", loot: BrooklynBridge.stranger.loot ?? Level.Loot()))
+    #expect(session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
     session.endEncounter()
     #expect(session.converse(.metTom))
     for _ in MissionScript.lines(.metTom) { session.advanceDialogue() }

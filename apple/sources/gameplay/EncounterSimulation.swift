@@ -10,6 +10,7 @@ final class EncounterSimulation {
     let side: Side
     var muzzle: SIMD2<Float>? = nil
     var trace: Ballistics.Trace? = nil
+    var gun: Int? = nil
   }
 
   struct FigurePose {
@@ -70,6 +71,7 @@ final class EncounterSimulation {
   private var handling: [PartyMember: WeaponHandling] = [:]
   private let specs: [String: Level.Hostile]
   private let blockers: [PartyMotion.Box]
+  private let movementObstacles: [PartyMotion.Box]
   private let lookout: SIMD2<Float>
   private var encounter: Level.Encounter?
   private var director = StoryDirector()
@@ -89,6 +91,7 @@ final class EncounterSimulation {
     startingLeader = level.party[0]
     weaponLeader = level.party[0]
     blockers = Aim.blockers(level.boxes, above: Self.aimHeight)
+    movementObstacles = level.obstacles
     lookout = -level.heading
     specs = Dictionary(
       uniqueKeysWithValues: level.encounters.flatMap(\.hostiles).map { ($0.id, $0) })
@@ -128,12 +131,34 @@ final class EncounterSimulation {
     lastMotion = [:]
     target = nil
     shots.removeAll(keepingCapacity: true)
+    events.removeAll(keepingCapacity: true)
     for (id, state) in hostiles { faceHostile(id, state) }
   }
 
   func begin(_ encounter: Level.Encounter) {
     self.encounter = encounter
     director.start(encounter.cues)
+  }
+
+  /// An authored, verified safe exit resolves this guard without inventing a kill or loot.
+  @discardableResult
+  func resolveRobotBypass(id: String, session: GameSession) -> Bool {
+    guard session.mode == .exploring, session.inEncounter,
+      encounter?.hostiles.contains(where: { $0.id == id && $0.attack == .robot }) == true,
+      let state = hostiles[id], let robot = state.robot,
+      !robot.isDown, !robot.isCleared
+    else { return false }
+    hostiles[id]?.clearGuard()
+    enemyHandling[id]?.cancel()
+    shots.removeAll(keepingCapacity: true)
+    threat = nil
+    target = nil
+    encounter = nil
+    director.stop()
+    session.endEncounter()
+    for member in handling.keys { handling[member]?.releaseTrigger() }
+    capturePose(id)
+    return true
   }
 
   func takeEvents() -> [CombatEvent] {
@@ -149,6 +174,7 @@ final class EncounterSimulation {
   ) -> Outcome {
     var outcome = Outcome()
     shots.removeAll(keepingCapacity: true)
+    guard session.mode == .exploring else { return outcome }
     settleBodies(dt: dt)
     if weaponLeader != session.leader {
       handling[weaponLeader]?.releaseTrigger()
@@ -182,6 +208,8 @@ final class EncounterSimulation {
         if let loot = specs[body]?.loot, session.search(body, loot: loot) {
           outcome.line = Self.describe(loot)
         }
+      case .supplies(let id, let loot):
+        if session.collectSupplies(id: id, loot: loot) { outcome.line = Self.describe(loot) }
       case .appear(let member): outcome.appeared.append(member)
       case .stand(let member): outcome.stood.append(member)
       case .shot(let member, let id):
@@ -205,6 +233,28 @@ final class EncounterSimulation {
     var threatNow: String?
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
+      if spec.attack == .robot {
+        let hasSight = ballistics.isClear(
+          from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
+        if let discharge = state.stepRobot(
+          dt: dt, target: leader, hasSight: hasSight, obstacles: movementObstacles,
+          party: Array(party.values))
+        {
+          fireRobot(discharge, state: &state, party: party, session: session, outcome: &outcome)
+        }
+        if let robot = state.robot {
+          switch robot.phase {
+          case .notice, .tracking: threatNow = "\(spec.name) is bracing."
+          case .committed: threatNow = "\(spec.name) has committed. Move or use cover."
+          case .burst: threatNow = "\(spec.name) is firing."
+          case .recovering: threatNow = "\(spec.name) is recovering."
+          default: break
+          }
+          hostiles[spec.id] = state
+          faceHostile(spec.id, state, facing: state.position + robot.facing)
+        }
+        continue
+      }
       let origin = state.position
       let inRange = simd_distance(ballistics.point(origin), ballistics.point(leader)) <= spec.range
       let canHit =
@@ -408,7 +458,9 @@ final class EncounterSimulation {
     guard let state = hostiles[id] else { return }
     hostiles[id]?.knockDown()
     enemyHandling[id]?.cancel()
-    falls[id] = Fall(away: state.position - shooter, yaw: hostileYaws[id] ?? 0)
+    if state.robot == nil {
+      falls[id] = Fall(away: state.position - shooter, yaw: hostileYaws[id] ?? 0)
+    }
     hostileJolts[id] = nil
     if let down = hostiles[id] { faceHostile(id, down) }
   }
@@ -441,8 +493,11 @@ final class EncounterSimulation {
     if let focus = encounter.focus {
       return Self.lean(from: leader, towards: focus, share: Self.focusShare, limit: Self.focusLimit)
     }
+    let current = Set(encounter.hostiles.map(\.id))
     guard
-      let nearest = hostiles.values.filter({ $0.isVisible && !$0.isDown }).min(by: {
+      let nearest = hostiles.values.filter({
+        current.contains($0.spec.id) && $0.isVisible && !$0.isDown && $0.robot?.isCleared != true
+      }).min(by: {
         simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
       })
     else { return .zero }
@@ -477,6 +532,11 @@ final class EncounterSimulation {
   }
 
   private func faceHostile(_ id: String, _ state: HostileState, facing point: SIMD2<Float>? = nil) {
+    if let robot = state.robot {
+      hostileYaws[id] = Movement.yaw(towards: robot.facing)
+      capturePose(id)
+      return
+    }
     if state.isDown {
       if falls[id] == nil {
         falls[id] = Fall(away: .zero, yaw: hostileYaws[id] ?? 0, finished: true)
@@ -491,7 +551,43 @@ final class EncounterSimulation {
   private func hostilePoint(_ id: String) -> SIMD2<Float> { hostiles[id]?.position ?? .zero }
 
   private func hostileTarget(_ id: String) -> Ballistics.Target {
-    Ballistics.Target(id: id, centre: ballistics.point(hostilePoint(id)))
+    if hostiles[id]?.robot != nil {
+      return Ballistics.Target(
+        id: id, centre: ballistics.point(hostilePoint(id), above: RobotModelGeometry.halfHeight),
+        halfHeight: RobotModelGeometry.halfHeight, radius: RobotModelGeometry.bodyRadius)
+    }
+    return Ballistics.Target(id: id, centre: ballistics.point(hostilePoint(id)))
+  }
+
+  private func fireRobot(
+    _ discharge: RobotGuard.Discharge, state: inout HostileState,
+    party: [PartyMember: SIMD2<Float>], session: GameSession, outcome: inout Outcome
+  ) {
+    var generator = enemyRandom[state.spec.id] ?? SeededRandom(seed: Self.seed)
+    let deviation = Scatter.deviation(within: Spread.degrees(0.6), using: &generator)
+    enemyRandom[state.spec.id] = generator
+    let ray = discharge.direction
+    let direction = SIMD3(
+      ray.x * cos(deviation) - ray.z * sin(deviation), ray.y,
+      ray.x * sin(deviation) + ray.z * cos(deviation))
+    let trace = ballistics.traceAcrossLevel(
+      from: discharge.origin, direction: direction,
+      targets: party.map {
+        Ballistics.Target(id: $0.key.rawValue, centre: ballistics.point($0.value))
+      })
+    shots.append(
+      Shot(
+        path: trace.path, side: .hostile,
+        muzzle: [discharge.origin.x, discharge.origin.z], trace: trace, gun: discharge.gun))
+    report(trace.path, firedBy: .rifle, byLeader: false)
+    if case .body(let id) = trace.strike, let member = PartyMember(rawValue: id),
+      state.acceptRobotBurstHit()
+    {
+      jolts[member, default: BodyJolt()].push(
+        towards: [direction.x, direction.z], by: BodyJolt.hit)
+      if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
+      if session.takeHit(member) { outcome.retry = true }
+    }
   }
 
   private func fireHostile(
@@ -525,6 +621,11 @@ final class EncounterSimulation {
 
   private func capturePose(_ id: String) {
     guard let state = hostiles[id] else { return }
+    if state.robot != nil {
+      hostilePoses[id] = FigurePose(
+        orientation: simd_quatf(angle: hostileYaws[id] ?? 0, axis: [0, 1, 0]), position: .zero)
+      return
+    }
     if state.isDown, let fall = falls[id] {
       let pose = fall.pose
       hostilePoses[id] = FigurePose(orientation: pose.orientation, position: pose.position)

@@ -12,11 +12,11 @@ Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/de
 
 The bridge-only prototype's structural preparation is delivered in **TestFlight 0.1.0 (28)**, app/archive source `7158f29`. The standard check and rendered Simulator checks passed; source review has no outstanding findings. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records exact sources, checks and delivery proof. Physical-phone behaviour, performance and enjoyment remain unverified for this build.
 
-**Design in progress, 23 November 2026:** The maintainer accepted the **concept C, Heavy walker**, Blender form after rejecting the first robot blockout. The current assignment is Blender studies of walking, turning and shooting motion, with exact left/right symmetry in the rest model and reusable identical leg and connector parts. [Concept A](art/robot/bulk-studies/README.md#a--armoured-crawler) is retained for a possible later variant with different gun types; that work is not assigned. Concept B is unselected. Replacing the first human shooter while Miki is alone remains the intended placement; the [first-tower proposal](docs/encounters/bridge-spider-bot.md) describes behaviour and the supply/search handoff for separate review. The current app still has the human encounter.
+**Robot integration, 23 November 2026:** The maintainer accepted C's form and motion and assigned replacing the first human shooter on the bridge, with movement and shooting verified in Simulator. The first-tower guard, bounded movement, committed alternating burst and supply-case/bypass handoff are implemented. The later knife attacker and Tom/Laura recruitment remain. [Concept A](art/robot/bulk-studies/README.md#a--armoured-crawler) stays a possible later different-weapon variant; concept B is unselected. Prototype timing and balance are starting values, not settled design. The [encounter record](docs/encounters/bridge-spider-bot.md) describes the implementation and remaining playtest questions.
 
 **Bridge environment, 23 November 2026:** The maintainer first assigned the scene in Blender, deferring the robot. The [level source](blender/levels/README.md) now has low-poly pointed arches, weathered stone, dark cable fans and low off-route snow facets, guided by the selected concept. That environment pass preserved the gameplay layout and camera. Its verification is recorded in the [prototype plan](docs/prototype-plan.md#bridge-environment-pass).
 
-**Camera and robot modelling, 23 November 2026:** Camera B remains approved: offset `[0, 56, 44]`, with a 22° lens, selected after comparing Simulator captures. The Blender camera and its exports use that framing; the [visual direction](docs/visual-direction.md#camera-and-scale) records the values. The rejected first [robot blockout](blender/assets/spider-bot/README.md) and its motion study remain historical references, not a triangle-budget target. The separate [C heavy-walker source](blender/assets/spider-bot-heavy/README.md) has been built, rendered and technically checked, and the maintainer accepted its form. The assigned Blender motion and linked-component work is built and technically checked, with a [30-second rendered review](blender/assets/spider-bot-heavy/motion-preview.mp4) ready. All four legs share six component meshes; the walk, mirrored step-turns and visual recoil await maintainer motion review. Bridge placement, runtime AI, weapon rules, the A variant and releases are not assigned. These changes are separate from the existing TestFlight build above; [recorded checks](docs/prototype-plan.md#concept-c-proportion-study) are technical evidence, not phone performance measurements.
+**Camera and robot, 23 November 2026:** Camera B remains approved: offset `[0, 56, 44]`, 22° lens. C's [Blender source](blender/assets/spider-bot-heavy/README.md) retains the accepted form, [motion studies](blender/assets/spider-bot-heavy/motion-preview.mp4) and shared symmetric leg components. Runtime geometry and joint/muzzle measurements come from that source; fixed-step combat owns decisions and the presenter poses the loaded parts from actual movement and firing. The standard check and rendered Simulator guard, retry and full-opening routes pass; the [prototype plan](docs/prototype-plan.md#c-robot-on-the-bridge) records the evidence. This work is separate from TestFlight build 28; no new phone performance or release result is claimed.
 
 ## Start here
 
@@ -41,13 +41,14 @@ apple/
     app/                         App entry, world ownership and bundle configuration
     interface/                   HUD, controller/keyboard/touch input and InputRules
     gameplay/                    Session authority, BridgeProgress and EncounterSimulation
-    combat/                      Weapon, spread, aiming, ray geometry and hostile rules
+    combat/                      Weapon, spread, aiming, ray geometry, hostile rules and RobotGuard
     world/                       Bodies, squad movement, presentation, WorldCamera and CameraRig
     content/
       Level.swift                Typed bridge and test-fixture data
       LevelLayout.swift          Blender layout schema
       BrooklynBridge.swift       Bridge names, encounters, interactions and dialogue cues
       BrooklynBridgeLayout.swift Generated bridge layout
+      RobotModelGeometry.swift   Generated robot joints, bounds and gun measurements
       BrooklynBridge.usdz        Exported bridge scene
       MissionScript.swift        Provisional bridge conversations
       StoryBeat.swift            Authored progression markers independent of the session

@@ -1,6 +1,6 @@
 # Lauder — architecture
 
-**Updated:** 22 November 2026
+**Updated:** 23 November 2026
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
 
@@ -22,7 +22,8 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | WorldCamera / CameraRig | Camera entity and landmark fading / follow, lean, switching, lens and projection | Presentation owner and value-only camera motion |
 | GameWorld | Bodies, scene, camera, movement, companion routing, encounters and one owned update subscription | Spatial state; no duplicate session progress |
 | EncounterSimulation | Native weapon handling, targeting, actual rays, hostile timing, cues, recoil/hit/fall values and feedback events | Plain Swift, no RealityKit or sound/haptic playback |
-| EncounterStage | Reusable hostile/weapon entities, target markers and shot effects | Presentation only |
+| RobotGuard | Bounded first-tower patrol, sight, finite turns, commitment, bursts and per-burst hit allowance | Value state advanced by EncounterSimulation; no entities |
+| EncounterStage | Reusable hostile/weapon entities, robot joint presentation, target markers and shot effects | Presentation only; no damage or navigation authority |
 | GameControls / InputRules | Device sampling, touch state, command edges, source arbitration and neutral gates | Intents only; no second pause/dialogue policy |
 | Content | Bridge layout, words, encounters, interactions, models and sounds | Typed definitions and bundle resources |
 
@@ -31,6 +32,8 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 The Brooklyn Bridge is the only playable `Level`. Its Blender file exports `BrooklynBridge.usdz` and `BrooklynBridgeLayout.swift` ([ADR 0002](decisions/0002-blender-source-of-truth.md)). `BrooklynBridge.swift` adds words, stable references, encounter definitions and interactions. Export refuses to drop layout names gameplay uses. [Contributor instructions](../CONTRIBUTING.md#editing-a-level-in-blender) describe authoring.
 
 `Level` contains flat ground bounds, blocker boxes, triggers, interactions, encounters, starting party/spawns, heading, camera/lights and an optional scene resource. Small test-only levels use the same data with plain geometry. They are not alternate app scenes. There is no terrain, gate, salvage, arena or optional-guard schema.
+
+The C robot is a runtime-spawned model. Its dedicated export preserves the named rigid joint hierarchy and generates `RobotModelGeometry.swift` from Blender link lengths, foot/hip positions, bounds and muzzle markers. Both outputs are fingerprinted with their source. The presenter uses actual bounded movement, turns and firing state to pose those parts; the reviewed Blender timeline remains an authoring study, not a runtime root-motion clip. Other models keep the existing static export. No parallel geometry authoring or generic animation framework is introduced.
 
 The world loads the bridge synchronously and retains it across Restart. Figure model templates produce independent clones. A single scene needs no level replacement, scene-template cache, cross-level navigation cache or transition timing subsystem. `SceneStyle` supplies simple materials and signal colours. Preserve Blender provenance and asset licensing.
 

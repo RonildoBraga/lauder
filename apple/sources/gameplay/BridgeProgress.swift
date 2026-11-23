@@ -30,12 +30,11 @@ struct BridgeProgress: Sendable {
   }
 
   func offers(
-    _ action: Level.ActionID, defeated: Set<String>, searched: Set<String>, inEncounter: Bool
+    _ action: Level.ActionID, searched: Set<String>, inEncounter: Bool
   ) -> Bool {
     switch action {
     case .searchStranger:
-      defeated.contains("stranger") && !searched.contains("stranger") && beat == .stranger
-        && !inEncounter
+      !searched.contains(BrooklynBridge.supplyCaseID) && beat == .stranger && !inEncounter
     case .helpLaura: beat == .lauraFound && !inEncounter
     }
   }
@@ -43,15 +42,18 @@ struct BridgeProgress: Sendable {
   /// Plans an action without changing progress or inventory. The session checkpoints the
   /// accepted encounter first, so retry restores the kit that Help subsequently spends.
   func action(
-    _ action: Level.ActionID, defeated: Set<String>, searched: Set<String>, medicalKits: Int,
+    _ action: Level.ActionID, searched: Set<String>, medicalKits: Int,
     inEncounter: Bool
   ) -> Action {
     switch action {
     case .searchStranger:
-      guard defeated.contains("stranger") else { return .refused(.notYet) }
-      guard !searched.contains("stranger"), let next = beatStarted[action] else {
+      guard beat >= .stranger else { return .refused(.notYet) }
+      guard !searched.contains(BrooklynBridge.supplyCaseID), let next = beatStarted[action],
+        beat == .stranger
+      else {
         return .refused(.alreadyDone)
       }
+      guard !inEncounter else { return .refused(.notYet) }
       return .begin(beat: next, medicalKits: 0, otherwise: .alreadyDone)
     case .helpLaura:
       if beat > .lauraFound { return .refused(.alreadyDone) }

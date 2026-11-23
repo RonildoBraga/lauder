@@ -1,13 +1,13 @@
 # spider-bot-heavy
 
-**Status:** The maintainer accepted C's form and assigned Blender walking, turning and visual shooting studies before bridge placement. Those studies and reusable symmetric components are built and technically checked, with a rendered motion reel ready for maintainer review. A remains a possible later different-weapon variant, outside this task. Camera B remains approved.
+**Status:** The maintainer accepted C's form and assigned Blender walking, turning and visual shooting studies before bridge placement. Those studies were accepted. The maintainer then assigned the first-tower runtime integration and Simulator movement/shooting checks; the standard check and rendered Simulator scenarios pass. A remains a possible later different-weapon variant, outside this task. Camera B remains approved.
 
 ![Actual Blender render of the C heavy walker](preview.png)
 
 - **Source:** New geometry and rigid-part motion authored for Lauder by Codex in Blender on 23 November 2026, following the selected [C — Heavy walker](../../../art/robot/bulk-studies/c-heavy-walker.png) and its [exact prompt](../../../art/robot/bulk-studies/prompts.md). This retains the [reference chain](../../../art/robot/attribution.md) to **Low-poly Spider Bot (Rigged)** by **rznn7**, from the [creator's asset page](https://rznn7.itch.io/low-poly-spider-bot). No creator model, rig, animation or texture was downloaded or imported. No endorsement is implied.
-- **Licence:** This reference-derived model, its authored motion and rendered previews are shared under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/), with credit to rznn7 and the Lauder concept studies. Changes include new faceted geometry, a connected torso, substantial hip housings and legs, twin guns, square sensor, linked components and new walking, turning, bracing and recoil motion. This file-level notice does not replace the repository's licence for code or unrelated assets.
+- **Licence:** This reference-derived model, its runtime USDZ export, authored motion and rendered previews are shared under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/), with credit to rznn7 and the Lauder concept studies. Changes include new faceted geometry, a connected torso, substantial hip housings and legs, twin guns, square sensor, linked components and new walking, turning, bracing and recoil motion. This file-level notice does not replace the repository's licence for code or unrelated assets.
 
-The earlier [spider-bot](../spider-bot/README.md) remains a rejected historical study. C is not registered as spawned, exported into the app or placed in a playable encounter. The app still has the human encounter. Runtime movement, AI, attacks and encounter rules remain separate work.
+The earlier [spider-bot](../spider-bot/README.md) remains a rejected historical study. C is now registered as spawned and exported into the app as `spider-bot-heavy.usdz`, replacing the first human shooter. Its loaded joint hierarchy is posed from actual runtime movement and firing state. The later human knife attacker and recruitment scenes remain. The [encounter record](../../../docs/encounters/bridge-spider-bot.md) owns the prototype attack and supply-case/bypass rules.
 
 ## Reusable components and symmetry
 
@@ -55,7 +55,7 @@ Frames 243, 485, 727 and 909 reset to neutral between independent takes. These a
 
 Walking uses a four-beat crawl with at least three feet supporting the body. Feet lift 12 cm, travel and plant before taking load. During turns each stance foot keeps its world-space position and yaw until its next step. A two-link solve was used during authoring, then baked into ordinary object-transform keys; the hierarchy keeps joint endpoints connected and foot pivots compensate for leg pitch.
 
-Firing plants all four feet before recoil starts. Both guns use matching stroke/recovery curves; their alternating timing is an authoring candidate. No muzzle flash, projectile, aim line, damage, warning or ammunition logic is implemented. This is visual shooting, not approved combat balance.
+Firing plants all four feet before recoil starts. Both guns use matching stroke/recovery curves; their alternating timing is an authoring candidate. This authoring take contains no muzzle flash, projectile, aim line, damage, warning or ammunition logic. Runtime firing is implemented separately as described below; balance remains provisional.
 
 ## Review and validation
 
@@ -63,9 +63,9 @@ The [30-second motion reel](motion-preview.mp4) presents separate labelled shots
 
 They use the bridge's two suns and an authoring exposure of +0.7. Ground, Miki, lights and cameras exist only in unsaved render copies. Public PNG metadata is removed without changing pixels. The Blender source and movie use Git LFS; PNGs below 1 MiB use ordinary Git under the [storage policy](../../../CONTRIBUTING.md#git-lfs-and-cloning).
 
-The standard `./scripts/check` passes contracts, 51 Blender tests, sound fingerprints, Swift formatting, the shared app build and hosted Simulator tests on this source-only pass. Final independent saved-file inspection sampled 7,204 poses at 240 Hz, including half-key subframes: stance drift stays below 0.029 mm, stance yaw drift below 0.000060°, foot tilt below 0.0053° and sole penetration below 0.012 mm. Joint gaps are zero; link-length error is below 0.00000023 m. Neutral geometry/material symmetry error is below 0.00000029 m and mirrored-turn error below 0.0000036 m. These are floating-point residuals, not visible intended sliding. Shared-data identity, positive unit scales, topology, part contact, materials, muzzle placement, intake and privacy checks pass. Sampled rendered poses were inspected; all 720 movie frames decode successfully. Prior static checks remain historical in the [prototype plan](../../../docs/prototype-plan.md#concept-c-proportion-study). The exporter still writes a selected frame and disables animation/instancing. Runtime clip delivery, hierarchy/muzzle preservation after export, integration and phone performance remain unverified.
+The standard `./scripts/check` passes contracts, 51 Blender tests, sound fingerprints, Swift formatting, the shared app build and hosted Simulator tests on this source-only pass. Final independent saved-file inspection sampled 7,204 poses at 240 Hz, including half-key subframes: stance drift stays below 0.029 mm, stance yaw drift below 0.000060°, foot tilt below 0.0053° and sole penetration below 0.012 mm. Joint gaps are zero; link-length error is below 0.00000023 m. Neutral geometry/material symmetry error is below 0.00000029 m and mirrored-turn error below 0.0000036 m. These are floating-point residuals, not visible intended sliding. Shared-data identity, positive unit scales, topology, part contact, materials, muzzle placement, intake and privacy checks pass. Sampled rendered poses were inspected; all 720 movie frames decode successfully. Prior static checks remain historical in the [prototype plan](../../../docs/prototype-plan.md#concept-c-proportion-study). The robot export writes the neutral frame with named parent transforms preserved and generates `RobotModelGeometry.swift` from the same source. It does not export source timeline clips or instancing. A focused runtime presenter uses the loaded parts with a planted-foot solve; fixed-step combat owns positions, aim and damage. Integration verification is recorded separately below; phone performance remains unverified.
 
-Review this movement before assigning bridge integration. The [first-tower proposal](../../../docs/encounters/bridge-spider-bot.md) retains its separate gate for AI, attacks, damage and encounter progression.
+The maintainer accepted this source motion and assigned bridge integration. The [first-tower record](../../../docs/encounters/bridge-spider-bot.md) describes the initial gameplay choices and remaining balance questions.
 
 | File | Size in bytes | Storage |
 |---|---:|---|
@@ -74,3 +74,9 @@ Review this movement before assigning bridge integration. The [first-tower propo
 | `preview.png` | 375,158 | Ordinary Git |
 | `scale-preview.png` | 436,880 | Ordinary Git |
 | `camera-b-preview.png` | 91,715 | Ordinary Git |
+
+## Runtime integration
+
+The [runtime USDZ](../../../apple/sources/content/models/spider-bot-heavy.usdz) retains this model's CC BY 4.0 credit and changes. `RobotModelGeometry.swift` is generated alongside it, with both outputs fingerprinted against this Blender source. The output keeps the named leg pivots, gun mounts and muzzle markers; other models retain their existing export path. Runtime stepping follows actual translation and turning, rather than the authoring timeline's travel or reset frames. A remains a later variation, not an extra runtime model.
+
+The standard check, loaded-model joint/muzzle tests and rendered first-fight (35/35), retry (15/15) and full opening (56/56) pass. Runtime gait uses a 1° stop-turn-advance gate and earlier stepping so tested patrol/combat feet remain reachable, with independent FK/stance errors below 0.002 mm. See the [runtime verification](../../../docs/prototype-plan.md#c-robot-on-the-bridge). The earlier 240 Hz audit above applies to the Blender study and is not a measurement of runtime gait or physical-phone performance.

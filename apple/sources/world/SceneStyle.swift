@@ -101,6 +101,11 @@ struct SceneStyle {
     figure("hostile")
   }
 
+  /// The C robot retains its authored rigid-joint hierarchy for RobotPresentation.
+  func robot() -> Entity {
+    figure("spider-bot-heavy")
+  }
+
   /// A party weapon, with its origin at the grip and its barrel ahead along -z. The simple
   /// shapes differ in length and weight; the same profile locates its visual and shot muzzle.
   func weapon(for kind: Weapon.Kind) -> Entity {

@@ -7,7 +7,7 @@ Combat stays occasional. The [future squad and combat design](#future-squad-and-
 
 The bridge is the only playable scene after the maintainer's [bridge-only reset](decisions/0017-bridge-only-reset.md). Other prototype venues and their dedicated systems are retired.
 
-**Planned revision:** The maintainer selected the armed spider robot to replace the first human shooter while Miki is alone. Its [movement/combat and supply-case handoff](encounters/bridge-spider-bot.md) are proposals for review before implementation. The built sequence below still describes the current human shooter, body search and Tom's introduction; none of the robot rules are working app behaviour yet.
+**Robot revision:** The maintainer accepted C's form and Blender motion studies, then assigned integration at the first tower. The first human shooter is replaced with the [C guard and supply-case handoff](encounters/bridge-spider-bot.md). The bridge keeps the later human knife attacker, Tom's introduction and Laura's recruitment. Internal `stranger` marker, beat and action identifiers remain stable references; they no longer describe the visible first enemy or its loot. Current verification belongs in the [prototype plan](prototype-plan.md), separate from this walkthrough.
 
 ## The game we are building
 
@@ -27,17 +27,25 @@ Miki starts at the Brooklyn end. Snow has buried the bridge's road, everything l
 
 She is alone, so the player learns to move and look. **Next** does not appear until someone joins. A few places show a short line the first time she reaches them, such as "Snow covers the road and everything left on it." and "The first tower. Its arches still stand." The camera stands high and far back, showing the buried road and the snow on both sides, and looks straight along the bridge, so pushing up walks towards Manhattan. While a tower stands between the camera and the party, it fades.
 
-### 2. Friendly? (M2, built)
+### 2. The guard at the first tower (M2)
 
-A stranger waits behind the first tower's pier, between its two arches. As Miki comes through the east arch he steps out beyond it, and she calls out, "Friendly!" He raises his rifle, with a warning on the HUD, and fires: a near miss, scripted. The HUD says "He opened fire. Fire back, or take cover." and shows how to fire, and while he stands the camera leans towards him so both are on screen. **Fire** draws Miki's carbine on the first press and shoots at the nearest hostile in sight, marked on the snow; on a controller the right stick aims instead, and a shot that hits nobody strikes a wall ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)). Before he has fired, he is not a target, and Miki holds her fire at him. Out on the snow only the pier gives cover, to whoever keeps it between them. Miki can take three hits, shown beside her name, and he two. A third hit fades the screen and starts the fight again with nothing lost, Miki back in the arch.
+A heavy, four-legged machine patrols the outgoing side of the first tower. Its dark faceted armour, square sensor and twin guns identify it as a different kind of threat. Miki notices that it is still guarding something; the scene does not explain who built it or why it remains there.
 
-### 3. The search, and Tom (M3, built)
+The robot turns toward Miki at a limited rate, gives notice, stops and braces while tracking, then commits to one aim point. It fires three rounds, alternating its guns, and recovers before trying again. There is no red aiming line or projected danger cone. Its body and gun direction, the planted pause and the shots supply the warning. Actual barrel-origin shots meet the tower's stone; neither a gun nor a committed shot can ignore cover.
 
-Miki can search the body for ammunition and a medical kit. While she searches, an attacker runs at her out of the tower's west arch with a knife. Tom, coming out of the east arch, shoots him before he reaches her. A short exchange follows, and Tom joins: **Next** appears, and he follows in the Close formation. The scene plays the same way every time, and Miki stands still while it plays.
+**Fire** draws Miki's carbine and uses the existing assisted target in sight; the right stick gives manual aim. The robot is a valid target when engaged, without waiting for a human's deliberate warning miss. Six carbine hits disable it in this prototype. Miki can take three hits, with at most one injury from a robot burst. A third mistake fades the screen and retries from the existing first-tower checkpoint with the encounter's initial inventory restored.
+
+The machine remains within its small guard area. Miki can break sight, withdraw and return without resetting her spent ammunition or the robot's damage. She can also take the west arch and reach the authored safe exit beyond the whole guard envelope. That resolves the encounter without pretending that the robot was killed and cancels any queued fire before the next scene. This route remains available with no ammunition.
+
+### 3. The supply case, and Tom (M3)
+
+A small supply case lies on the outgoing west side of the tower, separate from the robot. It is a nonblocking interaction prop, not extra cover. Defeating the guard or reaching the safe exit offers the same **Search case** action and the same one-time six rounds and medical kit.
+
+While Miki opens it, a human knife attacker runs out of the west arch. Tom appears beyond the tower and shoots him before he reaches her. A short exchange follows, and Tom joins: **Next** appears, and he follows in the Close formation. Miki stands still during the scripted scene. The case does not refill, and searching it again cannot replay the ambush or duplicate supplies.
 
 ### 4. Laura (M4, built)
 
-Laura lies hurt, face down, in the snow beyond mid-span, in view from the start. Once Tom has joined, nearing her finds her: she calls out, "Please. Over here.", and the objective becomes "Help the woman in the snow." Beside her, the action reads **Help**, for whoever leads. It uses the medical kit from the first body, and a short scene holds the party: she stands, she and Miki turn to each other, and the exchange gives only her name. When it ends she joins, and Tom and Laura follow in the Close formation.
+Laura lies hurt, face down, in the snow beyond mid-span, in view from the start. Once Tom has joined, nearing her finds her: she calls out, "Please. Over here.", and the objective becomes "Help the woman in the snow." Beside her, the action reads **Help**, for whoever leads. It uses the medical kit from the supply case, and a short scene holds the party: she stands, she and Miki turn to each other, and the exchange gives only her name. When it ends she joins, and Tom and Laura follow in the Close formation.
 
 ### 5. Onwards (M4 and M5, built)
 
@@ -47,7 +55,7 @@ Lines stay provisional and brief. None of the scenes explains anyone's past beyo
 
 ## What the opening has
 
-The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad ([ADR 0003](decisions/0003-squad-movement.md) phases S1 to S3) rather than on the leader's exact path: in the Close formation, and once Laura joins in whichever formation the player chooses, or where an order sends them. The stranger's fight has assisted aim, cover, the placeholder hit rule and a retry; then come the search, the ambush and Tom joining, and Laura and the end of the opening. Every recruited character can fire their own weapon as leader ([ADR 0010](decisions/0010-squad-weapons.md)). [Touch controls](touch-controls.md) give the phone a second input path.
+The bridge is one level value: its scenery, starting party, spawns, trigger areas, interactions and encounters, while the session holds who has joined and the story's beat. Three primitive stand-ins share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad ([ADR 0003](decisions/0003-squad-movement.md) phases S1 to S3) rather than on the leader's exact path: in the Close formation, and once Laura joins in whichever formation the player chooses, or where an order sends them. The guard's encounter has bounded patrol, a committed burst, real cover, retreat, a safe bypass and a retry; then come the supply case, the ambush and Tom joining, and Laura and the end of the opening. Every recruited character can fire their own weapon as leader ([ADR 0010](decisions/0010-squad-weapons.md)). [Touch controls](touch-controls.md) give the phone a second input path.
 
 ## Readable controls and party feedback
 

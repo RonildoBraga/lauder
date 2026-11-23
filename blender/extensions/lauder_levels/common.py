@@ -57,8 +57,10 @@ MODEL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 #: The models that the game creates itself while it plays, rather than a level placing them: the
 #: party and the hostiles (ADR 0002). Each gets a scene file of its own in
 #: SPAWNED_SCENES, named after it, which the game loads by the model's name.
-SPAWNED = ("hostile", "laura", "miki", "tom")
+SPAWNED = ("hostile", "laura", "miki", "spider-bot-heavy", "tom")
 SPAWNED_SCENES = "apple/sources/content/models"
+#: The robot's geometry values travel with its static, articulated scene file.
+MODEL_METADATA = {"spider-bot-heavy": "apple/sources/content/RobotModelGeometry.swift"}
 
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"

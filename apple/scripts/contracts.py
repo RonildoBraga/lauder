@@ -114,7 +114,8 @@ def problems(root=ROOT):
             raise ValueError(f"{common}: each LevelFile needs scene and layout output paths.")
         level_outputs.extend(outputs.values())
     model_folder = literal(root, common, "SPAWNED_SCENES")
-    exports = level_outputs + [f"{model_folder}/{name}.usdz" for name in spawned]
+    metadata = literal(root, common, "MODEL_METADATA")
+    exports = level_outputs + [f"{model_folder}/{name}.usdz" for name in spawned] + list(metadata.values())
     records = json.loads((root / "blender/level-exports.json").read_text())
     same("Export manifest record names", list(records), level_keys + [f"models/{n}" for n in spawned])
     recorded = [path for record in records.values() for path in record.get("wrote", {})]

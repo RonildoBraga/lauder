@@ -4,7 +4,7 @@
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
-The bridge concept and camera B remain selected. The maintainer chose the robot to **replace the first human shooter**, with Miki alone. After rejecting the first blockout and selecting **C, Heavy walker**, from the bulkier [concept options](../art/robot/bulk-studies/README.md), the maintainer accepted the C Blender form. Walking, turning and visual shooting studies in Blender are now assigned, together with exact mirrored left/right rest geometry and reusable identical leg and connector parts. A remains a possible later different-weapon variant, which is not assigned; B is unselected. The [first-tower behaviour proposal](encounters/bridge-spider-bot.md) remains the separate combat design discussion; runtime AI, weapon rules and encounter integration are not assigned.
+The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaces the first human shooter while Miki is alone. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
 ## Structural preparation
 
@@ -80,13 +80,31 @@ The maintainer selected **C, Heavy walker**, for a Blender proportion study, the
 
 ### Concept C Blender motion and shared parts
 
-The maintainer accepted C's form and assigned Blender animations of walking, turning and shooting before placing the robot on the bridge. This authorises source motion studies and reusable linked components. The new source has 41 mesh Objects sharing 17 unique Mesh datablocks, with 2,428 evaluated triangles and five matte materials. Each leg uses the same six shared component meshes under independent joint pivots; paired gun, roof and antenna parts also share data. Neutral dimensions are about 3.00 × 2.53 × 2.35 m after opening the knees for articulation, still provisional. Walking, mirrored 90° step-turns and a planted brace/recoil/recovery are baked at 120 Hz in a 30-fps source timeline. The [30-second rendered reel](../blender/assets/spider-bot-heavy/motion-preview.mp4) is ready for maintainer review.
+The maintainer accepted C's form and assigned Blender animations of walking, turning and shooting before placing the robot on the bridge. This authorises source motion studies and reusable linked components. The new source has 41 mesh Objects sharing 17 unique Mesh datablocks, with 2,428 evaluated triangles and five matte materials. Each leg uses the same six shared component meshes under independent joint pivots; paired gun, roof and antenna parts also share data. Neutral dimensions are about 3.00 × 2.53 × 2.35 m after opening the knees for articulation, still provisional. Walking, mirrored 90° step-turns and a planted brace/recoil/recovery are baked at 120 Hz in a 30-fps source timeline. The maintainer subsequently accepted the [30-second rendered reel](../blender/assets/spider-bot-heavy/motion-preview.mp4) and assigned runtime integration.
 
 On the animated source, `./scripts/check` passed the contracts, 51 Blender tests, sounds, formatting, app build and hosted Simulator tests. Final independent saved-file inspection sampled 7,204 poses at 240 Hz: stance drift below 0.029 mm, foot tilt below 0.0053°, sole penetration below 0.012 mm and zero joint gaps. Neutral and mirrored-turn geometry/material symmetry, linked-data reuse, topology, contacts, muzzles, palette, intake and privacy checks pass. All 720 rendered movie frames decode. The model README records the timeline and tolerances. No runtime source, bridge export or rejected model changed; no new phone check, rendered Simulator route, release or bridge placement occurred. These source checks do not establish runtime clip compatibility, phone performance or motion approval.
 
-The rest model's left and right assemblies must mirror exactly. Repeated legs and connectors must reuse identical linked mesh parts rather than separately maintained near-copies. Placement and pose may differ as the legs walk or turn; the geometry and matching joints must remain consistent. Review all three motion studies and the component structure before bridge placement or runtime integration.
+The rest model's left and right assemblies must mirror exactly. Repeated legs and connectors must reuse identical linked mesh parts rather than separately maintained near-copies. Placement and pose may differ as the legs walk or turn; the geometry and matching joints must remain consistent. The maintainer reviewed these motion studies and assigned bridge integration; keep that shared component structure in the runtime asset.
 
-**A, Armoured crawler**, is retained for a possible later variant with different gun types; no A modelling or new weapon work is assigned. **B, Low siege bot**, is unselected. Camera B remains unchanged. The current assignment does not approve runtime AI, firing/damage rules, encounter tuning, bridge integration or a release. Blender shooting motion is a visual study, not an implemented weapon system.
+**A, Armoured crawler**, is retained for a possible later variant with different gun types; no A modelling or new weapon work is assigned. **B, Low siege bot**, is unselected. Camera B remains unchanged. That authoring assignment did not implement runtime AI or firing. The subsequent bounded integration is recorded below; A and releases remain outside this task.
+
+### C robot on the bridge
+
+The maintainer assigned the first-shooter replacement after approving C's motion. Integration is implemented: a source-driven runtime robot, bounded east-side movement, honest twin-barrel rays, a finite warning/commit/burst/recovery cycle, and a west-side supply case with a verified bypass route. Internal first-fight beat and marker IDs retain `stranger` for continuity; player-facing content describes the guard and case. Tom's arrival marker moves closer to the case so the existing ambush can remain visible. Geometry blockers, camera B and lighting remain unchanged.
+
+The model's named joint hierarchy and generated measurements are exported from Blender. Gameplay remains fixed-step Swift; presentation follows actual movement, turns, brace and gun state. The standard `./scripts/check` passed on a frozen runtime tree: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build and hosted Swift Testing. Source fingerprints remained unchanged through the rendered runs. Independent code review found no actionable issues.
+
+Rendered Simulator checks passed with zero failures or companion warning frames:
+
+| Route | Steps | Evidence |
+|---|---:|---|
+| `first-fight` | 35/35 | Patrol, tracking, commitment, burst, recovery, defeat and Restart; marks record six emitted shots across two bursts before defeat |
+| `fight-retry` | 15/15 | Three mistakes, checkpoint restore and a successful second attempt |
+| `opening` | 56/56 | Supply case, ambush, Tom and Laura recruitment, both towers, arrival and Restart |
+
+Mean frame time was 16.7 ms in each Simulator run, with p99 between 16.8 and 17.1 ms. These are Simulator measurements, not baseline-phone evidence. The loaded USDZ tests verify grounded feet/joints, 3D barrel/ray agreement including yaw/pitch/recoil, and Pause/reset. Actual-guard motion regressions also verify planted feet stay reachable during combined translation and turning; the small fix uses a 1° stop-turn-advance gate and an earlier step trigger, rather than masking an unreachable foot through clamping. Private captures, summaries, hashes and logs are retained.
+
+No new phone or release evidence is recorded for this task. The frozen application and asset source was tested; later documentation edits do not change that runtime tree.
 
 ### Architecture checks
 
@@ -131,11 +149,9 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
-The C form is accepted and Blender walking, turning and visual shooting studies are assigned. Review those motions and reusable mirrored parts before bridge placement, then review the [first-tower robot proposal](encounters/bridge-spider-bot.md) before assigning runtime combat or encounter implementation. The proposal describes a brace/commit/burst/recovery pattern using existing tower cover, and a supply-case handoff that preserves Tom's introduction and Laura's medical kit. The bypass route, handoff, hit allowance and tuning still require agreement and geometry validation. The existing app and TestFlight build 28 continue to describe the human encounter.
+The C first-tower runtime prototype is implemented and its source/Simulator checks pass. Review whether the short loop is readable and enjoyable; source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
 
-The requested coordinated-squad direction and the trio's [combat identities](story/story-bible.md#combat-identities) remain design context. The bridge keeps formations and orders from [ADR 0003](decisions/0003-squad-movement.md), phases S1–S3. Its removed S4 experiments are not a current assignment. [The Quiet Yard](encounters/the-quiet-yard.md) and the Relay House screenplay remain unimplemented story proposals.
-
-Next, review C's Blender walking, turning and shooting motion, exact rest-pose symmetry and shared leg/connector components. Runtime integration and a bounded playable encounter require their own assignments; the tower loop and its concrete playtest questions still need agreement. The possible A variant remains future reference. A plan, historical assignment or review recommendation does not independently authorise implementation or bringing retired systems back.
+The broader squad combat direction, [The Quiet Yard](encounters/the-quiet-yard.md) and later narrative plans remain reference rather than assignments. The removed S4 experiments stay retired.
 
 ## Outside the first playable
 

@@ -15,7 +15,7 @@ struct Level {
   }
 
   enum ActionID: String, Sendable {
-    /// Searching the stranger's body, on the bridge (M3).
+    /// Opening the bridge supply case; the authored action ID remains stable.
     case searchStranger = "bridge.search-stranger"
     /// Helping Laura with the medical kit, at mid-span (M4).
     case helpLaura = "bridge.help-laura"
@@ -54,6 +54,8 @@ struct Level {
     enum Attack: Equatable, Sendable {
       /// Aims with a visible wind-up, shoots, recovers and aims again.
       case shoot
+      /// The bounded, planted-burst guard used at the first tower.
+      case robot
       /// Runs at the leader at this speed, in metres per second.
       case charge(speed: Float)
     }
@@ -87,6 +89,8 @@ struct Level {
     case engage(String)
     /// The leader finishes searching this hostile's body, and its loot is taken.
     case loot(String)
+    /// A separate, nonblocking supply case; a resolved encounter need not be a kill.
+    case supplies(id: String, loot: Loot)
     /// A member who has not joined yet appears where they wait.
     case appear(PartyMember)
     /// A member who lay hurt where they waited stands up.
@@ -124,6 +128,8 @@ struct Level {
     /// The encounter waits until every companion is close to the leader, so a scene for the
     /// whole party never begins with someone holding elsewhere (ADR 0003, phase S3).
     var gathersParty = false
+    /// A reachable safe exit may resolve a guard encounter without killing it.
+    var safeExit: PartyMotion.Box?
   }
 
   /// A short name, such as "brooklyn-bridge", for the scene and messages.

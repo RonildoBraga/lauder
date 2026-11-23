@@ -88,7 +88,7 @@ final class GameSession {
   private(set) var ammo: Int
   /// Hostiles defeated in this run.
   private(set) var defeated: Set<String> = []
-  /// Bodies searched in this run.
+  /// Bodies or supply containers searched in this run.
   private(set) var searched: Set<String> = []
   /// Medical kits in the party's small shared inventory.
   private(set) var medicalKits = 0
@@ -342,6 +342,17 @@ final class GameSession {
     return true
   }
 
+  /// The bridge case finishes opening during its ambush cue. Neither bypass nor a robot
+  /// defeat yields body loot; this one-time collection works after either resolution.
+  func collectSupplies(id: String, loot: Level.Loot) -> Bool {
+    guard mode == .exploring, beat == .ambush, inEncounter,
+      id == BrooklynBridge.supplyCaseID, searched.insert(id).inserted
+    else { return false }
+    ammo += loot.rounds
+    medicalKits += loot.medicalKits
+    return true
+  }
+
   /// A conversation that a scene starts, rather than an action: true if it began.
   func converse(_ conversation: MissionScript.Conversation) -> Bool {
     guard mode == .exploring else { return false }
@@ -384,7 +395,7 @@ final class GameSession {
 
   /// Whether the action is offered at its approach now.
   func offers(_ action: Level.ActionID) -> Bool {
-    progress.offers(action, defeated: defeated, searched: searched, inEncounter: inEncounter)
+    progress.offers(action, searched: searched, inEncounter: inEncounter)
   }
 
   /// The world checks the approach; this authority checks mode, then asks the bridge rules.
@@ -392,7 +403,7 @@ final class GameSession {
   func perform(_ action: Level.ActionID) -> ActionResult {
     guard mode == .exploring else { return .unavailable }
     switch progress.action(
-      action, defeated: defeated, searched: searched, medicalKits: medicalKits,
+      action, searched: searched, medicalKits: medicalKits,
       inEncounter: inEncounter)
     {
     case .refused(let result):

@@ -11,6 +11,7 @@ final class EncounterStage {
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
   private var hostileWeaponProps: [String: Entity] = [:]
+  private var robots: [String: RobotPresentation] = [:]
   private let targetMarker: Entity
 
   init(level: Level, style: SceneStyle) {
@@ -30,7 +31,8 @@ final class EncounterStage {
     for spec in level.encounters.flatMap(\.hostiles) {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
-      let visual = style.hostile()
+      let visual = spec.attack == .robot ? style.robot() : style.hostile()
+      if spec.attack == .robot { robots[spec.id] = RobotPresentation(visual: visual) }
       if spec.attack == .shoot {
         let weapon = style.weapon(for: .rifle)
         weapon.name = "hostile.\(spec.id).rifle"
@@ -46,7 +48,12 @@ final class EncounterStage {
 
   func reset(_ fight: EncounterSimulation) {
     effects.clear()
-    show(fight)
+    for (id, presentation) in robots {
+      if let state = fight.hostiles[id], let robot = state.robot {
+        presentation.reset(position: state.position, facing: robot.facing)
+      }
+    }
+    show(fight, dt: 0)
   }
 
   func update(_ fight: EncounterSimulation, dt: Float) {
@@ -60,16 +67,21 @@ final class EncounterStage {
           shot.path, side: side, height: EncounterSimulation.aimHeight, muzzle: shot.muzzle)
       }
     }
-    show(fight)
+    show(fight, dt: dt)
   }
 
-  private func show(_ fight: EncounterSimulation) {
+  private func show(_ fight: EncounterSimulation, dt: Float) {
     for (id, state) in fight.hostiles {
       if let body = bodies[id] {
         body.isEnabled = state.isVisible
         body.position = [state.position.x, PartyBody.height / 2, state.position.y]
       }
-      if let visual = visuals[id], let pose = fight.hostilePoses[id] {
+      if let presentation = robots[id], let robot = state.robot {
+        presentation.update(
+          position: state.position, facing: robot.facing, brace: robot.brace,
+          gunDirections: robot.gunDirections, gunRecoil: robot.gunRecoil,
+          down: state.isDown, dt: dt)
+      } else if let visual = visuals[id], let pose = fight.hostilePoses[id] {
         visual.orientation = pose.orientation
         visual.position = pose.position
       }

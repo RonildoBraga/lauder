@@ -167,11 +167,12 @@ struct BridgeTests {
     let level = BrooklynBridge.level
     #expect(
       layout.areas.map(\.name)
-        == level.triggers.map(\.id) + ["stranger", "search.stranger", "laura.found", "help.laura"])
+        == level.triggers.map(\.id)
+        + ["stranger", "search.stranger", "laura.found", "help.laura", "robot.exit"])
     #expect(
       layout.markers.map(\.name) == [
         "spawn.miki", "spawn.tom", "spawn.laura", "stranger.hidden", "stranger.stand",
-        "stranger.retry", "attacker.hidden", "attacker.stand",
+        "stranger.retry", "attacker.hidden", "attacker.stand", "supply.case",
       ])
   }
 
@@ -212,7 +213,7 @@ struct BridgeTests {
       "tower-shadow-manhattan", "snow plain", "route poles", "route flags",
       "cable-fan-brooklyn-west", "cable-fan-brooklyn-east",
       "cable-fan-manhattan-west", "cable-fan-manhattan-east",
-      "snow-drifts-west", "snow-drifts-east",
+      "snow-drifts-west", "snow-drifts-east", "bridge-supply-case",
     ]
     for name in decoration {
       #expect(part(name)?.components.has(ModelComponent.self) == true, "\(name) is shown")
@@ -225,6 +226,32 @@ struct BridgeTests {
     #expect(Set(shown(scene)) == Set(looks.map(Self.sceneName)))
     let camera = try #require(world.root.findEntity(named: "camera") as? PerspectiveCamera)
     #expect(camera.camera.fieldOfViewInDegrees == layout.camera.fieldOfView)
+  }
+
+  @Test
+  func theSupplyCaseIsVisibleNonblockingAndOutsideTheWholeGuardEnvelope() throws {
+    let level = BrooklynBridge.level
+    let world = GameWorld(level: level)
+    let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
+    let box = try #require(scene.findEntity(named: Self.sceneName("bridge-supply-case")))
+    let bounds = box.visualBounds(relativeTo: nil)
+    let point = BrooklynBridge.supplyCasePosition
+    #expect(simd_distance([bounds.center.x, bounds.center.z], point) < 0.1)
+    #expect(abs(bounds.min.y) < 0.01 && bounds.max.y < PartyBody.height)
+    #expect(BrooklynBridge.searchStranger.approach.contains(point))
+    #expect(!level.boxes.contains { $0.name.contains("supply") })
+    let movement = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
+    #expect(movement.canTraverse(from: point - [1, 0], to: point + [1, 0]))
+    let exit = try #require(BrooklynBridge.strangerEncounter.safeExit)
+    #expect(exit.contains(point))
+    let guardArea = RobotGuard(home: BrooklynBridge.stranger.standAt).guardArea
+    for x in [exit.minimum.x, exit.maximum.x] {
+      for y in [exit.minimum.y, exit.maximum.y] {
+        let corner = SIMD2(x, y)
+        let closest = simd_min(simd_max(corner, guardArea.minimum), guardArea.maximum)
+        #expect(simd_distance(corner, closest) > RobotGuard.detectionRange)
+      }
+    }
   }
 
   /// From the bridge's high camera a tower hides the party for some 40 m beyond it, so the whole
