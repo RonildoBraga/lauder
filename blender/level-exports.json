@@ -39,12 +39,12 @@
   "models/spider-bot-heavy": {
     "format": 1,
     "made from": {
-      "blender/assets/spider-bot-heavy/spider-bot-heavy.blend": "237575668dfa6996c8f5abc4aead4605506eb3f9b3110cdee5bbe46a8282dabd",
+      "blender/assets/spider-bot-heavy/spider-bot-heavy.blend": "d95d1f08ad7ed0eab888f721817b63fa61df279c3fece6df92eede248eb1da42",
       "blender/extensions/lauder_levels/robot_geometry.py": "cf7edaee16d17c81d794ce6d4fc620c038f8e31b4fea03076316c38daaeabec6"
     },
     "wrote": {
       "apple/sources/content/RobotModelGeometry.swift": "4659001c0dda88c2322ee541115cb69a576c131b6655d8eab8332b0e2362a4d2",
-      "apple/sources/content/models/spider-bot-heavy.usdz": "f885f6f478e8707333354244a4eb66d7e94e553d86f4a04b483b8a06134b4560"
+      "apple/sources/content/models/spider-bot-heavy.usdz": "659059b7b9385e5d7c8446aea3c76e44ac347893aa4b6554aade0c36a0f19c5a"
     }
   },
   "models/tom": {

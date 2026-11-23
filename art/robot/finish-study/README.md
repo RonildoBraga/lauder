@@ -1,6 +1,6 @@
 # C finish study
 
-**Status:** Concept proposal for visual review, generated on 23 November 2026. The maintainer authorised a comparison before the next Blender pass; the generated result is not yet approved. This study changes no Blender geometry, runtime assets, combat rules or TestFlight build.
+**Status:** Generated on 23 November 2026, then selected as direction for an assigned Blender finish pass. The sensor socket and stepped armour are now modelled separately; the actual mesh awaits visual review, with its own completed source/Simulator verification recorded separately. This PNG remains an approximate concept reference, not a model export, runtime result or TestFlight build.
 
 | Actual Blender model | AI finish proposal |
 |---|---|
@@ -16,7 +16,7 @@ The actual render was the edit target at source commit `2df4b45be850b3a1aaff8a10
 
 The first generated candidate made the red lens too small and added thin leg strips. A correction enlarged the red area and restored broad plain leg surfaces. Only the corrected candidate is retained; both [exact prompts and input roles](prompts.md) are recorded.
 
-Review the sensor housing and armour construction as visual targets before modelling them. AI imagery is approximate: this image does not verify dimensions, symmetry, mesh topology, material values, camera-B readability or phone performance. The current [Blender model and its validation](../../../blender/assets/spider-bot-heavy/README.md) remain separate from this proposal.
+The maintainer authorised modelling the sensor housing and armour construction using this study as a visual guide. Review the current [Blender model and its validation](../../../blender/assets/spider-bot-heavy/README.md) separately. AI imagery does not verify dimensions, symmetry, mesh topology, material values, camera-B readability or phone performance, and approval to model the direction does not approve every generated detail or the resulting mesh.
 
 ## Provenance and storage
 
