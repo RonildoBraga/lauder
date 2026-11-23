@@ -4,7 +4,7 @@ import simd
 
 @testable import Lauder
 
-/// ADR 0004, milestone M2: the stranger on the bridge. The session's rules, the Fire input and
+/// The first-tower C guard on the bridge. The session's rules, the Fire input and
 /// the whole fight in the world, without rendering.
 @MainActor
 struct FirstFightTests {
@@ -73,65 +73,111 @@ struct FirstFightTests {
     #expect(InputRules.Raw(keyboardFire: true).hasKeyboardInput)
   }
 
-  // MARK: - The fight in the world
+  // MARK: - The robot in the world
 
   @Test
-  func theStrangerWaitsUnseenUntilMikiComesNear() throws {
+  func theGuardWaitsUnseenUntilMikiReachesTheFirstTower() throws {
     let world = GameWorld(level: BrooklynBridge.level)
-    let body = try #require(world.root.findEntity(named: "hostile.stranger"))
-    #expect(!body.isEnabled)
+    let robot = try #require(world.root.findEntity(named: "hostile.stranger"))
+    #expect(!robot.isEnabled)
     walk(world, to: [6.5, 18])
-    #expect(world.session.beat == .alone && !body.isEnabled && !world.showsAmmo)
+    #expect(world.session.beat == .alone && !robot.isEnabled)
     walk(world, to: [6.5, 15])
     #expect(world.session.beat == .stranger && world.showsWeapon)
-    #expect(run(world, upTo: 1) { world.observation == "Miki: “Friendly!”" })
-    #expect(body.isEnabled)
+    #expect(run(world, upTo: 1) { robot.isEnabled })
+    #expect(BrooklynBridge.stranger.attack == .robot && BrooklynBridge.stranger.loot == nil)
   }
 
   @Test
-  func mikiHoldsFireAtHimUntilHeOpensFire() throws {
+  func theGuardCanBeDisabledWithoutAnAuthoredHumanWarningShot() {
     let world = GameWorld(level: BrooklynBridge.level)
-    let marker = try #require(world.root.findEntity(named: "combat.target"))
-    walk(world, to: [6.5, 15])
-    // Until he fires, nobody knows he is hostile: aimed at him, Miki draws but holds her fire,
-    // and he is not marked (ADR 0007).
-    let atHim = stick(world, towards: BrooklynBridge.stranger.standAt - position(world, .miki))
-    #expect(run(world, upTo: 4, fire: true, aim: atHim) { world.threat != nil })
-    #expect(world.weaponDrawn && !marker.isEnabled)
+    walk(world, to: [6.5, 10])
+    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(run(world, upTo: 1) { !world.session.inEncounter })
+    #expect(world.session.ammo <= 6 && world.session.ammo >= 0)
+    #expect(world.session.hitsTaken == 0 && world.threat == nil)
+    #expect(world.observation == "The guard robot is down.")
+    let rounds = world.session.ammo
+    run(world, upTo: 1, fire: true)
+    #expect(world.session.ammo == rounds)
+  }
+
+  @Test
+  func thePierCoversTheWestArchWhileTheGuardPatrols() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    walk(world, to: [-6.5, 30])
+    walk(world, to: [-4, 10])
+    #expect(world.session.beat == .stranger && world.session.inEncounter)
+    run(world, upTo: 8)
+    #expect(world.session.hitsTaken == 0 && world.session.inEncounter)
     #expect(world.session.ammo == 12)
   }
 
   @Test
-  func afterHisDeliberateMissTwoShotsPutHimDown() throws {
+  func theWestExitSupportsAZeroAmmunitionBypassAndTheSameSupplies() {
     let world = GameWorld(level: BrooklynBridge.level)
-    let marker = try #require(world.root.findEntity(named: "combat.target"))
-    walk(world, to: [6.5, 15])
-    #expect(run(world, upTo: 4) { world.threat != nil })
-    #expect(world.threat == "The stranger is aiming.")
-    // His first shot goes wide on purpose, and the HUD says how to answer it.
-    #expect(run(world, upTo: 2) { world.threat == nil })
+    for _ in 0..<12 { #expect(world.session.spendRound()) }
+    walk(world, to: [-6.5, 30])
+    walk(world, to: [-6.5, -3])
+    #expect(world.session.beat == .stranger && world.session.inEncounter)
+    #expect(world.session.ammo == 0 && !world.isRetrying)
+    walk(world, to: BrooklynBridge.supplyCasePosition)
+    #expect(!world.session.inEncounter && world.session.beat == .stranger)
+    #expect(!world.session.defeated.contains("stranger"))
+    #expect(world.actionName == BrooklynBridge.searchStranger.name)
+    world.performAction()
+    #expect(world.session.beat == .ambush)
+    #expect(run(world, upTo: 2) { world.session.medicalKits == 1 })
+    #expect(world.session.ammo == 6 && world.session.searched == [BrooklynBridge.supplyCaseID])
+    #expect(run(world, upTo: 5) { world.session.mode == .dialogue })
     #expect(world.session.hitsTaken == 0)
-    #expect(world.observation == BrooklynBridge.stranger.missLine)
-    // Now he is a target: Fire draws and marks him, then two shots put him down.
-    run(world, upTo: 0.2, fire: true)
-    #expect(world.weaponDrawn && marker.isEnabled && world.session.ammo == 12)
-    #expect(run(world, upTo: 2, fire: true) { !world.session.defeated.isEmpty })
-    #expect(world.session.defeated == ["stranger"] && world.session.ammo == 10)
-    #expect(world.observation == "The stranger is down.")
-    #expect(!world.session.inEncounter && world.session.hitsTaken == 0 && world.threat == nil)
-    // Down, he stays down: no target, and no more rounds spent.
-    run(world, upTo: 1, fire: true)
-    #expect(world.session.ammo == 10 && !marker.isEnabled)
-    #expect(try #require(world.root.findEntity(named: "hostile.stranger")).isEnabled)
+    #expect(world.session.defeated == ["attacker"])
+    finishConversation(world)
+    #expect(world.session.beat == .withTom && world.session.party == [.miki, .tom])
   }
 
-  /// The bridge camera shows only about 19 m ahead of Miki, so during the fight it leans
-  /// towards the stranger, and back once he is down.
   @Test
-  func theCameraLeansTowardsHimWhileHeStands() throws {
+  func pauseFreezesTheGuardAndItsPendingAttack() throws {
+    let world = GameWorld(level: BrooklynBridge.level)
+    walk(world, to: [6.5, 10])
+    #expect(run(world, upTo: 5) { world.threat != nil })
+    let body = try #require(world.root.findEntity(named: "hostile.stranger"))
+    let at = body.position
+    let rotation = body.orientation.vector
+    let threat = world.threat
+    let hits = world.session.hitsTaken
+    pressPause(world)
+    for _ in 0..<180 { world.update(with: .neutral, sampledIn: .paused, deltaTime: 1 / 60) }
+    #expect(body.position == at && body.orientation.vector == rotation)
+    #expect(world.threat == threat && world.session.hitsTaken == hits)
+    pressPause(world)
+    #expect(!world.isPaused)
+    #expect(run(world, upTo: 5) { world.session.hitsTaken != hits })
+  }
+
+  @Test
+  func threeBurstMistakesRetryFromTheExistingCheckpoint() throws {
+    let world = GameWorld(level: BrooklynBridge.level)
+    let entities = count(world.root)
+    walk(world, to: [6.5, 10])
+    #expect(run(world, upTo: 24) { world.isRetrying })
+    #expect(world.session.hitsTaken == GameSession.hitsAllowed)
+    #expect(run(world, upTo: 2) { !world.isRetrying })
+    #expect(world.session.beat == .alone && world.session.hitsTaken == 0)
+    #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
+    #expect(!world.session.inEncounter)
+    let retryAt = try #require(BrooklynBridge.strangerEncounter.retryAt)
+    #expect(simd_distance(position(world, .miki), retryAt) < 0.01)
+    #expect(world.root.findEntity(named: "hostile.stranger")?.isEnabled == false)
+    #expect(count(world.root) == entities)
+    walk(world, to: [6.5, 10])
+    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+  }
+
+  @Test
+  func theCameraFollowsTheGuardThenSettlesAfterResolution() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let camera = try #require(world.root.findEntity(named: "camera"))
-    // How far the camera has moved from where it sits behind Miki.
     let offset = BrooklynBridge.cameraOffset
     let lean = {
       simd_length(
@@ -140,123 +186,39 @@ struct FirstFightTests {
     }
     walk(world, to: [6.5, 18])
     #expect(abs(lean()) < 0.01)
-    walk(world, to: [6.5, 15])
-    #expect(run(world, upTo: 2) { lean() > EncounterSimulation.cameraLeanLimit - 0.1 })
+    walk(world, to: [6.5, 10])
+    let robot = try #require(world.root.findEntity(named: "hostile.stranger"))
+    #expect(
+      run(world, upTo: 2) {
+        let from = position(world, .miki)
+        let towards = SIMD2(robot.position.x, robot.position.z) - from
+        let expected = min(
+          EncounterSimulation.cameraLeanLimit,
+          simd_length(towards) * EncounterSimulation.cameraLeanShare)
+        let actual =
+          SIMD2(camera.position.x, camera.position.z) - from
+          - SIMD2(offset.x, offset.z)
+        return abs(simd_length(actual) - expected) < 0.08 && simd_length(actual) > 1
+          && simd_dot(simd_normalize(actual), simd_normalize(towards)) > 0.99
+      })
     #expect(lean() < EncounterSimulation.cameraLeanLimit + 0.01)
-    // Once he is down, it settles back behind her.
-    #expect(run(world, upTo: 4) { world.threat != nil })
-    #expect(run(world, upTo: 2) { world.threat == nil })
-    #expect(run(world, upTo: 2, fire: true) { !world.session.defeated.isEmpty })
+    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
     #expect(run(world, upTo: 3) { abs(lean()) < 0.05 })
   }
 
-  /// Through the west arch, the tower's pier stands between Miki and him.
   @Test
-  func coverBehindThePierBlocksHisShots() {
-    let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [-6.5, 30])
-    walk(world, to: [-4, 10])
-    #expect(world.session.beat == .stranger)
-    // He aims and fires three times: the deliberate miss, then twice into the pier.
-    for _ in 0..<3 {
-      #expect(run(world, upTo: 4) { world.threat != nil })
-      #expect(run(world, upTo: 2) { world.threat == nil })
-    }
-    #expect(world.session.hitsTaken == 0 && world.session.inEncounter)
-  }
-
-  @Test
-  func outsideAcquisitionHeWaitsInsteadOfFiringAcrossTheMap() {
-    let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [6.5, 15])
-    walk(world, to: [6.5, 30])
-    let stranger = BrooklynBridge.stranger
-    #expect(simd_distance(position(world, .miki), stranger.standAt) > stranger.range)
-    // Physical shots now cross the level. He must not start one without acquiring Miki.
-    #expect(!run(world, upTo: 8) { world.threat != nil })
-    #expect(world.session.hitsTaken == 0 && world.session.inEncounter)
-    walk(world, to: [6.5, 15])
-    #expect(run(world, upTo: 4) { world.threat != nil })
-    #expect(run(world, upTo: 2) { world.threat == nil })
-    #expect(world.session.hitsTaken == 0)
-  }
-
-  @Test
-  func pauseHoldsTheFight() {
-    let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [6.5, 15])
-    #expect(run(world, upTo: 4) { world.threat != nil })
-    pressPause(world)
-    #expect(world.isPaused)
-    for _ in 0..<(60 * 5) { world.update(with: .neutral, sampledIn: .paused, deltaTime: 1 / 60) }
-    #expect(world.threat == "The stranger is aiming." && world.session.hitsTaken == 0)
-    pressPause(world)
-    #expect(!world.isPaused)
-    // After Resume he finishes the same wind-up: still the deliberate miss.
-    #expect(run(world, upTo: 2) { world.threat == nil })
-    #expect(world.session.hitsTaken == 0)
-  }
-
-  @Test
-  func theThirdHitStartsTheFightAgainWithNothingLost() throws {
-    let world = GameWorld(level: BrooklynBridge.level)
-    let entities = count(world.root)
-    walk(world, to: [6.5, 15])
-    let fired = world.session.firedTriggers
-    #expect(run(world, upTo: 8) { world.session.hitsTaken == 1 })
-    #expect(run(world, upTo: 8) { world.isRetrying })
-    #expect(world.session.hitsTaken == GameSession.hitsAllowed)
-    // The screen fades out; Pause holds the fade where it is.
-    #expect(run(world, upTo: 1) { world.fade > 0.5 })
-    let fade = world.fade
-    pressPause(world)
-    for _ in 0..<60 { world.update(with: .neutral, sampledIn: .paused, deltaTime: 1 / 60) }
-    #expect(world.fade == fade && world.isRetrying)
-    pressPause(world)
-    #expect(run(world, upTo: 1.5) { !world.isRetrying })
-    #expect(world.fade == 0 && world.observation == "Try again.")
-    #expect(world.session.beat == .alone && world.session.hitsTaken == 0)
-    #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
-    #expect(!world.session.inEncounter && world.session.firedTriggers == fired)
-    let retryAt = try #require(BrooklynBridge.strangerEncounter.retryAt)
-    #expect(simd_distance(position(world, .miki), retryAt) < 0.01)
-    #expect(try #require(world.root.findEntity(named: "hostile.stranger")).isEnabled == false)
-    #expect(count(world.root) == entities)
-    // Walking back in plays the fight again from its start, deliberate miss and all.
-    walk(world, to: [6.5, 15])
-    #expect(world.session.beat == .stranger)
-    #expect(run(world, upTo: 4) { world.threat != nil })
-    #expect(run(world, upTo: 2) { world.threat == nil })
-    #expect(world.session.hitsTaken == 0)
-    #expect(run(world, upTo: 2, fire: true) { world.session.defeated == ["stranger"] })
-  }
-
-  @Test
-  func restartPutsTheFightBackWhereverItHadGot() throws {
+  func restartClearsTheGuardAndPreservesLoadedEntities() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let entities = count(world.root)
     let body = try #require(world.root.findEntity(named: "hostile.stranger"))
-    let camera = try #require(world.root.findEntity(named: "camera"))
-    for retrying in [false, false, true] {
-      walk(world, to: [6.5, 15])
-      #expect(run(world, upTo: 4) { world.threat != nil })
-      #expect(run(world, upTo: 2) { world.threat == nil })
-      #expect(run(world, upTo: 1, fire: true) { world.session.ammo == 11 })
-      #expect(run(world, upTo: 4) { world.session.hitsTaken == 1 })
-      if retrying { #expect(run(world, upTo: 8) { world.isRetrying }) }
-      world.restart()
-      #expect(world.session.beat == .alone && !world.session.inEncounter)
-      #expect(world.session.ammo == 12 && world.session.hitsTaken == 0)
-      #expect(world.session.defeated.isEmpty && world.session.firedTriggers.isEmpty)
-      #expect(!world.weaponDrawn && !world.showsAmmo && world.threat == nil)
-      #expect(!world.isRetrying && world.fade == 0)
-      #expect(world.observation == BrooklynBridge.level.opening)
-      #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
-      // The camera no longer leans towards the fight.
-      let behind = camera.position.z - position(world, .miki).y
-      #expect(abs(behind - BrooklynBridge.cameraOffset.z) < 0.001)
-      #expect(!body.isEnabled)
-      #expect(count(world.root) == entities)
-    }
+    walk(world, to: [6.5, 10])
+    run(world, upTo: 3)
+    world.restart()
+    #expect(world.session.beat == .alone && !world.session.inEncounter)
+    #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
+    #expect(world.session.searched.isEmpty && world.session.hitsTaken == 0)
+    #expect(!world.weaponDrawn && world.threat == nil && !body.isEnabled)
+    #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
+    #expect(count(world.root) == entities)
   }
 }

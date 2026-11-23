@@ -1,7 +1,9 @@
 # Lauder — story bible, draft 0.7
 
-**Date:** 20 November 2026\
+**Date:** 23 November 2026\
 **Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
+
+**First-encounter revision, 23 November 2026:** The maintainer accepted C's dark armed form and motion, then assigned its integration in place of the first human shooter. The opening below now uses the [first-tower guard and separate supply case](../encounters/bridge-spider-bot.md), retaining Tom's intervention and Laura's medical kit. The cause of the machine's continued patrol remains unexplained. Current implementation verification and tuning belong in the [prototype plan](../prototype-plan.md), not in this narrative outline.
 
 ## Agreed direction
 
@@ -31,7 +33,7 @@ The [Chapter One outline](#chapter-one--across-the-bridge) below records the rem
 
 Miki sets out alone across the Brooklyn Bridge, towards Manhattan, through a post-apocalyptic New York. Why she is crossing, like Tom's and Laura's pasts, is revealed gradually rather than at the start.
 
-On the bridge she meets strangers. One ignores her call of "Friendly!" and opens fire. While she searches his body, another comes at her with a knife and is shot by Tom, who walks on with her. Further on they find Laura injured and help her, and she joins them. The opening shows what each of them does when a stranger needs help, not who they were before.
+On the bridge a machine guards the first tower. Miki can fight it or use the other arch to get clear. While she opens a supply case beyond the guard, a knife attacker approaches and is shot by Tom, who walks on with her. Further on they find Laura injured and help her, and she joins them. The opening shows what each of them does when a stranger needs help, not who they were before.
 
 They begin with circumstances, not a shared history. Trust grows from what they do for one another. Their biographies, motives and relationships unfold through the journey; the opening does not explain them.
 
@@ -217,6 +219,8 @@ The repaired set serves others as well as the party. It establishes contact and 
 
 ## Chapter One — Across the bridge
 
+The first-tower and supply-case beats reflect the assigned C robot replacement. Its prototype behaviour and verification are recorded in the [encounter document](../encounters/bridge-spider-bot.md) and [prototype plan](../prototype-plan.md); narrative intent does not by itself establish a successful runtime check.
+
 **Immediate goal:** Cross the Brooklyn Bridge into Manhattan.\
 **Emotional movement:** Strangers brought together by circumstance begin to rely on one another.\
 **Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
@@ -230,13 +234,13 @@ Keep the opening's lines short. They should reveal nothing about anyone's past b
 
 Miki starts at the Brooklyn end. Snow has buried the bridge's road, everything left on it and the frozen East River alike, and only the towers stand above the white plain. She is alone, so the player learns to move and look around.
 
-### 2. Friendly?
+### 2. The guard at the first tower
 
-A stranger waits behind the first tower. Not knowing whether he is hostile, Miki calls out, "Friendly!" He uses her hesitation and fires. The player draws and returns fire: this is the first fight. Afterwards Miki can approach the body.
+A dark, four-legged machine still patrols the first tower. Miki notices its continued vigilance, but the scene gives no account of its maker or orders. The player can draw and return fire, using the tower's stone while the machine braces, commits its aim and fires a burst. The other arch offers a route beyond its guard area instead. Either choice brings Miki to a small supply case on the outgoing side.
 
-### 3. The search, and Tom
+### 3. The supply case, and Tom
 
-Miki searches the body for ammunition and supplies. While she is distracted, another attacker comes at her from behind with a knife and is shot before he can strike. She turns and finds Tom. A brief exchange introduces him, and he walks on with her.
+Miki opens the case for ammunition and a medical kit. While she is distracted, a human attacker approaches from the tower with a knife and is shot before he can strike. She turns and finds Tom. A brief exchange introduces him, and he walks on with her. The case remains available after either defeating or bypassing the guard, so taking the quiet route does not withhold the supplies needed later.
 
 ### 4. Laura
 

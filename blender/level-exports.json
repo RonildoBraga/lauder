@@ -2,11 +2,11 @@
   "brooklyn-bridge": {
     "format": 1,
     "made from": {
-      "blender/levels/brooklyn-bridge.blend": "58c6154ae1aa517c3d44009333b0a2fcee2938e34ef23430a8fa0b0d9bdfa661"
+      "blender/levels/brooklyn-bridge.blend": "086f07e80bd9c2d78453c2d07d17f50439e634cf25fa64bdf893031538d878b1"
     },
     "wrote": {
-      "apple/sources/content/BrooklynBridge.usdz": "dc75a4b1e34d20d67c9fec36e8597e350260c0ef0027f01d0a002b37e43ec437",
-      "apple/sources/content/BrooklynBridgeLayout.swift": "970188ce44e9afa01def5d2058e06ef282c3e88daa45bfc4cf21d3807c3936b0"
+      "apple/sources/content/BrooklynBridge.usdz": "9768044696400ebc3a4e5304356561ba7b3420809df01a47839f6cab3a614701",
+      "apple/sources/content/BrooklynBridgeLayout.swift": "262259dd457da7f15199f55b02bfc4a6d8cb721cf0ace316a5143d068f8b1636"
     }
   },
   "models/hostile": {
@@ -34,6 +34,17 @@
     },
     "wrote": {
       "apple/sources/content/models/miki.usdz": "a74a575534fab68e6477cec380cbe07809d442c77af685d5b8816837c9eef039"
+    }
+  },
+  "models/spider-bot-heavy": {
+    "format": 1,
+    "made from": {
+      "blender/assets/spider-bot-heavy/spider-bot-heavy.blend": "a3e0fa94dcac0308ab89f7f0a059dff0a8cf46a3b8b98331a2a4d965e494dfbc",
+      "blender/extensions/lauder_levels/robot_geometry.py": "cf7edaee16d17c81d794ce6d4fc620c038f8e31b4fea03076316c38daaeabec6"
+    },
+    "wrote": {
+      "apple/sources/content/RobotModelGeometry.swift": "b3fbe35a20a8eb8d90997805470315c1b46b678ac48cb37fa15db274f8211b06",
+      "apple/sources/content/models/spider-bot-heavy.usdz": "4c293ffcd3d4daa32b9487af43f5454121a648b22a41925c6cda41eb4bef285e"
     }
   },
   "models/tom": {

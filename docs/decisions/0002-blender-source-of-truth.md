@@ -51,6 +51,12 @@ The Lauder extension in `blender/extensions/lauder_levels` holds the checks, the
 
 Spot angles are full cone widths in Blender and in RealityKit alike. Blender's USD export writes a scene file's prims in a different order each time, so a scene file's bytes change whenever it is exported, even when nothing in it changed.
 
+## First-tower robot integration
+
+The maintainer accepted the C form and motion studies, then assigned its movement and shooting on the bridge. Its model export preserves named joint Xforms rather than merging parent transforms, and writes generated `RobotModelGeometry.swift` alongside the static USDZ. This data comes from the same Blender source and is included in the export fingerprint ledger: link lengths, feet/hips, gun mounts/muzzles and conservative body/navigation sizes have one authored origin.
+
+Swift's fixed-step combat chooses positions, turns, attack phases and actual rays. The entity presenter poses the loaded rigid parts from that state, keeping stance feet planted as actual movement permits. It does not play the source timeline's editorial resets or move gameplay through an animation clip. Animation export remains disabled, and the other figure exports retain their existing behaviour. A later clip pipeline needs its own demonstrated need and validation.
+
 ## Consequences
 
 - Blender files are binary, so two people cannot merge their edits to the same level. Git LFS locking waits until a second person edits levels.

@@ -224,22 +224,22 @@ struct LauraTests {
     session.defeat("stranger")
     session.endEncounter()
     #expect(session.perform(.searchStranger) == .done)
-    #expect(session.search("stranger", loot: BrooklynBridge.stranger.loot ?? Level.Loot()))
+    #expect(session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
     session.endEncounter()
     #expect(session.converse(.metTom))
     for _ in MissionScript.lines(.metTom) { session.advanceDialogue() }
     #expect(session.beat == .withTom)
   }
 
-  /// The same in play, from the start of a run: the stranger's fight, the search, the ambush
+  /// The same in play, from the start of a run: the guard's fight, the case, the ambush
   /// and the exchange.
   private func joinTom(_ world: GameWorld) {
     walk(world, to: [6.5, 15])
-    #expect(run(world, upTo: 4) { world.threat != nil })
-    #expect(run(world, upTo: 2) { world.threat == nil })
-    #expect(run(world, upTo: 2, fire: true) { world.session.defeated.contains("stranger") })
+    walk(world, to: [6.5, 10])
+    #expect(run(world, upTo: 5, fire: true) { world.session.defeated.contains("stranger") })
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
-    walk(world, to: [4.4, 4.6])
+    walk(world, to: [6.5, -4])
+    walk(world, to: BrooklynBridge.supplyCasePosition)
     world.performAction()
     #expect(run(world, upTo: 6) { world.session.mode == .dialogue })
     finishConversation(world)

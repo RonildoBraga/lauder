@@ -85,7 +85,9 @@ struct WeaponFeelTests {
 
   @Test
   func aHitDuringAWindUpDelaysTheShotUpToALimit() throws {
-    let spec = BrooklynBridge.stranger
+    let spec = Level.Hostile(
+      id: "rifle-fixture", name: "Rifle", hiddenAt: .zero, standAt: .zero, hits: 2,
+      windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true)
     var state = HostileState(spec: spec)
     state.reveal()
     _ = state.step(dt: HostileState.stepOutTime, canHit: true, toward: .zero)

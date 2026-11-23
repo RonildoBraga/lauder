@@ -1,8 +1,10 @@
 /// The bridge opening's ordered story markers (ADR 0004), shared by authored content and
 /// progression rules without depending on a live game session.
 enum StoryBeat: Int, Comparable, Sendable {
-  case alone, stranger
-  /// Searching the stranger's body begins the ambush (M3).
+  case alone
+  /// The first-tower guard; the authored identifier stays stable across the robot replacement.
+  case stranger
+  /// Opening the supply case begins the ambush (M3).
   case ambush
   /// After the exchange that follows Tom's shot, Tom travels with Miki.
   case withTom

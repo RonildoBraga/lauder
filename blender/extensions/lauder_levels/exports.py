@@ -8,11 +8,12 @@ from pathlib import Path
 
 from .common import (
     bpy, _collection, EXPORT_FORMAT, EXPORT_RECORD, file_fingerprint, LayoutError, LEVELS,
-    model_file, PREVIEW, SPAWNED, SPAWNED_SCENES, VISUAL,
+    model_file, MODEL_METADATA, PREVIEW, SPAWNED, SPAWNED_SCENES, VISUAL,
 )
 from .layouts import emit_layout, layout_from_blender
 from .looks import visual_problems, what_collection_shows
 from .models import check_model
+from .robot_geometry import emit_robot_geometry, ROBOT
 
 
 def _records(repository):
@@ -70,8 +71,9 @@ def _model_key(name):
 def stale_model_export(repository, name):
     """Why the scene file of a model that the game creates (SPAWNED) no longer matches its files,
     or None when it does."""
+    outputs = (spawned_scene(name),) + ((MODEL_METADATA[name],) if name in MODEL_METADATA else ())
     return _stale(repository, _model_key(name), f"the {name} model", model_file(name),
-                  (spawned_scene(name),), "the model")
+                  outputs, "the model")
 
 
 def record_exports(repository, key, made_from, wrote):
@@ -269,6 +271,15 @@ def export_model(repository, name, made_from=None):
     if problems:
         raise LayoutError(" ".join(problems))
     made_from = _fingerprints(root, model_file(name), made_from, "the model's file")
+    if name == ROBOT:
+        generator = "blender/extensions/lauder_levels/robot_geometry.py"
+        made_from[generator] = file_fingerprint(root / generator)
+    metadata = emit_robot_geometry() if name == ROBOT else None
+    options = dict(SCENE_EXPORT)
+    if name == ROBOT:
+        # Local joint transforms and leaf muzzle names are part of this model's contract.
+        bpy.context.scene.frame_set(1)
+        options["merge_parent_xform"] = False
     # Only the model's collection is exported, as the level export exports only Visual. Parts
     # hidden from renders stay out, as the intake check says.
     model = next(each for each in bpy.data.collections
@@ -278,8 +289,12 @@ def export_model(repository, name, made_from=None):
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as folder:
         exported = Path(folder) / target.name
-        bpy.ops.wm.usd_export(filepath=str(exported), **SCENE_EXPORT)
+        bpy.ops.wm.usd_export(filepath=str(exported), **options)
         shutil.copyfile(exported, target)
-    record_exports(repository, _model_key(name), made_from,
-                   {spawned_scene(name): file_fingerprint(target)})
+    wrote = {spawned_scene(name): file_fingerprint(target)}
+    if metadata is not None:
+        path = root / MODEL_METADATA[name]
+        path.write_text(metadata)
+        wrote[MODEL_METADATA[name]] = file_fingerprint(path)
+    record_exports(repository, _model_key(name), made_from, wrote)
     return target

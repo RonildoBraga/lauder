@@ -32,6 +32,7 @@ struct HostileState {
     }
   }
   private(set) var position: SIMD2<Float>
+  private(set) var robot: RobotGuard?
   private var hasFired = false
   private var engaged = false
   private var flinched: Float = 0
@@ -39,37 +40,70 @@ struct HostileState {
   init(spec: Level.Hostile) {
     self.spec = spec
     position = spec.hiddenAt
+    if spec.attack == .robot {
+      robot = RobotGuard(home: spec.standAt)
+      position = spec.standAt
+    }
   }
 
   var isVisible: Bool { phase != .hidden }
   var isDown: Bool { phase == .down }
   /// Before the stranger opens fire, the party does not know that he is hostile.
-  var isTargetable: Bool { !isDown && hasFired }
+  var isTargetable: Bool { robot.map(\.isTargetable) ?? (!isDown && hasFired) }
 
   mutating func reveal() {
     guard phase == .hidden else { return }
+    if robot != nil {
+      robot?.reveal()
+      phase = .waiting
+      return
+    }
     phase = .steppingOut(elapsed: 0)
   }
 
   mutating func engage() {
     guard !isDown else { return }
     engaged = true
+    if robot != nil {
+      robot?.engage()
+      return
+    }
     if phase == .waiting { phase = attacking }
   }
 
   private var attacking: Phase {
     switch spec.attack {
     case .shoot: .aiming(remaining: spec.windUp)
+    case .robot: .waiting
     case .charge: .charging
     }
   }
 
   mutating func knockDown() {
     phase = .down
+    robot?.knockDown()
+  }
+
+  mutating func clearGuard() {
+    robot?.clear()
+    phase = .waiting
+  }
+
+  mutating func acceptRobotBurstHit() -> Bool { robot?.acceptBurstHit() ?? false }
+
+  mutating func stepRobot(
+    dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
+    party: [SIMD2<Float>]
+  ) -> RobotGuard.Discharge? {
+    let shot = robot?.step(
+      dt: dt, target: target, hasSight: hasSight, obstacles: obstacles, party: party)
+    if let robot { position = robot.position }
+    return shot
   }
 
   /// A hit delays an unfinished wind-up, with a limit on the total delay from repeated hits.
   mutating func flinch() {
+    guard robot == nil else { return }
     guard case .aiming(let remaining) = phase else { return }
     let delay = min(Self.flinchDelay, Self.flinchLimit - flinched)
     guard delay > 0 else { return }

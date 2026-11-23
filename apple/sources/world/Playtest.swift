@@ -33,6 +33,9 @@
       case expectNear(PartyMember, SIMD2<Float>, within: Float)
       case expectApart(PartyMember, atLeast: Float)
       case expectRefused(Int)
+      /// Observe the real simulation state, bounded so a broken guard fails the route.
+      case waitForRobotPhase(RobotGuard.Phase, seconds: Float)
+      case expectRobotShots(atLeast: Int)
     }
 
     /// What the runner can see of the game each frame.
@@ -54,6 +57,9 @@
       let camera: CameraProjection
       /// Native weapon state, observed by headless Pause/reload regressions.
       let weapon: EncounterSimulation.WeaponStatus
+      /// Observed first-tower guard state. Defaults preserve unrelated test fixtures.
+      var robotPhase: RobotGuard.Phase? = nil
+      var robotShots = 0
     }
 
     struct Frame {
@@ -69,6 +75,8 @@
       struct Mark: Codable, Sendable {
         let name: String
         let seconds: Double
+        var robotPhase: String? = nil
+        var robotShots = 0
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -167,7 +175,11 @@
           }
           return InputRules.Raw()
         case .mark(let label):
-          marks.append(Summary.Mark(name: label, seconds: Double(elapsed)))
+          marks.append(
+            Summary.Mark(
+              name: label, seconds: Double(elapsed),
+              robotPhase: snapshot.robotPhase.map { String(describing: $0) },
+              robotShots: snapshot.robotShots))
           announce(label)
           advance()
         case .act:
@@ -234,6 +246,23 @@
             continue
           }
           return InputRules.Raw()
+        case .waitForRobotPhase(let phase, let seconds):
+          if snapshot.robotPhase == phase {
+            advance()
+            continue
+          }
+          if stepTime > seconds {
+            failures.append(
+              "guard phase was \(String(describing: snapshot.robotPhase)), not \(phase), "
+                + "after \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
+        case .expectRobotShots(let count):
+          expect(
+            snapshot.robotShots >= count,
+            "the guard fired \(snapshot.robotShots) shot(s), fewer than \(count)")
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -474,57 +503,64 @@
       .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
     ]
 
-    /// Miki alone from the Brooklyn end to the Manhattan end (ADR 0004, M1 and M2), along the
-    /// buried road: through the first tower's east arch, where the stranger steps out from behind
-    /// the pier, past him once he is down and on beyond the tower, which fades while it hides
-    /// her, then across to the west side and through the second tower. Each trigger area shows
-    /// its line once, then a Restart returns her to the start with none fired.
+    /// Miki alone from Brooklyn to Manhattan, resolving the first guard and crossing both
+    /// towers before Restart. The supply-case scene is exercised by the ambush/opening routes.
     private static let bridgeWalk: [Step] =
       [
         .mark("start"), .walk([6.5, 66]), .mark("buried road"), .walk([6.5, 20]),
-        .mark("first tower"), .walk([6.5, 15]), .expectBeat(.stranger), .wait(seconds: 3.4),
-        .fire(seconds: 2), .expectDefeated(1), .mark("stranger down"), .walk([6.5, -12]),
+        .mark("first tower"), .walk([6.5, 10]), .expectBeat(.stranger),
+        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
         .mark("beyond the first tower"), .walk([6.5, -206.15]), .mark("mid-span"),
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .mark("Manhattan end"),
         .expectTriggers(5), .walk([-7, -494.3]), .walk([-7, -502.3]), .expectTriggers(5),
         .wait(seconds: 0.5),
       ] + restartRun + [.expectTriggers(0)]
 
-    /// Up to the stranger's area: his fight begins as Miki stops in the first tower's east arch.
+    /// Through the east arch into the guard's acquisition range. The stable stranger beat is
+    /// retained internally; the visible hostile and feedback are the C robot.
     private static let toTheStranger: [Step] = [
-      .mark("start"), .walk([6.5, 66]), .walk([6.5, 15]), .mark("Friendly!"),
+      .mark("start"), .walk([6.5, 66]), .walk([6.5, 10]), .mark("guard noticed"),
       .expectBeat(.stranger),
     ]
 
-    /// The first fight (ADR 0004, M2): the stranger steps out, Miki calls "Friendly!", his first
-    /// shot misses on purpose, and two of her shots put him down before he fires again. Then a
-    /// Restart puts him back, unseen.
+    /// Observe patrol from the covered west arch, then approach through the east arch and
+    /// let a warned burst/recovery play before returning fire. Captures show actual motion and
+    /// shooting, rather than killing the robot before its pattern can be seen.
     private static let firstFight: [Step] =
-      toTheStranger + [
-        .wait(seconds: 3.4), .mark("near miss"), .expectHits(0), .fire(seconds: 2),
-        .expectDefeated(1), .mark("stranger down"), .expectHits(0), .wait(seconds: 1),
+      [
+        .mark("start"), .walk([6.5, 66]), .walk([-6.5, 30]), .walk([-6.5, 15]),
+        .expectBeat(.stranger), .waitForRobotPhase(.patrol, seconds: 3),
+        .wait(seconds: 1.8), .mark("guard patrol"),
+        .walk([-6.5, 30]), .walk([6.5, 30]), .walk([6.5, 10]),
+        .waitForRobotPhase(.tracking, seconds: 30), .mark("guard tracking"),
+        .waitForRobotPhase(.committed, seconds: 3), .mark("guard committed"),
+        .waitForRobotPhase(.burst, seconds: 2), .mark("guard burst"),
+        .waitForRobotPhase(.recovering, seconds: 2), .expectRobotShots(atLeast: 3),
+        .mark("guard recovery"),
+        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .expectHits(0),
+        .wait(seconds: 1),
       ] + restartRun
 
-    /// Standing in the open: after the deliberate miss, three hits start the fight again with
-    /// Miki just outside the area and nothing lost. She walks back in and wins.
+    /// Standing in the open takes at most one hit per burst. The third starts the encounter
+    /// again at its checkpoint with inventory restored; the second attempt returns fire.
     private static let fightRetry: [Step] =
       toTheStranger + [
-        .wait(seconds: 7), .expectHits(1), .mark("hit"), .wait(seconds: 7.5),
-        .expectBeat(.alone), .expectHits(0), .expectDefeated(0), .mark("retry"),
-        .walk([6.5, 15]), .expectBeat(.stranger), .wait(seconds: 3.4), .fire(seconds: 2),
+        .wait(seconds: 20), .expectBeat(.alone), .expectHits(0), .expectDefeated(0), .mark("retry"),
+        .walk([6.5, 10]), .expectBeat(.stranger), .fire(seconds: 4),
         .expectDefeated(1), .mark("won after the retry"),
       ]
 
-    /// From the start to Tom joining: the first fight, the search and the ambush.
+    /// Resolve the guard, cross the clear outgoing floor to the case, then Tom's ambush.
     private static let toTom: [Step] =
       toTheStranger + [
-        .wait(seconds: 3.4), .fire(seconds: 2), .expectDefeated(1), .walk([4.4, 4.6]),
-        .mark("at the body"), .act, .wait(seconds: 2.3), .mark("the attacker"),
+        .fire(seconds: 4), .expectDefeated(1), .walk([6.5, -4]),
+        .walk(BrooklynBridge.supplyCasePosition), .mark("at the supply case"),
+        .act, .wait(seconds: 2.3), .mark("the attacker"),
         .wait(seconds: 1.3), .talk, .expectBeat(.withTom), .expectParty([.miki, .tom]),
         .expectDefeated(2), .mark("Tom joins"),
       ]
 
-    /// The ambush (ADR 0004, M3): after the first fight Miki searches the stranger, the attacker
+    /// The ambush (ADR 0004, M3): after resolving the guard Miki opens the case, the attacker
     /// runs at her out of the west arch, Tom drops him and joins after a short exchange. Tom then
     /// follows her on to mid-span, and a Restart leaves Miki alone again.
     private static let ambush: [Step] =

@@ -1,6 +1,6 @@
 # Lauder — architecture
 
-**Updated:** 22 November 2026
+**Updated:** 23 November 2026
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
 
@@ -22,7 +22,8 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | WorldCamera / CameraRig | Camera entity and landmark fading / follow, lean, switching, lens and projection | Presentation owner and value-only camera motion |
 | GameWorld | Bodies, scene, camera, movement, companion routing, encounters and one owned update subscription | Spatial state; no duplicate session progress |
 | EncounterSimulation | Native weapon handling, targeting, actual rays, hostile timing, cues, recoil/hit/fall values and feedback events | Plain Swift, no RealityKit or sound/haptic playback |
-| EncounterStage | Reusable hostile/weapon entities, target markers and shot effects | Presentation only |
+| RobotGuard | Bounded first-tower patrol, sight, finite turns, commitment, bursts and per-burst hit allowance | Value state advanced by EncounterSimulation; no entities |
+| EncounterStage | Reusable hostile/weapon entities, robot joint presentation, target markers and shot effects | Presentation only; no damage or navigation authority |
 | GameControls / InputRules | Device sampling, touch state, command edges, source arbitration and neutral gates | Intents only; no second pause/dialogue policy |
 | Content | Bridge layout, words, encounters, interactions, models and sounds | Typed definitions and bundle resources |
 
@@ -31,6 +32,8 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 The Brooklyn Bridge is the only playable `Level`. Its Blender file exports `BrooklynBridge.usdz` and `BrooklynBridgeLayout.swift` ([ADR 0002](decisions/0002-blender-source-of-truth.md)). `BrooklynBridge.swift` adds words, stable references, encounter definitions and interactions. Export refuses to drop layout names gameplay uses. [Contributor instructions](../CONTRIBUTING.md#editing-a-level-in-blender) describe authoring.
 
 `Level` contains flat ground bounds, blocker boxes, triggers, interactions, encounters, starting party/spawns, heading, camera/lights and an optional scene resource. Small test-only levels use the same data with plain geometry. They are not alternate app scenes. There is no terrain, gate, salvage, arena or optional-guard schema.
+
+The C robot is a runtime-spawned model. Its dedicated export preserves the named rigid joint hierarchy and generates `RobotModelGeometry.swift` from Blender link lengths, foot/hip positions, bounds and muzzle markers. Both outputs are fingerprinted with their source. The presenter uses actual bounded movement, turns and firing state to pose those parts; the reviewed Blender timeline remains an authoring study, not a runtime root-motion clip. Other models keep the existing static export. No parallel geometry authoring or generic animation framework is introduced.
 
 The world loads the bridge synchronously and retains it across Restart. Figure model templates produce independent clones. A single scene needs no level replacement, scene-template cache, cross-level navigation cache or transition timing subsystem. `SceneStyle` supplies simple materials and signal colours. Preserve Blender provenance and asset licensing.
 
@@ -67,11 +70,11 @@ The camera follows the active leader and eases on a switch, retaining the elevat
 
 ## The opening
 
-The bridge starts with Miki alone. Timed encounter cues reveal/engage the stranger, script the ambush and Tom's shot, help Laura stand and begin brief conversations. Content owns text and authored points. The session owns which beats have completed; the world owns where bodies stand.
+The bridge starts with Miki alone. Timed encounter cues reveal/engage the first-tower robot, grant the separate case's supplies, script the ambush and Tom's shot, help Laura stand and begin brief conversations. Content owns text and authored points. The session owns which beats have completed; the world owns where bodies stand. The internal `stranger` beat and `searchStranger` action retain their stable identifiers across the robot replacement.
 
 ### Interactions
 
-Search and Help check the leader's accessible approach and session progress again on press. Search takes the downed stranger's rounds/kit once and begins the ambush. Help spends the shared kit and begins Laura's scene. These rules need no generic quest or inventory framework.
+Search and Help check the leader's accessible approach and session progress again on press. Search opens the supply case once after the guard is defeated or bypassed, granting rounds/a kit and beginning the ambush. Help spends the shared kit and begins Laura's scene. These rules need no generic quest or inventory framework.
 
 ### Fights
 
@@ -79,7 +82,7 @@ Every recruited leader carries their native weapon: Miki's precision carbine, La
 
 Manual aim turns the leader at a bounded rate; without it, assistance picks a visible target in effective reach and Fire waits until facing it. Spread follows movement, turning and recent shots. Ballistics traces actual shots through the flat level bounds, body cylinders and real box heights; a miss can strike scenery and a long ray is not truncated at assistance reach. Unengaged people hold deliberate fire. No line exposes an enemy's exact aim.
 
-The bridge's shooter reveals, winds up, fires a deliberate first miss, then recovers and fires again. Finite barrel tracking and seeded spread resolve actual rays. A nonlethal hit briefly delays a wind-up; downed figures fall. The tower's geometry supplies cover without a proximity stance/shield system. A third hit invokes the bridge encounter's retry. Companions have no autonomous combat or signature ability in this scene; Tom's ambush shot is an authored cue.
+The first-tower robot patrols a bounded area, notices a visible target, braces and tracks, then commits its aim point before an alternating three-round burst. Its gun transforms supply the actual 3D ray origins/directions; seeded spread and the tower's geometry resolve hits without a proximity stance/shield system. A burst can cause at most one injury, and a third injury invokes the bridge encounter's retry. Six carbine hits disable the robot without a human fall animation. Reaching the authored west exit instead clears the encounter and pending fire without recording a kill, restoring ammunition or resetting the robot's recorded damage. Both completed resolutions recover the party's encounter-local injuries; retreat while the encounter remains active preserves them. Companions have no autonomous combat or signature ability in this scene; Tom's ambush shot is an authored cue. Generic human rifle timing, including its deliberate first miss, remains covered by test fixtures rather than the first bridge encounter.
 
 EncounterStage projects poses, tracers/flashes/impacts and reusable target markers. Feedback events select the retained native weapon/impact sounds and leader haptic cues. Sound/haptic playback follows lifecycle and the Vibration preference.
 

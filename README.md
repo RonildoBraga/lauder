@@ -12,6 +12,12 @@ Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/de
 
 The bridge-only prototype's structural preparation is delivered in **TestFlight 0.1.0 (28)**, app/archive source `7158f29`. The standard check and rendered Simulator checks passed; source review has no outstanding findings. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#verification-and-performance) records exact sources, checks and delivery proof. Physical-phone behaviour, performance and enjoyment remain unverified for this build.
 
+**Robot integration, 23 November 2026:** The maintainer accepted C's form and motion and assigned replacing the first human shooter on the bridge, with movement and shooting verified in Simulator. The first-tower guard, bounded movement, committed alternating burst and supply-case/bypass handoff are implemented. The later knife attacker and Tom/Laura recruitment remain. [Concept A](art/robot/bulk-studies/README.md#a--armoured-crawler) stays a possible later different-weapon variant; concept B is unselected. Prototype timing and balance are starting values, not settled design. The [encounter record](docs/encounters/bridge-spider-bot.md) describes the implementation and remaining playtest questions.
+
+**Bridge environment, 23 November 2026:** The maintainer first assigned the scene in Blender, deferring the robot. The [level source](blender/levels/README.md) now has low-poly pointed arches, weathered stone, dark cable fans and low off-route snow facets, guided by the selected concept. That environment pass preserved the gameplay layout and camera. Its verification is recorded in the [prototype plan](docs/prototype-plan.md#bridge-environment-pass).
+
+**Camera and robot, 23 November 2026:** Camera B remains approved: offset `[0, 56, 44]`, 22° lens. C's [Blender source](blender/assets/spider-bot-heavy/README.md) retains the accepted form, [motion studies](blender/assets/spider-bot-heavy/motion-preview.mp4) and shared symmetric leg components. Runtime geometry and joint/muzzle measurements come from that source; fixed-step combat owns decisions and the presenter poses the loaded parts from actual movement and firing. The standard check and rendered Simulator guard, retry and full-opening routes pass; the [prototype plan](docs/prototype-plan.md#c-robot-on-the-bridge) records the evidence. This work is separate from TestFlight build 28; no new phone performance or release result is claimed.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.
@@ -20,6 +26,8 @@ The bridge-only prototype's structural preparation is delivered in **TestFlight 
 - [Prototype plan](docs/prototype-plan.md): retained scope, controls, checks and the design gate.
 - [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
 - [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
+- [Art studies](art/README.md): the selected bridge and robot concept C, earlier references and alternatives, with prompts and source credits.
+- [First-tower robot encounter](docs/encounters/bridge-spider-bot.md): implemented guard behaviour, supply-case/bypass progression and remaining playtest questions.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): an unimplemented encounter proposal, retained for narrative reference, not an active level or assignment.
 
 The player controls one character at a time, switching leadership while the other recruited characters follow. Miki, Laura and Tom meet as strangers; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.
@@ -33,13 +41,14 @@ apple/
     app/                         App entry, world ownership and bundle configuration
     interface/                   HUD, controller/keyboard/touch input and InputRules
     gameplay/                    Session authority, BridgeProgress and EncounterSimulation
-    combat/                      Weapon, spread, aiming, ray geometry and hostile rules
+    combat/                      Weapon, spread, aiming, ray geometry, hostile rules and RobotGuard
     world/                       Bodies, squad movement, presentation, WorldCamera and CameraRig
     content/
       Level.swift                Typed bridge and test-fixture data
       LevelLayout.swift          Blender layout schema
       BrooklynBridge.swift       Bridge names, encounters, interactions and dialogue cues
       BrooklynBridgeLayout.swift Generated bridge layout
+      RobotModelGeometry.swift   Generated robot joints, bounds and gun measurements
       BrooklynBridge.usdz        Exported bridge scene
       MissionScript.swift        Provisional bridge conversations
       StoryBeat.swift            Authored progression markers independent of the session
@@ -52,9 +61,10 @@ blender/
   levels/                        Bridge Blender source
   assets/                        Character model sources
   extensions/lauder_levels/      Export extension and tests
+art/                             Concept proposals, previews and generation provenance
 docs/                            Current design, architecture and prototype plan
   story/                         Story bible
-  encounters/                    Unimplemented narrative proposals
+  encounters/                    Encounter records and narrative proposals
   decisions/                     Accepted decisions and clearly marked historical experiments
 scripts/check                    Contract, Blender, asset, formatting, app-build and Swift checks
 .github/                         Pull request template and standard-check workflow

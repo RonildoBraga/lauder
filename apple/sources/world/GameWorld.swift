@@ -907,6 +907,16 @@ final class GameWorld {
   private func stepStage(
     leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
   ) {
+    // The authored west-side exit lies beyond the entire guard's acquisition envelope. Close
+    // the encounter before another fixed-step shot or supply-case action can begin the ambush.
+    if session.inEncounter,
+      let encounter = level.encounters.first(where: { $0.beat == session.beat }),
+      let exit = encounter.safeExit, exit.contains(position),
+      let robot = encounter.hostiles.first(where: { $0.attack == .robot }),
+      fight.resolveRobotBypass(id: robot.id, session: session)
+    {
+      observation = "Clear of the guard. A supply case lies ahead."
+    }
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
         bodies[member]?.isEnabled == true ? self.position(of: member).map { (member, $0) } : nil
@@ -1146,14 +1156,16 @@ final class GameWorld {
   #if DEBUG
     /// What a scripted playtest can see each frame.
     var playtestSnapshot: PlaytestRunner.Snapshot {
-      PlaytestRunner.Snapshot(
+      let robot = fight.hostiles["stranger"]?.robot
+      return PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count,
         ammo: session.ammo,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
-        weapon: fight.status(for: session.leader))
+        weapon: fight.status(for: session.leader),
+        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

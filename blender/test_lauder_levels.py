@@ -334,6 +334,20 @@ class ExportRecordTests(unittest.TestCase):
             self.assertEqual(L.stale_model_export(repository, "laura"),
                              "The laura model has not been exported.")
 
+    def test_the_robot_joint_metadata_and_its_generator_are_bound_to_the_export(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            metadata = repository / L.MODEL_METADATA["spider-bot-heavy"]
+            metadata.write_text(metadata.read_text() + "\n// changed outside Blender\n")
+            self.assertIn("changed since it was exported",
+                          L.stale_model_export(repository, "spider-bot-heavy"))
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            generator = repository / "blender/extensions/lauder_levels/robot_geometry.py"
+            generator.write_text(generator.read_text() + "\n# geometry contract changed\n")
+            self.assertIn("changed since the spider-bot-heavy model was exported",
+                          L.stale_model_export(repository, "spider-bot-heavy"))
+
     def test_exports_go_stale_when_the_level_file_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             repository = scratch(folder)

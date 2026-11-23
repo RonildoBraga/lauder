@@ -156,7 +156,7 @@ Some models the game creates itself as it plays, rather than a level placing the
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-model.py -- miki
 ```
 
-A new kind of thing for the game to create needs its name in `SPAWNED` and code that loads it.
+A new kind of thing for the game to create needs its name in `SPAWNED` and code that loads it. The C guard also has generated joint/muzzle measurements in `RobotModelGeometry.swift`, recorded in `MODEL_METADATA`. Its export preserves named parent transforms; edit its Blender source, then run the same model export rather than hand-editing either output. The source timeline remains an authoring study: runtime stepping and recoil pose the exported rigid parts from gameplay state.
 
 A model follows the same rules as the rest of a level's look, and Export refuses a level whose models break them. Its materials use a Principled BSDF with image textures, each named after the model so that no two share a name. Its textures are PNG or JPEG files in its own folder, never packed into the Blender file; the [visual direction](docs/visual-direction.md) allows no new ones for now. After changing a texture outside Blender, press **Export** in the level, or run `export-level.py`. `./scripts/check` fails while a model lacks a README naming its source and licence, while a level's exports no longer match its models, or while a model the game creates no longer matches its scene file.
 

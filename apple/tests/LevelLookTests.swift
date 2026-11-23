@@ -97,7 +97,7 @@ struct LevelLookTests {
     let bridge = BrooklynBridge.level
     let scale = SceneStyle.markerScale(
       cameraOffset: bridge.cameraOffset, fieldOfView: bridge.fieldOfView)
-    #expect(abs(scale - 2.13) < 0.01)
+    #expect(abs(scale - 2.56) < 0.01)
     let yard = SceneStyle.markerScale(
       cameraOffset: TestYard.cameraOffset, fieldOfView: TestYard.level.fieldOfView)
     #expect(abs(yard - 1) < 0.01)
