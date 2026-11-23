@@ -10,7 +10,7 @@ enum RobotModelGeometry {
   }
 
   // Combat offsets use game axes, facing -z. Gun 0 is the source's left gun.
-  static let bodyRadius: Float = 1.219415
+  static let bodyRadius: Float = 1.107744
   static let halfHeight: Float = 1.234272
   static let navigationRadius: Float = 2.067892
   static let gunMounts: [SIMD3<Float>] = [
@@ -29,16 +29,16 @@ enum RobotModelGeometry {
   static let braceDepth: Float = 0.045
   static let legs: [Leg] = [
     Leg(
-      name: "front-left", hip: [-0.58, -0.42, 1.28],
+      name: "front-left", hip: [-0.58, -0.42, 1.13],
       foot: [-1.226398, -0.987247, 0.15], angle: -2.42132),
     Leg(
-      name: "front-right", hip: [0.58, -0.42, 1.28],
+      name: "front-right", hip: [0.58, -0.42, 1.13],
       foot: [1.226398, -0.987247, 0.15], angle: -0.720273),
     Leg(
-      name: "rear-left", hip: [-0.58, 0.42, 1.28],
+      name: "rear-left", hip: [-0.58, 0.42, 1.13],
       foot: [-1.226398, 0.987247, 0.15], angle: 2.42132),
     Leg(
-      name: "rear-right", hip: [0.58, 0.42, 1.28],
+      name: "rear-right", hip: [0.58, 0.42, 1.13],
       foot: [1.226398, 0.987247, 0.15], angle: 0.720273),
   ]
 }
