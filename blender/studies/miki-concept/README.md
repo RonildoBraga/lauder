@@ -1,20 +1,24 @@
-# Miki cartoon mesh review
+# Miki signature mesh review
 
-**Status:** Blender-first visual proposal, revised on 24 November 2026. After two concept-based passes, the maintainer clarified that the concept is loose inspiration and assigned a more appealing, cartoonish character developed directly in Blender. This study replaces the earlier candidates in the same file; both remain in Git history. Review this appearance before canonical promotion or work on Laura and Tom.
+**Status:** Blender-first visual proposal, revised on 24 November 2026. The maintainer found the rounded cartoon candidate improved but still boring and Lego-like, then authorised creative changes towards a distinctive Lauder character. This pass develops Miki as a salvage traveller through strong costume construction and asymmetry. It proposes a visual language, not a settled game identity or new biography. Laura and Tom await their own mesh work after this review. Earlier candidates remain in Git history.
 
-Open `miki-concept.blend`, enter its camera view and play the timeline. The model is centred without the concept card, followed by running, sneaking, aiming and shooting.
+Open `miki-concept.blend`, enter its camera view and play the timeline. The model is centred without the concept card. A curious portrait pose is followed by running, sneaking, aiming and shooting.
 
-![Actual Miki cartoon mesh in its local relaxed review pose](preview.png)
+![Actual Miki salvage-traveller mesh in its local curious review pose](preview.png)
+
+![Rear view of the same mesh, showing its coat tails and cable pack](rear-preview.png)
 
 ## Appearance and rig
 
-The new mesh uses a larger rounded head and cheeks, larger eyes with whites, dark pupils and small highlights, a button nose and a slight smile. Three broad hair masses frame the face. A chunky rolled fleece collar, fuller teal parka, rounded mittens and boots soften the silhouette; a simple centre zip and one pouch keep the costume readable. The coat's split hem has a matching inner rim, fitted against the existing motion. No weapon is baked into the body.
+Three broad motifs carry the proposed identity: an oversized asymmetric collar, a diagonal wrap-parka with a real raised cloth facing and unequal tails, and a thick dark cable loop on a compact salvage pack. The loop has one chunky ochre coupling rather than small hanging gadgets. It is carried equipment, not an exposed enhancement. A swept blunt hair hook, shallower eyes with upper lids, an enquiring brow and an off-centre smile give Miki more attitude. Her torso has a narrower waist, convex front panels and rounder shoulder transitions. Rounded boot toes replace the broad flat fronts, while retaining the earlier maximum bounds and sole plane. No weapon is baked into the body.
 
-Selective smooth normals soften the face, hair, fleece, coat and boots while retaining low-poly geometry. There are no textures, subdivision modifiers, cloth simulation, facial bones or new rig controls. The palette and shading are local appearance proposals, not changes to the [canonical visual direction](../../../docs/visual-direction.md).
+The design favours readable construction over extra accessories. Rolled edges, interrupted oval shapes, diagonal overlaps and a small ochre repair accent could later unite the trio while their proportions and primary colours distinguish them. This is a proposal for review; no Laura/Tom geometry, faction symbol, origin story or enhancement history is established.
 
-The `miki` collection contains one manually weighted body and its local rig Object. The Armature data and all eleven canonical `party.*` Actions link relatively to [the shared library](../../animations/README.md). The same 17 rest bones, hierarchy and source keyframes remain exact. A separate local `review.portrait` Action relaxes the arms for a static model review; it is not shared game motion or a new runtime clip.
+Selective smooth normals soften the face, hair, fleece, coat, trousers and boots while retaining low-poly geometry. There are no textures, subdivision modifiers, cloth simulation, facial bones or new rig controls. The palette and shading are local appearance proposals, not changes to the [canonical visual direction](../../../docs/visual-direction.md).
 
-The saved candidate has **1,974 triangles, 1,119 vertices and nine matte Principled materials**, with a rest-geometry height of about 1.86 m. Its local palette is teal `#45998B`, ink `#303443`, trousers `#4C5061`, fleece `#EFDFBE`, hair `#493B43`, skin `#DFAD86`, lips `#975D53`, boots `#44404B` and eye whites `#FAF4E9`. There is no character emission.
+The `miki` collection contains one manually weighted body and its local rig Object. The Armature data and all eleven canonical `party.*` Actions link relatively to [the shared library](../../animations/README.md). The same 17 rest bones, hierarchy and source keyframes remain exact. A separate local `review.portrait` Action adds a slight head tilt and unequal relaxed arm positions for a static model review; it is not shared game motion or a new runtime clip.
+
+The saved candidate has **2,730 triangles, 1,535 vertices and ten matte Principled materials**, with a rest-geometry height of about 1.88 m. Its local palette is teal `#3C8D86`, ink `#263642`, trousers `#40515C`, fleece `#EED9B3`, hair `#293A44`, skin `#DEAA82`, lips `#975D53`, boots/cable `#35424D`, eye whites `#FAF4E9` and ochre `#C69B58`. There is no character emission.
 
 This is a **higher-detail visual proposal**, above the current 400-triangle runtime target. It changes no canonical character, navigation footprint, shared motion, runtime export or gameplay. Runtime import, visual scale, material/draw-call budgets and phone performance need verification before integration.
 
@@ -22,7 +26,7 @@ This is a **higher-detail visual proposal**, above the current 400-triangle runt
 
 | Take | Review frames at 120 fps | Repetitions |
 |---|---:|---:|
-| Relaxed portrait, local review pose | 1–241 | Static for two seconds |
+| Curious portrait, local review pose | 1–241 | Static for two seconds |
 | Run | 242–554 | Four 0.65-second cycles |
 | Sneak | 555–987 | Three 1.2-second cycles |
 | Aim | 988–1168 | One 1.5-second cycle |
@@ -42,17 +46,18 @@ The **Review context - never exported** collection contains the camera, labels, 
 
 | File | Size in bytes | Storage |
 |---|---:|---|
-| `miki-concept.blend` | 3,195,863 | Format-wide Git LFS rule |
-| `preview.png` | 1,336,753 | Explicit Git LFS rule; PNG metadata removed with compressed pixels unchanged |
-| `motion-preview.mp4` | 945,234 | Explicit Git LFS rule for deliberate review footage |
+| `miki-concept.blend` | 3,207,064 | Format-wide Git LFS rule |
+| `preview.png` | 1,341,623 | Explicit Git LFS rule; PNG metadata removed with compressed pixels unchanged |
+| `rear-preview.png` | 1,303,343 | Explicit Git LFS rule; same metadata-only cleaning |
+| `motion-preview.mp4` | 948,595 | Explicit Git LFS rule for deliberate review footage |
 
 ## Verification
 
-A fresh independent audit samples **2,303 poses across all eleven canonical clips at 240 Hz**. Rest hierarchy and linked source Action curves match the shared library exactly. Weights are normalized, with no loose vertices, nonfinite deformation, degenerate rest triangles or joint gaps. The 469 tagged head vertices follow the head rigidly, within **0.000125 mm**. The lowest sampled sole is **−0.250 mm**, rounded outwards. Fifty-two additional matrix comparisons confirm the editorial timeline's selected source poses, including five comparisons to the separate local portrait pose.
+A fresh independent audit samples **2,303 poses across all eleven canonical clips at 240 Hz**. Rest hierarchy and linked source Action curves match the shared library exactly. Weights are normalized, with no loose vertices, nonfinite deformation, degenerate rest triangles or joint gaps. The 505 tagged head vertices and 240 tagged pack/cable vertices follow the head and chest respectively, within **0.000128 mm**. The new fastening tab is projected onto the torso and uses its interpolated skin weights. The lowest sampled sole is **−0.250 mm**, rounded outwards. Fifty-two additional matrix comparisons confirm the editorial timeline's selected source poses, including five comparisons to the separate local portrait pose.
 
-After fitting the openings and matching the inner rim, the audit detects **zero strict coat/trouser surface crossings** across all eleven clips. Sampled hem vertices remain at least **39.39 mm** from the trouser surface; that is not the global minimum between every pair of surfaces. A sleeve edge reaches **2.390 times** rest length during Aim/Shoot, rounded outwards. The inspected surfaces stay continuous; sampled checks do not establish complete self-collision or physical cloth behaviour.
+After fitting the openings and matching the inner rim, the audit detects **zero strict coat/trouser surface crossings** across all eleven clips. Sampled hem vertices remain at least **36.81 mm** from the trouser surface; that is not the global minimum between every pair of surfaces. A sleeve edge reaches **2.173 times** rest length during Aim/Shoot, rounded outwards. The inspected surfaces stay continuous; sampled checks do not establish complete self-collision or physical cloth behaviour.
 
-Actual front, rear, running, sneaking and shooting renders were inspected. Connected Blender playback was observed through Run, Sneak and Shoot and left playing the full review timeline. The preview has no visible hem slivers or detached sleeve in those views. A small step remains in the rear hair silhouette, and the raised-arm shoulders remain angular. These are visual-review limitations, not accepted final art.
+Actual front, rear, running, sneaking and shooting renders were inspected. Connected Blender playback was observed through Run, Sneak and Shoot and left playing the full review timeline. The preview has no visible hem slivers or detached sleeve in those views. The swept forelock deliberately stands away from the main hair shell, and raised-arm shoulders retain some angularity. Side views recheck the pack-to-coat attachment and fastening tab; a higher rear view checks the broad shapes at a gameplay-like viewing angle, with close artist framing. These are visual-review limitations, not accepted final art.
 
 Public/private geometry, weights, materials, skeleton and motion fingerprints match after relative-path resaving. Both linked libraries resolve, with no image dependencies. All 48 construction-start fingerprints for canonical Blender sources, runtime content and the export ledger remain unchanged. The existing **62 Blender/export tests pass**, including saved-file path hygiene. No app build, Simulator test, phone test, merge or release is included in this Blender-only revision.
 
