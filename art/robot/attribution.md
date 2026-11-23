@@ -9,6 +9,8 @@ The following reference-derived AI-generated concept images are shared under [Cr
 
 This file-level notice does not change the licences of project code, documentation or the bridge study.
 
+The subsequent reference-derived [Blender model and rendered preview](../../blender/assets/spider-bot/README.md) retain this source chain, with their own CC BY 4.0 notice and record of new geometry and motion in the model folder.
+
 ## Source and changes
 
 Based on **Low-poly Spider Bot (Rigged)** by **rznn7**, available from the [creator's asset page](https://rznn7.itch.io/low-poly-spider-bot), which identifies the original asset as [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The [public preview](https://img.itch.zone/aW1hZ2UvMjg0MTY2NS8xNjk3OTcxMi5wbmc=/794x1000/yEcRLJ.png) was used as a visual reference. No model file was downloaded or imported.

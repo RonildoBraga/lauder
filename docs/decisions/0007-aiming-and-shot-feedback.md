@@ -69,7 +69,7 @@ These are plain blocks in the palette's colours, sized by the marker scale so th
 ### 5. A closer lens in a fight
 
 - **When:** in an encounter, or while the right stick aims.
-- **How:** the camera's lens narrows to 70% of the level's, about 14° from the bridge's 20°, easing there in about 0.3 s, and widens again for exploring. The camera keeps its height and angle, as the visual direction asks. A scripted scene keeps the level's lens for its framing.
+- **How:** the camera's lens narrows to 70% of the level's, easing there in about 0.3 s, and widens again for exploring. With camera B, selected by the maintainer on 23 November 2026, that is 15.4° from the bridge's 22° ([visual direction](../visual-direction.md#camera-and-scale)); the earlier 20° framing narrowed to 14°. The camera keeps its height and angle. A scripted scene keeps the level's lens for its framing.
 - **Touch orders** map the screen to the ground through the lens as it is.
 
 ## Consequences

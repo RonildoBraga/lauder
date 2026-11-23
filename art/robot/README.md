@@ -1,6 +1,6 @@
 # Robot enemy — concept proposal
 
-**Status:** Dark armed v3 look selected by the maintainer. [Movement and combat](../../docs/encounters/bridge-spider-bot.md) are being designed before implementation.
+**Status:** Dark armed v3 look selected by the maintainer. A first [Blender blockout and motion study](../../blender/assets/spider-bot/README.md) is built. Gameplay movement and combat in the [encounter proposal](../../docs/encounters/bridge-spider-bot.md) remain under review.
 
 **Updated:** 23 November 2026.
 
@@ -28,7 +28,7 @@ The three travellers are shown for visual scale. The selected first-encounter re
 - Keep the central head, four-leg stance and square sensor readable before adding detail.
 - Guns are visual proposals. Targeting, detection, firing, ammunition, damage, attack timing, movement, collision and retreat rules remain undecided.
 - No aim lines, warning zones, muzzle flashes, projectiles or effects are depicted.
-- No Swift, Blender, rig, inverse-kinematics or procedural-animation implementation accompanies the studies. Mesh budgets and phone performance are unverified.
+- The concept images themselves contain no mesh, rig or animation data. The subsequent [Blender model](../../blender/assets/spider-bot/README.md) has 298 triangles and authoring-only object motion; runtime motion and phone performance are unverified.
 
 ## Current provenance and licensing
 

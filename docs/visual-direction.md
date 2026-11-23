@@ -65,6 +65,18 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 - Every level and model uses the shared palette materials, so a colour changes in one place. A new colour joins the palette before anything uses it. A shared palette library in Blender comes with the first kit models; until then each file's materials take the palette's values.
 - No textures, apart from baked ambient occlusion where contact needs it.
 
+### Robot blockout palette
+
+The assigned first robot blockout uses asset-specific matte materials from the selected [dark armed concept](../art/robot/README.md). Its Principled BSDF materials have roughness 1 and metallic 0, with no emission or textures. These colours apply to the robot's own materials; the existing world palette remains as listed above.
+
+| Part | Base colour |
+|---|---|
+| Armour | `#30343E` |
+| Slate facets | `#4B5260` |
+| Joints and muzzles | `#151D24` |
+| Burgundy face | `#662E30` |
+| Pale sensor | `#E9DFCA` |
+
 ## Light and shadow
 
 - One sun for the whole game: warm white, 25° to 35° high, from the south-west, so that shadows fall towards the top right of the screen. The sun's direction never changes within a level, so shadows are a consistent part of the composition.
@@ -75,8 +87,8 @@ The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. 
 
 ## Camera and scale
 
-- A high three-quarter view along the route, rather than a strict isometric one, with a long lens of about 20° and a view about 50° down.
-- The camera is far enough away that characters stand about 15 to 25 points tall on the baseline phone, and the whole deck and its surroundings show. The starting point is 65 m away with a 20° lens. The camera keeps that height, above the towers' tops, and comes closer through its lens rather than by moving lower. In a fight, or while the right stick aims, the lens narrows to 70%, about 14° ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)).
+- A high three-quarter view along the route, rather than a strict isometric one, with the selected camera B's 22° lens and a view about 51.8° down.
+- Camera B's offset is `[0, 56, 44]` in game coordinates: 56 m above and 44 m behind its target, about 71.2 m away. The maintainer selected it on 23 November 2026 after comparing it with the previous `[0, 50, 42]`, 20° framing in Simulator. It shows about 20% more width at the target and makes characters smaller. The intended character-size range of 15 to 25 points on the baseline phone remains a readability target, not a new physical measurement. The camera keeps its height, above the towers' tops, and comes closer through its lens rather than by moving lower. In a fight, or while the right stick aims, the lens narrows to 70%, 15.4° ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)).
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
 - Tall landmarks, such as tower tops and buildings, fade to a see-through ghost while they come between the camera and the party, so the player still sees what is in the way. The ghost is unlit, in each part's own colour, since a lit see-through landmark that fills the screen costs the phone's GPU too much.
 - World markers, such as the leader's ring, order rings, the refusal cross and the aim marker, keep a readable size on screen: a camera that shows more of the ground draws them larger, as the [architecture](architecture.md#movement-and-presentation) sets out.
@@ -92,7 +104,7 @@ Snow has buried the bridge's road, everything left on it and the frozen East Riv
 
 The bridge also uses the palette, the light and the camera's starting values, its world markers keep their size on screen, and its HUD is light and frosted, with the compass. A visual pass keeps the route, the collision layout, interaction anchors and the controls.
 
-On 23 November 2026 the maintainer assigned the bridge environment in Blender before the robot. The [level source](../blender/levels/README.md#brooklyn-bridgeblend) now gives the towers faceted pointed arches and weathered bases, adds thin cable fans and places broad, low snow facets outside the walking route. The selected [gameplay concept](../art/bridge/bridge-gameplay-v1.png) guides form and palette; its compressed composition does not replace the existing tower dimensions, spacing or gameplay camera. Both towers retain their independent ghost fade. The cables cast no runtime shadow and are omitted from the masonry's bounding-box shadow bake, which would otherwise turn thin strands into broad slabs. The robot and further gameplay changes remain deferred.
+On 23 November 2026 the maintainer assigned the bridge environment in Blender before the robot. The [level source](../blender/levels/README.md#brooklyn-bridgeblend) now gives the towers faceted pointed arches and weathered bases, adds thin cable fans and places broad, low snow facets outside the walking route. The selected [gameplay concept](../art/bridge/bridge-gameplay-v1.png) guides form and palette; its compressed composition does not replace the existing tower dimensions or spacing. The later camera B choice changes the framing while retaining that geometry. It gives more breathing room, but the towers' arches still crop up close. Both towers retain their independent ghost fade. The cables cast no runtime shadow and are omitted from the masonry's bounding-box shadow bake, which would otherwise turn thin strands into broad slabs. The maintainer has now assigned the robot's Blender blockout and movement poses; combat implementation remains separate.
 
 ## Rendering budget
 

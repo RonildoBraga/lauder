@@ -10,4 +10,6 @@ A model's file follows the contract between Blender and the game:
 - **Its textures** are PNG or JPEG files in its folder, such as `textures/`, rather than packed into the Blender file. The [visual direction](../../docs/visual-direction.md) allows no textures apart from baked ambient occlusion.
 - **Its README.md** says where the model comes from and under which licence, as [CONTRIBUTING](../../CONTRIBUTING.md#assets-and-attribution) asks of every asset. `./scripts/check` fails without it.
 
-The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The models so far are the stand-ins that the game creates itself: the party's `miki`, `tom` and `laura`, and `hostile`. Saving one of them also exports its own scene file, as [CONTRIBUTING](../../CONTRIBUTING.md#models) describes.
+The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The runtime-spawned models are the stand-ins that the game creates itself: the party's `miki`, `tom` and `laura`, and `hostile`. Saving one of them also exports its own scene file, as [CONTRIBUTING](../../CONTRIBUTING.md#models) describes.
+
+The [spider-bot](spider-bot/README.md) is a separate authoring model and motion study. It is not registered as spawned or placed in a level, so saving it creates no runtime export. Its README records the reference-derived CC BY 4.0 licence, proportions, mesh budget and source-only motion. The other models keep their existing licences.

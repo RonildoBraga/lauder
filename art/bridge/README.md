@@ -6,7 +6,7 @@
 
 The maintainer preferred the gameplay-view image as the style reference for the subsequent [robot concept studies](../robot/README.md). The other establishing view was removed at the maintainer's request.
 
-The maintainer subsequently assigned the bridge environment in Blender before the robot. The [level source and runtime export](../../blender/levels/README.md) follow this study's low-poly forms and palette while retaining the existing layout and gameplay camera. This concept image remains an illustration, separate from the implemented scene.
+The maintainer subsequently assigned the bridge environment in Blender before the robot. The [level source and runtime export](../../blender/levels/README.md) follow this study's low-poly forms and palette. The environment pass retained the existing layout and then-current gameplay camera; the later [camera B choice](../../docs/visual-direction.md#camera-and-scale) changes the framing. This concept image remains an illustration, separate from the implemented scene.
 
 This study uses the existing [frozen-world direction](../../docs/visual-direction.md): a snow plain up to the old deck level, two recognisable stone towers, a clear buried route, sparse flag poles, matte forms and long blue-grey shadows.
 

@@ -4,7 +4,7 @@
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
-The high bridge concept and dark armed v3 robot look are now selected. The maintainer chose the robot to **replace the first human shooter**, with Miki alone. The [first-tower behaviour proposal](encounters/bridge-spider-bot.md) is the current design discussion; its rules and tuning are not approved or implemented.
+The high bridge concept and dark armed v3 robot look are now selected. The maintainer chose the robot to **replace the first human shooter**, with Miki alone, then selected camera B after a Simulator comparison and assigned the robot's Blender blockout and movement poses. The [first-tower behaviour proposal](encounters/bridge-spider-bot.md) remains the combat design discussion; its rules and tuning are not approved or implemented.
 
 ## Structural preparation
 
@@ -56,11 +56,23 @@ Search and Help are revalidated on press against the leader's position and curre
 
 On 23 November 2026 the maintainer assigned the bridge scene in Blender before implementing the robot. The [level source](../blender/levels/README.md) and its USDZ now contain faceted pointed arches, weathered stone bases, four local cable fans and two low off-route snow meshes. The complete scene has 2,724 triangles, six materials and 33 used object/material partitions. These counts fit the authoring budget; they do not establish GPU draw calls or phone performance.
 
-The Gameplay, Camera and Lights collections were compared against a pre-edit snapshot, with object transforms, dimensions, properties and gameplay mesh vertices unchanged. The generated Swift layout is byte-for-byte unchanged. The robot, supply handoff, narrative, weapons and controls are outside this pass.
+For that environment pass, the Gameplay, Camera and Lights collections were compared against a pre-edit snapshot, with object transforms, dimensions, properties and gameplay mesh vertices unchanged. Its generated Swift layout was byte-for-byte unchanged. The subsequent camera B adoption below changes only the camera data in that layout. The robot, supply handoff, narrative, weapons and controls were outside the environment pass.
 
 `./scripts/check` passed the source/release contracts, all 51 Blender tests, sound fingerprints, Swift formatting, the app build and hosted Swift Testing, including all eight headless routes. Scene regressions retain the exact mesh inventory, require each tower's cable fans to fade with it while the other tower stays opaque, and check that the snow drifts remain low, off-route and noncolliding. Source/export fingerprints and all 61 local links in the six changed Markdown documents were checked.
 
-Rendered Simulator runs passed `first-fight` **23/23** and `opening` **56/56**, with no failures or companion warning frames. Screenshots were inspected at the first fight, recruitment and both sides of the second tower; the party remains visible. The opening recorded 16.7 ms mean frame time and 16.8 ms p99 on Simulator. Private captures and logs are retained locally. This is new Simulator evidence for the scene pass, not a phone performance check or a new TestFlight delivery. Review the scene's proportions and framing before assigning the robot.
+Rendered Simulator runs passed `first-fight` **23/23** and `opening` **56/56**, with no failures or companion warning frames. Screenshots were inspected at the first fight, recruitment and both sides of the second tower; the party remains visible. The opening recorded 16.7 ms mean frame time and 16.8 ms p99 on Simulator. Private captures and logs are retained locally. This is Simulator evidence for the environment pass with its original camera, not a phone performance check or a new TestFlight delivery.
+
+### Camera B selection and robot modelling
+
+On 23 November 2026 the maintainer selected **B**, the higher, wider framing, after reviewing matched Simulator captures and crossing clips. The bridge's Blender camera and generated layout use offset `[0, 56, 44]` and vertical field of view **22°**. The existing 70% combat/aim lens rule therefore reaches **15.4°**. Geometry, lighting, controls and encounter rules are preserved. The world-marker scale expectation changes from 2.13 to 2.56; the projected-size and actual entity-scale checks remain intact.
+
+The comparison used scene source `5cfb064` with temporary neutral capture holds and an additional waypoint in the existing opening route. Both camera options completed **67/67** steps with no failures or companion warning frames. Matched leader positions differed by less than 3 cm. The candidate's standard check passed with its camera-specific marker-scale expectation updated. These comparison copies are not exact-head captures of the canonical adoption. Validation of the canonical source is recorded with the adoption PR; phone performance remains unverified.
+
+The maintainer also assigned the robot's Blender blockout and movement poses, using the selected [dark armed concept](../art/robot/README.md). This starts model and motion authoring, not the proposed combat rules, supply-case handoff or replacement encounter. Those remain subject to the combat design gate below.
+
+The first [robot source](../blender/assets/spider-bot/README.md) now has 298 triangles, 17 rigid mesh parts, five matte materials and no textures. A diagonal-pair walk study, a stepped brace, separate gun recoil and recovery are authored as object-transform keyframes; frame 1 is the neutral source pose. The model is not in `SPAWNED` or the bridge's exported scene. Existing exports sample one frame, so these are Blender motion studies rather than runtime animation clips. Its reference-derived source and preview retain CC BY 4.0 attribution.
+
+On the canonical camera-B source, `./scripts/check` passed source/release contracts, 51 Blender tests, sound fingerprints, formatting, the app build and hosted Swift Testing, including all eight headless routes. The rendered `opening` passed **56/56**, with zero failures and companion warning frames. The robot passed standalone intake with zero problems. Neutral, front, side, brace/recovery and camera-B scale renders were inspected, alongside a rendered walk study. Post-save Blender/privacy checks also passed. The gameplay camera is adopted; robot proportions and motion remain a first authoring pass for review, with runtime integration and phone performance unverified.
 
 ### Architecture checks
 
@@ -105,7 +117,7 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
-Review the [first-tower robot proposal](encounters/bridge-spider-bot.md) before assigning modelling or gameplay work. It proposes a readable brace/commit/burst/recovery pattern using existing tower cover, and a supply-case handoff that preserves Tom's introduction and Laura's medical kit. The bypass route, handoff, hit allowance and tuning still require agreement and geometry validation. The existing app, source checks and TestFlight build 28 continue to describe the human encounter.
+The robot's Blender blockout and movement poses are assigned. Review the [first-tower robot proposal](encounters/bridge-spider-bot.md) before assigning combat or encounter implementation. It proposes a readable brace/commit/burst/recovery pattern using existing tower cover, and a supply-case handoff that preserves Tom's introduction and Laura's medical kit. The bypass route, handoff, hit allowance and tuning still require agreement and geometry validation. The existing app and TestFlight build 28 continue to describe the human encounter.
 
 The requested coordinated-squad direction and the trio's [combat identities](story/story-bible.md#combat-identities) remain design context. The bridge keeps formations and orders from [ADR 0003](decisions/0003-squad-movement.md), phases S1–S3. Its removed S4 experiments are not a current assignment. [The Quiet Yard](encounters/the-quiet-yard.md) and the Relay House screenplay remain unimplemented story proposals.
 

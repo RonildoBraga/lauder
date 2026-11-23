@@ -2,7 +2,7 @@
 
 **Updated:** 23 November 2026.
 
-**Status:** Behaviour draft for maintainer review. The dark armed [v3 appearance](../../art/robot/README.md) and replacing the first human shooter are selected; movement, combat rules and tuning below are proposals. No robot implementation is assigned or reported complete.
+**Status:** Behaviour draft for maintainer review. The dark armed [v3 appearance](../../art/robot/README.md) and replacing the first human shooter are selected. The maintainer has assigned the Blender blockout and movement poses. The gameplay movement, combat rules and tuning below remain proposals; no playable robot encounter is assigned or reported complete.
 
 ## Goal and placement
 
@@ -85,4 +85,4 @@ These are checks for a later assigned implementation, not results from this plan
 
 ## Before implementation
 
-Review the attack cycle, damage cap, six-hit candidate and the supply-case/bypass handoff. The approved look and first-encounter placement do not approve all these rules. Then assign a small blockout/model-and-motion task, followed by one playable tower encounter and Simulator checks. The live Blender MCP connection was read successfully during planning; no Blender objects or runtime files were changed.
+The Blender blockout and movement poses are now assigned. Before assigning the playable tower encounter, review the attack cycle, damage cap, six-hit candidate and supply-case/bypass handoff. The selected look, modelling assignment and first-encounter placement do not approve all these rules. The planning task read the live Blender MCP connection without changing Blender objects or runtime files; model authoring is the subsequent task.
