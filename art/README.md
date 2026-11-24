@@ -13,6 +13,6 @@ Superseded images were removed at the maintainer's request. The [first-tower enc
 
 The [visual direction](../docs/visual-direction.md) remains the source of agreed constraints. Each study keeps its provenance and exact generation prompts alongside the images.
 
-The current [Miki head-only pilot](characters/angular-study/miki-head-pilot/README.md) supplies bald image-to-3D inputs for the [native Blender comparison](../blender/studies/miki-head-pilot/README.md#native-generator-comparison). Its illustrations remain separate from actual mesh renders and the approved source art. The assigned [native feature cleanup](../blender/studies/miki-head-cleanup/README.md) is now a separate appearance-review candidate; hair and rigging follow later.
+The current [Miki head-only pilot](characters/angular-study/miki-head-pilot/README.md) supplies bald image-to-3D inputs for the [native Blender comparison](../blender/studies/miki-head-pilot/README.md#native-generator-comparison). Its illustrations remain separate from actual mesh renders and the approved source art. The assigned [native feature cleanup](../blender/studies/miki-head-cleanup/README.md) is preserved as the working base for a [separate swept-hair study](../blender/studies/miki-hair/README.md), with actual Blender views and the approved illustration clearly distinguished. Body and rig fitting follow visual review.
 
 Reference-derived studies retain their own attribution and file-level licence notices; see the [robot credits](robot/attribution.md).

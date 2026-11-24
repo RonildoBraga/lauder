@@ -4,7 +4,7 @@
 
 **Angular character direction, 24 November 2026:** The maintainer selected the [angular trio sheet](../art/characters/angular-study/README.md), then approved the [Miki-only modelling references](../art/characters/angular-study/miki-reference/README.md) for the separate [unrigged A-pose blockout](../blender/studies/miki-reference-blockout/README.md). Small simplified heads, exaggerated mass and limb ratios, angular negative spaces and flat graphic colour planes guide the work. The actual mesh awaits matched-view visual review before detail, rig or animation fitting; current runtime rendering and the frozen world remain unchanged. The earlier four-pose study remains a comparison.
 
-**Head refinement:** The assigned [native cleanup study](../blender/studies/miki-head-cleanup/README.md) retains the Tripo head's large forms while simplifying eyes/brows and repairing local defects. Its actual matched before/after renders await appearance review. The [original Tripo/CC0 comparison](../blender/studies/miki-head-pilot/README.md#native-generator-comparison), raw export and approved art remain unchanged. The bald illustrations remain trial interpretations. Visual acceptance precedes separate hair, rig and runtime work.
+**Head and hair study:** The assigned [separate swept-hair study](../blender/studies/miki-hair/README.md) uses the [cleaned Tripo-derived head](../blender/studies/miki-head-cleanup/README.md) as its unchanged working base. Native head angles, reference/collar comparisons and the actual Camera B projection await visual review before body or shared-skeleton fitting. The original Tripo/CC0 comparison, raw export and approved art remain unchanged. This does not approve a final character or runtime budget.
 
 ## The direction
 
