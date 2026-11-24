@@ -52,6 +52,17 @@ Hair geometry and presentation are original work authored by **Codex** for Laude
 
 The independently linked head retains its **Tripo free-output source grant**, Creator/job/hash and [source notice](../miki-head-pilot/tripo/README.md); it is not relabelled MIT by this hair study. The original FBX, CC0 foundation comparison, head cleanup, body/equipment studies, approved art, canonical models, shared animations, bridge and app resources remain unchanged.
 
+Native sources use Git LFS. Each PNG is below 1 MiB and stays in ordinary Git. Blender 5.3 renders supply the model panels; native macOS image composition adds labels and the unchanged reference crop.
+
+| File | Bytes |
+| --- | ---: |
+| `hair/miki-hair.blend` | 592,516 |
+| `miki-hair-review.blend` | 641,924 |
+| `preview.png` | 879,116 |
+| `turnaround.png` | 637,260 |
+| `reference.png` | 641,136 |
+| `camera-b.png` | 189,898 |
+
 ## Verification and next gate
 
 Fresh native reopening confirms the self-contained hair source, all three retained review scenes, the default head three-quarter camera and three resolving relative libraries. The hair has one connected surface, finite vertices, coherent winding, no overused/internal nonmanifold edges and no zero-area triangles. A nonadjacent-face BVH diagnostic reports no overlap pairs; it is not a universal surface-intersection proof. The intentional hem remains open.
