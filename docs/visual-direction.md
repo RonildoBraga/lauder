@@ -4,6 +4,8 @@
 
 **Angular character direction, 24 November 2026:** The maintainer selected the [angular trio sheet](../art/characters/angular-study/README.md), then approved the [Miki-only modelling references](../art/characters/angular-study/miki-reference/README.md) for the separate [unrigged A-pose blockout](../blender/studies/miki-reference-blockout/README.md). Small simplified heads, exaggerated mass and limb ratios, angular negative spaces and flat graphic colour planes guide the work. The actual mesh awaits matched-view visual review before detail, rig or animation fitting; current runtime rendering and the frozen world remain unchanged. The earlier four-pose study remains a comparison.
 
+**Head trial:** The hand-built head revisions were not visually accepted. The assigned [head-only pipeline comparison](../art/characters/angular-study/miki-head-pilot/README.md) now prepares a bald Miki input and actual CC0 foundation views before any hair, rig or runtime work. Its new illustrations are trial interpretations, not replacements for the approved sheets; its anatomy baselines are not finished Miki likenesses. The Tripo comparison remains incomplete until an exported mesh can be inspected. The selected angular direction and runtime rules below remain unchanged.
+
 ## The direction
 
 **Quiet, cold, sparse and legible.** The world is frozen: rivers and the sea lie under ice, and most of the land is buried under snow. Most of the screen is flat white ground, with a few structures and landmarks on it. Simple geometry, a small palette, long shadows and carefully placed objects make the world distinctive, rather than detail or graphical complexity.
