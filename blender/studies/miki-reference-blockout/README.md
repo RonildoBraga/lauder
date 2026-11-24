@@ -1,6 +1,6 @@
 # Reference-led Miki A-pose blockout
 
-**Status:** Assigned modelling study, 24 November 2026. The maintainer approved the [Miki-only reference sheets](../../../art/characters/angular-study/miki-reference/README.md) as the modelling basis and asked to proceed. This fresh, unrigged A-pose rebuilds the head, torso, shoulders and coat from those views. The actual mesh awaits visual review before detail, rig or animation fitting. Reference approval does not establish final mesh approval.
+**Status:** Handed over for visual correction, 24 November 2026. The maintainer reports that the Blender version looks distorted; the current appearance is not accepted. [Issue #141](https://github.com/RonildoBraga/lauder/issues/141) records the complete handover for another agent. Geometry checks below do not establish visual quality or resolve that report. The maintainer approved the [Miki-only reference sheets](../../../art/characters/angular-study/miki-reference/README.md) as the modelling basis and asked to proceed. This fresh, unrigged A-pose rebuilds the head, torso, shoulders and coat from those views. The actual mesh awaits visual review before detail, rig or animation fitting. Reference approval does not establish final mesh approval.
 
 ![Refined face and swept hair in the actual Blender model](head.png)
 
