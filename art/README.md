@@ -15,6 +15,8 @@ The [visual direction](../docs/visual-direction.md) remains the source of agreed
 
 The current [Miki head-only pilot](characters/angular-study/miki-head-pilot/README.md) supplies bald image-to-3D inputs for the [native Blender comparison](../blender/studies/miki-head-pilot/README.md#native-generator-comparison). Its illustrations remain separate from actual mesh renders and the approved source art. The assigned [native feature cleanup](../blender/studies/miki-head-cleanup/README.md) is preserved as the working base for a [separate swept-hair study](../blender/studies/miki-hair/README.md), with actual Blender views and the approved illustration clearly distinguished. Body and rig fitting follow visual review.
 
+The maintainer subsequently selected the full-body route and assigned a [reduced, fitted Miki derivative](../blender/studies/miki-fullbody-fit/README.md), with native static and motion review. This continues the same generated source and preserves its provenance; no additional generation was purchased. Appearance and garment deformation remain review gates before any game integration.
+
 The later [full-body input](characters/angular-study/miki-fullbody-input/README.md) and [native Tripo draft](../blender/studies/miki-fullbody-tripo/README.md) follow rejection of the assembled motion-fit appearance. The maintainer requested a recognisable side bag; the new derivative uses a closed brown field satchel. These colour/clay views are static review material, with the original illustrations and prior sources preserved and no rig or game integration.
 
 Reference-derived studies retain their own attribution and file-level licence notices; see the [robot credits](robot/attribution.md).

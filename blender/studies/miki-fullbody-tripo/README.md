@@ -2,6 +2,8 @@
 
 **25 November 2026 — static appearance review pending.** After rejecting the earlier body/motion fitting, the maintainer assigned a coherent full-body Tripo draft from the approved Miki art, with static review before another rigging pass. The maintainer then requested a recognisable side bag. The [new single-figure input](../../../art/characters/angular-study/miki-fullbody-input/README.md) replaces the former open frame with a compact brown field satchel. This does not approve the resulting illustration or mesh, or change the historical sheets.
 
+**Follow-up:** The maintainer subsequently selected this full-body working base and assigned refinement and fitted motion. See the [reduced full-body study](../miki-fullbody-fit/README.md) for the current authoring review. The original dense source and views below remain preserved; the earlier static-review gate describes this historical draft.
+
 ## Inspect the actual model
 
 Open [miki-fullbody-review.blend](miki-fullbody-review.blend) in Blender 5.3 or later, keeping the neighbouring `character` folder. The default **01 Colour review** scene shows the imported generated materials. **02 Clay review** overrides those materials to expose the actual volume. Both use the same linked character, five orthographic cameras, lighting and proportions; choose Front, Left profile, Right profile, Back or Three quarter. These profile labels identify the camera's side around the model, rather than a drawing's page-facing direction.
@@ -60,3 +62,6 @@ This new generation used an active paid subscription. The [Tripo terms](https://
 ## Verification
 
 Raw GLB header/version/declared size, SHA-256 and generator were checked after the browser reported the completed download. Fresh native import agrees with the provider's geometry totals and packs the three embedded textures. Static colour views from front, both profiles, back and three-quarter and a clay view were rendered and inspected. Independent fresh-file inspection confirms exact imported vertex/topology hashes and all three texture payloads, uniform-only alignment, two scenes/five cameras, one resolving relative library, no private absolute references and successful native rendering. All 324 files in the pre-trial preservation baseline were unchanged at that check; subsequent status documentation and LFS entries are intentional edits. These technical checks do not approve appearance. The existing **62 Blender extension/export tests pass**. No runtime intake, deformation, gameplay or device-performance check is implied.
+
+
+**Publication hygiene follow-up, 25 November 2026:** compressed-file validation exposed stale local paths in file-browser buffers and an unused render-output buffer. Native metadata cleanup removes those buffers; fresh before/after fingerprints preserve mesh positions/topology/UVs, packed texture payloads, object transforms, linked dependencies and scenes exactly. The raw vendor GLB is byte-identical. This corrects the earlier private-path verification claim; the native file bytes change only as a saved Blender metadata revision.
