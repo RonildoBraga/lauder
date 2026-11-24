@@ -1,6 +1,6 @@
 # Miki modelling references
 
-**Status:** Candidate reference sheets, generated on 24 November 2026. The maintainer found the current mesh unlike the selected concept and authorised a consistent modelling-reference pass. These sheets await appearance approval; they are not approved final art or an assignment to rewrite the mesh. The [original trio](../party-angular-v1.png) and its [prompt](../prompts.md) remain unchanged.
+**Status:** Approved modelling-reference basis, generated on 24 November 2026. After finding the earlier mesh unlike the selected concept, the maintainer approved this pair and assigned a fresh unrigged head, torso, shoulder and coat blockout, reviewed at matched projections before detail, rig or motion. This approves the reference basis, not a final mesh. The [original trio](../party-angular-v1.png) and its [prompt](../prompts.md) remain unchanged.
 
 ## Body turnaround
 
@@ -12,11 +12,11 @@ Four full-body views align the head, anatomical landmarks and soles in the same 
 
 ![Miki front and rear three-quarter views with front and right-profile head and collar close-ups](head-and-construction-v1.png)
 
-The three-quarter views show shoulder, collar and coat depth. The head studies guide swept hair, cheek/chin/nose planes, attentive eyes and the folded collar wrapping the neck. These are the same candidate design, not alternate faces or costumes.
+The three-quarter views show shoulder, collar and coat depth. The head studies guide swept hair, cheek/chin/nose planes, attentive eyes and the folded collar wrapping the neck. These show the same approved reference design, not alternate faces or costumes.
 
 ## Construction interpretation to review
 
-The original illustration does not fully settle every hidden surface. These explicit choices make a coherent candidate; inferred sides and unseen joins are not newly agreed story or costume facts:
+The approved sheets guide visible proportions and costume arrangement. This reading clarifies their construction, rather than establishing a measured 3D specification. Hidden surfaces and unseen joins still require modeller judgement and review:
 
 - The ivory collar rises on **wearer-left** and overlaps diagonally towards **wearer-right**. It folds around the neck rather than floating as a flat slab.
 - Longer pointed hair sweeps towards **wearer-right/back**.
@@ -30,7 +30,7 @@ Front views show wearer-right on viewer-left; back views show it on viewer-right
 
 Visual consistency review checked identity, approximate landmark alignment, anatomical sides, holster construction and knee/calf hem lengths. The first body output shortened the profile tails and introduced a flap pouch; an image-tool edit repaired them. The first detail output labelled near-front/back figures as three-quarter views; an image-tool edit supplied actual rotated views. The final pair has no observed material construction contradiction, but remains an illustrated guide, **not a measured geometric blueprint**. Hidden rear/under-collar joins, panel thickness and motion clearances still require modelling decisions.
 
-Appearance approval comes before the Blender rewrite. The next proposed modelling step is a fresh head, torso, shoulder and coat blockout, compared against these views at matched projections before detail or animation. The [current independent character source](../../../../blender/studies/miki-angular/character/README.md) remains unchanged. Its previous geometry and source-separation checks establish technical properties, not likeness to the concept. Equipment, canonical/runtime models, shared motion and gameplay remain outside this image pass.
+The maintainer approved these sheets as the modelling basis and assigned the separate [unrigged A-pose blockout](../../../../blender/studies/miki-reference-blockout/README.md) for the head, torso, shoulders and coat, with no weapon or tablet. Its actual mesh awaits matched front, side, back and three-quarter visual review before detail, rig or motion. The [earlier independent character source](../../../../blender/studies/miki-angular/character/README.md) and its four equipment-fit poses remain unchanged comparisons; their previous geometry and source-separation checks establish technical properties, not likeness or fresh verification of a new blockout. Hidden joins and motion clearance remain unresolved. Equipment, canonical/runtime models, shared motion and gameplay remain outside the assigned body blockout.
 
 ## Generation and provenance
 

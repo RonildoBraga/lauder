@@ -1,0 +1,11 @@
+# Reference-led Miki character source
+
+**Source:** Original Lauder geometry authored by Codex from the [approved Miki modelling basis](../../../../art/characters/angular-study/miki-reference/README.md). No third-party mesh, rig or animation was imported. **Licence:** Project [MIT licence](../../../../LICENSE).
+
+Open `miki-reference-character.blend` for the independently editable **`miki-reference-character`** collection in a neutral A-pose. Native front is −Y, up is +Z, wearer-right is −X, units are metres and soles are at Z = 0. The study's hair-top landmark is at 1.82 m.
+
+The file owns the body, hair, face, clothing, gloves, carrying strap and empty worn slate holster. Its **47 mesh parts / 1,818 triangles / 1,001 vertices / ten matte materials** are closed, flat-shaded solids with intentional overlap at body/clothing joins. They are not a connected or rig-ready character surface. Landmark empties aid comparison; they are not joints or an attachment system.
+
+There is no external library, image, rifle, tablet, armature, skinning, Action, constraint or modifier in the source, including hidden or unused equipment. The [review composition](../README.md) links this collection and owns the reference cards, cameras, neutral lighting and floor. Save body changes here, then reopen the review to reload linked geometry.
+
+The actual blockout still needs matched-view visual review before detail, rig or animation fitting. Hidden joins and movement clearance remain interpretations. The [earlier independent character](../../miki-angular/character/README.md), four equipment-fit poses, equipment sources, canonical characters, shared motions and app exports remain separate and unchanged. This file is an unregistered study and does not trigger runtime export.

@@ -59,3 +59,12 @@ blender/studies/miki-angular/weapon-ready.png filter=lfs diff=lfs merge=lfs -tex
 blender/studies/miki-angular/rifle-family.png filter=lfs diff=lfs merge=lfs -text
 art/characters/angular-study/miki-reference/body-turnaround-v1.png filter=lfs diff=lfs merge=lfs -text
 art/characters/angular-study/miki-reference/head-and-construction-v1.png filter=lfs diff=lfs merge=lfs -text
+
+# Reference-led Miki blockout previews, outside app resources.
+blender/studies/miki-reference-blockout/front.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-reference-blockout/left.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-reference-blockout/back.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-reference-blockout/right.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-reference-blockout/three-quarter.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-reference-blockout/artist.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-reference-blockout/head.png filter=lfs diff=lfs merge=lfs -text
