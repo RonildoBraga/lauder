@@ -1,6 +1,6 @@
 # Miki navigator and sniper pose study
 
-**Status:** Assigned Blender review, 24 November 2026. The maintainer selected the [angular graphic direction](../../../art/characters/angular-study/README.md), agreed Miki's [field navigator/explorer role](../../../docs/story/story-bible.md#tablet-and-field-navigation), then clarified that she is a sniper who can use different sniper rifles. This source develops her field slate, rifle family and four static poses. Her body remains a rough blockout awaiting visual review; Laura and Tom are unchanged. The study is unregistered and does not export into the app.
+**Status:** Assigned Blender review, 24 November 2026. The maintainer selected the [angular graphic direction](../../../art/characters/angular-study/README.md), agreed Miki's [field navigator/explorer role](../../../docs/story/story-bible.md#tablet-and-field-navigation), clarified her sniper identity, then assigned independent character and equipment sources. This file is now a linked review composition. Her body remains a rough blockout awaiting visual review; Laura and Tom are unchanged. All these sources are unregistered studies and do not export into the app.
 
 ![Four actual Blender poses: inspection, lowered carry, secure stow and weapon ready](poses.png)
 
@@ -11,17 +11,38 @@ Open `miki-angular.blend`. Choose a scene from Blender's scene selector:
 | Scene | Purpose |
 |---|---|
 | `01 Tablet role poses` | Default four-pose gallery, with labels and shared bridge lighting |
-| `02 Inspection model` | Directly selectable inspection components at the origin |
-| `03 Lowered carry model` | One-handed carry using the rear grip |
-| `04 Stowed model` | Vertical slate in its holster, hands free |
-| `05 Weapon ready model` | Holstered slate and two hands on the new precision rifle, in low-ready carry |
+| `02 Inspection model` | Linked character, rifle and slate in the inspection pose |
+| `03 Lowered carry model` | Linked assets showing one-handed rear-grip carry |
+| `04 Stowed model` | Linked assets showing the vertical slate in its holster, hands free |
+| `05 Weapon ready model` | Linked assets showing holstered slate and two hands on the precision rifle, in low-ready carry |
 | `06 Concept comparison` | Original concept crop beside the inspection pose |
 | `07 Camera B exact phone scale` | Normal camera B projection at 926 × 428, facing along the route |
 | `08 High rear artist close-up` | Enlarged orthographic rear view at the same viewing angle |
 | `09 Field slate detail` | Front and back of the shared device without the character |
 | `10 Sniper rifle family` | Side-profile design comparison of scout, precision and heavy rifle options |
 
-The four pose collections share the unchanged body and prop mesh data. Arms use separate static geometry with equal segment lengths across poses; head and prop transforms vary. Gallery instances and the device detail reuse those data rather than maintaining another model. The concept card is a UV crop of the original generated sheet, not a character texture. Cameras, labels, floor, lights and contact markers are review context outside the character geometry.
+The four local pose collections assemble linked character and equipment collections. The galleries reuse those same assets. Cameras, labels, floor, lighting and equipment-placement transforms belong to this review file. The concept card is a UV crop of the original generated sheet, not a character texture.
+
+## Asset ownership and editing
+
+```text
+blender/studies/
+  miki-angular/
+    miki-angular.blend                    Linked review composition
+    character/
+      miki-angular-character.blend        Body, clothing and worn mounts; four static poses
+  equipment/
+    rifle-scout/rifle-scout.blend          Independent scout rifle
+    rifle-precision/rifle-precision.blend  Independent precision rifle
+    rifle-heavy/rifle-heavy.blend          Independent heavy rifle
+    field-slate/field-slate.blend          Independent tablet
+```
+
+Open the [character source](character/README.md) to edit Miki's body, face, hair, clothing or worn holster/sling. Its default scene is directly editable and has no rifle or tablet geometry, including hidden or unused data. It retains four static body poses, not a skeleton or fitted animation. Common body parts share mesh data within that file; arms retain their pose-specific geometry.
+
+Open the relevant [equipment source](../equipment/README.md) to change a rifle or the slate. Each owns native-origin geometry, materials and local grip/reference markers, with no dependency on Miki or the review file. The holster and sling remain character-fitted worn mounts. Save the asset, then reopen this review to reload its linked data.
+
+Adjust holding/stowing placement here, using one local collection instance per equipped asset. Character-side contact markers follow gloves or coat in the character source; local prop counterparts reference the equipment's named native interfaces. These static placements and checks need no library overrides or new attachment framework. Changing a design still requires rechecking fit. No runtime equipment binding is implemented.
 
 ## Field slate and carrying arrangement
 
@@ -52,7 +73,7 @@ The [sniper direction](../../../docs/story/story-bible.md#sniper-rifle-family) r
 | Precision | Medium scope and full fore-end; about 1.06 m overall; used in the four poses | Deliberate, balanced long-range shots |
 | Heavy | Deeper receiver, substantial shroud and boxier optic; about 1.17 m overall | Slower anti-machine option |
 
-These are alternative compatible rifles, with one equipped at a time. The source supplies shared local stock, grip, support, scope and muzzle markers for comparing the designs; the selected precision rifle's mesh data are shared across the four poses. Other variants have not been fitted to the hands or animated. Acquiring, selecting and balancing them remain design work.
+These are alternative compatible rifles, with one equipped at a time. Each independent source supplies the common stock, grip, support, scope and muzzle convention for comparing designs. The review links the same Precision collection across all four poses. Other variants have not been fitted to the hands or animated. Acquiring, selecting and balancing them remain design work.
 
 The precision rifle replaces the earlier three-piece gun throughout this study. While Miki inspects or carries the tablet, the rifle lies along the existing back sling with a small keeper linking the assembly. That keeper is a static attachment study, not a validated sling or draw mechanism. In the ready pose, the tablet stays secured and the stock is supported against the coat below the tall collar. This is **low-ready**, below her eyes. A convincing scoped aiming pose still needs head, neck, shoulder, cheek and eye-relief work, followed by recoil and transition checks. It is not established by adding an optic to a static gun.
 
@@ -64,7 +85,9 @@ The built bridge retains its current carbine, assisted/manual aim, ammunition, d
 
 The small tapered face, swept angular bob, long separated legs, teal wrap coat, broad diagonal ivory collar and unequal coat points remain the preceding blockout's forms. The body, head, tablet and holster from the field-device pass are preserved. This pass replaces the study weapon, adds the sling keeper and refits the ready arms; its contact remains an authoring approximation pending rig fitting.
 
-Each pose has **57 editable mesh parts, 1,446 triangles, 837 vertices and ten untextured matte materials**. These counts include clothing and carried equipment, but exclude review context and the separate rifle-family comparison. Parts are individually closed and intentionally overlap at body/clothing connections; this is not connected deforming topology. Shared data do not multiply the per-character count. The initial blockout at `4ac20ea` had 36 parts and 938 triangles; the field-device pass at `c0e2d56` had 47 parts and 1,222 triangles.
+Each equipped review figure still has **57 mesh parts, 1,446 triangles and 837 vertices**: the character contributes **37 parts / 998 triangles / 573 vertices**, Precision **12 / 280 / 164**, and the slate **8 / 168 / 100**. Counts exclude review context and the rifle-family comparison. Geometry is editable in each owning source. Parts remain closed and intentionally overlap at body/clothing connections; this is not connected deforming topology. The initial blockout at `4ac20ea` had 36 parts and 938 triangles; the field-device pass at `c0e2d56` had 47 parts and 1,222 triangles.
+
+The three independent sources own **17 material datablocks** in total, representing the same **ten distinct numeric palette appearances** as the preceding combined study. Their materials are local so each asset opens without another library. This authoring arrangement establishes no runtime material/draw-call budget; import validation and optimisation remain later gates.
 
 Faces use flat normals and broad planes. There is no armature, skinning, Action, modifier, cloth simulation or custom runtime shader. The clothing/device palette remains teal `#358F84`, teal shadow `#286C66`, teal light `#5B9E91`, ink `#30373C`, ivory `#CDCEBC`, ivory shadow `#A8AA9E`, skin `#CCA17D`, skin shadow `#A37F63` and leather `#594C40`; the rifle adds matte slate `#626C70`. These study choices do not change the current runtime palette or 400-triangle target. Budget and import validation precede integration.
 
@@ -80,14 +103,16 @@ Additional inspection views: [front](front.png), [side](side.png), [rear](rear.p
 
 ## Verification and next gate
 
-The saved source passes an independent read-only geometry, preservation, rifle-fit and camera audit: finite, nondegenerate, closed, consistently wound, positive-volume, flat-shaded meshes; ten matte materials; and no rig or Actions. All six static contact pairs pass, including the ready hands and stock-to-coat support. Arm segment lengths are preserved. The equipped precision rifle clears the collar, tablet and holster in the sampled poses, and each character has one rifle assembly. Scope and muzzle direction, the device's seating and its grip-channel clearance pass. These checks do not prove anatomical finger grip, continuous draw/stow motion, scoped aiming, full self-collision clearance or shared-skeleton compatibility.
+An independent saved-source audit compares all ten scenes with the pre-separation revision at `7d0e79b`. Evaluated geometry, normals, material appearances, cameras, lighting, labels and prior markers are preserved, with maximum vertex drift below **0.00027 mm** from floating-point transform composition. All six static contact pairs, native interfaces and one-rifle-per-pose checks pass. The five standalone sources have no external dependencies or misplaced/orphan equipment/character data; the review retains only three local context meshes. These checks do not prove anatomical finger grip, continuous draw/stow motion, scoped aiming, full self-collision clearance or shared-skeleton compatibility.
 
-The public source matches the audited private candidate, including all three rifle templates. Its relative concept image and bridge-light library resolve, and its saved default is the four-pose gallery. All **176 preserved body, head, tablet and holster objects**, **48 protected canonical/source/runtime/export fingerprints** and the earlier rounded study remain unchanged. The existing **62 Blender/export tests pass** on the rifle revision, including saved-file hygiene. Documentation links, whitespace, image metadata/pixel preservation and Git LFS storage are checked. Actual Blender views accompany the source.
+The public sources match the audited private candidate, with resolving relative libraries/image references and no private staging paths. The review opens on its camera-framed gallery; the character opens on an editable bare stowed pose. Saved studio editing views suppress reference-empty overlays. All **48 protected canonical/source/runtime/export fingerprints** and the earlier rounded study remain unchanged. The existing **62 Blender/export tests pass**, including saved-file hygiene. Relative documentation links, whitespace and Git LFS storage pass.
+
+An isolated-copy edit extended eight Precision muzzle-tip vertices by 20 mm. Reopening the copied review updated all **12 linked placements** across its scenes, with the other eight vertices unchanged. This verifies source reuse, without changing an authored/public file. The previews above remain actual Blender renders from `7d0e79b`; fresh inspection, ready and device-detail renders visually match them, with more than 99.9% matching pixels. No duplicate PNG revisions are needed for this ownership-only change. The linked review and bare character were inspected in connected Blender.
 
 Review the device, carrying arrangement and poses before fitting deforming topology or the shared animations. The face, angular sleeve caps and thin coat points remain rough. Later motion work must recheck foot contact, coat clearance, hand/weapon alignment and transitions. Physical-phone performance and final visual acceptance remain unverified. No app build, Simulator run, phone test, merge or release is included in this authoring pass.
 
 ## Source and licence
 
-- **Source:** Original Blender geometry authored for Lauder by Codex, guided by the selected AI-generated concept. No third-party mesh, rig, texture or animation was imported. The [concept's provenance](../../../art/characters/angular-study/README.md#generation-and-provenance) remains separate from the model's authorship.
+- **Source:** Original Blender geometry authored for Lauder by Codex, guided by the selected AI-generated concept, separated into the [character source](character/README.md) and [equipment sources](../equipment/README.md). No third-party mesh, rig, texture or animation was imported. The [concept's provenance](../../../art/characters/angular-study/README.md#generation-and-provenance) remains separate from the model's authorship.
 - **Licence:** Original model and documentation under the project's [MIT licence](../../../LICENSE).
 - **Storage:** Editable `.blend` source uses the format-wide Git LFS rule. PNGs larger than 1 MiB have explicit-path rules; smaller images remain ordinary Git. Render PNG metadata is removed with compressed pixels unchanged.
