@@ -20,6 +20,10 @@ The cast remains original human survivors in the frozen futuristic setting. Clot
 
 The maintainer agreed Miki's [field navigator/explorer role](../../../docs/story/story-bible.md#tablet-and-field-navigation) and assigned a field-device/carrying study. It connects her technical/salvage expertise to exploration while Laura checks real access and Tom judges practical group passage. The original generated sheet and prompt remain unchanged. The Blender pass develops a readable field tool, secure stow and four static inspection/carry/stow/weapon-ready poses. These are visual studies, not continuous transitions, a new interface, implemented gameplay or acceptance of the rough body as final art.
 
+## Miki's sniper rifle direction
+
+The maintainer subsequently specified Miki as a sniper with multiple compatible sniper rifle types, while retaining her field-navigator role. The [rifle-family brief](../../../docs/story/story-bible.md#sniper-rifle-family) proposes a lighter scout version, a balanced default authoring model and a slower heavy anti-machine concept. Their common construction and distinct massing should read through the selected angular style. They are alternative loadouts with one rifle carried at a time; exact variants, tuning and equipment flow remain proposals. The original sheet and prompt are preserved, so the pictured stand-in does not represent the refined rifles or change the built game's carbine.
+
 ## Translation to 3D
 
 This is a 2D direction sheet, not a game screenshot or an exported model. The assigned [static Blender pass](../../../blender/studies/miki-angular/README.md) preserves its large planes and silhouette rhythm, with restrained facial marks and deliberately selected hard edges. Random triangulation, bevels on every edge, glossy surfaces and large white eyes would weaken this direction.

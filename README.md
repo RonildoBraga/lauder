@@ -32,6 +32,8 @@ The latest TestFlight delivery is the bridge-only prototype with the Blender env
 
 **Miki field-navigation direction, 24 November 2026:** The maintainer agreed Miki's [field navigator/explorer role](docs/story/story-bible.md#tablet-and-field-navigation) and authorised a tablet/carrying design pass. Miki interprets incomplete records and observed clues, Laura checks present access, and Tom assesses practical group passage. The [Blender review](blender/studies/miki-angular/README.md) develops the field-tool shape and four static inspection/carry/stow/weapon-ready poses; the body remains rough. The [first-tower vignette](docs/gameplay-script.md#mikis-tablet-exploration-vignette-proposal) and precise gameplay/UI/input behaviour remain proposals, with no runtime tablet feature built.
 
+**Miki sniper direction, 24 November 2026:** The maintainer specified Miki as a sniper able to use different compatible sniper rifle types, alongside her field-navigator role. The [rifle-family design](docs/story/story-bible.md#sniper-rifle-family) proposes scout, balanced and heavy alternatives with one carried rifle at a time; the balanced rifle is the default authoring model. The [Blender study](blender/studies/miki-angular/README.md) explores their form and fit. Variant tuning and equipment flow remain open, with no new interface or runtime weapon feature built. The playable bridge retains its carbine and existing combat rules.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.

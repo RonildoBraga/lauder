@@ -3,7 +3,7 @@
 **Date:** 17 November 2026\
 **Status:** Proposed encounter for design review, not implemented or assigned for implementation. The character definitions it uses are agreed; the encounter itself remains a proposal, a future exercise beyond the opening.
 
-Read the proposed [combat identities](../story/story-bible.md#combat-identities), the current [gameplay walkthrough](../gameplay-script.md) and the [combat design review gate](../prototype-plan.md#combat-design-review-gate) alongside this scene. Character histories, final dialogue, control bindings and combat tuning remain proposals.
+Read the proposed [combat identities](../story/story-bible.md#combat-identities), the current [gameplay walkthrough](../gameplay-script.md) and the [combat design review gate](../prototype-plan.md#combat-design-review-gate) alongside this scene. Character histories, final dialogue, control bindings and combat tuning remain proposals. Miki's later [sniper rifle-family direction](../story/story-bible.md#sniper-rifle-family) applies to her combat identity, with one chosen rifle at a time. The example below does not require a particular variant or settle its range, cadence or equipment flow.
 
 ## Place in the journey
 
@@ -55,7 +55,7 @@ In this proposed experiment, only the character actively controlled by the playe
 
 One possible sequence shows how the identities complement each other:
 
-- **Miki — Disrupt:** From mid-range, interrupt one unit during its shot preparation. It cancels **one** winding-up shot, creating a short movement opportunity. It does not switch off both units, grant permanent control or erase shots already fired.
+- **Miki — Disrupt:** With her chosen rifle from a useful mid-range position, interrupt one unit during its shot preparation. It cancels **one** winding-up shot, creating a short movement opportunity. It does not switch off both units, grant permanent control or erase shots already fired.
 
   > **Miki:** Move now.
 
