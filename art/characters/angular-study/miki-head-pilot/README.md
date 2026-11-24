@@ -18,7 +18,7 @@ The [native Blender baseline](../../../../blender/studies/miki-head-pilot/README
 
 After the maintainer signed in, one free Tripo P2.0 head was generated from the single hero. Its first FBX export was subscription-gated; subsequent Pro access enabled export of the existing job without regeneration. The [trial record](../../../../blender/studies/miki-head-pilot/tripo-trial.md) and [actual native comparison](../../../../blender/studies/miki-head-pilot/README.md#native-generator-comparison) now record the source, matched views, mesh defects and cleanup proposal. The complete comparison remains distinct from final appearance acceptance, hair, rigging or runtime integration.
 
-Keep the winning head only after visual acceptance; add separate hair next. Body/clothing, skeleton fitting, animation tests, runtime budget, Laura/Tom and app integration follow separately. No new runtime polygon budget, paid plan, merge or release is approved by this trial.
+Keep the winning head only after visual acceptance; add separate hair next. Body/clothing, skeleton fitting, animation tests, runtime budget, Laura/Tom and app integration follow separately. The maintainer's subsequent Pro signup enabled the recorded export; no new runtime polygon budget, merge or release is approved by this trial.
 
 ## Generation and provenance
 
