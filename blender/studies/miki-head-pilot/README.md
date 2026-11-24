@@ -1,6 +1,6 @@
 # Miki head-only pipeline trial: CC0 foundations
 
-**Status:** A native anatomy baseline for the assigned head-only comparison, not a finished or accepted Miki likeness. The [pilot art and input record](../../../art/characters/angular-study/miki-head-pilot/README.md) defines the single image-to-3D input and the limits of its supporting illustrations. Tripo is awaiting sign-in; no generator mesh has been produced or imported. This baseline therefore does not complete the comparison.
+**Status:** A native anatomy baseline for the assigned head-only comparison, not a finished or accepted Miki likeness. The [pilot art and input record](../../../art/characters/angular-study/miki-head-pilot/README.md) defines the single image-to-3D input and the limits of its supporting illustrations. One free Tripo P2.0 head has now been generated and inspected in its 3D viewer. The [trial record](tripo-trial.md) records the subscription-gated FBX export; no generator mesh has been downloaded or imported into Blender. This baseline therefore does not complete the matched comparison.
 
 ## Open and inspect
 
@@ -51,4 +51,4 @@ The initial gallery exposed the source's Basis-only display setting: key values 
 
 The existing **62 Blender/export tests pass**. Canonical assets, shared animations, bridge, app, prior studies and approved reference images remain unchanged. No app build, Simulator run, physical-device test, performance claim, merge or release is part of this authoring-only trial. The live Blender file was left untouched.
 
-After sign-in, run one Tripo P2.0 attempt using the single hero, geometry only, quad topology and a requested 5,000-quad target. This is a modelling trial setting, not an adopted runtime budget or a guarantee of anatomical edge loops. Record the actual settings, job, account/export rights and native import, then inspect the exported mesh under matching neutral views. Do not treat a website preview or generated illustration as the final mesh. Choose a head route on volume and identity before separate hair, body fitting, shared-skeleton/animation verification or an explicitly agreed runtime budget.
+The single free P2.0 attempt used the hero, geometry only, quad topology and a requested 5,000-face target. These are trial settings, not an adopted runtime budget or a guarantee of anatomical edge loops. Its [actual job and export gate](tripo-trial.md) are recorded separately. A paid subscription needs a maintainer decision before downloading; there is no native Tripo import or matched Blender comparison yet. Choose a head route on volume and identity before separate hair, body fitting, shared-skeleton/animation verification or an explicitly agreed runtime budget.
