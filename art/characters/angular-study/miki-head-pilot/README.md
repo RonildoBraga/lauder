@@ -16,7 +16,7 @@ The bald design separates the skull/face from the swept hair. It preserves an ad
 
 The [native Blender baseline](../../../../blender/studies/miki-head-pilot/README.md) preserves actual CC0 foundation geometry, editable shape keys and matched clay views. It is a starting topology, not Miki's finished face. Judge the actual exported Tripo mesh against it using the same front/profile/three-quarter framing and neutral clay, then simple facial materials. Check adult identity, full skull depth, coherent eye placement, integrated nose/mouth/chin and volume that survives rotation.
 
-After the maintainer signed in, one free Tripo P2.0 head was generated from the single hero and inspected in its rotatable clay viewer. The [trial record](../../../../blender/studies/miki-head-pilot/tripo-trial.md) records its defects and actual export attempt: FBX download opened an upgrade gate. The [export documentation](https://www.tripo3d.ai/product-doc/export-and-integration/export-dcc) requires a subscription for P-series downloads. No model was downloaded or purchased. The matched comparison remains incomplete until an exported mesh can be inspected in Blender; the website viewer and these illustrations do not satisfy that gate.
+After the maintainer signed in, one free Tripo P2.0 head was generated from the single hero. Its first FBX export was subscription-gated; subsequent Pro access enabled export of the existing job without regeneration. The [trial record](../../../../blender/studies/miki-head-pilot/tripo-trial.md) and [actual native comparison](../../../../blender/studies/miki-head-pilot/README.md#native-generator-comparison) now record the source, matched views, mesh defects and cleanup proposal. The complete comparison remains distinct from final appearance acceptance, hair, rigging or runtime integration.
 
 Keep the winning head only after visual acceptance; add separate hair next. Body/clothing, skeleton fitting, animation tests, runtime budget, Laura/Tom and app integration follow separately. No new runtime polygon budget, paid plan, merge or release is approved by this trial.
 
@@ -24,7 +24,7 @@ Keep the winning head only after visual acceptance; add separate hair next. Body
 
 - **Source:** original AI-generated illustrations using the built-in image-generation tool, guided by the approved Lauder references. No failed Blender render or third-party character mesh was used as an image input.
 - **Process:** one bald hero, then front/profile interpretations derived independently from that hero. All three PNGs were copied unchanged from the tool output; the [exact prompt set](prompts.md) records input roles.
-- **Licence:** generated contributions under the project's [MIT licence](../../../../LICENSE), without claiming exclusive rights in generated output or rights over reference works. This does not grant a licence to future Tripo output; its account terms and export rights must be recorded separately.
+- **Licence:** These generated illustrations use the project's [MIT licence](../../../../LICENSE), without claiming exclusive rights in generated output or rights over reference works. The separate Tripo export retains its own [free-output provenance and grant](../../../../blender/studies/miki-head-pilot/tripo/README.md); it is not automatically licensed MIT.
 - **Storage:** all three 1536 × 1024 opaque PNGs exceed 1 MiB and use explicit-path Git LFS.
 
 | File | Bytes | SHA-256 |

@@ -13,6 +13,6 @@ Superseded images were removed at the maintainer's request. The [first-tower enc
 
 The [visual direction](../docs/visual-direction.md) remains the source of agreed constraints. Each study keeps its provenance and exact generation prompts alongside the images.
 
-The current [Miki head-only pilot](characters/angular-study/miki-head-pilot/README.md) prepares bald image-to-3D inputs and a separate native CC0 anatomy baseline after the hand-built face attempts were rejected. Its illustrations are not actual model renders or approved replacement art; the generator comparison remains incomplete.
+The current [Miki head-only pilot](characters/angular-study/miki-head-pilot/README.md) supplies bald image-to-3D inputs for the [native Blender comparison](../blender/studies/miki-head-pilot/README.md#native-generator-comparison). Its illustrations remain separate from actual mesh renders and the approved source art. The exported Tripo candidate needs feature cleanup before hair or rigging.
 
 Reference-derived studies retain their own attribution and file-level licence notices; see the [robot credits](robot/attribution.md).
