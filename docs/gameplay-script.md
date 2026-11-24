@@ -67,7 +67,7 @@ Pause and dialogue suspend switching and world movement. Release guidance and fr
 
 ## Miki's tablet exploration vignette (proposal)
 
-This is a small design example for the [field-navigation proposal](story/story-bible.md#tablet-and-field-navigation-proposal), not a change to the built opening. Miki keeps her inspection and salvage expertise; Laura's physical scouting and Tom's practical passage/load judgement remain distinct. The player still chooses the leader and route.
+This remains a proposed scene example for Miki's [agreed field-navigation role](story/story-bible.md#tablet-and-field-navigation), not a change to the built opening. Miki keeps her inspection and salvage expertise; Laura's physical scouting and Tom's practical passage/load judgement remain distinct. The player still chooses the leader and route.
 
 At the existing first tower, while Miki is still alone, she briefly compares the two visible arches and the flag line with an old crossing diagram on her tablet. A contextual observation gives her interpretation; it neither reveals a patrol nor chooses the passage for the player.
 

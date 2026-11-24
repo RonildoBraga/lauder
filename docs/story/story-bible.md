@@ -10,7 +10,7 @@
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
 - Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
 - Three playable characters travel together once they have met. Miki begins alone, and Tom and Laura join her on the Brooklyn Bridge as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)). The player moves the active character; the others remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
-- Each character has distinct capabilities that make different approaches useful, including agility and strength.
+- Each character has distinct capabilities that make different approaches useful, including agility and strength. Miki is a field navigator and explorer who interprets records and observed clues; Laura checks present access and footing, and Tom assesses practical group passage and loads. All three remain playable leaders.
 - Chapter One begins with Miki crossing the Brooklyn Bridge towards Manhattan, where circumstances bring her together with Tom and Laura. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The opening is set in a post-apocalyptic New York. The cause and wider extent of the collapse remain uncertain.
 - The whole world is frozen. Rivers and the sea lie under ice, and most of the land is buried under snow: flat, white and largely empty, broken by a few structures and landmarks. Why it froze, and how the freeze relates to the collapse, remains uncertain.
@@ -83,7 +83,7 @@ Natural movement should seek reachable nearby destinations and respond to obstac
 ## Miki — understanding what still works
 
 **Proposed background:** Municipal water and power maintenance.\
-**Proposed role:** Technical inspection and purposeful salvage, with [tablet-assisted field navigation](#tablet-and-field-navigation-proposal) under discussion.\
+**Agreed exploration role:** [Field navigator and explorer](#tablet-and-field-navigation), building on technical inspection and purposeful salvage.\
 **Enhancement status:** Undecided; her competence does not require an enhancement.
 
 Miki reads places through a dry pipe, a warm cable or a pump vibrating behind a wall. She checks markings and diagrams rather than assuming a familiar housing contains a safe part. Her practical local knowledge does not give her universal access to future technology.
@@ -98,9 +98,9 @@ Her first important act is restraint: she leaves useful infrastructure intact be
 
 Her strength is reading a threat and making a deliberate opening. Being crowded or attacked from several directions exposes her limits; basic weapon fire still lets her defend herself. As a companion, she favours a reachable position with a clear view and supports the current fight without independently changing the group's plan. That preference reflects her careful inspection and desire for certainty. Learning to trust another person's timing can develop her character without making her mechanically unreliable.
 
-### Tablet and field navigation proposal
+### Tablet and field navigation
 
-**Working proposal, 24 November 2026:** The maintainer suggested exploring Miki as a guide and explorer after the angular blockout's handheld device read as a tablet. Develop her as a **field navigator and surveyor**: she helps the group understand a place and choose a course through it. This extends her systems knowledge and salvage expertise. It does not yet change the agreed combat identities or make her the group's permanent leader.
+**Agreed role direction, 24 November 2026:** After the tablet suggested Miki as a guide and explorer, the maintainer instructed us to proceed with the field-navigator direction and the device/carrying design brief. Miki helps the group understand a place and choose a course through it, extending her systems knowledge and salvage expertise. The combat identities and all-character leadership remain unchanged. Exact tablet interactions, interface and control behaviour remain design work; the role agreement does not make them implemented features.
 
 The tablet holds incomplete offline maps, utility diagrams, recovered notes and Miki's own observations. She compares a record with the visible place, identifies a useful connection and records corrections. Old information can be wrong. A physical landmark, a companion's experience or a failed assumption can change her interpretation. The device does not know live enemy locations, see through walls or grant universal access to machines.
 
@@ -112,9 +112,9 @@ The tablet holds incomplete offline maps, utility diagrams, recovered notes and 
 
 All three explore, observe and lead. The player can choose another leader, ignore a suggestion, fight, bypass or withdraw under the existing scene's rules. Miki's knowledge should create understandable choices; it should not turn the tablet into an obligatory waypoint dispenser or require her to lead every journey. Sharing a useful discovery is also a way for trust and personal history to emerge gradually without opening character dossiers.
 
-For the first design test, use one authored observation at an existing bridge landmark and a short in-world response, as the [walkthrough vignette](../gameplay-script.md#mikis-tablet-exploration-vignette-proposal) illustrates. A full map screen, new input binding, free-form scanning, battery-management loop and procedural exploration system are not prerequisites. No such system is assigned by this proposal.
+For the first design test, use one authored observation at an existing bridge landmark and a short in-world response, as the [walkthrough vignette](../gameplay-script.md#mikis-tablet-exploration-vignette-proposal) illustrates. A full map screen, new input binding, free-form scanning, battery-management loop and procedural exploration system are not prerequisites. The role agreement assigns none of those runtime systems.
 
-Miki carries the tablet as ordinary equipment and stows it when drawing her carbine. It does not replace her weapon or turn **Disrupt** into a tablet-based remote hack. The next art/animation brief should make inspection, lowered carry, secure stow and weapon-ready poses legible. Exact behaviour, controls, storage and transitions remain to be designed after this role is agreed; the current static holding pose proves none of them.
+Miki carries the tablet as ordinary equipment and stows it when drawing her carbine. It does not replace her weapon or turn **Disrupt** into a tablet-based remote hack. The assigned next Blender pass makes the field-tool shape, inspection, lowered carry, secure stow and weapon-ready poses legible through four static authoring studies. These poses support visual review; they do not fit the shared skeleton or establish continuous transitions, input behaviour or runtime attachment rules. Exact gameplay implementation remains to be designed separately.
 
 ## Laura — finding a way through
 

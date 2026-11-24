@@ -16,9 +16,9 @@ The reference language is **angular graphic caricature**: small simplified heads
 
 The cast remains original human survivors in the frozen futuristic setting. Clothing covers them for cold, weapons stay secondary, and no external cybernetic anatomy is introduced. Colours retain their established roles. Apparent ages, faces, body ratios, costume details and carried props remain visual proposals; the [story bible](../../../docs/story/story-bible.md) still owns biographies and enhancement histories.
 
-## Miki's tablet as a role proposal
+## Miki's tablet and field-navigation role
 
-The blockout's tablet prompted a working proposal for Miki as a [field navigator and surveyor](../../../docs/story/story-bible.md#tablet-and-field-navigation-proposal). It connects her existing technical/salvage expertise to exploration while Laura checks real access and Tom judges practical group passage. The original generated sheet and prompt remain unchanged. Future model work should follow the function once agreed, with a readable field device, secure stow and a clear transition to her existing carbine; the held prop does not establish gameplay, a new interface or a final character appearance.
+The maintainer agreed Miki's [field navigator/explorer role](../../../docs/story/story-bible.md#tablet-and-field-navigation) and assigned a field-device/carrying study. It connects her technical/salvage expertise to exploration while Laura checks real access and Tom judges practical group passage. The original generated sheet and prompt remain unchanged. The Blender pass develops a readable field tool, secure stow and four static inspection/carry/stow/weapon-ready poses. These are visual studies, not continuous transitions, a new interface, implemented gameplay or acceptance of the rough body as final art.
 
 ## Translation to 3D
 
@@ -34,4 +34,4 @@ The static blockout is separate from the earlier body and has no armature or ski
 - **Prompt and process:** The [complete generation prompt](prompts.md) records the brief and constraints. One opaque PNG was generated and copied unchanged into this folder; no image editing or 3D export was performed.
 - **File:** `party-angular-v1.png`, 1536 × 1024 pixels, 1,405,206 bytes; explicit-path Git LFS storage. SHA-256: `aed5b823ecef0893335befd6df2faf9eaa131ba24871a710c2c7f2cffd2b579f`.
 
-The [visual direction](../../../docs/visual-direction.md) distinguishes this new review proposal from current runtime rules. The next gate is reviewing the static Miki blockout before fitting the skeleton and motions. The selected sheet and static source do not approve a new rig architecture, renderer or game feature.
+The [visual direction](../../../docs/visual-direction.md) distinguishes this new review proposal from current runtime rules. The next gate is reviewing the device, carrying arrangement and four static poses before fitting the skeleton and motions. The selected sheet and static source do not approve a new rig architecture, renderer or game feature.

@@ -51,3 +51,8 @@ blender/studies/miki-angular/front.png filter=lfs diff=lfs merge=lfs -text
 blender/studies/miki-angular/side.png filter=lfs diff=lfs merge=lfs -text
 blender/studies/miki-angular/rear.png filter=lfs diff=lfs merge=lfs -text
 blender/studies/miki-angular/high-rear.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-angular/poses.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-angular/inspection.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-angular/lowered-carry.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-angular/stowed.png filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-angular/weapon-ready.png filter=lfs diff=lfs merge=lfs -text
