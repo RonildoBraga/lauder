@@ -16,6 +16,10 @@ The reference language is **angular graphic caricature**: small simplified heads
 
 The cast remains original human survivors in the frozen futuristic setting. Clothing covers them for cold, weapons stay secondary, and no external cybernetic anatomy is introduced. Colours retain their established roles. Apparent ages, faces, body ratios, costume details and carried props remain visual proposals; the [story bible](../../../docs/story/story-bible.md) still owns biographies and enhancement histories.
 
+## Miki's tablet as a role proposal
+
+The blockout's tablet prompted a working proposal for Miki as a [field navigator and surveyor](../../../docs/story/story-bible.md#tablet-and-field-navigation-proposal). It connects her existing technical/salvage expertise to exploration while Laura checks real access and Tom judges practical group passage. The original generated sheet and prompt remain unchanged. Future model work should follow the function once agreed, with a readable field device, secure stow and a clear transition to her existing carbine; the held prop does not establish gameplay, a new interface or a final character appearance.
+
 ## Translation to 3D
 
 This is a 2D direction sheet, not a game screenshot or an exported model. The assigned [static Blender pass](../../../blender/studies/miki-angular/README.md) preserves its large planes and silhouette rhythm, with restrained facial marks and deliberately selected hard edges. Random triangulation, bevels on every edge, glossy surfaces and large white eyes would weaken this direction.

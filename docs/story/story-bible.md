@@ -1,6 +1,6 @@
-# Lauder — story bible, draft 0.7
+# Lauder — story bible, draft 0.8
 
-**Date:** 23 November 2026\
+**Date:** 24 November 2026\
 **Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
 
 **First-encounter revision, 23 November 2026:** The maintainer accepted C's dark armed form and motion, then assigned its integration in place of the first human shooter. The opening below now uses the [first-tower guard and separate supply case](../encounters/bridge-spider-bot.md), retaining Tom's intervention and Laura's medical kit. The cause of the machine's continued patrol remains unexplained. Current implementation verification and tuning belong in the [prototype plan](../prototype-plan.md), not in this narrative outline.
@@ -83,7 +83,7 @@ Natural movement should seek reachable nearby destinations and respond to obstac
 ## Miki — understanding what still works
 
 **Proposed background:** Municipal water and power maintenance.\
-**Proposed role:** Technical inspection and purposeful salvage.\
+**Proposed role:** Technical inspection and purposeful salvage, with [tablet-assisted field navigation](#tablet-and-field-navigation-proposal) under discussion.\
 **Enhancement status:** Undecided; her competence does not require an enhancement.
 
 Miki reads places through a dry pipe, a warm cable or a pump vibrating behind a wall. She checks markings and diagrams rather than assuming a familiar housing contains a safe part. Her practical local knowledge does not give her universal access to future technology.
@@ -97,6 +97,24 @@ Her first important act is restraint: she leaves useful infrastructure intact be
 **Proposed combat identity — precision and disruption.** Miki carries a precision carbine suited to measured shots from a clear position. **Disrupt** uses a precise shot to interrupt one clearly telegraphed ranged attack at useful range, opening a brief window for a teammate to cross, fire or withdraw. It is a specific combat action, not universal hacking, control of every machine or knowledge acquired through an unexplained enhancement. The Quiet Yard proposal first demonstrates it against a visible security-unit wind-up; applicability to other threats remains to be defined.
 
 Her strength is reading a threat and making a deliberate opening. Being crowded or attacked from several directions exposes her limits; basic weapon fire still lets her defend herself. As a companion, she favours a reachable position with a clear view and supports the current fight without independently changing the group's plan. That preference reflects her careful inspection and desire for certainty. Learning to trust another person's timing can develop her character without making her mechanically unreliable.
+
+### Tablet and field navigation proposal
+
+**Working proposal, 24 November 2026:** The maintainer suggested exploring Miki as a guide and explorer after the angular blockout's handheld device read as a tablet. Develop her as a **field navigator and surveyor**: she helps the group understand a place and choose a course through it. This extends her systems knowledge and salvage expertise. It does not yet change the agreed combat identities or make her the group's permanent leader.
+
+The tablet holds incomplete offline maps, utility diagrams, recovered notes and Miki's own observations. She compares a record with the visible place, identifies a useful connection and records corrections. Old information can be wrong. A physical landmark, a companion's experience or a failed assumption can change her interpretation. The device does not know live enemy locations, see through walls or grant universal access to machines.
+
+| Character | Contribution to an exploration decision |
+|---|---|
+| Miki | Interprets records and technical clues; proposes a route or worthwhile salvage lead |
+| Laura | Checks current footing, sightlines and reachable access; tests whether the proposed route works now |
+| Tom | Judges loads, whole-party passage and the limits of his delivery knowledge; helps make the route practical |
+
+All three explore, observe and lead. The player can choose another leader, ignore a suggestion, fight, bypass or withdraw under the existing scene's rules. Miki's knowledge should create understandable choices; it should not turn the tablet into an obligatory waypoint dispenser or require her to lead every journey. Sharing a useful discovery is also a way for trust and personal history to emerge gradually without opening character dossiers.
+
+For the first design test, use one authored observation at an existing bridge landmark and a short in-world response, as the [walkthrough vignette](../gameplay-script.md#mikis-tablet-exploration-vignette-proposal) illustrates. A full map screen, new input binding, free-form scanning, battery-management loop and procedural exploration system are not prerequisites. No such system is assigned by this proposal.
+
+Miki carries the tablet as ordinary equipment and stows it when drawing her carbine. It does not replace her weapon or turn **Disrupt** into a tablet-based remote hack. The next art/animation brief should make inspection, lowered carry, secure stow and weapon-ready poses legible. Exact behaviour, controls, storage and transitions remain to be designed after this role is agreed; the current static holding pose proves none of them.
 
 ## Laura — finding a way through
 

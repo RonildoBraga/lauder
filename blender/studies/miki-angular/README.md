@@ -25,6 +25,12 @@ The saved model has **36 editable mesh parts, 938 triangles, 541 vertices and ni
 
 Every authored face uses flat normals and deliberately broad planes. There is no armature, skinning, animation, modifier, cloth simulation or custom runtime shader. A study palette approximates the selected illustration under linked bridge lighting: teal `#358F84`, teal shadow `#286C66`, teal light `#5B9E91`, ink `#30373C`, ivory `#CDCEBC`, ivory shadow `#A8AA9E`, skin `#CCA17D`, skin shadow `#A37F63` and leather `#594C40`. These local appearance choices and the count above do not change the current runtime palette or 400-triangle target. Budget and import validation precede integration.
 
+## Tablet role and next visual brief
+
+The maintainer's subsequent feedback found this mesh improved but still rough, and suggested the tablet as a starting point for Miki as a guide/explorer. The [field-navigation proposal](../../../docs/story/story-bible.md#tablet-and-field-navigation-proposal) now records that idea; it is not an implemented device or a settled role change.
+
+If that proposal is selected, develop the existing slab into a recognisable field instrument and use the current pouch/carrying arrangement to explore secure stow, rather than accumulating accessories. Inspection, lowered carry, stowing and weapon-ready silhouettes should be clear; normal weapon use requires free hands. At camera B, gesture and broad shape matter more than tiny screen text or interface graphics. The next pose/rig pass must test those transitions and hand/weapon contact. This static source, its tablet geometry and all previews remain unchanged by the documentation discussion.
+
 ## Camera comparison
 
 ![Close high rear artist view, not phone scale](high-rear.png)

@@ -30,6 +30,8 @@ The latest TestFlight delivery is the bridge-only prototype with the Blender env
 
 **Angular character blockout, 24 November 2026:** The maintainer selected the [angular graphic trio direction](art/characters/angular-study/README.md) and authorised a static Miki blockout before fitting animations. The new [Blender study](blender/studies/miki-angular/README.md) tests her small head, long legs, broad diagonal collar, unequal coat points and tablet pose using flat colour planes. It includes a concept comparison, directly editable components, camera B at the baseline landscape scale and a separate close high rear view. The blockout awaits silhouette review; its appearance is not final. Canonical models, shared motion, runtime rendering and gameplay remain unchanged, as do Laura and Tom. The [earlier rounded study](blender/studies/miki-concept/README.md) remains a comparison.
 
+**Miki exploration-role proposal, 24 November 2026:** The tablet in her rough blockout prompted a [field navigator/surveyor proposal](docs/story/story-bible.md#tablet-and-field-navigation-proposal): Miki interprets incomplete records and observed clues, Laura checks present access, and Tom assesses practical group passage. A [small first-tower vignette](docs/gameplay-script.md#mikis-tablet-exploration-vignette-proposal) illustrates the idea without changing the opening. Role details and device behaviour remain under discussion before more mesh/rig work; no tablet mechanic or map interface is built.
+
 ## Start here
 
 - [Story bible](docs/story/story-bible.md): ensemble foundations, proposed identities, enhancements and Chapter One.

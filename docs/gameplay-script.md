@@ -1,6 +1,6 @@
 # Lauder — gameplay walkthrough
 
-**Updated:** 23 November 2026\
+**Updated:** 24 November 2026\
 **Status:** The game opens on the Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines the checks.
 
 Combat stays occasional. The [future squad and combat design](#future-squad-and-combat-design) passes a design gate before any combat or formation work beyond the opening.
@@ -64,6 +64,18 @@ Every input, controller, touch or keyboard, uses the same movement, action, swit
 Switching is available while exploring, including during movement. Each character stays at their current location. The camera eases over a short transition to the new leader while keeping its elevated angle. The previous leader becomes a follower, and held movement applies only to the new leader. Switching does not replay an action the player was already holding. A simultaneous switch and action performs the switch alone; a fresh action press is needed afterwards. The formation button and the orders follow the same rules: they work only while exploring, and pressed with the action they give their command alone. A switch ends the new leader's order; if the others are going or holding, the previous leader holds where they stand, and otherwise follows. The HUD shows the formation and what the squad is doing, such as "Close · following" or "Laura holding", and for a controller or keyboard the companions' fixed sides, "◀ Laura · Tom ▶".
 
 Pause and dialogue suspend switching and world movement. Release guidance and fresh-input recovery apply after source changes, interruption, reconnection and pause transitions. On touch, lift every finger before continuing, even one resting at the stick centre. The stick and buttons can be held together; Pause keeps their contacts tracked while gameplay is frozen. The [party architecture](architecture.md) records command routing and ownership.
+
+## Miki's tablet exploration vignette (proposal)
+
+This is a small design example for the [field-navigation proposal](story/story-bible.md#tablet-and-field-navigation-proposal), not a change to the built opening. Miki keeps her inspection and salvage expertise; Laura's physical scouting and Tom's practical passage/load judgement remain distinct. The player still chooses the leader and route.
+
+At the existing first tower, while Miki is still alone, she briefly compares the two visible arches and the flag line with an old crossing diagram on her tablet. A contextual observation gives her interpretation; it neither reveals a patrol nor chooses the passage for the player.
+
+> **Miki:** The drawing gives me two passages. It doesn't say who's using them.
+
+The player observes the guard directly and can use the existing fight, west-arch bypass or withdrawal. The record supplies a starting question, and looking at the place supplies the current evidence. No extra route, pickup, enemy, map interface or secret scan target is needed for this example.
+
+Once Laura and Tom have joined, a later observation can show cooperation: Miki relates an old plan to a landmark, Laura checks present access, and Tom judges whether the group and its supplies can pass. This does not move their recruitment earlier or make any of them a passive follower. Tablet use should be brief, optional and legible in the world, with controls defined through the existing shared input rules when an implementation is assigned. Her carbine remains available; the tablet is stowed for weapon use.
 
 ## Future squad and combat design
 
