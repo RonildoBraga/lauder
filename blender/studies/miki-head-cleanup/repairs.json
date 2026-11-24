@@ -1,0 +1,1090 @@
+{
+  "source_fbx_sha256": "42b633426b1e30f3905e1ed3dc53fc7de0e085b015518c1154569b2494a09d55",
+  "source_comparison_sha256": "9dc82596f6b92980983ee6615ac6d3d94dfb2adcfc37464f431114dcdf19fc27",
+  "source_object_identifier": "tripo_9ed6bdae_0b95_4771_bc63_f3e10ef438a3",
+  "source_mesh_identifier": "tripo_9ed6bdae_0b95_4771_bc63_f3e10ef438a3",
+  "coordinate_space": "Native source FBX local coordinates retained except the documented local coordinate patches; object matrix is the original comparison uniform alignment and importer axis orientation.",
+  "object_matrix": [
+    [
+      0.2966829836368561,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      2.2398943144708028e-08,
+      -0.2966829836368561,
+      -0.0026949478778988123
+    ],
+    [
+      0.0,
+      0.2966829836368561,
+      2.2398943144708028e-08,
+      -0.18726864457130432
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "before_audit": {
+    "vertices": 538,
+    "edges": 1222,
+    "faces": 681,
+    "triangles": 1037,
+    "boundary_edges": 45,
+    "boundary_groups": [
+      {
+        "edges": 8,
+        "vertices": 7,
+        "degrees": {
+          "2": 6,
+          "4": 1
+        },
+        "source_vertex_ids": [
+          74,
+          126,
+          154,
+          156,
+          157,
+          167,
+          1497
+        ],
+        "world_bounds": [
+          [
+            -0.062074530869722366,
+            -0.09779864549636841,
+            -0.00995419267565012
+          ],
+          [
+            -0.03817184641957283,
+            -0.07925596088171005,
+            -0.00807095319032669
+          ]
+        ]
+      },
+      {
+        "edges": 9,
+        "vertices": 9,
+        "degrees": {
+          "2": 9
+        },
+        "source_vertex_ids": [
+          42,
+          43,
+          117,
+          740,
+          1431,
+          3095,
+          3100,
+          3101,
+          3102
+        ],
+        "world_bounds": [
+          [
+            -0.056279949843883514,
+            -0.0042160265147686005,
+            -0.09238225221633911
+          ],
+          [
+            -0.023540526628494263,
+            0.05083256959915161,
+            -0.059787675738334656
+          ]
+        ]
+      },
+      {
+        "edges": 21,
+        "vertices": 21,
+        "degrees": {
+          "2": 21
+        },
+        "source_vertex_ids": [
+          105,
+          106,
+          114,
+          115,
+          1422,
+          1424,
+          3077,
+          3079,
+          3085,
+          3087,
+          3089,
+          3092,
+          3097,
+          3156,
+          3158,
+          4847,
+          4850,
+          4852,
+          4855,
+          4858,
+          4862
+        ],
+        "world_bounds": [
+          [
+            -0.05613509193062782,
+            -0.03130573779344559,
+            -0.18726864457130432
+          ],
+          [
+            0.057728592306375504,
+            0.07169308513402939,
+            -0.1604686677455902
+          ]
+        ]
+      },
+      {
+        "edges": 7,
+        "vertices": 7,
+        "degrees": {
+          "2": 7
+        },
+        "source_vertex_ids": [
+          54,
+          66,
+          67,
+          89,
+          90,
+          93,
+          95
+        ],
+        "world_bounds": [
+          [
+            -0.01818051189184189,
+            -0.1043175533413887,
+            -0.07673684507608414
+          ],
+          [
+            0.01803567260503769,
+            -0.09982674568891525,
+            -0.07224603742361069
+          ]
+        ]
+      }
+    ],
+    "internal_nonmanifold_edges": [],
+    "winding_conflicts": [
+      [
+        90,
+        91
+      ],
+      [
+        67,
+        91
+      ]
+    ],
+    "zero_area_faces": [],
+    "min_area_local": 8.344650268554688e-07,
+    "custom_normals": true,
+    "all_smooth": true
+  },
+  "after_audit": {
+    "vertices": 533,
+    "edges": 1216,
+    "faces": 683,
+    "triangles": 1040,
+    "boundary_edges": 26,
+    "boundary_groups": [
+      {
+        "edges": 21,
+        "vertices": 21,
+        "degrees": {
+          "2": 21
+        },
+        "source_vertex_ids": [
+          105,
+          106,
+          114,
+          115,
+          1422,
+          1424,
+          3077,
+          3079,
+          3085,
+          3087,
+          3089,
+          3092,
+          3097,
+          3156,
+          3158,
+          4847,
+          4850,
+          4852,
+          4855,
+          4858,
+          4862
+        ],
+        "world_bounds": [
+          [
+            -0.05613509193062782,
+            -0.03130573779344559,
+            -0.18726864457130432
+          ],
+          [
+            0.057728592306375504,
+            0.07169308513402939,
+            -0.1604686677455902
+          ]
+        ]
+      },
+      {
+        "edges": 5,
+        "vertices": 5,
+        "degrees": {
+          "2": 5
+        },
+        "source_vertex_ids": [
+          54,
+          67,
+          89,
+          90,
+          93
+        ],
+        "world_bounds": [
+          [
+            -0.0180356465280056,
+            -0.1043175533413887,
+            -0.07673684507608414
+          ],
+          [
+            0.01803567260503769,
+            -0.09982674568891525,
+            -0.07586031407117844
+          ]
+        ]
+      }
+    ],
+    "internal_nonmanifold_edges": [],
+    "winding_conflicts": [],
+    "zero_area_faces": [],
+    "min_area_local": 6.627641596423928e-06,
+    "custom_normals": true,
+    "all_smooth": true
+  },
+  "normal_protection": {
+    "protected_loop_count": 1939,
+    "protected_encoded_exact": false,
+    "protected_decoded_max_difference": 0.0,
+    "normal_recomputed_source_vertex_ids": [
+      63,
+      67,
+      69,
+      70,
+      89,
+      90,
+      96,
+      97,
+      126,
+      127,
+      128,
+      129,
+      156,
+      158,
+      167,
+      169,
+      189,
+      265,
+      823,
+      824,
+      1005,
+      1006,
+      1008,
+      1028,
+      1189,
+      1190,
+      1191,
+      1497,
+      1498,
+      1578,
+      3332
+    ],
+    "protected_decoded_unequal_count": 0,
+    "unprotected_source_vertex_ids": [
+      10,
+      38,
+      42,
+      43,
+      44,
+      51,
+      52,
+      54,
+      63,
+      66,
+      67,
+      68,
+      69,
+      70,
+      74,
+      75,
+      79,
+      82,
+      84,
+      86,
+      88,
+      89,
+      90,
+      91,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      110,
+      117,
+      118,
+      119,
+      126,
+      127,
+      128,
+      129,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      167,
+      168,
+      169,
+      189,
+      265,
+      385,
+      386,
+      739,
+      740,
+      743,
+      761,
+      762,
+      763,
+      771,
+      772,
+      774,
+      823,
+      824,
+      826,
+      1005,
+      1006,
+      1007,
+      1008,
+      1026,
+      1028,
+      1189,
+      1190,
+      1191,
+      1192,
+      1193,
+      1429,
+      1430,
+      1431,
+      1432,
+      1497,
+      1498,
+      1578,
+      3084,
+      3090,
+      3093,
+      3094,
+      3095,
+      3098,
+      3099,
+      3100,
+      3101,
+      3102,
+      3103,
+      3104,
+      3116,
+      3332
+    ]
+  },
+  "welds": [
+    {
+      "removed_source_vertex": 154,
+      "retained_source_vertex": 126,
+      "before": [
+        -0.18872065842151642,
+        0.59765625,
+        0.2946777641773224
+      ],
+      "after": [
+        -0.18920893967151642,
+        0.59765625,
+        0.2946777641773224
+      ],
+      "distance_in_comparison_metres": 0.00014486536455477218,
+      "reason": "Pinched eye near-duplicate seam pair"
+    },
+    {
+      "removed_source_vertex": 157,
+      "retained_source_vertex": 1497,
+      "before": [
+        -0.15454097092151642,
+        0.60400390625,
+        0.3142090141773224
+      ],
+      "after": [
+        -0.15502925217151642,
+        0.60400390625,
+        0.3142090141773224
+      ],
+      "distance_in_comparison_metres": 0.00014486536455477218,
+      "reason": "Pinched eye near-duplicate seam pair"
+    },
+    {
+      "removed_source_vertex": 66,
+      "retained_source_vertex": 90,
+      "before": [
+        -0.06127925217151642,
+        0.373046875,
+        0.327392578125
+      ],
+      "after": [
+        -0.06079097092151642,
+        0.373046875,
+        0.327392578125
+      ],
+      "distance_in_comparison_metres": 0.00014486536455477218,
+      "reason": "Folded mouth microflap/seam near-duplicate pair"
+    },
+    {
+      "removed_source_vertex": 91,
+      "retained_source_vertex": 67,
+      "before": [
+        -0.003662064438685775,
+        0.3876953125,
+        0.342529296875
+      ],
+      "after": [
+        -0.0041503459215164185,
+        0.38720703125,
+        0.342529296875
+      ],
+      "distance_in_comparison_metres": 0.00020486751552238828,
+      "reason": "Folded mouth microflap/seam near-duplicate pair"
+    },
+    {
+      "removed_source_vertex": 95,
+      "retained_source_vertex": 89,
+      "before": [
+        0.0041504353284835815,
+        0.3876953125,
+        0.342529296875
+      ],
+      "after": [
+        0.003662154311314225,
+        0.3876953125,
+        0.342529296875
+      ],
+      "distance_in_comparison_metres": 0.00014486466561210623,
+      "reason": "Folded mouth microflap/seam near-duplicate pair"
+    }
+  ],
+  "removed_faces": [
+    {
+      "source_face": 94,
+      "source_vertices": [
+        66,
+        90,
+        91
+      ],
+      "remapped_vertices": [
+        90,
+        90,
+        67
+      ],
+      "reason": "Degenerate after the local seam weld"
+    },
+    {
+      "source_face": 95,
+      "source_vertices": [
+        91,
+        67,
+        66
+      ],
+      "remapped_vertices": [
+        67,
+        67,
+        90
+      ],
+      "reason": "Degenerate after the local seam weld"
+    },
+    {
+      "source_face": 98,
+      "source_vertices": [
+        91,
+        67,
+        90
+      ],
+      "remapped_vertices": [
+        67,
+        67,
+        90
+      ],
+      "reason": "Degenerate after the local seam weld"
+    },
+    {
+      "source_face": 108,
+      "source_vertices": [
+        94,
+        89,
+        95
+      ],
+      "remapped_vertices": [
+        94,
+        89,
+        89
+      ],
+      "reason": "Degenerate after the local seam weld"
+    }
+  ],
+  "added_seam_faces": [
+    [
+      3095,
+      117,
+      740
+    ],
+    [
+      3095,
+      3102,
+      43,
+      117
+    ],
+    [
+      1431,
+      42,
+      43
+    ],
+    [
+      3100,
+      1431,
+      43
+    ],
+    [
+      3101,
+      3100,
+      43
+    ],
+    [
+      3102,
+      3101,
+      43
+    ]
+  ],
+  "coordinate_patches": [
+    {
+      "source_vertex": 96,
+      "before": [
+        -0.13403315842151642,
+        0.58447265625,
+        0.3117676079273224
+      ],
+      "after": [
+        -0.13403315842151642,
+        0.57275390625,
+        0.3088378608226776
+      ],
+      "reference_source_vertex": 765,
+      "reason": "Isolated lower-lid notch: copy counterpart765 rawY/Z while retaining sourceX",
+      "world_delta": [
+        0.0,
+        0.0008692058036103845,
+        -0.003476753830909729
+      ],
+      "distance_in_comparison_metres": 0.0035837593756420133
+    },
+    {
+      "source_vertex": 823,
+      "before": [
+        0.10278324782848358,
+        0.6083984375,
+        0.322021484375
+      ],
+      "after": [
+        0.10278324782848358,
+        0.611876368522644,
+        0.322021484375
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        7.79019765362321e-11,
+        0.0010318428976461291
+      ],
+      "distance_in_comparison_metres": 0.0010318458075987914
+    },
+    {
+      "source_vertex": 824,
+      "before": [
+        0.12182621657848358,
+        0.61181640625,
+        0.3215331733226776
+      ],
+      "after": [
+        0.12182621657848358,
+        0.617569625377655,
+        0.3215331733226776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.288660289588961e-10,
+        0.001706882263533771
+      ],
+      "distance_in_comparison_metres": 0.001706883283628021
+    },
+    {
+      "source_vertex": 1006,
+      "before": [
+        0.13696293532848358,
+        0.61083984375,
+        0.3186034858226776
+      ],
+      "after": [
+        0.13696293532848358,
+        0.6174880266189575,
+        0.3186034858226776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.4891227140267915e-10,
+        0.0019724026788026094
+      ],
+      "distance_in_comparison_metres": 0.0019723921630914166
+    },
+    {
+      "source_vertex": 1190,
+      "before": [
+        0.15454106032848358,
+        0.60888671875,
+        0.3146972358226776
+      ],
+      "after": [
+        0.15454106032848358,
+        0.6153705716133118,
+        0.3146972358226776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.4523145186462472e-10,
+        0.001923648756928742
+      ],
+      "distance_in_comparison_metres": 0.0019236505158557336
+    },
+    {
+      "source_vertex": 1191,
+      "before": [
+        0.17700199782848358,
+        0.6064453125,
+        0.3010253608226776
+      ],
+      "after": [
+        0.17700199782848358,
+        0.6109251379966736,
+        0.3010253608226776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.0034335862219024e-10,
+        0.001329088001511991
+      ],
+      "distance_in_comparison_metres": 0.0013290941738629525
+    },
+    {
+      "source_vertex": 1028,
+      "before": [
+        0.19018559157848358,
+        0.6015625,
+        0.2946777045726776
+      ],
+      "after": [
+        0.19018559157848358,
+        0.6041518449783325,
+        0.2946777045726776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        5.799859204014268e-11,
+        0.0007682145806029439
+      ],
+      "distance_in_comparison_metres": 0.0007682144821080935
+    },
+    {
+      "source_vertex": 169,
+      "before": [
+        -0.10131831467151642,
+        0.6083984375,
+        0.322021484375
+      ],
+      "after": [
+        -0.10131831467151642,
+        0.6117575168609619,
+        0.322021484375
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        7.523982825663467e-11,
+        0.000996581744402647
+      ],
+      "distance_in_comparison_metres": 0.0009965896606445312
+    },
+    {
+      "source_vertex": 129,
+      "before": [
+        -0.12377925217151642,
+        0.61181640625,
+        0.3215332329273224
+      ],
+      "after": [
+        -0.12377925217151642,
+        0.6177198886871338,
+        0.3215332329273224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.322317672025619e-10,
+        0.0017514628125354648
+      ],
+      "distance_in_comparison_metres": 0.0017514676052773764
+    },
+    {
+      "source_vertex": 167,
+      "before": [
+        -0.12866206467151642,
+        0.60302734375,
+        0.3205566704273224
+      ],
+      "after": [
+        -0.12866206467151642,
+        0.6092743277549744,
+        0.3205566704273224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.3992583480781917e-10,
+        0.00185337383300066
+      ],
+      "distance_in_comparison_metres": 0.0018533761724264834
+    },
+    {
+      "source_vertex": 1497,
+      "before": [
+        -0.15502925217151642,
+        0.60400390625,
+        0.3142090141773224
+      ],
+      "after": [
+        -0.15502925217151642,
+        0.6105273365974426,
+        0.3142090141773224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.461179510720001e-10,
+        0.001935390755534172
+      ],
+      "distance_in_comparison_metres": 0.0019353921535290228
+    },
+    {
+      "source_vertex": 127,
+      "before": [
+        -0.17700190842151642,
+        0.6064453125,
+        0.3010254204273224
+      ],
+      "after": [
+        -0.17700190842151642,
+        0.6111978888511658,
+        0.3010254204273224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.0645268694320364e-10,
+        0.001410008524544537
+      ],
+      "distance_in_comparison_metres": 0.0014100074768066406
+    },
+    {
+      "source_vertex": 126,
+      "before": [
+        -0.18920893967151642,
+        0.59765625,
+        0.2946777641773224
+      ],
+      "after": [
+        -0.18920893967151642,
+        0.6008053421974182,
+        0.2946777641773224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        7.053633371834067e-11,
+        0.0009342820849269629
+      ],
+      "distance_in_comparison_metres": 0.0009342730078591795
+    },
+    {
+      "source_vertex": 128,
+      "before": [
+        -0.16284175217151642,
+        0.6083984375,
+        0.3098144829273224
+      ],
+      "after": [
+        -0.16284175217151642,
+        0.6144843697547913,
+        0.3098144829273224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74",
+      "world_delta": [
+        0.0,
+        1.363184565228437e-10,
+        0.0018055925611406565
+      ],
+      "distance_in_comparison_metres": 0.0018055885886929753
+    },
+    {
+      "source_vertex": 3332,
+      "before": [
+        0.10864262282848358,
+        0.60498046875,
+        0.321533203125
+      ],
+      "after": [
+        0.10864262282848358,
+        0.6092710494995117,
+        0.321533203125
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        9.610447160302016e-11,
+        0.0012729422887787223
+      ],
+      "distance_in_comparison_metres": 0.0012729466013786366
+    },
+    {
+      "source_vertex": 1005,
+      "before": [
+        0.13159184157848358,
+        0.607421875,
+        0.3205566108226776
+      ],
+      "after": [
+        0.13159184157848358,
+        0.6138583421707153,
+        0.3205566108226776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        1.4417006477529526e-10,
+        0.0019095903262495995
+      ],
+      "distance_in_comparison_metres": 0.001909583808619484
+    },
+    {
+      "source_vertex": 1008,
+      "before": [
+        0.15649418532848358,
+        0.60595703125,
+        0.3142089545726776
+      ],
+      "after": [
+        0.15649418532848358,
+        0.612342119216919,
+        0.3142089545726776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        1.4301922146575663e-10,
+        0.0018943469040095806
+      ],
+      "distance_in_comparison_metres": 0.0018943399030904558
+    },
+    {
+      "source_vertex": 1189,
+      "before": [
+        0.17797856032848358,
+        0.60400390625,
+        0.3020019233226776
+      ],
+      "after": [
+        0.17797856032848358,
+        0.6083582639694214,
+        0.3020019233226776
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        9.753300944659316e-11,
+        0.0012918638531118631
+      ],
+      "distance_in_comparison_metres": 0.001291856633003844
+    },
+    {
+      "source_vertex": 156,
+      "before": [
+        -0.17602534592151642,
+        0.6005859375,
+        0.3020019829273224
+      ],
+      "after": [
+        -0.17602534592151642,
+        0.6054505705833435,
+        0.3020019829273224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        1.0896263752391278e-10,
+        0.001443253830075264
+      ],
+      "distance_in_comparison_metres": 0.0014432524092108986
+    },
+    {
+      "source_vertex": 158,
+      "before": [
+        -0.12768550217151642,
+        0.60107421875,
+        0.3010254204273224
+      ],
+      "after": [
+        -0.12768550217151642,
+        0.6072593927383423,
+        0.3010254204273224
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        1.3854135894053599e-10,
+        0.0018350358586758375
+      ],
+      "distance_in_comparison_metres": 0.0018350333211948511
+    },
+    {
+      "source_vertex": 1498,
+      "before": [
+        -0.10620112717151642,
+        0.60205078125,
+        0.321533203125
+      ],
+      "after": [
+        -0.10620112717151642,
+        0.6060775518417358,
+        0.321533203125
+      ],
+      "reference_source_vertex": null,
+      "reason": "Upper-lid central2mm sine-taper raise; fixed corner vertices761/771 and82/74; roof support only",
+      "world_delta": [
+        0.0,
+        9.019540669896742e-11,
+        0.001194674288854003
+      ],
+      "distance_in_comparison_metres": 0.0011946703227234512
+    },
+    {
+      "source_vertex": 67,
+      "before": [
+        -0.0041503459215164185,
+        0.38720703125,
+        0.342529296875
+      ],
+      "after": [
+        -0.0041503459215164185,
+        0.3754814863204956,
+        0.342529296875
+      ],
+      "reference_source_vertex": null,
+      "reason": "Narrow mouth cavity to0.8mm above original fixed lower-lip edge54/93; retainX and depth",
+      "world_delta": [
+        0.0,
+        -2.626398265537233e-10,
+        -0.003478769678622484
+      ],
+      "distance_in_comparison_metres": 0.0034787729305841056
+    },
+    {
+      "source_vertex": 89,
+      "before": [
+        0.003662154311314225,
+        0.3876953125,
+        0.342529296875
+      ],
+      "after": [
+        0.003662154311314225,
+        0.3755130171775818,
+        0.342529296875
+      ],
+      "reference_source_vertex": null,
+      "reason": "Narrow mouth cavity to0.8mm above original fixed lower-lip edge54/93; retainX and depth",
+      "world_delta": [
+        0.0,
+        -2.7287053172564413e-10,
+        -0.0036142796743661165
+      ],
+      "distance_in_comparison_metres": 0.0036142766916783804
+    }
+  ],
+  "intentional_openings": [
+    "21-edge natural neck cutoff (all source vertices/edges retained)",
+    "5-edge mouth slit narrowed to0.8mm at center; retained as an intentional restrained mouth aperture"
+  ],
+  "no_broad_sculpt_remesh_decimation": true,
+  "asset_acceptance": "Unaccepted cleanup candidate; native geometry checks do not establish likeness or appeal.",
+  "mapping": "Native shell attributes tripo_source_vertex_id and tripo_source_face_id map retained geometry. New seam faces use -1.",
+  "features": {
+    "eyes": {
+      "base_vertices": 28,
+      "base_triangles": 40,
+      "evaluated_triangles": 80,
+      "modifier": "Mirror X",
+      "surface": "Continuous shallow membrane; sclera/iris are adjacent material regions. Source shell supplies eyelids."
+    },
+    "brows": {
+      "base_vertices": 66,
+      "base_quads": 32,
+      "evaluated_triangles": 128,
+      "modifier": "Mirror X"
+    },
+    "coordinate_space": "Comparison world coordinates; identity object matrices; front -Y, up +Z.",
+    "provenance": "New geometry by Codex, retains Tripo derivation origin, source job and hash."
+  },
+  "total_evaluated_triangles": 1248
+}

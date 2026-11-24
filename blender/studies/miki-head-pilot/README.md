@@ -1,6 +1,6 @@
 # Miki head-only pipeline trial: CC0 foundations
 
-**Status:** The head-only comparison is available for review, without final appearance selection. This file retains the CC0 foundation gallery and its verification; the [native generator comparison](#native-generator-comparison) adds the actual exported Tripo head. The [pilot art](../../../art/characters/angular-study/miki-head-pilot/README.md) and [trial record](tripo-trial.md) distinguish generated inputs, native mesh findings and the proposed cleanup pass.
+**Status:** The head-only comparison is available for review, without final appearance selection. This file retains the CC0 foundation gallery and its verification; the [native generator comparison](#native-generator-comparison) adds the actual exported Tripo head. The [pilot art](../../../art/characters/angular-study/miki-head-pilot/README.md) and [trial record](tripo-trial.md) distinguish generated inputs, native mesh findings and the subsequently assigned [cleanup study](../miki-head-cleanup/README.md).
 
 ## Open and inspect
 
@@ -75,7 +75,7 @@ The initial alignment proposal used the conservative object-bound height, **0.23
 
 The Tripo head supplies more Miki-specific large forms, while the CC0 sources supply cleaner anatomical starting topology. The imported head is an **uncorrected modelling candidate**. Four eye parts account for **88.41% of its vertices**; raised brows, a one-sided skull/neck gap, a pinched eye aperture, an iris seam and a local mouth-winding issue need repair. An open neck cutoff is expected and is not itself a defect. Counts and source findings belong in the [FBX record](tripo/README.md).
 
-The proposed next pass keeps the Tripo silhouette while rebuilding leaner eyes/brows and repairing those local defects, using the CC0 heads as construction references. No cleanup, hair, UV work, rig, animation fitting or runtime integration is performed in this comparison. The original FBX bytes, native mesh coordinates/connectivity, smooth flags and custom normals remain unchanged.
+The maintainer subsequently assigned the recommended [cleanup study](../miki-head-cleanup/README.md), which keeps the Tripo silhouette while rebuilding leaner eyes/brows and repairing those local defects. That derivative and its matched views are separate files. No cleanup, hair, UV work, rig, animation fitting or runtime integration is performed in this original comparison. The original FBX bytes, native mesh coordinates/connectivity, smooth flags and custom normals remain unchanged.
 
 The raw Tripo source and its embedded comparison geometry retain their [Tripo free-output provenance](tripo/README.md); CC0 controls and original MIT review contributions remain distinct. A later subscription enabled export and did not retroactively make the free generation paid/private output.
 

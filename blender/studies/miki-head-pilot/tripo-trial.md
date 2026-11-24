@@ -41,6 +41,6 @@ Official summaries conflict: the [pricing document](https://www.tripo3d.ai/produ
 
 ## Next modelling pass
 
-The native head volume is more specific to Miki's graphic reference than the stock CC0 shapes, while the CC0 source supplies cleaner anatomical starting topology. Use the Tripo silhouette as the leading volume candidate and keep the CC0 source as a construction reference. Before hair or fitting, simplify the eye parts, replace the raised brow slabs with restrained forms, repair the one-sided skull/neck seam and localized eye/mouth defects, and review the expression. This is a proposed cleanup pass, not a change already made.
+The native head volume is more specific to Miki's graphic reference than the stock CC0 shapes, while the CC0 source supplies cleaner anatomical starting topology. Use the Tripo silhouette as the leading volume candidate and keep the CC0 source as a construction reference. Before hair or fitting, simplify the eye parts, replace the raised brow slabs with restrained forms, repair the one-sided skull/neck seam and localized eye/mouth defects, and review the expression. The maintainer subsequently assigned that bounded [cleanup pass](../miki-head-cleanup/README.md). Its derivative and matched renders are separate; this trial preserves the original export and comparison.
 
 No final head is selected. Hair, body fitting, rigging, animation, runtime budgets, Laura/Tom, app integration, merge and release remain outside this trial. The live Blender file is unchanged.
