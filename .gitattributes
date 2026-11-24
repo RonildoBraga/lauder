@@ -76,3 +76,7 @@ blender/studies/miki-reference-blockout/artist.png filter=lfs diff=lfs merge=lfs
 blender/studies/miki-reference-blockout/head.png filter=lfs diff=lfs merge=lfs -text
 blender/studies/miki-reference-blockout/head-front.png filter=lfs diff=lfs merge=lfs -text
 blender/studies/miki-reference-blockout/head-right.png filter=lfs diff=lfs merge=lfs -text
+
+art/characters/angular-study/miki-fullbody-input/miki-three-quarter-v1.png filter=lfs diff=lfs merge=lfs -text
+
+art/characters/angular-study/miki-fullbody-input/miki-three-quarter-v2.png filter=lfs diff=lfs merge=lfs -text

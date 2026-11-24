@@ -6,6 +6,8 @@
 
 **Head and hair study:** The assigned [separate swept-hair study](../blender/studies/miki-hair/README.md) uses the [cleaned Tripo-derived head](../blender/studies/miki-head-cleanup/README.md) as its unchanged working base. Native head angles, reference/collar comparisons and the actual Camera B projection await visual review before body or shared-skeleton fitting. The original Tripo/CC0 comparison, raw export and approved art remain unchanged. This does not approve a final character or runtime budget.
 
+**Miki full-body reset, 25 November 2026:** The maintainer rejected the assembled body/motion appearance and assigned a [coherent full-body Tripo draft](../blender/studies/miki-fullbody-tripo/README.md) for static review before rigging. The additional bag correction replaces the open-frame holder with a compact closed brown satchel in the [new generator input](../art/characters/angular-study/miki-fullbody-input/README.md); historical illustrations remain unchanged. The prepared colour/clay views establish a review candidate, not an accepted final mesh. The dense imported surface still needs deliberate low-poly construction if selected. Face, hair, fingers and rear garment/strap details remain review issues. The rifle/tablet stay separate; the existing game and shared motions are unchanged.
+
 ## The direction
 
 **Quiet, cold, sparse and legible.** The world is frozen: rivers and the sea lie under ice, and most of the land is buried under snow. Most of the screen is flat white ground, with a few structures and landmarks on it. Simple geometry, a small palette, long shadows and carefully placed objects make the world distinctive, rather than detail or graphical complexity.
