@@ -76,6 +76,11 @@ final class EncounterSimulation {
   private var encounter: Level.Encounter?
   private var director = StoryDirector()
   private(set) var target: SIMD2<Float>?
+  /// The hostile the leader's aim is locked on, or nil (ADR 0020). While it holds, the world
+  /// turns the leader to face them and Fire takes them.
+  private(set) var lock: String?
+  /// Play time since the latest lock press, which tells a quick second press apart.
+  private var lockPressAge: Float?
   private(set) var hostilePoses: [String: FigurePose] = [:]
   private(set) var shots: [Shot] = []
   private var reportedEmpty = false
@@ -130,6 +135,8 @@ final class EncounterSimulation {
     scatters = [:]
     lastMotion = [:]
     target = nil
+    lock = nil
+    lockPressAge = nil
     shots.removeAll(keepingCapacity: true)
     events.removeAll(keepingCapacity: true)
     for (id, state) in hostiles { faceHostile(id, state) }
@@ -178,6 +185,9 @@ final class EncounterSimulation {
     var outcome = Outcome()
     shots.removeAll(keepingCapacity: true)
     guard session.mode == .exploring else { return outcome }
+    lockPressAge = lockPressAge.map { $0 + dt }
+    // A hostile downed, cleared or left behind in this step is no longer locked for the next.
+    defer { keepLock(from: leader) }
     settleBodies(dt: dt)
     if weaponLeader != session.leader {
       handling[weaponLeader]?.releaseTrigger()
@@ -319,9 +329,9 @@ final class EncounterSimulation {
     let origin = leader
     guard fireHeld, isDrawn, let aimed = leaderShot(from: origin, aiming: aiming, facing: facing)
     else { return }
-    // Without the stick, Fire turns her towards the assisted target, and she fires once she
-    // faces it within the help's angle.
-    if !aiming, case .body = aimed.strike, simd_distance(aimed.end, origin) > 0.001 {
+    // Without the stick or a lock, Fire turns her towards the assisted target, and she fires
+    // once she faces it within the help's angle.
+    if !aiming, lock == nil, case .body = aimed.strike, simd_distance(aimed.end, origin) > 0.001 {
       let towards = simd_normalize(aimed.end - origin)
       outcome.facing = towards
     }
@@ -368,8 +378,8 @@ final class EncounterSimulation {
     }
     guard
       let aimed = Aim.shot(
-        from: leader, aim: aiming ? facing : nil, facing: facing, range: targetReach,
-        hostiles: candidates, blockers: blockers)
+        from: leader, aim: aiming && lock == nil ? facing : nil, locked: lock, facing: facing,
+        range: targetReach, hostiles: candidates, blockers: blockers)
     else { return nil }
     // The first-fire safety rule also applies beyond the short assistance radius. A manual
     // map-length shot cannot intentionally pass through someone who is not yet hostile.
@@ -400,6 +410,10 @@ final class EncounterSimulation {
     _ shot: ShotPath, from origin: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool
   ) -> Bool {
     guard handling[weaponLeader]?.isReady == true else { return false }
+    // With a lock she fires once she faces them, as the help's angle allows (ADR 0020).
+    if let point = lockPoint, simd_distance(point, origin) > 0.001 {
+      return simd_dot(simd_normalize(point - origin), facing) >= cos(Aim.helpAngle)
+    }
     if !aiming, case .body = shot.strike, simd_distance(shot.end, origin) > 0.001 {
       return simd_dot(simd_normalize(shot.end - origin), facing) >= cos(Aim.helpAngle)
     }
@@ -616,6 +630,63 @@ final class EncounterSimulation {
       if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
       if session.takeHit(member) { outcome.retry = true }
     }
+  }
+
+  // MARK: - The lock (ADR 0020)
+
+  /// How far from the leader a hostile can be locked, and stays locked.
+  static let lockRange: Float = 30
+  /// A second lock press within this many seconds of play after the last lets go.
+  static let releaseTime: Float = 0.3
+
+  /// Where the locked hostile stands, while the lock holds.
+  var lockPoint: SIMD2<Float>? { lock.map(hostilePoint) }
+
+  /// A lock press. Without a lock it locks on the hostile Fire would take, or else the
+  /// nearest; with one, it moves the lock to the next hostile clockwise round the leader, as
+  /// the screen shows the ground with `up` and `right`. A press within `releaseTime` of the
+  /// last lets go instead, so the stick aims again.
+  func pressLock(
+    from leader: SIMD2<Float>, facing: SIMD2<Float>, up: SIMD2<Float>, right: SIMD2<Float>
+  ) {
+    keepLock(from: leader)
+    if let age = lockPressAge, age <= Self.releaseTime {
+      releaseLock()
+      return
+    }
+    lockPressAge = 0
+    let candidates = lockable(from: leader)
+    if let current = lock,
+      let next = Targeting.nextLock(
+        after: current, around: leader, candidates: candidates, up: up, right: right)
+    {
+      lock = next
+    } else {
+      let ballistics = self.ballistics
+      lock = Targeting.firstLock(
+        from: leader, facing: facing, candidates: candidates,
+        isClear: { ballistics.isClear(from: ballistics.point($0), to: ballistics.point($1)) })
+    }
+  }
+
+  /// Lets go of the lock, as a quick second press or the touch controls taking over do.
+  func releaseLock() {
+    lock = nil
+    lockPressAge = nil
+  }
+
+  /// Keeps the lock only while its hostile can still be locked.
+  private func keepLock(from leader: SIMD2<Float>) {
+    guard let id = lock, !lockable(from: leader).contains(where: { $0.id == id }) else { return }
+    lock = nil
+  }
+
+  /// The hostiles a lock can take: standing in view, a target, and within `lockRange`.
+  private func lockable(from leader: SIMD2<Float>) -> [Targeting.Candidate] {
+    hostiles.values.filter {
+      $0.isVisible && !$0.isDown && $0.isTargetable
+        && simd_distance($0.position, leader) <= Self.lockRange
+    }.map { Targeting.Candidate(id: $0.spec.id, position: $0.position) }.sorted { $0.id < $1.id }
   }
 
   private func updateTarget(leader: SIMD2<Float>, aiming: Bool, facing: SIMD2<Float>) {

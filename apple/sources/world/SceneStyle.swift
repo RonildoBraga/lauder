@@ -25,12 +25,12 @@ struct SceneStyle {
   let ink = SceneStyle.palette(54, 65, 75)
   /// Amber: things to use, and the leader's disc.
   let warm = UnlitMaterial(color: UIColor(red: 1, green: 0.75, blue: 0.4, alpha: 1))
-  /// Threats: a hostile's aim and shots, and the assisted target's marker.
+  /// Threats: a hostile's aim and shots, the assisted target's marker and the lock's ring.
   let threat = UnlitMaterial(color: UIColor(red: 0.95, green: 0.3, blue: 0.24, alpha: 1))
   let signal = UnlitMaterial(color: UIColor(red: 0.62, green: 0.87, blue: 0.77, alpha: 1))
 
   /// How much larger than their authored sizes the world markers show: the leader's disc, order
-  /// rings, the refusal cross, the aim marker and the aim and shot lines.
+  /// rings, the refusal cross, the aim marker, the lock's ring and the aim and shot lines.
   let markerScale: Float
 
   /// The camera the world markers were made for: the bridge's before the frozen look, about
@@ -90,6 +90,31 @@ struct SceneStyle {
     disc.scale = [markerScale, 1, markerScale]
     return disc
   }
+
+  /// The lock's mark: a ring on the ground round the locked hostile, in the threats' colour,
+  /// wider than the assisted target's disc so that it circles it (ADR 0020).
+  func lockMarker() -> Entity {
+    let ring = Entity()
+    let segments = 16
+    let radius = Self.lockRingRadius
+    let length = 2 * radius * sin(.pi / Float(segments)) + 0.02
+    for index in 0..<segments {
+      let angle = 2 * .pi * Float(index) / Float(segments)
+      let segment = block(
+        size: [length, 0.02, 0.08], at: [radius * sin(angle), 0, radius * cos(angle)],
+        material: threat)
+      segment.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
+      ring.addChild(segment)
+    }
+    ring.scale = [markerScale, 1, markerScale]
+    return ring
+  }
+
+  /// The lock ring's radius as authored, before the marker scale.
+  static let lockRingRadius: Float = 0.62
+  /// How high the lock ring's centre stands: above the towers' baked shadows, which lie 3 cm
+  /// over the snow, so the ring still shows round a hostile in a tower's shadow.
+  static let lockRingHeight: Float = 0.045
 
   /// A member of the party, from the model named after them in `blender/assets`.
   func partyMember(_ member: PartyMember) -> Entity {
