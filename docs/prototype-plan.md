@@ -196,8 +196,13 @@ On 26 November 2026 the maintainer gave each character two weapons, and chose ho
 - **Switching:** R1 / RB, T or the touch **Swap** button brings the other weapon into hand, and each keeps its magazine.
 - **Rounds:** none are counted beyond the magazine, and the status shows the weapon in hand.
 - **Not built yet:** each weapon borrows the nearest existing sound, and dedicated sounds are left for a later pass.
-- **Checks:** CHECKS_B
-- **Simulator:** SIM_B
+- **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 283 tests in 395 runs. New tests cover the pairs and the switch keeping each magazine, the switch press, the long rifle's heavy hit, the assault rifle's rapid fire past a reload, the minigun's spin-up and slower walk, the dome stopping shots for everyone inside it and shots landing once it drops, its run-down and recharge, and the sword striking in front within reach and turning shots from in front only.
+- **Simulator:** in the new `weapons` route Tom raises his dome against the guard's bursts and nobody is hurt, then switches to the minigun and brings the guard down. Its screenshot shows the dome round all three, with the status reading **Shield · Up**. Mean frame time was 16.7 ms and p99 16.8 ms, Simulator measurements only.
+
+  | Route | Steps |
+  |---|---:|
+  | `weapons` | 28/28 |
+  | `first-fight` | 35/35 |
 - **Not yet verified:** the phone. That covers how each weapon feels, the switch on R1, the touch Swap button, how the blade and the dome read at the phone's size, and the guard fight's balance, which the heavier hits change.
 
 ### Architecture checks
