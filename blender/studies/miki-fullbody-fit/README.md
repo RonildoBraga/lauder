@@ -1,85 +1,72 @@
-# Miki full-body fitting study
+# Miki simple dress and motion study
 
-**Work-in-progress motion review, 25 November 2026.** The maintainer accepted the coherent full-body approach as Miki's working visual base and assigned simplification, detail refinement and reuse of the existing skeleton and animations. This separate authoring study awaits final motion/appearance review. Canonical characters, shared motion, gameplay and app resources remain unchanged.
-
-
+**Updated authoring review, 25 November 2026.** The maintainer asked: “I think we should simplify and remove the side bag and the belts so only have the dress with a high colar.” This candidate follows that direction with a simple teal dress and integral standing collar. The bag, crossbody/waist belts, rear strap and folded scarf are removed from the current outfit. Original references, raw assets and history remain preserved. Canonical characters, shared motion, gameplay and app resources are unchanged.
 
 ## Review in Blender
 
-Open [miki-fullbody-fit-review.blend](miki-fullbody-fit-review.blend), keeping `character` beside it and the existing [Precision rifle source](../equipment/rifle-precision/README.md). Relative libraries supply both assets. **01 Run Sneak Shoot** presents the motion sequence; **02 Rest and details** supplies static inspection. The review has five orthographic body views, a face camera and a motion camera. The editable source is [character/miki-fullbody-fit.blend](character/miki-fullbody-fit.blend), collection `miki-fullbody-fit`.
+Open [miki-fullbody-fit-review.blend](miki-fullbody-fit-review.blend) with `character` beside it. Its animated and static scenes use **one relative character library only**: the editable [character/miki-fullbody-fit.blend](character/miki-fullbody-fit.blend), collection `miki-fullbody-fit`. No equipment is displayed or linked into this review.
 
-![Actual native Blender view](three-quarter.png)
+![Native Blender three-quarter view](three-quarter.png)
 
-[Front](front.png) · [Back](back.png) · [Face](face.png)
+[Front](front.png) · [Back](back.png) · [Face](face.png) · [Motion reel](motion-preview.mp4)
 
-The images and [motion reel](motion-preview.mp4) are native Blender renders of the saved candidate, with no AI image replacement or retouching. The earlier [Tripo review](../miki-fullbody-tripo/README.md) remains an unchanged comparison. The editorial sequence uses 120 fps:
+The images and reel are native Blender renders of the frozen candidate, not AI replacements or retouched previews. The animated scene presents two editorial takes at 120 fps; the other scene remains independently unposed for inspection.
 
-| Take | Frames | Repetitions |
+| Take | Source timeline | Repetitions |
 | --- | --- | ---: |
 | Run | 1–312 | 4 |
 | Sneak | 313–744 | 3 |
-| Fire | 745–1104 | 5 |
 
-The sequence lasts **9.2 seconds**. The 960 × 900 H.264 reel encodes 276 native frames at 30 fps, sampling every fourth source frame. Editorial cuts separate the clips; this does not demonstrate gameplay blending.
+The **6.2-second**, **960 × 900** H.264 reel contains **186 frames at 30 fps**, sampling every fourth source frame. These editorial cuts demonstrate the selected clips, not gameplay transitions. All eleven fitted body clips remain in the authoring source; Fire is not displayed in this review.
 
-## Geometry, colour and equipment
+## Outfit, geometry and colour
 
-A UV-preserving reduction takes the [1,931,766-triangle Tripo draft](../miki-fullbody-tripo/README.md#source-and-settings) to a **12,000-triangle core** with 5,998 unique source vertices. Semantic splitting duplicates seam vertices across objects. The saved candidate totals **8,103 vertices / 14,846 triangles**, including the auxiliary pieces below; garment correctives preserve topology. The topology is a simplified triangulated generator mesh; dedicated deformation retopology and iPhone performance are unestablished.
+The accepted [Tripo full-body base](../miki-fullbody-tripo/README.md) began at 1,931,766 triangles and was reduced to a UV-preserving 12,000-triangle core. This outfit revision deliberately replaces obsolete clothing surfaces with clean native topology; the retained original surface and the new clothing are recorded separately. The lower dress is a clean open wrap with a practical high-low front hem and a longer side/back tail. It is not the old fused coat/leg-return mesh.
 
-The bounded detail pass changes **159 source vertices**, at most approximately **1.992 mm**, around the jaw/mouth/adjacent neck. All semantic copies of an edited source vertex receive its same delta. The accepted swept-hair silhouette remains. Darker irises and the **558-vertex glove palette region** are baked through native Blender emission into one [1,024² base-colour atlas](character/textures/miki-basecolour-1k.png). UV-bearing parts share a simple matte material; auxiliary pieces use plain colours. The gloves retain their original thumb gaps and fused-finger topology, with no finger articulation. Normal and roughness/metallic maps are removed from this derivative.
+The upper dress joins a tailored bodice directly into a hollow high collar, with no raised belt ring. A small neck infill fills the source void formerly hidden by the scarf; two clean sleeve roots join the retained lower sleeves. The waist overlaps the lower dress internally. The formerly hidden hip bridge and jagged closure fans are retired. One connected matte-charcoal upper-leggings surface joins the retained pants at 61 exact seam points around 0.62 m; boots and lower legs remain.
 
-| Additional piece | Vertices | Triangles |
+| New upper component | Vertices | Triangles |
 | --- | ---: | ---: |
-| Bounded coat inner shell | 1,094 | 2,009 |
-| Hidden cut-boundary caps | 183 | 177 |
-| Hidden hip/thigh bridge | 142 | 272 |
-| Rear shoulder strap | 196 | 388 |
+| Bodice and integral high collar | 264 | 480 |
+| Neck continuity infill | 48 | 92 |
+| Clean sleeve roots | 165 | 271 |
+| Continuous visible upper leggings | 517 | 1,030 |
 
-The closed caps seal seven original cut cycles. The hip/thigh bridge uses closed overlapping opaque lofts beneath the coat, with narrower hidden lower overlaps inside the retained pants. The back strap continues the satchel's front strap. These additions have their own provenance; their source IDs are distinct from original visible faces.
+Retained face/hair, glove, boot and pants vertices keep their source positions, weights and UVs. **62 neutral-cream scarf triangles previously classified into the head object are removed**; this is clothing cleanup, so the entire old head topology is not claimed unchanged. No jaw, face or hair redesign accompanies this revision. Retained pants receive a uniform charcoal material, with their UVs preserved. The gloves keep their fused-finger topology, without finger articulation.
 
-The **280-triangle Precision rifle stays independent and linked**. The review owns carry/hold transforms; neither rifle nor tablet is part of the character mesh. Fire is a fitted low-ready review, with scoped aiming, draw/stow transitions and runtime weapon attachment remaining separate work.
+One new **1,024² base-colour atlas** is baked natively from the cleaned body and head together, retaining their original UV charts and face/hair colours. Plain matte materials cover the new dress, closures and neck infill. No normal or roughness/metallic maps are required. Source images are not overwritten. Equipment remains independent: the [Precision rifle study](../equipment/rifle-precision/README.md) and other equipment are unchanged and excluded from these two takes.
 
-## Shared skeleton, derived motion and garment correctives
+**Frozen actor totals:** 4,669 vertices / 8,821 triangles, across eight meshes, including lining and visible leggings. This remains simplified generator topology plus bounded native clothing work, not production deformation retopology or an established iPhone budget.
 
-The study keeps **17 fitted body bones**, preserving shared names and hierarchy while adapting rest positions to Miki's proportions. The canonical [skeleton and eleven `party.*` Actions](../../animations/README.md) remain immutable. Eleven local `miki.fitted.*` body Actions regenerate from them through rest-space rotation mapping, sole-contact correction and fitted palm targets; the source opens unposed at frame 0 and preserves those reusable Actions.
+## Shared skeleton, motion and regeneration
 
-The garment uses **83 corrective shape keys per part plus Basis**: 27 Run, 49 Sneak and seven Fire samples. Six local Key Actions pair the three clips with the outer coat and its lining. The experimental 18-bone pilot was rejected; it is not included. The animated review owns local mesh/Key-data copies and matching body/corrective NLA tracks; the static review owns its rest configuration. All channels are explicit, including zero values for other clips, to prevent stale shapes when switching Actions. Shared-source changes require reauthoring/rechecking the correctives; the helper checks the shared source SHA before a refresh so a body refresh cannot silently invalidate them.
+The actor keeps **17 fitted body bones** with the existing names and hierarchy. The canonical [shared skeleton and eleven `party.*` Actions](../../animations/README.md) remain immutable. The eleven local `miki.fitted.*` Actions preserve the fitted rest-space mapping, sole-contact correction and palm-target work; outfit cleanup changes none of those body curves. The source opens unposed at frame 0.
 
-[refresh-motions.py](refresh-motions.py) exposes `refresh_target(rig, body_objects, source_library, fit)` and a CLI entry point restricted to this exact study source. Its fit metadata and source signature preserve lineage. From the repository root, the public helper is invoked with Blender:
+[refresh-motions.py](refresh-motions.py) refreshes only this study’s derived body motion and rejects a mismatched shared-source fingerprint. [refresh-dress.py](refresh-dress.py), using [dress_clearance.py](dress_clearance.py), regenerates this study’s coherent garment deformation from its frozen rest garment and fitted motion. Its inputs are the saved rest topology, skin weights/modes and fitted body clips. A change to any of those inputs invalidates prior garment samples and requires regeneration and native review; old independent coat correctives must not be reused silently.
 
-```sh
-/Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup -Y \
-  blender/studies/miki-fullbody-fit/character/miki-fullbody-fit.blend \
-  --python-exit-code 1 --python blender/studies/miki-fullbody-fit/refresh-motions.py
-```
+The animated review owns local evaluated garment/Key data paired with its body motion; the static scene owns its rest configuration. Refreshing the authoring source requires rebuilding and rechecking the linked review and rendered reel. Neither helper saves the canonical party source. A full 297-frame regeneration reproduces 26 evaluated outer/lining pose samples exactly and leaves the eleven body curves and saved source unchanged. Both helpers reject a mismatched shared-motion fingerprint. A separate body refresh reproduces 33 sampled poses across all eleven clips exactly.
 
-The helper updates only this study's derived motion and saves that study source. The linked review and garment pairing need rebuilding/verification after a valid refresh; canonical files are not saved.
+## Verification and remaining gates
 
-## Verification and limits
+Fresh native loads must resolve the single relative library and atlas, preserve the 17-bone/eleven-body-Action contract, and keep normalized skin weights with no more than four influences per vertex. Source-ID comparisons establish that retained body/head positions, weights and UVs are unchanged; they do not imply preservation of retired wardrobe faces. Review clones must bind every new component to their own copy of the same rig, including the head-bound neck infill. Follow the [repository validation and storage rules](../../../CONTRIBUTING.md#validation).
 
-The final candidate is checked through fresh native loads, resolving relative libraries/atlas, normalized skin weights, the 17-bone/eleven-body-Action contract, six matching Key Actions, exact core-motion preservation and source-bound renders. Follow [repository validation/storage rules](../../../CONTRIBUTING.md#validation).
+**Frozen validation:** all 62 existing Blender/export tests pass; fresh native inspection verifies 17 fitted bones, eleven unchanged body Actions, normalized weights with at most three influences and no unweighted vertices. The final 591-pose check at 240 Hz covers Run 157, Sneak 289 and Fire 145 poses; all geometry is finite/nondegenerate, foreign-clip keys stay zero, active keys sum to one and loop endpoints match exactly. All 61 pants joins and 55 sleeve joins remain exact. Native rest/front/back/face views and worst-fold/stride poses were inspected on the assembled snapshot. The full two-take sequence was rendered, decoded and opened in Blender for playback. No strict outer or lining triangle crossings were detected against retained legs and the entire actual upper-leggings surface across those 591 poses. The garment gate covers free panels with rest face-centroid Z below 0.98 m; the intentional upper waist attachment band is excluded. Minimum lining-to-floor clearance is 33.89 mm. This does not certify continuous-time/global self-collision or every motion. An angular trailing-tail fold and small Boolean sliver triangles remain; production retopology and runtime intake are unverified. Earlier 591-pose or underbody checks belong to their recorded snapshots and do not automatically validate this new dress.
 
-All **62 existing Blender/export tests pass**, including compressed-file path hygiene. A read-only refresh reproduces 33 sampled body poses across all eleven Actions exactly, restores the previous pose/frame, leaves the saved character unchanged and rejects a mismatched source fingerprint before reusing garment correctives. The encoded reel fully decodes with 276 frames at 30 fps.
-
-Independent scratch-file inspection confirms the final 17-bone rest rig and eleven body Actions match the fitted basis, all 12,000 original surface faces and declared detail edits are preserved, and **591 skinned Run/Sneak/Fire poses** stay finite with at most four normalized weights per vertex. Fourteen source-to-review comparisons, including the reported worst midpoints, match evaluated body and corrective geometry exactly. The animated and static actors own independent Key data; the static actor remains unposed. Both relative libraries and the external atlas resolve. These checks verify playback and lineage, not clean clothing contact.
-
-Bounded auxiliary checks passed: original underbody plus caps has zero boundary/nonmanifold edges, winding conflicts or degenerate faces after a 1 µm weld; cap seam positions/weights are exact. The hip bridge's 822 rest samples stayed inside the accepted surface with at least 4.24 mm sampled clearance. Its **591 Run/Sneak/Fire poses at 240 Hz** passed **14,184 overlap-anchor tests** with finite, nondegenerate geometry and positive component volumes. A semantic colour-bake test matched all tested covered texels of the equivalent single-mesh bake; variation was confined to padding.
-
-**Unresolved visual defect:** the coat still contacts the legs, has a ragged inner edge in some moving poses and visibly pokes through the front of the satchel in part of Run. The corrective sampling/midpoint audit measures up to approximately **36.94 mm** Run and **36.09 mm** Sneak point penetration; selected corrected samples are substantially better, so three attractive stills do not establish a clean loop. This is a review draft, not completed garment deformation. The next art task is coherent garment topology/weight cleanup before promoting it to the game. These local checks establish no collision-free clothing guarantee, final appearance, all-clip deformation approval, runtime intake or phone performance. This study includes no Swift changes, app/Simulator/phone run, canonical replacement, merge or release.
+**Remaining gate:** final visual review and bounded deformation acceptance, then a separately assigned runtime intake. No collision-free clothing guarantee, final appearance approval, all-clip garment approval or iPhone-performance claim follows from this authoring study. It includes no app/Simulator/phone run, canonical replacement, merge or release.
 
 ## Saved review files
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
-| [Character](character/miki-fullbody-fit.blend) | 19,990,597 | `4e64323bd2135b3c606e92df75b1962aabb6714facd7ae4a05f211260f47b0d6` |
-| [Review](miki-fullbody-fit-review.blend) | 6,001,582 | `e6b991fd520e2470e6cb7b7b8347260b3a9934c08906d16697c7747a51faa7c8` |
-| [Colour atlas](character/textures/miki-basecolour-1k.png) | 1,017,022 | `855bda50135fb7d79eb251582335e5a91a8dd0593445ef5bcab6dd89b5d543e3` |
-| [Motion reel](motion-preview.mp4) | 743,137 | `f66dd340734bfe76b1be9c465a7881e1a54eba767c3af7a9b1b165dcf39098a8` |
+| Character source | 2,413,190 | `da1f234dee4476245db69cc31f407018062452a8128d701fe70fdc3448188d56` |
+| Two-scene review | 487,089 | `fab727d1bae71c1f5afd9c30cd5343954e9e404d4c9af3558364fe5d0424f5f5` |
+| Base-colour atlas | 477,147 | `cd5e2a58ed43e3586a008dd22c16eb63bc144bf59c5f4b330329c98c61cc7d0d` |
+| Two-take reel | 548,626 | `c9e73535e1f8467bdbc578d257f9b929472f2729f3c52d5c24c1a68f6c8233cb` |
 
-Hashes bind this revision’s native files and encoded media. New renders are needed after any geometry, motion or material change.
+These values bind the exact saved files and encoded media after the final freeze. Any geometry, material, motion or helper change requires refreshed evidence.
 
 ## Provenance and licence
 
-The preserved [raw GLB](../miki-fullbody-tripo/source/miki-h3-trial-v1.glb) has SHA-256 `c21f1c753a5bc2b85017ddbd9428894af0732683daae48f50832059e7ad09edd`, Tripo H3.1 job `c6145ced-0843-4f0e-bcce-283c000f5238`, generated under an active paid subscription. The [input and satchel correction](../../../art/characters/angular-study/miki-fullbody-input/README.md) retain reference lineage and exact prompts. This fitting phase uses no new generation or purchase. Raw vendor identifiers and earlier sources remain preserved.
+The preserved [raw GLB](../miki-fullbody-tripo/source/miki-h3-trial-v1.glb) has SHA-256 `c21f1c753a5bc2b85017ddbd9428894af0732683daae48f50832059e7ad09edd`, Tripo H3.1 job `c6145ced-0843-4f0e-bcce-283c000f5238`, generated under an active paid subscription. The [input/reference lineage](../../../art/characters/angular-study/miki-fullbody-input/README.md) remains historical evidence even where its outfit differs. This native dress pass uses **no new AI generation, paid credits or purchase**.
 
-The mesh/atlas retain the [source's paid-output provenance and applicable Tripo terms](../miki-fullbody-tripo/README.md#provenance-and-licence), separately from the earlier free head trial. Do not automatically relabel the underlying generator output as exclusively owned MIT material. Original Lauder motion, rifle, added geometry, fitting/review work, helper and documentation use the project's [MIT licence](../../../LICENSE), subject to recorded underlying rights and without an exclusive-rights claim over AI output. Native processing is agent-assisted; no human sculpting is claimed.
+The retained generator mesh and atlas keep their [paid-output provenance and applicable Tripo terms](../miki-fullbody-tripo/README.md#provenance-and-licence), separately from the earlier free head trial. Original Lauder motion, equipment, added geometry, fitting/review work, helpers and documentation use the project’s [MIT licence](../../../LICENSE), subject to recorded underlying rights and without an exclusive-rights claim over AI output. Native processing is agent-assisted; no human sculpting is claimed.

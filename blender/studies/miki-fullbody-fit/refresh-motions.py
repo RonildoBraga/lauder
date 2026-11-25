@@ -243,7 +243,14 @@ def main():
         pb.scale = (1, 1, 1)
     bpy.context.scene.frame_set(0)
     bpy.data.orphans_purge(do_recursive=True)
-    bpy.ops.wm.save_as_mainfile(filepath=str(expected), relative_remap=False)
+    import sys
+    sys.path.insert(0, str(folder.parents[1] / 'extensions'))
+    from lauder_levels import forget_local_paths
+    for scene in bpy.data.scenes:
+        scene.render.filepath = ' ' * 1023
+        scene.render.filepath = '//'
+    forget_local_paths(expected)
+    bpy.ops.wm.save_as_mainfile(filepath=str(expected), relative_remap=False, compress=True)
 
 if __name__ == '__main__':
     main()
