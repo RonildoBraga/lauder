@@ -21,15 +21,12 @@ enum InputRules {
     var aimStick: SIMD2<Float> = .zero
     var controllerAction = false
     var controllerPause = false
+    /// L1 / LB: lead as the next member, going round the party.
     var controllerSwitch = false
-    /// L1 / LB: the previous leader (ADR 0005).
-    var controllerPrevious = false
     /// R2 / RT.
     var controllerFire = false
     /// Triangle / Y.
     var controllerFormation = false
-    /// Circle / B: hides or shows the status panel.
-    var controllerPanel = false
     /// Square / X: the leader's dodge roll.
     var controllerDodge = false
     /// The D-pad's directions: squad orders while exploring, and up or down in the pause menu.
@@ -43,13 +40,10 @@ enum InputRules {
     var down = false
     var keyboardAction = false
     var keyboardPause = false
+    /// Q: lead as the next member, going round the party.
     var keyboardSwitch = false
-    /// Z: the previous leader.
-    var keyboardPrevious = false
     var keyboardFire = false
     var keyboardFormation = false
-    /// H: hides or shows the status panel.
-    var keyboardPanel = false
     /// Space: the leader's dodge roll.
     var keyboardDodge = false
     /// The arrow keys, the Simulator keyboard's D-pad.
@@ -88,17 +82,15 @@ enum InputRules {
     var hasDpad: Bool { dpadUp || dpadDown || dpadLeft || dpadRight }
     var hasAimKey: Bool { aimUp || aimDown || aimLeft || aimRight }
     var hasKeyboardInput: Bool {
-      hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardPrevious
-        || keyboardFire || keyboardFormation || keyboardPanel || keyboardDodge || hasArrowKey
-        || hasAimKey
+      hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardFire
+        || keyboardFormation || keyboardDodge || hasArrowKey || hasAimKey
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
     var hasControllerInput: Bool {
       let deadZone = Movement.deadZone * Movement.deadZone
       return simd_length_squared(stick) > deadZone || simd_length_squared(aimStick) > deadZone
-        || controllerAction || controllerPause || controllerSwitch || controllerPrevious
-        || controllerFire || controllerFormation || controllerPanel || controllerDodge
-        || hasDpad
+        || controllerAction || controllerPause || controllerSwitch || controllerFire
+        || controllerFormation || controllerDodge || hasDpad
     }
   }
 
@@ -117,9 +109,7 @@ enum InputRules {
     var rightWasPressed = false
     /// The vertical direction held in the previous sample: -1 up, 1 down, 0 neither.
     var menuDirection = 0
-    var panelWasPressed = false
     var vibrationWasPressed = false
-    var previousWasPressed = false
     var dodgeWasPressed = false
   }
 
@@ -147,13 +137,8 @@ enum InputRules {
     var commandPoint: ScreenPoint?
     /// Where the touch order menu has just opened, while exploring.
     var markPoint: ScreenPoint?
-    /// A fresh press of the panel button, which hides or shows the status panel, while
-    /// exploring or in a conversation.
-    var panelPressed = false
     /// A fresh press of the touch Vibration button while paused (ADR 0008).
     var vibrationPressed = false
-    /// A fresh Previous press while exploring, which leads as the member before the leader.
-    var previousPressed = false
     /// Where the right stick, or I, K, J and L, aims while exploring, in the stick's terms: up
     /// and right on the screen. Nil inside the dead zone (ADR 0007).
     var aim: SIMD2<Float>?
@@ -170,12 +155,10 @@ enum InputRules {
     let action = raw.keyboardAction || raw.controllerAction || raw.touchAction
     let pause = raw.keyboardPause || raw.controllerPause || raw.touchPause
     let cycle = raw.keyboardSwitch || raw.controllerSwitch || raw.touchSwitch
-    let previous = raw.keyboardPrevious || raw.controllerPrevious
     let restart = raw.touchRestart
     let vibration = raw.touchVibration
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
-    let panel = raw.keyboardPanel || raw.controllerPanel
     let dodge = raw.keyboardDodge || raw.controllerDodge || raw.touchDodge
     let up = raw.dpadUp || raw.arrowUp
     let down = raw.dpadDown || raw.arrowDown
@@ -204,11 +187,8 @@ enum InputRules {
       restartWasPressed: restart, fireWasPressed: fire, formationWasPressed: formation,
       upWasPressed: up, downWasPressed: down, leftWasPressed: left, rightWasPressed: right,
       menuDirection: direction)
-    next.panelWasPressed = panel
     next.vibrationWasPressed = vibration
-    next.previousWasPressed = previous
     next.dodgeWasPressed = dodge
-    let panelEdge = panel && !state.panelWasPressed
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
       next.needsNeutralInput =
@@ -220,8 +200,7 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || panel || raw.hasDpad || raw.touchGround || vibration
-        || previous || dodge
+        || raw.hasDpad || raw.touchGround || vibration || dodge
       return (.neutral, next)
     }
     let pauseEdge = pause && !state.pauseWasPressed
@@ -235,7 +214,7 @@ enum InputRules {
     switch mode {
     case .paused:
       // The pause menu: up/down choose, action confirms, and the touch buttons choose directly.
-      // Switch, Previous, formation, panel and order presses are consumed.
+      // Switch, formation and order presses are consumed.
       return (
         Input(
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
@@ -244,18 +223,14 @@ enum InputRules {
           vibrationPressed: vibration && !state.vibrationWasPressed), next
       )
     case .dialogue:
-      // Action shows the next line, and the panel button hides or shows the status panel;
-      // Movement, switch, Previous, formation and order presses are consumed.
+      // Action shows the next line; movement, switch, formation and order presses are consumed.
       return (
         Input(
-          movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
-          panelPressed: panelEdge),
+          movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false),
         next
       )
     case .exploring:
       let switchEdge = cycle && !state.switchWasPressed
-      // Next wins over Previous pressed in the same sample.
-      let previousEdge = previous && !state.previousWasPressed && !switchEdge
       let formationEdge = formation && !state.formationWasPressed
       // One order per sample. A touch order is already a single event; among fresh directions
       // Hold comes first, then both, then one side, should two arrive together.
@@ -274,7 +249,7 @@ enum InputRules {
         command = .rightGoes
       }
       // A switch or a squad command in the same sample discards the leader's action and roll.
-      let commanded = switchEdge || previousEdge || formationEdge || command != nil
+      let commanded = switchEdge || formationEdge || command != nil
       return (
         Input(
           movement: movement,
@@ -287,8 +262,6 @@ enum InputRules {
           command: command,
           commandPoint: commandPoint,
           markPoint: raw.touchMark,
-          panelPressed: panelEdge,
-          previousPressed: previousEdge,
           aim: aim,
           dodgePressed: dodge && !state.dodgeWasPressed && !commanded
         ), next

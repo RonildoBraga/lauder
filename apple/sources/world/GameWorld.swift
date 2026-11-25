@@ -41,13 +41,14 @@ final class GameWorld {
   private(set) var fade: Float = 0
   /// The compass to the level's current goal; nil when there is none.
   private(set) var compass: Compass?
-  /// Whether the player has hidden the status panel. It stays hidden or shown across Restart.
+  /// Whether the player has hidden the status panel with the pause menu's Status panel choice.
+  /// It stays hidden or shown across Restart.
   private(set) var panelHidden = false
   /// Whether the phone or the controller vibrates in play (ADR 0008): the pause menu's choice,
   /// on until the player turns it off.
   private(set) var vibrationEnabled = true
   /// Whether the status panel shows: unless the player has hidden it, and always with touch
-  /// controls, which have no button to show it again.
+  /// controls, whose pause screen has no Status panel choice to show it again.
   var showsPanel: Bool { !panelHidden || controls.touchControlsEnabled }
   /// Whether the latest line and the objective are new enough to show in the status panel.
   private(set) var lineIsFresh = true
@@ -391,12 +392,12 @@ final class GameWorld {
         case .resume: togglePause()
         case .restart: restart()
         case .vibration: toggleVibration()
+        case .statusPanel: panelHidden.toggle()
         }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
       }
     case .dialogue:
-      if input.panelPressed { panelHidden.toggle() }
       if input.pausePressed {
         togglePause()
       } else if input.actionPressed {
@@ -405,14 +406,10 @@ final class GameWorld {
         if session.mode != .dialogue { updatePromptAndCompass() }
       }
     case .exploring:
-      if input.panelPressed { panelHidden.toggle() }
       if input.pausePressed {
         togglePause()
       } else if input.switchPressed, session.nextLeader != nil {
         session.cycleLeader()
-        followNewLeader()
-      } else if input.previousPressed, session.previousLeader != nil {
-        session.cycleLeaderBackwards()
         followNewLeader()
       }
       // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
@@ -431,8 +428,8 @@ final class GameWorld {
     controls.requireNeutralInput()
   }
 
-  /// After Next or Previous: the camera eases to the new leader, and a previous leader who
-  /// joins a holding squad holds where they stand.
+  /// After a switch: the camera eases to the new leader, and a previous leader who joins a
+  /// holding squad holds where they stand.
   private func followNewLeader() {
     pinHolds()
     camera.switchLeader()

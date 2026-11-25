@@ -101,7 +101,7 @@ The rejected first robot blockout used asset-specific matte materials from the e
   - One strong colour per person and their headwear tell them apart: Miki's dark hair, Laura's hood with its Snow rim, and Tom's dark beanie with its Snow pompom. Their faces share the Skin tone.
   - Miki's hair and Laura's hood sit behind their faces, so the bare face shows which way they look.
   - No rigging is needed at this size. Each pawn bobs once a step, rocks from side to side and leans into its movement. The leader's [dodge roll](decisions/0019-dodge-roll.md) tumbles the whole figure. Hostiles keep their own models.
-- The interface is light and small, so the world stays the subject: frosted panels with ink words. The status panel keeps to the essentials: the party and its formation, a new objective or line for a few seconds, and a threat or the carbine's rounds while they matter; Circle / B or H hides it. A compass at the top centre points to the next goal with its distance. A controller's or keyboard's controls that apply show in one strip at the bottom, and the touch buttons are frosted too. Controls and their rules do not change.
+- The interface is light and small, so the world stays the subject: frosted panels with ink words. The status panel keeps to the essentials: the party and its formation, a new objective or line for a few seconds, and a threat or the carbine's rounds while they matter; with a controller or keyboard, the pause menu's Status panel choice hides it. A compass at the top centre points to the next goal with its distance. A controller's or keyboard's controls that apply show in one strip at the bottom, and the touch buttons are frosted too. Controls and their rules do not change.
 
 ## The bridge in the frozen world
 

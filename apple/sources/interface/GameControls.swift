@@ -16,6 +16,7 @@ final class GameControls {
   private(set) var actionSymbol: String?
   private(set) var sourceName = "Touch controls"
   private(set) var pauseButtonName = "Pause"
+  /// The button that leads as the next member, going round the party.
   private(set) var switchButtonName = "Switch"
   private(set) var fireButtonName = "Fire"
   /// What aims the active weapon apart from movement, such as the right stick; touch has nothing,
@@ -24,10 +25,6 @@ final class GameControls {
   private(set) var formationButtonName = "Formation"
   /// The button that makes the leader dodge-roll.
   private(set) var dodgeButtonName = "Roll"
-  /// The button that hides or shows the status panel; touch has none.
-  private(set) var panelButtonName = "Panel"
-  /// The button that leads as the member before the leader; touch has none, and Next cycles.
-  private(set) var previousButtonName = "Previous"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -139,20 +136,18 @@ final class GameControls {
         pad?.rightThumbstick.xAxis.value ?? 0, pad?.rightThumbstick.yAxis.value ?? 0),
       controllerAction: pad?.buttonA.isPressed == true,
       controllerPause: pad?.buttonMenu.isPressed == true,
-      controllerSwitch: pad?.rightShoulder.isPressed == true,
-      controllerPrevious: pad?.leftShoulder.isPressed == true,
+      // One switch, going round the party: R1 / RB and Circle / B are free.
+      controllerSwitch: pad?.leftShoulder.isPressed == true,
       controllerFire: pad?.rightTrigger.isPressed == true,
       controllerFormation: pad?.buttonY.isPressed == true,
-      controllerPanel: pad?.buttonB.isPressed == true,
       controllerDodge: pad?.buttonX.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
-      keyboardSwitch: pressed(.keyQ), keyboardPrevious: pressed(.keyZ),
+      keyboardSwitch: pressed(.keyQ),
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
-      keyboardPanel: pressed(.keyH),
       keyboardDodge: pressed(.spacebar),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
@@ -245,46 +240,43 @@ final class GameControls {
   private func showController(_ profile: GCExtendedGamepad) {
     if profile is GCDualSenseGamepad {
       showSource(
-        "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
-        previous: "L1", fire: "R2", aim: "Right stick", formation: "Triangle", panel: "Circle",
-        dodge: "Square")
+        "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "L1",
+        fire: "R2", aim: "Right stick", formation: "Triangle", dodge: "Square")
     } else if profile is GCXboxGamepad {
       showSource(
-        "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
-        previous: "LB", fire: "RT", aim: "Right stick", formation: "Y", panel: "B", dodge: "X")
+        "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "LB",
+        fire: "RT", aim: "Right stick", formation: "Y", dodge: "X")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
-        cycle: "Right shoulder", previous: "Left shoulder", fire: "Right trigger",
-        aim: "Right stick", formation: "Button Y", panel: "Button B", dodge: "Button X")
+        cycle: "Left shoulder", fire: "Right trigger", aim: "Right stick", formation: "Button Y",
+        dodge: "Button X")
     }
   }
 
   private func showKeyboard() {
     showSource(
-      "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", previous: "Z",
-      fire: "F", aim: "IJKL", formation: "R", panel: "H", dodge: "Space")
+      "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F",
+      aim: "IJKL", formation: "R", dodge: "Space")
   }
 
   private func showTouch() {
     showSource(
-      "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", previous: "Next",
-      fire: "Fire", aim: nil, formation: "Formation", panel: "Panel", dodge: "Roll")
+      "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
+      aim: nil, formation: "Formation", dodge: "Roll")
   }
 
   private func showSource(
-    _ name: String, action: String?, pause: String, cycle: String, previous: String,
-    fire: String, aim: String?, formation: String, panel: String, dodge: String
+    _ name: String, action: String?, pause: String, cycle: String, fire: String, aim: String?,
+    formation: String, dodge: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
     if pauseButtonName != pause { pauseButtonName = pause }
     if switchButtonName != cycle { switchButtonName = cycle }
-    if previousButtonName != previous { previousButtonName = previous }
     if fireButtonName != fire { fireButtonName = fire }
     if aimControlName != aim { aimControlName = aim }
     if formationButtonName != formation { formationButtonName = formation }
-    if panelButtonName != panel { panelButtonName = panel }
     if dodgeButtonName != dodge { dodgeButtonName = dodge }
   }
 

@@ -21,23 +21,6 @@ struct GameSessionTests {
     }
   }
 
-  /// Previous cycles the other way (ADR 0005); with two in the party it leads as Next does.
-  @Test
-  func previousCyclesBackwardsAndMatchesNextWithTwo() {
-    let session = GameSession(level: TestYard.level)
-    for expected in [PartyMember.tom, .laura, .miki] {
-      session.cycleLeaderBackwards()
-      #expect(session.leader == expected)
-    }
-    session.togglePause()
-    session.cycleLeaderBackwards()
-    #expect(session.leader == .miki)
-    let bridge = GameSession(level: BrooklynBridge.level)
-    #expect(bridge.previousLeader == nil)
-    bridge.recruit(.tom)
-    #expect(bridge.previousLeader == .tom && bridge.nextLeader == .tom)
-  }
-
   @Test
   func pauseKeepsTheLeaderAndRejectsSwitching() {
     let session = GameSession(level: TestYard.level)
@@ -110,9 +93,9 @@ struct GameSessionTests {
     #expect(session.currentLine == line)
   }
 
-  /// Resume, Restart and Vibration.
+  /// Resume, Restart, Vibration and Status panel.
   @Test
-  func thePauseMenuOpensOnResumeAndHasThreeChoices() {
+  func thePauseMenuOpensOnResumeAndHasFourChoices() {
     let session = GameSession(level: BrooklynBridge.level)
     session.movePauseChoice(by: 1)
     session.togglePause()
@@ -124,6 +107,10 @@ struct GameSessionTests {
     session.movePauseChoice(by: 1)
     #expect(session.pauseChoice == .vibration)
     session.movePauseChoice(by: 1)
+    #expect(session.pauseChoice == .statusPanel)
+    session.movePauseChoice(by: 1)
+    #expect(session.pauseChoice == .statusPanel)
+    session.movePauseChoice(by: -1)
     #expect(session.pauseChoice == .vibration)
     session.movePauseChoice(by: -1)
     #expect(session.pauseChoice == .restart)
