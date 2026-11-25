@@ -13,7 +13,7 @@ Unmerged draft PRs #150 to #154 proposed a different ADR 0019, for skeletal char
 ## Decision
 
 - **Input:**
-  - Square on PS5, X on Xbox, Space on a keyboard, or the touch **Roll** button, which sits beside Fire and shows with it.
+  - Square on PS5, X on Xbox, Space on a keyboard, or the touch **Roll** button, which sits beside Fire and shows with it while exploring.
   - A roll needs a fresh press while exploring. Dialogue and Pause consume the press rather than queueing it.
   - A switch, formation or order command in the same sample cancels it, as it cancels the action.
   - A held press keeps the release gate closed, like every other button.
@@ -25,8 +25,10 @@ Unmerged draft PRs #150 to #154 proposed a different ADR 0019, for skeletal char
 - **Limits:**
   - The leader does not fire during a roll. A Fire press during it is dropped, and a held Fire resumes when it ends.
   - The next roll waits 0.5 s after one ends.
-  - Only the leader rolls, and switching leader ends a roll.
-  - A scene that holds the party, or a downed leader, cannot roll.
+  - Only the leader rolls.
+  - A scene that holds the party, or a downed leader, cannot start a roll.
+  - Switching leader, or a scene that begins mid-roll, ends the roll, and the next still waits 0.5 s.
+  - A press that no fixed step took up before a Pause or interruption is dropped, as is a Fire press.
 - **Presentation:** the pawn tumbles one full turn forward over the way it rolls. At the middle of the roll it is tucked to 55% of its height and 115% of its width, and lowered so that it stays on the ground. The fixed-step simulation owns the roll; the tumble only shows it.
 
 ## Consequences

@@ -352,9 +352,12 @@ final class GameWorld {
     }
     guard running else { return }
     guard !skipNextStep else {
-      // Time owed from before an interruption is not replayed afterwards.
+      // Time owed from before an interruption is not replayed afterwards, and nor is a Fire or
+      // dodge press that no step took up before it.
       skipNextStep = false
       unsimulatedTime = 0
+      firePressPending = false
+      dodgePressPending = false
       return
     }
     #if DEBUG
@@ -591,9 +594,13 @@ final class GameWorld {
     let movement = held ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
     let walking = SIMD2(direction.x, direction.z)
-    // A roll belongs to the leader who began it, and the next waits for its cooldown.
+    // A roll belongs to the leader who began it and stops when a scene holds the party; either
+    // way the next waits for its cooldown (ADR 0019).
     rollCooldown = max(0, rollCooldown - dt)
-    if roll?.member != leader { roll = nil }
+    if let rolling = roll, held || rolling.member != leader {
+      roll = nil
+      rollCooldown = DodgeRoll.cooldown
+    }
     if dodgePressPending {
       dodgePressPending = false
       startRoll(leader, moving: walking, held: held)

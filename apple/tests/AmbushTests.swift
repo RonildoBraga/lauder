@@ -131,6 +131,26 @@ struct AmbushTests {
     #expect(runs[2] == runs[0])
   }
 
+  /// A scene stops a roll under way (ADR 0019): Miki rolls at the supply case and searches it
+  /// at once, and the ambush holds her where she searched.
+  @Test
+  func theAmbushStopsARollUnderWay() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    winTheFight(world)
+    walk(world, to: [6.5, -4])
+    walk(world, to: BrooklynBridge.supplyCasePosition)
+    world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: GameWorld.simulationStep)
+    #expect(world.roll != nil)
+    world.performAction()
+    #expect(world.session.beat == .ambush)
+    let searchedFrom = position(world, .miki)
+    for _ in 0..<60 where world.session.mode == .exploring {
+      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    }
+    #expect(world.roll == nil)
+    #expect(simd_distance(position(world, .miki), searchedFrom) < 0.001)
+  }
+
   @Test
   func tomDropsTheAttackerShortOfMikiThenJoinsAndFollows() throws {
     let world = GameWorld(level: BrooklynBridge.level)

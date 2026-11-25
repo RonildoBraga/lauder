@@ -122,9 +122,9 @@ On 25 November 2026 the maintainer chose simpler figures for the party from a [g
 - **Checks:** `./scripts/check` passed:
   - 13 declaration-contract tests, 28 offline release tests, 52 Blender tests and seven sound fingerprints;
   - Swift formatting and the app build;
-  - Swift Testing on an iOS 27 iPhone 17 simulator: 288 tests in 391 runs.
+  - Swift Testing on an iOS 27 iPhone 17 simulator: 290 tests in 393 runs.
 
-  New tests cover the walk, the roll's distance and tumble, its cooldown, the dodge press and its release gate, shots passing through a rolling leader, and the pawn models' heights and facing.
+  New tests cover the walk, the roll's distance, tumble and direction, its cooldown, a roll ended by a leader switch or a scene, the dodge press and its release gate, shots passing through a rolling leader, and the pawn models' heights and facing.
 - **Simulator:** the rendered routes passed with no failures or companion warning frames. Mean frame time was 16.7 ms and p99 16.8 ms, Simulator measurements only.
 
   | Route | Steps |
@@ -137,6 +137,13 @@ On 25 November 2026 the maintainer chose simpler figures for the party from a [g
   - **Roll while moving:** with the stick already held to the side, she rolls that way and walks on.
   - **Walk:** her rock from side to side shows.
   - **Not exercised by hand:** Space. The Simulator tool's key presses are shorter than a frame, so the game never samples them held; the input tests cover the binding.
+- **Review:** a second Claude review pass, by a separate agent and so not independent, found four defects. Each is fixed with a regression test:
+  - a roll carried on into a scene that holds the party;
+  - a leader switch skipped the cooldown;
+  - a press that no fixed step took up survived a Pause;
+  - the touch Roll button covered the conversation panel's lines.
+
+  The two new GameWorld tests fail without their fix.
 - **Not yet verified:** the phone. That covers how the pawns read at their real size, the walk and the roll's feel, the touch Roll button with a finger on the stick, controllers, frame pacing and the guard fight's balance with a roll.
 
 ### Architecture checks

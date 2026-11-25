@@ -150,8 +150,9 @@ struct TouchControls: UIViewRepresentable {
       cycle.isHidden = nextLeaderName == nil && !cycle.isCaptured
       // Fire shows for every leader, and stays while a finger holds it.
       fire.isHidden = !showsFire && !fire.isCaptured
-      // Roll shows with Fire, for every leader, and stays while a finger holds it.
-      dodge.isHidden = !showsFire && !dodge.isCaptured
+      // Roll shows with Fire while exploring, so it never covers a conversation's lines, and
+      // stays while a finger holds it.
+      dodge.isHidden = (!showsFire || mode != .exploring) && !dodge.isCaptured
       // Formation appears with the second companion; a finger on it keeps it until it lifts.
       formation.isHidden = !showsFormation && !formation.isCaptured
       pause.setTitle(mode == .paused ? "Resume" : "Pause")

@@ -18,8 +18,10 @@ struct PawnMotionTests {
     let dt: Float = 1 / 60
     var highest: Float = 0
     var lowest: Float = 1
-    for _ in 0..<120 {
+    for frame in 0..<120 {
       gait.step(moved: [PartyBody.speed * dt, 0], dt: dt)
+      // Measured once the shown speed has caught up with walking speed, after half a second.
+      guard frame >= 30 else { continue }
       highest = max(highest, gait.lift)
       lowest = min(lowest, gait.lift)
     }
@@ -66,12 +68,13 @@ struct DodgeRollTests {
   /// Square, X, Space or Roll: the leader tumbles three metres the way they move, then waits a
   /// moment before the next roll; with nothing held, they roll the way they face.
   @Test
-  func theLeaderRollsAheadThenWaitsBeforeRollingAgain() {
+  func theLeaderRollsAheadThenWaitsBeforeRollingAgain() throws {
     let world = GameWorld(level: BrooklynBridge.level)
     let start = position(world, .miki)
     let ahead: SIMD2<Float> = [0, 1]
     world.advanceParty(movement: ahead, dodgePressed: true, deltaTime: 1 / 60)
     #expect(world.roll?.member == .miki)
+    let firstWay = try #require(world.roll?.direction)
     var frames = 1
     while world.roll != nil, frames < 120 {
       // Pressing again mid-roll does nothing.
@@ -87,6 +90,30 @@ struct DodgeRollTests {
       world.advanceParty(movement: .zero, deltaTime: 1 / 60)
     }
     world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
-    #expect(world.roll != nil, "with nothing held, she rolls the way she faces")
+    // She turned to face her first roll; with nothing held, the next goes the way she faces.
+    let secondWay = try #require(world.roll?.direction, "with nothing held, she rolls")
+    #expect(simd_dot(secondWay, firstWay) > 0.999)
+    #expect(simd_dot(secondWay, world.facing(of: .miki)) > 0.999)
+  }
+
+  /// Switching leader ends a roll, and starts the cooldown as a finished roll does, so nobody
+  /// stays untouchable by switching back and forth.
+  @Test
+  func switchingLeaderEndsARollAndStartsTheCooldown() {
+    let world = GameWorld(level: BrooklynBridge.level)
+    world.session.recruit(.laura)
+    world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
+    #expect(world.roll?.member == .miki)
+    world.session.cycleLeader()
+    world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    #expect(world.roll == nil, "the switch ends Miki's roll")
+    world.session.cycleLeader()
+    world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
+    #expect(world.roll == nil, "the next roll waits for the cooldown")
+    for _ in 0..<(Int(DodgeRoll.cooldown * 60) + 2) {
+      world.advanceParty(movement: .zero, deltaTime: 1 / 60)
+    }
+    world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
+    #expect(world.roll?.member == .miki)
   }
 }
