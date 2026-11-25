@@ -1,5 +1,7 @@
 # Miki simple dress and motion study
 
+**Appearance rejected; preserved study.** The maintainer rejected this model after its running/sneaking review and selected [new concept A](../../../art/characters/angular-study/miki-option-a/README.md) for a fresh reference-led Tripo trial. The verification below belongs only to this historical mesh. It does not establish accepted appearance or justify reusing its wardrobe corrections for the new design.
+
 **Updated authoring review, 25 November 2026.** The maintainer asked: “I think we should simplify and remove the side bag and the belts so only have the dress with a high colar.” This candidate follows that direction with a simple teal dress and integral standing collar. The bag, crossbody/waist belts, rear strap and folded scarf are removed from the current outfit. Original references, raw assets and history remain preserved. Canonical characters, shared motion, gameplay and app resources are unchanged.
 
 ## Review in Blender

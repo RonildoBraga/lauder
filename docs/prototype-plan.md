@@ -90,6 +90,12 @@ A direct Device Hub keyboard check on the same installed build verifies Shift + 
 
 One known visual limit remains: animated boots and barrels can extend beyond the navigation circle near walls. The body collision rules are unchanged; ground/boot-pair checks do not establish full foot-versus-cover clearance. Physical-phone controls, performance and enjoyment remain unverified for this pass; no phone installation or TestFlight delivery is included.
 
+### Miki Option A reference reset
+
+On 25 November 2026 the maintainer rejected the fitted high-collar dress mesh and agreed to restart with fresh concepts, followed by Tripo and Blender using the lessons learned. The maintainer selected [Option A](../art/characters/angular-study/miki-option-a/README.md), the compact tailored dress. Its selected illustration, standalone empty-handed front A-pose, front/side/back body sheet and face/collar sheet are prepared. The rear construction and collar depth remain interpretations; generated guide lines do not establish exact multiview geometry.
+
+**Next gate:** review the reference set, then one unrigged Tripo Smart Mesh candidate with native colour/clay and multi-angle inspection before rigging. Preserve the selected raw result during any simplification; fit the rig to accepted proportions and test one run/sneak cycle before expanding. Keep equipment separate. Do not carry the rejected outfit's dense corrective-key scheme into a new wardrobe. The prior full-body-fit appearance below is superseded, despite its bounded technical checks. No new Tripo credits, Blender changes, runtime assets, app checks, physical tests, merge or release are included in this reference step.
+
 ### Miki concept mesh review
 
 **Retained comparison at `0d94c18`:** This section describes the earlier Blender source and its verification. The current appearance-review gate is the [angular art reset](#angular-character-art-reset) below.
