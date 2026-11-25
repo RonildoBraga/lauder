@@ -4,7 +4,7 @@
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
-The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaces the first human shooter while Miki is alone. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
+The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
 On 25 November 2026 the maintainer replaced the party's figures with [pawns](visual-direction.md#characters-and-interface) and asked for a [dodge roll](decisions/0019-dodge-roll.md) to escape attacks, then said **“Start building”**. Their verification is recorded under [Pawns and dodge roll](#pawns-and-dodge-roll).
 
@@ -210,6 +210,8 @@ On 26 November 2026 the maintainer gave each character two weapons, and chose ho
 TestFlight 0.1.0 (32) was delivered on 26 November 2026 from the head of [PR #158](https://github.com/RonildoBraga/lauder/pull/158), `0a50613`, before any merge. It carries the pawns and dodge roll, the controls pass, the three starting together and the paired weapons. The [delivery record](https://github.com/RonildoBraga/lauder/pull/158#issuecomment-7176893712) gives Apple's confirmation.
 
 Asked **“How do the weapons and controls feel on your phone?”**, the maintainer answered **“Feels right”**. That is the maintainer's judgement of the weapons and controls as played. No frame-pacing capture was taken, and the question did not cover the guard fight's balance or how the pawns read at their size.
+
+All four pull requests then merged into `main` on 26 November 2026, in order: [#155](https://github.com/RonildoBraga/lauder/pull/155) as `c757cad`, [#156](https://github.com/RonildoBraga/lauder/pull/156) as `a8e7dc9`, [#157](https://github.com/RonildoBraga/lauder/pull/157) as `52fa921` and [#158](https://github.com/RonildoBraga/lauder/pull/158) as `135c2a4`. `main`'s app sources are those of `0a50613`; only the five documents that record the playtest differ. Main's check [passed](https://github.com/RonildoBraga/lauder/actions/runs/45720003568) on `135c2a4`.
 
 ### Architecture checks
 
