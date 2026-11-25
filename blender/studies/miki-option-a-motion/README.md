@@ -2,6 +2,8 @@
 
 **25 November 2026 — animation review prepared.** The maintainer assigned: “Go ahead and prepare Miki for animation, fit the existing skeleton and show me running and sneaking in Blender. Make sure we preserve her current appearance.” This is a separate fitted derivative of the [unrigged P2.0 trial](../miki-option-a-tripo/README.md). It preserves the selected body rather than reshaping it to the old skeleton.
 
+**Follow-up:** The maintainer identified distorted hand positions and asked to review the skeleton, then assigned a [free Quaternius Run/Crouch trial](../miki-quaternius-motion/README.md). Inspection found this study's Sneak wrist offsets preserve the old palm orientation while moving the wrists outward, creating an excessive bend. Its recorded technical checks do not establish visually accepted motion. This source remains preserved; the new trial keeps its appearance/binding and uses different source Actions without those hand adjustments.
+
 ## Watch and inspect
 
 Open [miki-option-a-motion-review.blend](miki-option-a-motion-review.blend), keeping `character` beside it. **01 Run and Sneak** plays the two existing clips in sequence; **02 Rest appearance** holds an independent neutral model. Front, Side, Back, Three quarter and Face cameras allow inspection without editing the character.

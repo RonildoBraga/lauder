@@ -1,0 +1,71 @@
+{
+  "donor_sha256": "69591853d817488edaa8fd9bf8fc1d821eaeaf789f8627b3cd23b41c4ed67997",
+  "fps": 120,
+  "key_sample_rate": 120,
+  "donor_bones": 65,
+  "target_bones": 17,
+  "leg_scale": 1.0985031437961,
+  "mapping": {
+    "ROOT": "root",
+    "pelvis": "pelvis",
+    "spine": "spine_02",
+    "chest": "spine_03",
+    "head": "Head",
+    "upper_arm.L": "upperarm_l",
+    "forearm.L": "lowerarm_l",
+    "hand.L": "hand_l",
+    "thigh.L": "thigh_l",
+    "shin.L": "calf_l",
+    "foot.L": "foot_l",
+    "upper_arm.R": "upperarm_r",
+    "forearm.R": "lowerarm_r",
+    "hand.R": "hand_r",
+    "thigh.R": "thigh_r",
+    "shin.R": "calf_r",
+    "foot.R": "foot_r"
+  },
+  "clips": {
+    "run": {
+      "source_action": "Sprint_Loop",
+      "source_seconds": 0.6666666666666666,
+      "target_action": "miki.quaternius.run",
+      "frames": [
+        1,
+        81
+      ],
+      "fps": 120,
+      "source_endpoint_matrix_difference": 0.010747134685516357,
+      "endpoint_closed_to_first": true,
+      "maximum_forearm_hand_direction_angle_degrees": 22.606594265854053,
+      "maximum_arm_joint_gap_m": 0.0,
+      "minimum_rigid_sole_height_m": 0.0004984888946637511
+    },
+    "crouch": {
+      "source_action": "Crouch_Fwd_Loop",
+      "source_seconds": 2.0,
+      "target_action": "miki.quaternius.crouch",
+      "frames": [
+        1,
+        241
+      ],
+      "fps": 120,
+      "source_endpoint_matrix_difference": 0.0,
+      "endpoint_closed_to_first": true,
+      "maximum_forearm_hand_direction_angle_degrees": 10.668853667529236,
+      "maximum_arm_joint_gap_m": 0.0,
+      "minimum_rigid_sole_height_m": 0.0004984819679521024
+    }
+  },
+  "original_source_sha256": "d3b2480f847bfcdcb51271d128a8f12470aedb112cace7721af854a6ac625864",
+  "provider": "Quaternius",
+  "pack": "Universal Animation Library Standard",
+  "source_licence": "CC0-1.0",
+  "source_url": "https://quaternius.itch.io/universal-animation-library",
+  "method": "Anatomical T/A-pose limb and palm frames; world rest-space torso rotations; scaled pelvis movement and source-foot-height grounding",
+  "contact_guard_m": 0.0005,
+  "notes": [
+    "Trial preserves Miki appearance/binding; garment clearance remains unfinished.",
+    "Sprint final target sample matches its first pose; original source endpoint difference is recorded.",
+    "This record is for a separate authoring trial, not the canonical shared rig."
+  ]
+}

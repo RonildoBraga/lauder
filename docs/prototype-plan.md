@@ -106,6 +106,14 @@ Neutral front/face/profile comparisons retain the selected appearance within tin
 
 The native review shows four Run cycles followed by three Sneak cycles in 6.2 seconds, with a separately held neutral scene and a decoded native movie. **Next gate:** maintainer visual review of movement and the stylised dress response before other clips, rifle fitting or runtime intake. Do not infer final animation approval, phone performance, merge or release from the authoring checks. The original Tripo model, shared source Actions, canonical characters and application remain unchanged.
 
+### Free Quaternius Run/Crouch trial
+
+The maintainer questioned the original fitted hand motion and assigned testing the free Quaternius running and crouching animations on Miki, preserving her appearance and showing Blender before any purchase. The [isolated trial](../blender/studies/miki-quaternius-motion/README.md) retains the unchanged fitted body, rest rig, skin weights, UVs, packed texture and four garment targets. The retained CC0 Standard archive includes both `Sprint_Loop` (0.667 s) and `Crouch_Fwd_Loop` (2 s); no paid edition is needed for this comparison.
+
+The two donor clips are fitted to the 17-bone target with calibrated limb/palm axes, fixed lengths and in-place root travel. The earlier fixed hand roll and outward wrist offsets are absent. Native review scenes show the clothed model, the same skeleton motion and an isolated neutral model. Appearance/binding, 23 source/review pose comparisons, public-helper reproduction, relative dependencies, privacy and 62 Blender/export tests pass. Actual renders and nine sampled phases reveal unresolved garment crossings: dress/pants at 3/9 Run and 9/9 Crouch poses, plus glove/dress at 1/9 Run pose. This is a motion trial, not finished clean clothing deformation or global clearance proof.
+
+**Next gate:** maintainer review of the source motion and its Miki fit before selecting clips and assigning bounded clothing cleanup. Preserve natural wrist alignment during that cleanup. Canonical party models, shared source Actions, runtime, phone validation, purchases, merge and release remain outside this trial.
+
 ### Miki concept mesh review
 
 **Retained comparison at `0d94c18`:** This section describes the earlier Blender source and its verification. The current appearance-review gate is the [angular art reset](#angular-character-art-reset) below.

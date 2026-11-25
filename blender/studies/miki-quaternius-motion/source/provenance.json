@@ -1,0 +1,36 @@
+{
+  "provider": "Quaternius",
+  "pack": "Universal Animation Library",
+  "edition": "Standard (free)",
+  "retrieved_date": "2026-11-25",
+  "source_url": "https://quaternius.itch.io/universal-animation-library",
+  "license": "CC0-1.0",
+  "license_file": "License.txt",
+  "archive": {
+    "file": "universal-animation-library-standard.zip",
+    "bytes": 15904933,
+    "sha256": "cc73fc4e495b82958207316596317a3f40b9fa38065bde1027937452da537724"
+  },
+  "motion_file": {
+    "archive_path": "Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb",
+    "bytes": 7618436,
+    "sha256": "69591853d817488edaa8fd9bf8fc1d821eaeaf789f8627b3cd23b41c4ed67997"
+  },
+  "clip_count": 43,
+  "source_joint_count": 65,
+  "source_sample_grid_hz": 30,
+  "trial_clips": {
+    "Sprint_Loop": {
+      "duration_s": 0.6666666865348816,
+      "sample_grid_hz": 30,
+      "root_translation_constant_zero": true
+    },
+    "Crouch_Fwd_Loop": {
+      "duration_s": 2.0,
+      "sample_grid_hz": 30,
+      "root_translation_constant_zero": true
+    }
+  },
+  "payment_made": false,
+  "display_text_copies": "Whitespace-normalised License.txt and upstream-README.txt; exact unmodified originals remain inside the retained ZIP."
+}

@@ -95,3 +95,7 @@ blender/studies/miki-option-a-tripo/source/miki-option-a-p2-textured.zip filter=
 
 # Native Option A running/sneaking review movie, outside app resources.
 blender/studies/miki-option-a-motion/motion-preview.mp4 filter=lfs diff=lfs merge=lfs -text
+
+# Unchanged CC0 free motion source and native Miki retarget review.
+blender/studies/miki-quaternius-motion/source/universal-animation-library-standard.zip filter=lfs diff=lfs merge=lfs -text
+blender/studies/miki-quaternius-motion/motion-preview.mp4 filter=lfs diff=lfs merge=lfs -text
