@@ -10,6 +10,8 @@
   struct PlaytestRunner {
     enum Step {
       case walk(SIMD2<Float>)
+      /// Hold ordinary raw input for a bounded time, including across a capture mark.
+      case input(InputRules.Raw, seconds: Float)
       case wait(seconds: Float)
       case mark(String)
       case act
@@ -180,6 +182,12 @@
         switch steps[index] {
         case .walk(let target):
           if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
+        case .input(let raw, let seconds):
+          guard stepTime < seconds else {
+            advance()
+            continue
+          }
+          return raw
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -561,6 +569,22 @@
       .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
     ]
 
+    /// Exercise the production keyboard path on the clear Brooklyn approach. Repeating the
+    /// same held input after each mark keeps the gait moving while the tool takes its still.
+    private static let mikiMotion: [Step] =
+      [
+        .mark("standing"), .wait(seconds: 0.5),
+        .input(.init(up: true), seconds: 1), .mark("running"),
+        .input(.init(up: true), seconds: 1), .wait(seconds: 0.5),
+        .input(.init(up: true, keyboardSneak: true), seconds: 1), .mark("sneaking"),
+        .input(.init(up: true, keyboardSneak: true), seconds: 1), .wait(seconds: 0.5),
+        .pause, .mark("paused in sneak"), .wait(seconds: 0.7),
+        .pause, .wait(seconds: 0.5),
+        .input(.init(down: true), seconds: 1), .mark("running after resume"),
+        .input(.init(down: true), seconds: 1), .wait(seconds: 0.5),
+        .expectBeat(.alone), .expectTriggers(0), .expectParty([.miki]),
+      ] + restartRun
+
     /// Miki alone from Brooklyn to Manhattan, resolving the first guard and crossing both
     /// towers before Restart. The supply-case scene is exercised by the ambush/opening routes.
     private static let bridgeWalk: [Step] =
@@ -727,6 +751,7 @@
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
       ("orders", orders),
+      ("miki-motion", mikiMotion),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

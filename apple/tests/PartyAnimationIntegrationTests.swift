@@ -14,10 +14,12 @@ struct PartyAnimationIntegrationTests {
     let first = try skin(.miki, in: moving)
     let second = try skin(.miki, in: still)
     let untouched = second.jointTransforms
-    #expect(first.jointNames.count == 17 && second.jointNames == first.jointNames)
+    #expect(PartyModelClips.profile(for: first.jointNames) == .miki47)
+    #expect(second.jointNames == first.jointNames)
     #expect(first.model?.mesh === second.model?.mesh)
     for member in PartyMember.allCases {
-      #expect(try skin(member, in: moving).jointNames.count == 17)
+      let profile: PartyModelClips.Profile = member == .miki ? .miki47 : .party17
+      #expect(PartyModelClips.profile(for: try skin(member, in: moving).jointNames) == profile)
     }
     let input = stick(moving, towards: [0, -1])
     for _ in 0..<24 { moving.advanceParty(movement: input, deltaTime: 1 / 60) }

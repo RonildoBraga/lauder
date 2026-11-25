@@ -32,7 +32,7 @@ final class PartyAnimation {
     if let source = Self.sources[key] {
       self.source = source
     } else {
-      let source = Source(model: model)
+      let source = Source(model: model, visual: visual)
       Self.sources[key] = source
       self.source = source
     }
@@ -49,6 +49,7 @@ final class PartyAnimation {
     sneakDirection = [0, 1]
     sneakMovement = 0
     model.jointTransforms = source.pose(.idle, time: 0)
+    applyGarments(source.garments(.idle, time: 0))
   }
 
   /// Velocity is the final resolved world-ground [x,z] displacement per second, facing is the
@@ -76,21 +77,26 @@ final class PartyAnimation {
     let total = weights.reduce(0, +)
     weights = weights.map { $0 / total }
     let stride = zip(Self.movement, target).reduce(Float(0)) { sum, item in
-      let take = PartyModelClips.take(for: item.0)
+      let take = source.take(item.0)
       return sum + item.1 * take.nominalSpeed * Float(take.duration)
     }
     if stride > 0.0001 {
       phase = (phase + Double(speed * dt / stride)).truncatingRemainder(dividingBy: 1)
     }
     elapsed += Double(dt)
-    if fired { fireTime = PartyModelClips.take(for: .fire).eventStart }
-    if hit { hitTime = PartyModelClips.take(for: .hit).eventStart }
+    if fired { fireTime = source.take(.fire).eventStart }
+    if hit { hitTime = source.take(.hit).eventStart }
     var samples: [([Transform], Float)] = []
+    var garmentSamples: [([Float], Float)] = []
     for (index, clip) in Self.movement.enumerated() where weights[index] > 0 {
-      let time = clip == .idle ? elapsed : phase * PartyModelClips.take(for: clip).duration
+      let time = clip == .idle ? elapsed : phase * source.take(clip).duration
       var sampled = source.pose(clip, time: time)
+      var garments = source.garments(clip, time: time)
       if clip == .sneak {
         let resting = source.pose(.sneak, time: 0)
+        garments = zip(source.garments(.sneak, time: 0), garments).map {
+          $0 + ($1 - $0) * sneakMovement
+        }
         let restFeet = source.globals(resting)
         let movingFeet = source.globals(sampled)
         sampled = Self.blend([
@@ -117,6 +123,7 @@ final class PartyAnimation {
         }
       }
       samples.append((sampled, weights[index]))
+      garmentSamples.append((garments, weights[index]))
     }
     var pose = Self.blend(samples)
     // Blending joint rotations alone shortens a planted leg. Preserve the sampled ankle
@@ -132,7 +139,15 @@ final class PartyAnimation {
       let aim = source.pose(.aim, time: elapsed)
       let first = source.pose(.aim, time: 0)
       for index in source.arms {
-        pose[index] = Self.mix(pose[index], aim[index], amount: weapon.raise)
+        let amount: Float
+        if source.rightFingers.contains(index) {
+          amount = 1
+        } else if source.leftFingers.contains(index) {
+          amount = Self.supportWeight(weapon.raise)
+        } else {
+          amount = weapon.raise
+        }
+        pose[index] = Self.mix(pose[index], aim[index], amount: amount)
       }
       // Retain the gait's torso lean: straightening a low sneak would lose support-arm reach.
       for index in source.torso {
@@ -142,14 +157,21 @@ final class PartyAnimation {
     }
     applyReaction(.fire, time: fireTime, pose: &pose)
     applyReaction(.hit, time: hitTime, pose: &pose)
-    if let weapon { hold(weapon, pose: &pose) }
+    if let weapon {
+      hold(weapon, pose: &pose)
+      if let time = fireTime { applyFingerFire(time: time, pose: &pose) }
+    }
     model.jointTransforms = pose
+    let garments = source.garmentNames.indices.map { index in
+      garmentSamples.reduce(Float(0)) { $0 + $1.0[index] * $1.1 }
+    }
+    applyGarments(garments)
     fireTime = advanced(fireTime, clip: .fire, dt: dt)
     hitTime = advanced(hitTime, clip: .hit, dt: dt)
   }
 
   private func advanced(_ time: Double?, clip: Clip, dt: Float) -> Double? {
-    guard let time, time + Double(dt) < PartyModelClips.take(for: clip).duration else { return nil }
+    guard let time, time + Double(dt) < source.take(clip).duration else { return nil }
     return time + Double(dt)
   }
 
@@ -163,7 +185,42 @@ final class PartyAnimation {
     }
   }
 
+  private func applyGarments(_ values: [Float]) {
+    guard !source.garmentNames.isEmpty else { return }
+    guard var component = model.components[BlendShapeWeightsComponent.self] else {
+      preconditionFailure("The party skin is missing its declared garment blend shapes")
+    }
+    let weights = Dictionary(uniqueKeysWithValues: zip(source.garmentNames, values))
+    for index in component.weightSet.indices {
+      var set = component.weightSet[index]
+      set.weights = BlendShapeWeights(
+        set.weightNames.map { name in
+          guard let value = weights[name] else {
+            preconditionFailure("The party garment binding changed: \(name)")
+          }
+          return value
+        })
+      component.weightSet[index] = set
+    }
+    model.components.set(component)
+  }
+
+  private func applyFingerFire(time: Double, pose: inout [Transform]) {
+    guard !source.fingers.isEmpty else { return }
+    let ready = source.pose(.aim, time: 0)
+    let reaction = source.pose(.fire, time: time)
+    for index in source.fingers {
+      pose[index].rotation *= ready[index].rotation.inverse * reaction[index].rotation
+    }
+  }
+
   private func hold(_ weapon: WeaponPose, pose: inout [Transform]) {
+    if let rightGrip = PartyModelClips.handGrip(left: false, profile: source.profile),
+      let leftGrip = PartyModelClips.handGrip(left: true, profile: source.profile)
+    {
+      holdCalibrated(weapon, rightGrip: rightGrip, leftGrip: leftGrip, pose: &pose)
+      return
+    }
     let held = weapon.transform
     func point(_ offset: SIMD3<Float>) -> SIMD3<Float> {
       model.convert(position: held.position + held.orientation.act(offset), from: visual)
@@ -191,6 +248,50 @@ final class PartyAnimation {
           Transform(matrix: current[source.leftArm.end]).rotation, hand, amount),
         pole: -source.right - source.up * 0.5 - source.forward * 0.05, pose: &pose)
     }
+  }
+
+  private func holdCalibrated(
+    _ weapon: WeaponPose, rightGrip: PartyModelClips.HandGrip,
+    leftGrip: PartyModelClips.HandGrip, pose: inout [Transform]
+  ) {
+    let held = weapon.transform
+    func point(_ offset: SIMD3<Float>) -> SIMD3<Float> {
+      model.convert(position: held.position + held.orientation.act(offset), from: visual)
+    }
+    func axis(_ vector: SIMD3<Float>) -> SIMD3<Float> {
+      simd_normalize(model.convert(direction: held.orientation.act(vector), from: visual))
+    }
+    // These are the complete weapon-local axes. The generated calibration maps each actual
+    // palm and thumb into them; a generic forward/up wrist frame would discard that roll.
+    let orientation = simd_quatf(
+      simd_float3x3(
+        columns: (
+          axis([1, 0, 0]), axis([0, 1, 0]), axis([0, 0, 1])
+        )))
+    let global = source.globals(pose)
+    source.solve(
+      source.rightArm, target: point(rightGrip.offset),
+      endRotation: orientation * rightGrip.rotation,
+      pole: Self.position(global[source.rightArm.lower])
+        - Self.position(global[source.rightArm.upper]), pose: &pose)
+    let amount = Self.supportWeight(weapon.raise)
+    guard amount > 0 else { return }
+    let current = source.globals(pose)
+    source.solve(
+      source.leftArm,
+      target: simd_mix(
+        Self.position(current[source.leftArm.end]), point(leftGrip.offset),
+        SIMD3(repeating: amount)),
+      endRotation: simd_slerp(
+        Transform(matrix: current[source.leftArm.end]).rotation,
+        orientation * leftGrip.rotation, amount),
+      pole: Self.position(current[source.leftArm.lower])
+        - Self.position(current[source.leftArm.upper]), pose: &pose)
+  }
+
+  private static func supportWeight(_ raise: Float) -> Float {
+    let amount = max(0, min(1, (raise - 0.7) / 0.3))
+    return amount * amount * (3 - 2 * amount)
   }
 
   /// Positive local y means forward; positive x means the character's right, independent of
@@ -262,6 +363,9 @@ final class PartyAnimation {
   @MainActor private struct Source {
     // Retain the resource whose identity keys the cache, even if a figure is later removed.
     let mesh: MeshResource
+    let profile: PartyModelClips.Profile
+    let garmentNames: [String]
+    let garmentTracks: [GarmentTrack]
     let frames: [JointTransforms]
     let interval: Double
     let start: Double
@@ -272,20 +376,62 @@ final class PartyAnimation {
     let rightArm: Limb
     let leftArm: Limb
     let arms: [Int]
+    let leftFingers: [Int]
+    let rightFingers: [Int]
+    let fingers: [Int]
     let torso: [Int]
     let up: SIMD3<Float>
     let forward: SIMD3<Float>
     let right: SIMD3<Float>
 
-    init(model: ModelEntity) {
+    init(model: ModelEntity, visual: Entity) {
+      func definitions(_ entity: Entity) -> [any AnimationDefinition] {
+        func flatten(_ value: any AnimationDefinition) -> [any AnimationDefinition] {
+          if let group = value as? AnimationGroup { return group.group.flatMap(flatten) }
+          return [value]
+        }
+        return entity.availableAnimations.flatMap { flatten($0.definition) }
+          + entity.children.flatMap(definitions)
+      }
+      guard let profile = PartyModelClips.profile(for: model.jointNames) else {
+        preconditionFailure("The party model does not match a declared animation skeleton")
+      }
+      self.profile = profile
+      let definitions = definitions(visual)
       guard
-        let sampled = model.availableAnimations.compactMap({
-          $0.definition as? SampledAnimation<JointTransforms>
+        let sampled = definitions.compactMap({
+          $0 as? SampledAnimation<JointTransforms>
         }).first, let mesh = model.model?.mesh, let skeleton = mesh.contents.skeletons.first
       else {
         fatalError("The party model has no imported sampled animation or rest skeleton")
       }
       self.mesh = mesh
+      garmentNames = PartyModelClips.garmentNames(profile: profile)
+      let blendAnimations = definitions.compactMap {
+        $0 as? SampledAnimation<BlendShapeWeights>
+      }
+      garmentTracks = garmentNames.map { name in
+        guard let animation = blendAnimations.first(where: { $0.weightNames.contains(name) }),
+          let channel = animation.weightNames.firstIndex(of: name),
+          !animation.frames.isEmpty && animation.frameInterval > 0
+        else { preconditionFailure("The party garment animation is missing \(name)") }
+        precondition(
+          PartyModelClips.Clip.allCases.allSatisfy {
+            let take = PartyModelClips.take(for: $0, profile: profile)
+            return take.start >= animation.start - 0.0001
+              && take.end <= animation.start
+                + Double(animation.frameInterval) * Double(animation.frames.count - 1) + 0.0001
+          }, "The imported garment animation does not cover its declared clips: \(name)")
+        return GarmentTrack(
+          frames: animation.frames.map { $0[channel] }, start: animation.start,
+          interval: Double(animation.frameInterval))
+      }
+      let bindings =
+        model.components[BlendShapeWeightsComponent.self]?.weightSet
+        .flatMap { $0.weightNames } ?? []
+      precondition(
+        Set(bindings) == Set(garmentNames),
+        "The imported garment bindings differ from the declared animation profile")
       frames = sampled.frames
       interval = Double(sampled.frameInterval)
       start = sampled.start
@@ -340,27 +486,76 @@ final class PartyAnimation {
       leftArm = limb("upper_arm_L", "forearm_L", "hand_L")
       rightArm = limb("upper_arm_R", "forearm_R", "hand_R")
       torso = [index("spine"), index("chest"), index("head")]
-      arms = [
-        leftArm.upper, leftArm.lower, leftArm.end,
-        rightArm.upper, rightArm.lower, rightArm.end,
-      ]
-      up = simd_normalize(global[index("head")].translation - global[index("pelvis")].translation)
+      let jointParents = parents
+      func descendants(of ancestor: Int) -> [Int] {
+        jointParents.indices.filter { candidate in
+          var parent = jointParents[candidate]
+          while let value = parent {
+            if value == ancestor { return true }
+            parent = jointParents[value]
+          }
+          return false
+        }
+      }
+      leftFingers = descendants(of: leftArm.end)
+      rightFingers = descendants(of: rightArm.end)
+      fingers = leftFingers + rightFingers
+      arms =
+        [
+          leftArm.upper, leftArm.lower, leftArm.end,
+          rightArm.upper, rightArm.lower, rightArm.end,
+        ] + fingers
+      precondition(
+        fingers.isEmpty
+          || (PartyModelClips.handGrip(left: false, profile: profile) != nil
+            && PartyModelClips.handGrip(left: true, profile: profile) != nil),
+        "An articulated party hand requires its measured weapon-grip calibration")
+      // The ground normal is independent of the character's anatomical spine lean.
+      up = simd_normalize(model.convert(direction: [0, 1, 0], from: visual))
       let toe = global[index("foot_L")].rotation.act([0, 1, 0])
       forward = simd_normalize(toe - up * simd_dot(toe, up))
       right = simd_normalize(simd_cross(forward, up))
       precondition(
         PartyModelClips.Clip.allCases.allSatisfy {
-          PartyModelClips.take(for: $0).end <= sampled.end + 0.0001
-        }, "The imported party animation ends before its declared clips")
+          let take = PartyModelClips.take(for: $0, profile: profile)
+          return take.start >= sampled.start - 0.0001 && take.end <= sampled.end + 0.0001
+        }, "The imported party animation does not cover its declared clips")
+    }
+
+    func take(_ clip: Clip) -> PartyModelClips.Take {
+      PartyModelClips.take(for: clip, profile: profile)
+    }
+
+    private func sampleTime(_ clip: Clip, time: Double) -> Double {
+      let take = take(clip)
+      let local =
+        take.loop
+        ? max(0, time).truncatingRemainder(dividingBy: take.duration)
+        : min(take.duration, max(0, time))
+      return take.start + local
+    }
+
+    func garments(_ clip: Clip, time: Double) -> [Float] {
+      let time = sampleTime(clip, time: time)
+      return garmentTracks.map { track in
+        let frame = max(
+          0, min(Double(track.frames.count - 1), (time - track.start) / track.interval))
+        let first = Int(frame)
+        let second = min(first + 1, track.frames.count - 1)
+        return track.frames[first]
+          + (track.frames[second] - track.frames[first]) * Float(frame - Double(first))
+      }
+    }
+
+    struct GarmentTrack {
+      let frames: [Float]
+      let start: Double
+      let interval: Double
     }
 
     func pose(_ clip: Clip, time: Double) -> [Transform] {
-      let take = PartyModelClips.take(for: clip)
-      let local =
-        take.loop
-        ? time.truncatingRemainder(dividingBy: take.duration)
-        : min(take.duration, max(0, time))
-      let frame = max(0, min(Double(frames.count - 1), (take.start + local - start) / interval))
+      let frame = max(
+        0, min(Double(frames.count - 1), (sampleTime(clip, time: time) - start) / interval))
       let first = Int(frame)
       let second = min(first + 1, frames.count - 1)
       return order.map {

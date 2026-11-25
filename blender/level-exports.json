@@ -23,24 +23,25 @@
     "made from": {
       "blender/animations/party.blend": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
       "blender/assets/laura/laura.blend": "48952298b0cb86d6897e9ab4212016d9519b0f138afdf88e6314ef0ea10fd4d9",
-      "blender/extensions/lauder_levels/exports.py": "14f072e94c536f3968a71a3bd7ad6e57264d3fe0f59e0e9e27e45ce83cdb9255",
-      "blender/extensions/lauder_levels/party_animation.py": "9b8896bcb178736155a1a3a2949214e7cf3d13968b80f817a190920062454999"
+      "blender/extensions/lauder_levels/exports.py": "3226c6796c2169b5ed084ef37cfb330dcc3a8e45a7894f453f1fec3c62c362c9",
+      "blender/extensions/lauder_levels/party_animation.py": "786ccd0b87cf9144aa869c847ef8126f2ac5059e5c58a7e223a2770f8c9ccda2"
     },
     "wrote": {
-      "apple/sources/content/models/laura.usdz": "7a77e39c90f911ae2ba19a149c4462cbafb1f2f97f07ed2e2d10174001b63e0e"
+      "apple/sources/content/models/laura.usdz": "305a6c8c2976640b07133e1ab3ad2954ad633297605437a9b403df3f13d64c9f"
     }
   },
   "models/miki": {
     "format": 1,
     "made from": {
       "blender/animations/party.blend": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
-      "blender/assets/miki/miki.blend": "d513c61baa9792e309df6c3f75311c19db0ee4dc8f32d77fa0719f5b94b84115",
-      "blender/extensions/lauder_levels/exports.py": "14f072e94c536f3968a71a3bd7ad6e57264d3fe0f59e0e9e27e45ce83cdb9255",
-      "blender/extensions/lauder_levels/party_animation.py": "9b8896bcb178736155a1a3a2949214e7cf3d13968b80f817a190920062454999"
+      "blender/assets/miki/miki.blend": "00b577e439805f00bb11b55ab49a5a843a900c7decd8082a3e8dfb8c7c013254",
+      "blender/assets/miki/textures/miki-basecolour.jpg": "dfabbdc82c3d2c2fef777a24a5752be73bd6fd96f4371e6dbaa2f470c95b329b",
+      "blender/extensions/lauder_levels/exports.py": "3226c6796c2169b5ed084ef37cfb330dcc3a8e45a7894f453f1fec3c62c362c9",
+      "blender/extensions/lauder_levels/party_animation.py": "786ccd0b87cf9144aa869c847ef8126f2ac5059e5c58a7e223a2770f8c9ccda2"
     },
     "wrote": {
-      "apple/sources/content/PartyModelClips.swift": "484eade74854b0aaaece3e1724deca20d01c56884b175054c5adfa736a6a467b",
-      "apple/sources/content/models/miki.usdz": "516ffc17ec9948d73e8daa4b07ebca9af9f6ceb4bf2820577df7f14ef412563c"
+      "apple/sources/content/PartyModelClips.swift": "c2a5f09a5d14f690cde344d9c39359b813c7a0a7e5db33ab7b7722362701efd9",
+      "apple/sources/content/models/miki.usdz": "1c8ecc380485d273cd35a88fd05870316dae648e55d7482cb289355969d1735e"
     }
   },
   "models/spider-bot-heavy": {
@@ -59,11 +60,11 @@
     "made from": {
       "blender/animations/party.blend": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
       "blender/assets/tom/tom.blend": "f1743b1a056a26c80f581ffffe097618b669374c89ad292d52c661af6624ed2e",
-      "blender/extensions/lauder_levels/exports.py": "14f072e94c536f3968a71a3bd7ad6e57264d3fe0f59e0e9e27e45ce83cdb9255",
-      "blender/extensions/lauder_levels/party_animation.py": "9b8896bcb178736155a1a3a2949214e7cf3d13968b80f817a190920062454999"
+      "blender/extensions/lauder_levels/exports.py": "3226c6796c2169b5ed084ef37cfb330dcc3a8e45a7894f453f1fec3c62c362c9",
+      "blender/extensions/lauder_levels/party_animation.py": "786ccd0b87cf9144aa869c847ef8126f2ac5059e5c58a7e223a2770f8c9ccda2"
     },
     "wrote": {
-      "apple/sources/content/models/tom.usdz": "6d27edc4ff0b87bae4752e572e528868bb236b2832a21bf004dd278b4a7f244f"
+      "apple/sources/content/models/tom.usdz": "6d4454624757064f52983f30cf2452194c442d4e0472409577e6cebbb5ce77f0"
     }
   }
 }

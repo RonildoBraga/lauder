@@ -243,6 +243,58 @@ class PartyAnimationTests(unittest.TestCase):
             with self.subTest(name=name, value=value), self.assertRaises(L.LayoutError):
                 L.party_manifest(changed, ranges)
 
+    def test_profiles_preserve_named_hierarchies_including_each_digit_parent(self):
+        self.assertEqual(len(L.PARTY_SCHEMAS["party17"]), 17)
+        self.assertEqual(len(L.PARTY_SCHEMAS["miki47"]), 47)
+        L.party_skeleton("party17", dict(L.PARTY_HIERARCHY))
+        L.party_skeleton("miki47", dict(L.MIKI_HIERARCHY))
+        wrong = dict(L.MIKI_HIERARCHY)
+        wrong["index.02.L"] = "middle.01.L"
+        for profile, hierarchy, deforms in (("miki47", wrong, False),
+                ("party17", L.MIKI_HIERARCHY, False),
+                ("unknown", L.PARTY_HIERARCHY, False),
+                ("miki47", L.MIKI_HIERARCHY, True)):
+            with self.subTest(profile=profile), self.assertRaises(L.LayoutError):
+                L.party_skeleton(profile, hierarchy, deforms)
+
+    def test_miki_profile_uses_its_own_complete_actions_and_timing(self):
+        shared, ranges = self.sample()
+        spec = dict(shared, profile="miki47", clips=[dict(entry,
+            source_action=entry["source_action"].replace("party.", "miki."))
+            for entry in shared["clips"]])
+        local_ranges = {name.replace("party.", "miki."): bounds for name, bounds in ranges.items()}
+        local_ranges["miki.fire"] = (1, 61)
+        manifest = L.party_manifest(spec, local_ranges)
+        self.assertEqual(manifest["profile"], "miki47")
+        self.assertEqual(manifest["clips"][7]["duration"], 2)
+        with self.assertRaises(L.LayoutError):
+            L.party_manifest(spec, ranges)
+        spec["profile"] = "count47"
+        with self.assertRaises(L.LayoutError):
+            L.party_manifest(spec, local_ranges)
+
+    def test_each_profile_requires_all_quaternion_joint_channels(self):
+        def complete(profile):
+            properties = (("location", 3), ("rotation_quaternion", 4))
+            if profile == "miki47":
+                properties += (("scale", 3),)
+            return [(f'pose.bones["{bone}"].{prop}', index)
+                    for bone in L.PARTY_SCHEMAS[profile] for prop, count in properties
+                    for index in range(count)]
+        for profile in ("party17", "miki47"):
+            L.party_channels(profile, complete(profile))
+        valid = complete("miki47")
+        finger = ('pose.bones["index.02.R"].rotation_quaternion', 3)
+        missing_finger = [key for key in valid if key != finger]
+        euler = [(path.replace("rotation_quaternion", "rotation_euler"), index)
+                 if (path, index) == finger else (path, index) for path, index in valid]
+        for channels in (missing_finger, euler, valid + [valid[0]],
+                         valid[:-1] + [('pose.bones["unknown"].location', 0)],
+                         valid[:-1] + [('pose.bones["hand.L"].rotation_quaternion', 4)],
+                         valid[:-1] + [('pose.bones["hand.L"].location', True)]):
+            with self.subTest(last=channels[-1]), self.assertRaises(L.LayoutError):
+                L.party_channels("miki47", channels)
+
 
 class LayoutTests(unittest.TestCase):
     """Writing the layout file from what the level's Blender file holds, after the game's rules."""

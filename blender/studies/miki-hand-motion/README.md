@@ -2,6 +2,8 @@
 
 **25 November 2026 — Blender review before game integration.** After accepting the [hand-rig pilot](../miki-hand-rig/README.md), the maintainer assigned exported skin-deformation verification and running, sneaking and shooting with the new rig. This study retains Miki's appearance and 47-bone skeleton, with the rifle kept separate.
 
+**Subsequent assignment:** the maintainer accepted this review and requested [canonical bridge integration](../../assets/miki/README.md), tested in Simulator. This source, its delivery hashes and review media remain preserved; current runtime verification is recorded in the [prototype plan](../../../docs/prototype-plan.md#miki-articulated-model-on-the-bridge).
+
 ## Watch in Blender
 
 Open [miki-hand-motion-review.blend](miki-hand-motion-review.blend), keeping `character` beside it. The scene selector provides **01 Running**, **02 Sneaking**, **03 Shooting** and **04 Neutral appearance**. Play each scene's timeline. Front, Side, Back and Three quarter cameras show the complete motion; Shooting hands shows the grip in detail.
@@ -56,4 +58,4 @@ Open the character source for persistent pose edits. Each digit still has three 
 
 The mesh/JPEG retain their [Tripo provenance](../miki-option-a-tripo/README.md#provenance-and-licence). Original project motion, hand fitting, helpers, shooting, review and media are [MIT](../../../LICENSE) contributions. No new generation, purchase or installation was used.
 
-**Next gate:** visual review of these complete motions before an integration assignment. Canonical characters, shared animation, the deliberate 17-bone export contract, runtime grip fitting/masks, gameplay and TestFlight remain unchanged. No Simulator or physical-phone performance claim is made. Extreme poses, additional clips, continuous/global self-collision quality and scoped aim remain unverified.
+This authoring review preceded the subsequently assigned canonical integration. Its original results make no Simulator or phone-performance claim. The canonical model now owns runtime edits; this preserved study is not an automatic overwrite source. Extreme poses, continuous/global self-collision quality and scoped aim remain outside this review's verified scope.

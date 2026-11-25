@@ -11,6 +11,8 @@ struct PartyAnimationTests {
     let body: Entity
     let visual: Entity
     let model: ModelEntity
+    let profile: PartyModelClips.Profile
+    let geometryBind: simd_float4x4
     let animation: PartyAnimation
 
     init(_ member: PartyMember) throws {
@@ -23,6 +25,18 @@ struct PartyAnimationTests {
         return entity.children.compactMap(find).first
       }
       model = try #require(find(visual))
+      let profile = try #require(PartyModelClips.profile(for: model.jointNames))
+      self.profile = profile
+      // The approved Miki intake retains FBX vertices before its USD geomBind. The older
+      // simple party meshes store vertices directly in skeleton space.
+      geometryBind =
+        profile == .miki47
+        ? simd_float4x4(
+          columns: (
+            [1.800879359, 0, 0, 0], [0, 0.000000135963, 1.800879359, 0],
+            [0, -1.800879359, 0.000000135963, 0],
+            [0, -0.000000067088, 0.000000016630, 1]
+          )) : matrix_identity_float4x4
       animation = PartyAnimation(visual: visual)
     }
 
@@ -42,22 +56,35 @@ struct PartyAnimationTests {
       return model.convert(position: SIMD3(point.x, point.y, point.z), to: visual)
     }
 
+    func grip(left: Bool) -> SIMD3<Float> {
+      PartyModelClips.handGrip(left: left, profile: profile)?.offset
+        ?? (left ? [-0.07, -0.05, -0.02] : [0, 0, 0.06])
+    }
+
+    func bound(_ point: SIMD3<Float>) -> SIMD4<Float> {
+      geometryBind * SIMD4(point.x, point.y, point.z, 1)
+    }
+
     func minimumSkinHeight(global: [simd_float4x4]) throws -> Float {
       let mesh = try #require(model.model?.mesh)
-      let skeleton = try #require(mesh.contents.skeletons.first)
-      let skin = zip(global, skeleton.joints).map { $0 * $1.inverseBindPoseMatrix }
       var minimum: Float = .greatestFiniteMagnitude
       for part in mesh.contents.models.flatMap({ Array($0.parts) }) {
         guard let influences = part.jointInfluences else { continue }
+        let skeleton = try #require(part.skeletonID.flatMap { mesh.contents.skeletons[$0] })
+        let skin = try skeleton.joints.map { joint in
+          let index = try #require(model.jointNames.firstIndex(of: joint.name))
+          return global[index] * joint.inverseBindPoseMatrix
+        }
         let positions = part.positions.elements
         let weights = influences.influences.elements
         let count = weights.count / positions.count
         for (index, position) in positions.enumerated() {
           var point = SIMD4<Float>.zero
+          let boundPosition = bound(position)
           for weight in weights[(index * count)..<((index + 1) * count)] {
             point +=
               weight.weight
-              * (skin[weight.jointIndex] * SIMD4(position.x, position.y, position.z, 1))
+              * (skin[weight.jointIndex] * boundPosition)
           }
           minimum = min(
             minimum,
@@ -69,10 +96,7 @@ struct PartyAnimationTests {
 
     func bootIntervals(global: [simd_float4x4]) throws -> [(minimum: Float, maximum: Float)] {
       let mesh = try #require(model.model?.mesh)
-      let skeleton = try #require(mesh.contents.skeletons.first)
-      let indices = try ["foot_L", "foot_R"].map { name in
-        try #require(model.jointNames.firstIndex { $0.hasSuffix("/" + name) })
-      }
+      let names = ["foot_L", "foot_R"]
       var bounds = Array(
         repeating: (
           minimum: Float.greatestFiniteMagnitude,
@@ -80,18 +104,28 @@ struct PartyAnimationTests {
         ), count: 2)
       for part in mesh.contents.models.flatMap({ Array($0.parts) }) {
         guard let influences = part.jointInfluences else { continue }
+        let skeleton = try #require(part.skeletonID.flatMap { mesh.contents.skeletons[$0] })
+        let feet = try names.map { name -> (index: Int, skin: simd_float4x4)? in
+          guard let joint = skeleton.joints.firstIndex(where: { $0.name.hasSuffix("/" + name) })
+          else {
+            return nil
+          }
+          let modelJoint = try #require(
+            model.jointNames.firstIndex(of: skeleton.joints[joint].name))
+          return (joint, global[modelJoint] * skeleton.joints[joint].inverseBindPoseMatrix)
+        }
         let positions = part.positions.elements
         let weights = influences.influences.elements
         let count = weights.count / positions.count
         for (index, point) in positions.enumerated() {
-          for (foot, joint) in indices.enumerated()
-          where
-            weights[(index * count)..<((index + 1) * count)].contains(where: {
-              $0.jointIndex == joint && $0.weight > 0.999
-            })
-          {
-            let skin = global[joint] * skeleton.joints[joint].inverseBindPoseMatrix
-            let p = skin * SIMD4(point.x, point.y, point.z, 1)
+          let boundPosition = bound(point)
+          for (foot, binding) in feet.enumerated() {
+            guard let binding,
+              weights[(index * count)..<((index + 1) * count)].contains(where: {
+                $0.jointIndex == binding.index && $0.weight > 0.999
+              })
+            else { continue }
+            let p = binding.skin * boundPosition
             let x = model.convert(position: SIMD3(p.x, p.y, p.z), to: visual).x
             bounds[foot].minimum = min(bounds[foot].minimum, x)
             bounds[foot].maximum = max(bounds[foot].maximum, x)
@@ -99,6 +133,20 @@ struct PartyAnimationTests {
         }
       }
       return bounds
+    }
+  }
+
+  @Test
+  func animationProfilesRequireTheExactNamedSkeletonRatherThanOnlyItsSize() throws {
+    for member in PartyMember.allCases {
+      let fixture = try Fixture(member)
+      let names = fixture.model.jointNames
+      #expect(PartyModelClips.profile(for: Array(names.reversed())) == fixture.profile)
+      #expect(PartyModelClips.profile(for: Array(names.dropLast())) == nil)
+      var unrelated = names
+      unrelated[unrelated.count - 1] = "unrelated-joint"
+      #expect(PartyModelClips.profile(for: unrelated) == nil)
+      #expect(PartyModelClips.profile(for: names + [names[0]]) == nil)
     }
   }
 
@@ -152,7 +200,29 @@ struct PartyAnimationTests {
     #expect(
       simd_distance(
         try reacting.joint("hand_R", global: reacting.globals()),
-        held.position + held.orientation.act([0, 0, 0.06])) < 0.001)
+        held.position + held.orientation.act(reacting.grip(left: false))) < 0.001)
+  }
+
+  @Test
+  func carbineDrawAndCompleteLoweringKeepMikisMeasuredRightGripReachable() throws {
+    let fixture = try Fixture(.miki)
+    for velocity: SIMD2<Float> in [.zero, [0, -2.6], [0, -0.65]] {
+      fixture.animation.reset()
+      var weapon = WeaponPose(kind: .carbine)
+      for frame in 0..<390 {
+        let aiming = (60..<120).contains(frame) || (240..<300).contains(frame)
+        weapon.step(dt: 1 / 60, aiming: aiming)
+        fixture.animation.update(
+          velocity: velocity, facing: 0, weapon: weapon, fired: false, hit: frame % 79 == 0,
+          sneaking: velocity.y == -0.65, dt: 1 / 60)
+        let held = weapon.transform
+        #expect(
+          simd_distance(
+            try fixture.joint("hand_R", global: fixture.globals()),
+            held.position + held.orientation.act(fixture.grip(left: false))) < 0.001)
+      }
+      #expect(weapon.raise == 0)
+    }
   }
 
   @Test(arguments: PartyMember.allCases)
@@ -177,11 +247,13 @@ struct PartyAnimationTests {
       #expect(try fixture.minimumSkinHeight(global: global) > -0.002)
       let held = weapon.transform
       let wrist = try fixture.joint("hand_R", global: global)
-      #expect(simd_distance(wrist, held.position + held.orientation.act([0, 0, 0.06])) < 0.001)
+      #expect(
+        simd_distance(wrist, held.position + held.orientation.act(fixture.grip(left: false)))
+          < 0.001)
       if weapon.raise == 1 {
         let support = try fixture.joint("hand_L", global: global)
         #expect(
-          simd_distance(support, held.position + held.orientation.act([-0.07, -0.05, -0.02]))
+          simd_distance(support, held.position + held.orientation.act(fixture.grip(left: true)))
             < 0.001)
       }
     }
@@ -210,11 +282,11 @@ struct PartyAnimationTests {
       #expect(
         simd_distance(
           try fixture.joint("hand_R", global: global),
-          held.position + held.orientation.act([0, 0, 0.06])) < 0.001)
+          held.position + held.orientation.act(fixture.grip(left: false))) < 0.001)
       #expect(
         simd_distance(
           try fixture.joint("hand_L", global: global),
-          held.position + held.orientation.act([-0.07, -0.05, -0.02])) < 0.001)
+          held.position + held.orientation.act(fixture.grip(left: true))) < 0.001)
     }
     let settled = fixture.model.jointTransforms
     for _ in 0..<30 {
@@ -231,7 +303,7 @@ struct PartyAnimationTests {
   @Test
   func aWalksPlantedFootCancelsTheActualBodyTravel() throws {
     let fixture = try Fixture(.miki)
-    let speed = PartyModelClips.take(for: .walk).nominalSpeed
+    let speed = PartyModelClips.take(for: .walk, profile: fixture.profile).nominalSpeed
     for _ in 0..<60 {
       fixture.animation.update(
         velocity: [0, -speed], facing: 0, weapon: nil,

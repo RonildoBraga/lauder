@@ -16,6 +16,7 @@ from .models import check_model
 from .robot_geometry import emit_robot_geometry, ROBOT
 from .party_animation import (
     emit_party_clips, package_party_animation, PARTY_MODELS, prepare_party_animation,
+    PARTY_ANIMATIONS, shared_party_manifest,
 )
 
 
@@ -132,6 +133,10 @@ def _files_used(repository):
     root = Path(repository).resolve()
     used = set()
     for path in bpy.utils.blend_paths(absolute=True, packed=False, local=False):
+        # Blender also returns cleared/inactive path fields as empty strings. They are not
+        # dependencies; used images with no path are already refused by the intake check.
+        if not path:
+            continue
         resolved = Path(path).resolve()
         try:
             used.add(str(resolved.relative_to(root)))
@@ -294,7 +299,9 @@ def export_model(repository, name, made_from=None):
         made_from[generator] = file_fingerprint(root / generator)
         manifest = prepare_party_animation(model, root)
         if name == "miki":
-            metadata = emit_party_clips(manifest)
+            made_from[PARTY_ANIMATIONS] = file_fingerprint(root / PARTY_ANIMATIONS)
+            metadata = emit_party_clips({"party17": shared_party_manifest(root),
+                                        "miki47": manifest})
         options.update(export_animation=True, export_armatures=True,
                        only_deform_bones=False, merge_parent_xform=False)
     _keep_only(model, set(model.all_objects))
@@ -305,7 +312,7 @@ def export_model(repository, name, made_from=None):
         if name in PARTY_MODELS:
             source = Path(folder) / f"{name}.usdc"
             bpy.ops.wm.usd_export(filepath=str(source), **options)
-            package_party_animation(source, exported)
+            package_party_animation(source, exported, manifest["profile"])
         else:
             bpy.ops.wm.usd_export(filepath=str(exported), **options)
         shutil.copyfile(exported, target)

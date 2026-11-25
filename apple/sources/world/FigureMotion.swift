@@ -108,7 +108,8 @@ struct WeaponPose: Sendable {
   static let kickTime: Float = 0.04
   /// The grip, held low and raised to the shoulder: at the raised grip, the barrel is at
   /// shoulder height.
-  static let lowGrip = SIMD3<Float>(0.16, -0.02, -0.1)
+  // The carbine's carry must remain within Miki's fitted arm reach while drawing and lowering.
+  static let lowGrip = SIMD3<Float>(0.16, 0.10, -0.1)
   static let raisedGrip = SIMD3<Float>(0.15, 0.4, -0.14)
   /// How far ahead of the grip the muzzle is.
   static let barrel: Float = 0.475
@@ -130,9 +131,13 @@ struct WeaponPose: Sendable {
 
   static func profile(for kind: Weapon.Kind) -> Profile {
     switch kind {
-    case .carbine, .rifle:
+    case .carbine:
       Profile(
         lowGrip: lowGrip, raisedGrip: raisedGrip, barrel: barrel,
+        kickBack: kickBack, kickLift: kickLift)
+    case .rifle:
+      Profile(
+        lowGrip: [0.16, -0.02, -0.1], raisedGrip: raisedGrip, barrel: barrel,
         kickBack: kickBack, kickLift: kickLift)
     case .lightBurst:
       Profile(

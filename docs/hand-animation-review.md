@@ -6,6 +6,8 @@
 
 **Further assigned review:** after accepting the hand poses, the maintainer requested exported deformation verification plus running, sneaking and shooting. The [complete-motion study](../blender/studies/miki-hand-motion/README.md) preserves neutral appearance and uses a deliberately linear-skinned derivative to match the tested native export path. The earlier large bind-space discrepancy came from a test exporter deleting the alignment parent; a separate dual-quaternion/linear method difference was measured rather than hidden. These authoring corrections do not update the canonical skeleton/export contract or runtime grip layer below.
 
+**Integration assigned after acceptance:** the maintainer subsequently requested the new model, hand rig and animations on the bridge, tested in Simulator. [Canonical Miki](../blender/assets/miki/README.md), explicit [animation profiles](decisions/0019-character-animation-profiles.md) and the [integration record](prototype-plan.md#miki-articulated-model-on-the-bridge) now own that work. The table below remains a historical diagnosis of the original 17-bone pipeline, rather than a current claim that Miki has no finger animation.
+
 In the reviewed baseline, the body/wrist animation pipeline existed but **independent finger articulation was not implemented**. The trial's assumed palm calibration and runtime weapon-grip orientation required review before claiming natural hand motion. This is a project capability gap, not a limitation imposed by Swift or RealityKit.
 
 ## Verified original baseline

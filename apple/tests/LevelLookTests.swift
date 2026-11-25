@@ -91,11 +91,14 @@ struct LevelLookTests {
         if let bound = part as? ModelEntity, !bound.jointNames.isEmpty { skin = bound }
         pending.append(contentsOf: part.children)
       }
-      #expect(try #require(skin).jointNames.count == 17)
+      let bound = try #require(skin)
+      let profile: PartyModelClips.Profile = name == "miki" ? .miki47 : .party17
+      #expect(bound.jointNames.count == (name == "miki" ? 47 : 17))
+      #expect(PartyModelClips.profile(for: bound.jointNames) == profile)
     }
     let bounds = model.visualBounds(relativeTo: figure)
     #expect(abs(bounds.min.y + PartyBody.height / 2) < 0.001, "\(name) stands on the ground")
-    let height: Float = name == "hostile" ? 1.58 : 1.74
+    let height: Float = name == "hostile" ? 1.58 : (name == "miki" ? 1.8 : 1.74)
     #expect(
       abs(bounds.max.y - bounds.min.y - height) < 0.001, "\(name) retains its authored height")
   }

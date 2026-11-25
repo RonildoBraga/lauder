@@ -1,0 +1,181 @@
+{
+  "source_sha256": "00b577e439805f00bb11b55ab49a5a843a900c7decd8082a3e8dfb8c7c013254",
+  "usdz_sha256": "1c8ecc380485d273cd35a88fd05870316dae648e55d7482cb289355969d1735e",
+  "native_joint_count": 47,
+  "source_vertex_count": 10269,
+  "matched_original_vertex_count": 10269,
+  "maximum_error_m": 6.269805536938334e-06,
+  "maximum_shape_weight_error": 0.0,
+  "native_independent_instances": true,
+  "native_independent_blend_weights": true,
+  "native_reset_joint_pose_exact": true,
+  "tolerance_m": 1e-05,
+  "passes_10um": true,
+  "diagnostic_passes_5um": false,
+  "pose_count": 55,
+  "clip_count": 11,
+  "clips": {
+    "idle": {
+      "selected_frames": [
+        1.0,
+        61.0,
+        121.0,
+        181.0,
+        241.0
+      ],
+      "maximum_error_m": 1.869649150970958e-06
+    },
+    "walk": {
+      "selected_frames": [
+        242.0,
+        266.0,
+        290.0,
+        314.0,
+        338.0
+      ],
+      "maximum_error_m": 4.353980068124021e-06
+    },
+    "jog": {
+      "selected_frames": [
+        339.0,
+        357.0,
+        375.0,
+        393.0,
+        411.0
+      ],
+      "maximum_error_m": 5.023478714049058e-06
+    },
+    "backward": {
+      "selected_frames": [
+        412.0,
+        430.0,
+        448.0,
+        466.0,
+        484.0
+      ],
+      "maximum_error_m": 5.066454839935726e-06
+    },
+    "strafe_left": {
+      "selected_frames": [
+        485.0,
+        500.0,
+        515.0,
+        530.0,
+        545.0
+      ],
+      "maximum_error_m": 4.0925314054936005e-06
+    },
+    "strafe_right": {
+      "selected_frames": [
+        546.0,
+        561.0,
+        576.0,
+        591.0,
+        606.0
+      ],
+      "maximum_error_m": 4.0925314054936005e-06
+    },
+    "aim": {
+      "selected_frames": [
+        607.0,
+        629.0,
+        652.0,
+        675.0,
+        697.0
+      ],
+      "maximum_error_m": 1.2971668427926107e-06
+    },
+    "fire": {
+      "selected_frames": [
+        698.0,
+        713.0,
+        728.0,
+        743.0,
+        758.0
+      ],
+      "maximum_error_m": 1.2971668427926107e-06
+    },
+    "hit": {
+      "selected_frames": [
+        759.0,
+        777.0,
+        795.0,
+        813.0,
+        831.0
+      ],
+      "maximum_error_m": 2.183694183650062e-06
+    },
+    "run": {
+      "selected_frames": [
+        832.0,
+        852.0,
+        871.0,
+        890.0,
+        910.0
+      ],
+      "maximum_error_m": 6.269805536938334e-06
+    },
+    "sneak": {
+      "selected_frames": [
+        911.0,
+        947.0,
+        983.0,
+        1019.0,
+        1055.0
+      ],
+      "maximum_error_m": 4.074502352050521e-06
+    }
+  },
+  "evidence": "Numerical reconstruction of actual RealityKit imported buffers, poses and morphs; not GPU vertex readback. Rendered Simulator validation is separate.",
+  "texture_sha256": "dfabbdc82c3d2c2fef777a24a5752be73bd6fd96f4371e6dbaa2f470c95b329b",
+  "skeleton_channel_contract": {
+    "party17": 119,
+    "miki47": 470
+  },
+  "approved_source_sha256": "899ebf7f3986b666419a26d5a38b1d4c6c278cf915e072c4ce4a5944a6c7af95",
+  "preservation": {
+    "protected_section_changes": [],
+    "counts": {
+      "vertices": 10269,
+      "faces": 10742,
+      "bones": 47,
+      "targets": 4,
+      "materials": 1
+    },
+    "policy": "Data-exact mesh/normals/UV/47rest/weights/4targets/drivers/bind; material/image/object labels may change, numeric shaders and image bytes may not; original identityUVMapping and explicitactiveUVMap are checked equivalent.",
+    "approved_clip_comparisons": {
+      "run": {
+        "samples_120hz": 79,
+        "max_skin_world_error_m": 8.690073079957565e-07,
+        "max_bone_matrix_element_error": 7.748603820800781e-07,
+        "max_garment_value_error": 1.7881393432617188e-07
+      },
+      "sneak": {
+        "samples_120hz": 145,
+        "max_skin_world_error_m": 7.964806565578441e-07,
+        "max_bone_matrix_element_error": 7.152557373046875e-07,
+        "max_garment_value_error": 1.7881393432617188e-07
+      }
+    }
+  },
+  "walk_fit": {
+    "policy": "Only derived Walk ankle trajectories use the donor bind-relative linear travel and a two-segment fit; declared nominal speed remains unchanged. Other ten Action channels remain exact.",
+    "nominal_speed_m_per_s": 1.012931034,
+    "native_stance_speed_min_m_per_s": 1.012900471687317,
+    "native_stance_speed_max_m_per_s": 1.0129607915878296,
+    "private_native_planted_probe_steps": 120,
+    "private_native_maximum_planted_error_m": 1.6732484e-06,
+    "plant_threshold_m": 0.001,
+    "private_native_steps_exceeding_threshold": 0,
+    "bounded_source_samples_240hz": 193,
+    "bounded_dress_pants_crossings": 0,
+    "bounded_glove_dress_crossings": 0,
+    "bounded_minimum_boot_floor_m": 0.0004585694696288556,
+    "remaining_action_channel_changes": []
+  },
+  "runtime_carbine_support_slide_m": 0.15,
+  "deformation_method": {
+    "blender_preserve_volume": false,
+    "usd_skinning_method": "classicLinear"
+  }
+}
