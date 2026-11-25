@@ -60,14 +60,12 @@ struct GameSessionTests {
   @Test
   func aConversationHoldsActionsAndSwitchingUntilItsLastLine() {
     let session = GameSession(level: BrooklynBridge.level)
-    session.recruit(.tom)
-    #expect(session.converse(.metTom))
+    #expect(session.converse(.arrival))
     #expect(session.mode == .dialogue)
-    #expect(session.currentLine == MissionScript.lines(.metTom).first)
+    #expect(session.currentLine == MissionScript.lines(.arrival).first)
     session.cycleLeader()
     #expect(session.leader == .miki)
-    #expect(session.perform(.searchStranger) == .unavailable)
-    for line in MissionScript.lines(.metTom).dropFirst() {
+    for line in MissionScript.lines(.arrival).dropFirst() {
       session.advanceDialogue()
       #expect(session.currentLine == line)
     }
@@ -81,7 +79,7 @@ struct GameSessionTests {
   @Test
   func pauseKeepsTheConversationAtItsLine() {
     let session = GameSession(level: BrooklynBridge.level)
-    #expect(session.converse(.metTom))
+    #expect(session.converse(.arrival))
     session.advanceDialogue()
     let line = session.currentLine
     session.togglePause()
@@ -125,7 +123,7 @@ struct GameSessionTests {
   @Test
   func restartLeavesNoConversationOrMenuChoiceBehind() {
     let session = GameSession(level: BrooklynBridge.level)
-    #expect(session.converse(.metTom))
+    #expect(session.converse(.arrival))
     session.togglePause()
     session.movePauseChoice(by: 1)
     session.restart()

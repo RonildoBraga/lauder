@@ -10,6 +10,8 @@ On 25 November 2026 the maintainer replaced the party's figures with [pawns](vis
 
 On 26 November 2026 the maintainer asked for three changes to the controls: one leader switch on L1 / LB that goes round the party, the status panel's toggle moved from Circle / B into the pause menu, and a [lock-on](decisions/0020-lock-on.md) on a press of the right stick. Their verification is recorded under [Controls pass](#controls-pass).
 
+Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together).
+
 ## Structural preparation
 
 The approved structural preparation is merged: [PR #125](https://github.com/RonildoBraga/lauder/pull/125) separates camera motion and bridge progression, clarifies encounter naming, splits combat values into cohesive files and adds narrow declaration checks with CI. [PR #126](https://github.com/RonildoBraga/lauder/pull/126) adds reproducible TestFlight tooling. [ADR 0018](decisions/0018-runtime-boundaries.md) records the boundaries. Gameplay and story are unchanged; the next gameplay task is the design gate below.
@@ -22,13 +24,11 @@ The story's foundations remain in the [story bible](story/story-bible.md). Explo
 
 ## The opening
 
-The [walkthrough](gameplay-script.md#the-brooklyn-bridge-opening) follows Miki from the Brooklyn end to Manhattan:
+The [walkthrough](gameplay-script.md#the-brooklyn-bridge-opening) follows Miki, Tom and Laura from the Brooklyn end to Manhattan:
 
-1. Move and look while alone on the snowbound bridge.
+1. Move, look, switch leaders and try the formations on the snowbound bridge, the three together from the start.
 2. Meet the C robot at the first tower. Fight using the tower as cover, or take the west arch to its safe exit. Each committed burst can cause at most one injury; a third injury retries that fight.
-3. Search the outgoing supply case for rounds and a medical kit after either resolution. A scripted ambush introduces Tom, who joins afterwards.
-4. Find Laura, help her with the kit and hear her name. She joins after the short exchange.
-5. Cross the second tower with both companions. Switch leaders, try Close/Spread/Column and move/hold orders, then gather at the Manhattan end.
+3. Cross the second tower together. Try Close/Spread/Column and move/hold orders, then gather at the Manhattan end.
 
 Only the bridge is available. Pause has Resume, Restart, Vibration and, with a controller or keyboard, Status panel. There is no alternate-scene selector, weapon bench, endless spawn, automatic combat cover, companion auto-fire, grenade, signature, elevation or salvage-repair system.
 
@@ -37,9 +37,9 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Intent | PS5 / Xbox | Touch | Keyboard |
 |---|---|---|---|
 | Move active character | Left stick | Bottom-left analog stick | WASD |
-| Contextual action, advance dialogue or confirm menu | Cross / A | Look, Search, Help, Continue, or Restart while paused | E |
-| Next leader after someone joins, going round the party | L1 / LB | Next: name | Q |
-| Change formation with two companions; call ordered companions back first | Triangle / Y | Formation / Follow | R |
+| Look around, advance dialogue or confirm menu | Cross / A | Look, Continue, or Restart while paused | E |
+| Next leader, going round the party | L1 / LB | Next: name | Q |
+| Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
 | Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
 | Draw and fire the leader's native weapon; hold to fire, automatic reload | R2 / RT | Fire with assisted aim | F |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
@@ -53,7 +53,7 @@ Touch is automatic without an extended controller. An attached controller is pre
 
 Switching preserves positions and progress; held movement can continue on the new leader. R1 / RB and Circle / B are unassigned. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
-Search and Help are revalidated on press against the leader's position and current progress. The supply case can be searched once after defeating or bypassing the guard, starting the ambush. Helping Laura uses the shared medical kit and starts her recruitment exchange.
+Formations and orders still need two companions, so a level that starts with fewer than three offers them once the others join; the bridge starts with all three. There is nothing on the bridge to search or help with, so Look only looks around.
 
 ## Verification and performance
 
@@ -173,6 +173,16 @@ Checks:
 - **Found on the way:** the assisted target's red disc and the companions' order rings are also drawn below those shadows, so a tower's shadow hides them. That predates this change and is left as it was.
 - **Not exercised by hand:** a controller and the O key. The Simulator delivers no controller input, and its key presses are shorter than a frame, so the route drives the lock through the same input rules instead.
 - **Not yet verified:** the phone. That covers L1's switch, the pause menu's new choice, the lock with a real DualSense, how the ring reads at the phone's size, and the guard fight's balance with a lock.
+
+### Three together
+
+On 26 November 2026 the maintainer asked: **“I want to simplify the starting of the game so all the 3 companions will start together so no need to meet Tom and Laura later in the game”**. Asked what then happens to the scenes that introduced Tom and Laura, the maintainer chose **“Guard fight only”**. Both were said in a Claude session, which has no public permalink.
+
+- **Start:** Miki, Tom and Laura start at the Brooklyn end, Tom and Laura in the Close formation's places behind Miki, Tom on the right and Laura on the left. Next, the formations and the orders work from the start.
+- **Story:** the beats are the crossing, the first-tower guard and the Manhattan end. The supply case's search, the knife attacker's ambush with Tom's shot, Laura's rescue and the medical kit are gone, with their conversations. The closing exchange stays.
+- **Removed with them:** the Search and Help actions, loot and the medical kit, so Look only looks around. The supply case stays as scenery, and its unused layout names go at the level's next export. The shared rounds stay until the weapons pass replaces them.
+- **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 273 tests in 373 runs. Rewritten tests cover the three starting together in their Close places, the beats in order, a bypass leading on to Manhattan, a retry and Restart keeping the three together, and the closing exchange. The headless routes now run `bridge-walk`, `first-fight`, `fight-retry`, `opening`, `formations`, `orders` and `lock-on`; `ambush` and `laura` went with their scenes.
+- **Not yet verified:** the phone, and how the guard fight plays with the companions beside the leader from the start.
 
 ### Architecture checks
 

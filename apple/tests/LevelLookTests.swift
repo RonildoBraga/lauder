@@ -93,7 +93,19 @@ struct LevelLookTests {
         #expect(abs(beanie.x) < 0.001 && abs(beanie.z) < 0.001, "Tom's beanie sits square")
       }
     }
-    let hostile = try #require(world.root.findEntity(named: "hostile.attacker"))
+    // The bridge's only hostile is the robot, so a range with one shooter shows the model.
+    var range = TestRange.practice
+    range.encounters = [
+      Level.Encounter(
+        beat: .stranger, start: .area(PartyMotion.Box(minimum: [-1, -1], maximum: [1, 1])),
+        retryAt: nil,
+        hostiles: [
+          Level.Hostile(
+            id: "shooter", name: "Shooter", hiddenAt: [0, -4], standAt: [0, -4], hits: 3)
+        ], cues: [])
+    ]
+    let shooterWorld = GameWorld(level: range)
+    let hostile = try #require(shooterWorld.root.findEntity(named: "hostile.shooter"))
     let figure = try expectFigure(in: hostile, from: "hostile", height: 1.58)
     let mark = try #require(figure.findEntity(named: "hostile_mark"))
     let ahead = mark.position(relativeTo: figure)

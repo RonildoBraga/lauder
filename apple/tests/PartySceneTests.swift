@@ -42,7 +42,6 @@ struct PartySceneTests {
 
     // Changing the leader moves no one.
     let initialPositions = bodies.map(\.position)
-    world.session.recruit(.tom)
     world.session.cycleLeader()
     #expect(world.session.leader == .tom)
     #expect(bodies.map(\.position) == initialPositions)

@@ -22,7 +22,7 @@ struct FormationTests {
 
   @Test
   func formationsWaitForTheSecondCompanion() {
-    let session = GameSession(level: BrooklynBridge.level)
+    let session = GameSession(level: TestRange.mikiAlone)
     #expect(!session.formationsAvailable)
     session.cycleFormation()
     #expect(session.formation == .close)

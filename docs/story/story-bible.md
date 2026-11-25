@@ -1,17 +1,19 @@
-# Lauder — story bible, draft 0.7
+# Lauder — story bible, draft 0.8
 
-**Date:** 23 November 2026\
-**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki alone on the Brooklyn Bridge, meeting Tom and Laura as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
+**Date:** 26 November 2026\
+**Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki, Tom and Laura together on the Brooklyn Bridge ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
 
-**First-encounter revision, 23 November 2026:** The maintainer accepted C's dark armed form and motion, then assigned its integration in place of the first human shooter. The opening below now uses the [first-tower guard and separate supply case](../encounters/bridge-spider-bot.md), retaining Tom's intervention and Laura's medical kit. The cause of the machine's continued patrol remains unexplained. Current implementation verification and tuning belong in the [prototype plan](../prototype-plan.md), not in this narrative outline.
+**First-encounter revision, 23 November 2026:** The maintainer accepted C's dark armed form and motion, then assigned its integration in place of the first human shooter. The opening below uses the [first-tower guard](../encounters/bridge-spider-bot.md). The cause of the machine's continued patrol remains unexplained. Current implementation verification and tuning belong in the [prototype plan](../prototype-plan.md), not in this narrative outline.
+
+**Opening revision, 26 November 2026:** The maintainer simplified the opening: **“I want to simplify the starting of the game so all the 3 companions will start together so no need to meet Tom and Laura later in the game”**. Asked what then happens to the scenes that introduced Tom and Laura, the maintainer chose **“Guard fight only”**. The three start together, the guard is the bridge's only fight, and the supply case's search, the knife attacker, Tom's intervention and Laura's rescue are gone. Why they travel together, and whether they were strangers, is now open.
 
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
 - Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
-- Three playable characters travel together once they have met. Miki begins alone, and Tom and Laura join her on the Brooklyn Bridge as strangers ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)). The player moves the active character; the others remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
+- Three playable characters travel together, from the start of the game ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)). The player moves the active character; the others remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
 - Each character has distinct capabilities that make different approaches useful, including agility and strength.
-- Chapter One begins with Miki crossing the Brooklyn Bridge towards Manhattan, where circumstances bring her together with Tom and Laura. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
+- Chapter One begins with Miki, Tom and Laura crossing the Brooklyn Bridge together towards Manhattan. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The opening is set in a post-apocalyptic New York. The cause and wider extent of the collapse remain uncertain.
 - The whole world is frozen. Rivers and the sea lie under ice, and most of the land is buried under snow: flat, white and largely empty, broken by a few structures and landmarks. Why it froze, and how the freeze relates to the collapse, remains uncertain.
 - Exploration, purposeful salvage and survival lead the experience. The opening teaches combat through two short encounters on the bridge; afterwards combat stays occasional and light. All three characters carry weapons and can defend themselves and support one another. Ordinary cooperation, humour and care remain possible.
@@ -23,7 +25,7 @@ The control description is understood as **one human player directing a party of
 
 Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
 
-No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The bridge opening makes the three strangers when they meet; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
+No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The opening no longer shows how the three came to travel together, or whether they were strangers; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
 With the East River frozen, the opening needs a reason to cross by the bridge rather than over the ice. A proposal: the line of the buried road is the one way across known to be solid, marked by someone with flagged poles, and off it the snow hides thin ice and channels of open water near Manhattan. The places beyond the bridge that assume open water, such as Old Lock's crossing, the canal route and the coastal water crew, need revisiting for the frozen world.
 
@@ -31,11 +33,11 @@ The [Chapter One outline](#chapter-one--across-the-bridge) below records the rem
 
 ## Premise
 
-Miki sets out alone across the Brooklyn Bridge, towards Manhattan, through a post-apocalyptic New York. Why she is crossing, like Tom's and Laura's pasts, is revealed gradually rather than at the start.
+Miki, Tom and Laura set out together across the Brooklyn Bridge, towards Manhattan, through a post-apocalyptic New York. Why they are crossing, like their pasts, is revealed gradually rather than at the start.
 
-On the bridge a machine guards the first tower. Miki can fight it or use the other arch to get clear. While she opens a supply case beyond the guard, a knife attacker approaches and is shot by Tom, who walks on with her. Further on they find Laura injured and help her, and she joins them. The opening shows what each of them does when a stranger needs help, not who they were before.
+On the bridge a machine guards the first tower. The three can fight it or use the other arch to get clear, then walk on to Manhattan. The opening shows what each of them does in a fight, not who they were before.
 
-They begin with circumstances, not a shared history. Trust grows from what they do for one another. Their biographies, motives and relationships unfold through the journey; the opening does not explain them.
+Trust grows from what they do for one another. Their biographies, motives and relationships unfold through the journey; the opening does not explain them.
 
 A relay shelter's transmitter, which the three restore, is kept for later as the [Relay House scene](#later-scene--relay-house).
 
@@ -69,7 +71,7 @@ Each character should be useful as leader and capable of ordinary weapon defence
 
 In the proposed first combat experiment, companions provide basic weapon support while the player triggers only the active character's signature ability. They do not spend signatures automatically or require the player to manage three ability bars. Using another member's signature therefore means switching to them first, and the controls and threats must allow for that:
 
-- Every member is one press away: Previous and Next on a controller, Next or tapping a name on touch.
+- Every member is at most two presses away: Next, on L1 / LB on a controller or as a button on touch, goes round the party.
 - A threat's wind-up lasts long enough to switch and act; about 1.5 seconds is a starting value for playtests.
 - The HUD names who can answer a telegraph, such as “Miki can Disrupt”.
 - When a signature is pressed, assisted targeting prefers the threat it affects, such as the unit winding up for Disrupt.
@@ -222,33 +224,25 @@ The repaired set serves others as well as the party. It establishes contact and 
 The first-tower and supply-case beats reflect the assigned C robot replacement. Its prototype behaviour and verification are recorded in the [encounter document](../encounters/bridge-spider-bot.md) and [prototype plan](../prototype-plan.md); narrative intent does not by itself establish a successful runtime check.
 
 **Immediate goal:** Cross the Brooklyn Bridge into Manhattan.\
-**Emotional movement:** Strangers brought together by circumstance begin to rely on one another.\
-**Party:** Miki alone at first; Tom joins after the ambush, and Laura after the others help her.\
-**Achievement:** Three strangers reach Manhattan together, each having helped another.
+**Emotional movement:** Three travellers begin to rely on one another.\
+**Party:** Miki, Tom and Laura, together from the start.\
+**Achievement:** The three reach Manhattan together.
 
 The whole opening is built, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Its final dialogue remains to be written; the game's lines are provisional.
 
 Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 
-### 1. Alone on the bridge
+### 1. Together on the bridge
 
-Miki starts at the Brooklyn end. Snow has buried the bridge's road, everything left on it and the frozen East River alike, and only the towers stand above the white plain. She is alone, so the player learns to move and look around.
+The three start at the Brooklyn end. Snow has buried the bridge's road, everything left on it and the frozen East River alike, and only the towers stand above the white plain. The player learns to move, look around, switch leader and try the formations.
 
 ### 2. The guard at the first tower
 
-A dark, four-legged machine still patrols the first tower. Miki notices its continued vigilance, but the scene gives no account of its maker or orders. The player can draw and return fire, using the tower's stone while the machine braces, commits its aim and fires a burst. The other arch offers a route beyond its guard area instead. Either choice brings Miki to a small supply case on the outgoing side.
+A dark, four-legged machine still patrols the first tower. Miki notices its continued vigilance, but the scene gives no account of its maker or orders. The player can draw and return fire, using the tower's stone while the machine braces, commits its aim and fires a burst. The other arch offers a route beyond its guard area instead.
 
-### 3. The supply case, and Tom
+### 3. Onwards
 
-Miki opens the case for ammunition and a medical kit. While she is distracted, a human attacker approaches from the tower with a knife and is shot before he can strike. She turns and finds Tom. A brief exchange introduces him, and he walks on with her. The case remains available after either defeating or bypassing the guard, so taking the quiet route does not withhold the supplies needed later.
-
-### 4. Laura
-
-Further along, an injured woman lies in the snow, struggling to move. Miki offers help. A short exchange gives her name, Laura, and after receiving help she joins them.
-
-### 5. Onwards
-
-The three continue towards Manhattan together. With two companions, squad movement and formations come into play. Each one's personality, abilities and role in the group emerge over the journey rather than in the opening.
+The three continue towards Manhattan together. Squad movement and formations are there from the start. Each one's personality, abilities and role in the group emerge over the journey rather than in the opening.
 
 ## Later scene — Relay House
 

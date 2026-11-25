@@ -6,11 +6,11 @@
 
 ## Goal and placement
 
-Use one short encounter to test **observe → bait the aim → move or use stone cover → return fire during recovery → advance**. Exploration and salvage still lead the game. The guard replaces the first shooter while Miki is alone; the later knife attacker, Tom's intervention and Laura's medical-kit scene remain.
+Use one short encounter to test **observe → bait the aim → move or use stone cover → return fire during recovery → advance**. Exploration and salvage still lead the game. The guard replaced the first shooter while Miki was alone. Since 26 November 2026 the three start together and the guard is the bridge's only fight: the knife attacker, Tom's intervention and Laura's medical-kit scene are gone.
 
 C starts planted at the existing first-shooter stand marker on the outgoing east side of the first tower. Its old hidden marker is not a path for sliding the large model through stone. Three local patrol goals and a bounded east-side guard area keep the machine away from the far crossing. Blender supplies a conservative navigation radius covering the animated legs; movement uses that full footprint against existing tower blockers and avoids the party.
 
-Internal beat, marker and interaction IDs retain `stranger` / `searchStranger` for continuity with the opening's progression. These identifiers do not describe the visible character or a body search: the player sees a robot guard and a supply case.
+Internal beat and marker IDs retain `stranger` for continuity with the opening's progression. They do not describe the visible character: the player sees a robot guard.
 
 ## Movement and source boundary
 
@@ -37,13 +37,11 @@ There is **no red aim line or warning cone**. Stance, facing, the commit pause a
 
 Start with **six carbine hits** against Miki's **12 starting rounds**. This is a tuning candidate. It must be challenged if standing still and holding Fire is more useful than reading the pattern. There is one ranged pattern; no lunge, melee, grenades, destructible limbs, hidden weak point or extra gun type is added.
 
-## Bypass, supply case and story handoff
+## Bypass and the way on
 
-The west arch offers a zero-ammunition route. The authored safe exit is `robot.exit`, game coordinates **[-12, -12] to [-7.5, -7.5]**. Every point in it is beyond the guard's 14 m acquisition radius for its entire allowed position envelope. Reaching it resolves this first encounter once, without recording a defeated machine, restoring ammunition or resetting the robot's recorded damage. Both defeat and completed bypass recover Miki's encounter-local injuries under the existing bridge rules; unresolved retreat does not. Pending attacks are cancelled before the case/ambush can begin. The bypassed machine stops tracking and cannot reactivate this encounter until Restart.
+The west arch offers a zero-ammunition route. The authored safe exit is `robot.exit`, game coordinates **[-12, -12] to [-7.5, -7.5]**. Every point in it is beyond the guard's 14 m acquisition radius for its entire allowed position envelope. Reaching it resolves this first encounter once, without recording a defeated machine, restoring ammunition or resetting the robot's recorded damage. Both defeat and completed bypass recover Miki's encounter-local injuries under the existing bridge rules; unresolved retreat does not. Pending attacks are cancelled before the party walks on. The bypassed machine stops tracking and cannot reactivate this encounter until Restart.
 
-A small **nonblocking supply case** at **[-8.5, -8]** replaces searching the stranger. It is authored in the bridge's Visual collection, with its marker and interaction area in Gameplay; it adds no cover or collision box. Search becomes available after defeat or safe bypass, grants **six rounds and one medical kit once**, and starts the existing ambush. Tom's arrival marker is closer at **[2, -3]** so his intervention and Miki remain in view. The attacker and recruitment sequence remain otherwise intact, and Laura receives the same kit later.
-
-Robot loot is nil. A distinct one-shot supply cue owns the case contents; a bypass does not impersonate a dead human. Player-facing lines describe the machine and case rather than “Friendly!”, a deliberate human warning miss or searching a corpse.
+A small **nonblocking supply case** at **[-8.5, -8]** once held six rounds and a medical kit and began the ambush. Since 26 November 2026 it is scenery with nothing to search, authored in the bridge's Visual collection with no cover or collision box. Its layout marker and search area stay in the generated layout until the level is next exported, which drops names the game no longer quotes. After defeat or bypass the three walk on to Manhattan; a bypass does not impersonate a kill.
 
 ## Verification and playtest questions
 

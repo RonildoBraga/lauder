@@ -2,7 +2,7 @@
 
 **Status:** Accepted\
 **Date:** 18 November 2026\
-**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world)); on 21 November 2026, when the unused points of interest were removed; and the same day, when [ADR 0007](0007-aiming-and-shot-feedback.md) gave a controller's right stick manual aim and let shots strike the scenery
+**Amended:** 20 November 2026, when the maintainer chose to bury the road and everything on it in snow, leaving only the towers ([visual direction](../visual-direction.md#the-bridge-in-the-frozen-world)); on 21 November 2026, when the unused points of interest were removed; and the same day, when [ADR 0007](0007-aiming-and-shot-feedback.md) gave a controller's right stick manual aim and let shots strike the scenery; and on 26 November 2026, when the maintainer started Miki, Tom and Laura together and kept the guard as the only fight, dropping the supply case's search, the ambush and Laura's rescue ([story bible](../story/story-bible.md))
 
 ## Context
 

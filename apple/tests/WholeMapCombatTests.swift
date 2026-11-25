@@ -182,7 +182,7 @@ struct WholeMapCombatTests {
   ) -> Level {
     Level(
       id: "whole-map-combat", ground: .box("floor", at: [0, -0.15, 30], size: [20, 0.3, 80]),
-      boxes: boxes, interactions: [], triggers: [],
+      boxes: boxes, triggers: [],
       encounters: [
         .init(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 70])),

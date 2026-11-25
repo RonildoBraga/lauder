@@ -4,9 +4,9 @@ The bridge can be played with the touch screen alone, for when no controller is 
 
 ## Behaviour
 
-Without an extended controller, show a fixed bottom-left analog stick plus **Look**, **Fire**, **Roll** beside Fire, **Next: name** when a companion has joined, **Formation** when two have joined, and **Pause/Resume**. With a controller attached, prefer it unless **Use touch controls** is selected; **Use controller** returns to it. The preference lasts for the run, not across launches.
+Without an extended controller, show a fixed bottom-left analog stick plus **Look**, **Fire**, **Roll** beside Fire, **Next: name**, **Formation** and **Pause/Resume**. The three travel together from the start, so Next and Formation always show. With a controller attached, prefer it unless **Use touch controls** is selected; **Use controller** returns to it. The preference lasts for the run, not across launches.
 
-Look requests the shared contextual action: Search, Help, Continue during dialogue and Restart while paused. Fire draws the current leader's native weapon and holds fire at its pace; Miki has a carbine, Laura a burst weapon and Tom a close scatter weapon. Assistance turns the leader towards a clear target before firing; otherwise the shot follows their facing. Practice is free; actual leader shots during encounters spend shared ammunition. Magazines reload automatically, retain readiness across switches and freeze on Pause.
+Look makes the leader look around; it reads Continue during dialogue and Restart while paused. Fire draws the current leader's native weapon and holds fire at its pace; Miki has a carbine, Laura a burst weapon and Tom a close scatter weapon. Assistance turns the leader towards a clear target before firing; otherwise the shot follows their facing. Practice is free; actual leader shots during encounters spend shared ammunition. Magazines reload automatically, retain readiness across switches and freeze on Pause.
 
 Roll makes the leader [dodge-roll](decisions/0019-dodge-roll.md) 3 m the way the stick points, or the way they face with the stick centred; hostile shots pass through them while they roll. It shows only while exploring, so it never covers a conversation's lines. It needs a fresh press, does not fire, and waits half a second after a roll before the next.
 

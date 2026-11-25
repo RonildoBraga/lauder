@@ -217,12 +217,6 @@ final class EncounterSimulation {
       case .reveal(let id): hostiles[id]?.reveal()
       case .engage(let id): hostiles[id]?.engage()
       case .say(let speaker, let line): outcome.line = "\(speaker): “\(line)”"
-      case .loot(let body):
-        if let loot = specs[body]?.loot, session.search(body, loot: loot) {
-          outcome.line = Self.describe(loot)
-        }
-      case .supplies(let id, let loot):
-        if session.collectSupplies(id: id, loot: loot) { outcome.line = Self.describe(loot) }
       case .appear(let member): outcome.appeared.append(member)
       case .stand(let member): outcome.stood.append(member)
       case .shot(let member, let id):
@@ -495,15 +489,6 @@ final class EncounterSimulation {
     case .scenery: events.append(.struckBlock(at: path.end))
     case .nothing: break
     }
-  }
-
-  static func describe(_ loot: Level.Loot) -> String {
-    var found: [String] = []
-    if loot.rounds > 0 { found.append(loot.rounds == 1 ? "a round" : "\(loot.rounds) rounds") }
-    if loot.medicalKits > 0 {
-      found.append(loot.medicalKits == 1 ? "a medical kit" : "\(loot.medicalKits) medical kits")
-    }
-    return found.isEmpty ? "Nothing useful." : "Found " + found.joined(separator: " and ") + "."
   }
 
   func cameraLean(leader: SIMD2<Float>) -> SIMD2<Float> {

@@ -1,8 +1,8 @@
 import simd
 
-/// A playable place: its scenery and blockers, who starts in the party and where, the contextual
-/// actions and the areas that show a line once. Content only: the session owns progress and the
-/// world owns the bodies (ADR 0004).
+/// A playable place: its scenery and blockers, who starts in the party and where, its encounters
+/// and the areas that show a line once. Content only: the session owns progress and the world
+/// owns the bodies (ADR 0004).
 struct Level {
   /// A box that blocks movement and sight with its footprint; the ground is separate. How it
   /// looks is up to the level's scene file (ADR 0002).
@@ -14,37 +14,11 @@ struct Level {
     var footprint: PartyMotion.Box { Level.footprint(position: position, size: size) }
   }
 
-  enum ActionID: String, Sendable {
-    /// Opening the bridge supply case; the authored action ID remains stable.
-    case searchStranger = "bridge.search-stranger"
-    /// Helping Laura with the medical kit, at mid-span (M4).
-    case helpLaura = "bridge.help-laura"
-  }
-
-  /// A contextual action, usable by whoever leads while they stand in its approach area.
-  struct Interaction {
-    let id: ActionID
-    let name: String
-    let approach: PartyMotion.Box
-    /// Shown when the action succeeds.
-    let result: String
-    /// Shown when the action has already succeeded.
-    var repeated = ""
-    /// Shown before the story reaches the action.
-    var early = ""
-  }
-
   /// An area that shows a line the first time the leader walks into it in a run.
   struct Trigger {
     let id: String
     let area: PartyMotion.Box
     let line: String
-  }
-
-  /// What a body yields when it is searched.
-  struct Loot: Equatable, Sendable {
-    var rounds = 0
-    var medicalKits = 0
   }
 
   /// Someone who fights in an encounter: where they wait unseen, where they step out to, how
@@ -75,8 +49,6 @@ struct Level {
     var firstShotMisses = false
     /// Shown after that deliberate miss: how to answer it.
     var missLine: String?
-    /// What searching the body yields once the hostile is down.
-    var loot: Loot?
   }
 
   /// What happens at a moment after an encounter begins.
@@ -87,10 +59,6 @@ struct Level {
     case say(speaker: String, line: String)
     /// A hostile starts to fight.
     case engage(String)
-    /// The leader finishes searching this hostile's body, and its loot is taken.
-    case loot(String)
-    /// A separate, nonblocking supply case; a resolved encounter need not be a kill.
-    case supplies(id: String, loot: Loot)
     /// A member who has not joined yet appears where they wait.
     case appear(PartyMember)
     /// A member who lay hurt where they waited stands up.
@@ -109,8 +77,6 @@ struct Level {
     enum Start {
       /// When the leader walks into this area.
       case area(PartyMotion.Box)
-      /// When the leader performs this action.
-      case action(ActionID)
     }
 
     let beat: StoryBeat
@@ -141,7 +107,6 @@ struct Level {
   /// the app's bundle. Without one, such as in a test, the game draws the ground and boxes as
   /// plain blocks.
   var scene: String?
-  let interactions: [Interaction]
   let triggers: [Trigger]
   var encounters: [Encounter] = []
   /// Rounds for the leader's weapon when a run starts.

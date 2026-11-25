@@ -308,7 +308,7 @@ struct RobotGuardTests {
       range: 12)
     return Level(
       id: "robot-fixture", ground: .box("floor", at: [0, -0.15, 0], size: [60, 0.3, 60]),
-      boxes: boxes, interactions: [], triggers: [],
+      boxes: boxes, triggers: [],
       encounters: [
         Level.Encounter(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 10])),

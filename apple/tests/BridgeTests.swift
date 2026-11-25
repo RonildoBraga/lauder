@@ -9,24 +9,17 @@ import simd
 @MainActor
 struct BridgeTests {
   @Test
-  func mikiStartsAloneAtTheBrooklynEnd() throws {
+  func theThreeStartTogetherAtTheBrooklynEnd() throws {
     let world = GameWorld(level: BrooklynBridge.level)
-    #expect(world.session.party == [.miki])
-    #expect(world.session.leader == .miki)
-    #expect(world.session.nextLeader == nil)
+    #expect(world.session.party == [.miki, .tom, .laura])
+    #expect(world.session.leader == .miki && world.session.nextLeader == .tom)
     #expect(world.objective == "Cross the bridge to Manhattan.")
     #expect(world.observation == BrooklynBridge.level.opening)
-    #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
-    // Tom waits hidden where his scene will be; Laura lies hurt in view at hers (M4).
-    #expect(try #require(world.root.findEntity(named: "party.tom")).isEnabled == false)
-    let laura = try #require(world.root.findEntity(named: "party.laura"))
-    #expect(laura.isEnabled && !world.session.party.contains(.laura))
-    #expect(position(world, .laura) == BrooklynBridge.level.spawn(.laura))
-    #expect(try #require(world.root.findEntity(named: "party.miki")).isEnabled)
-    // With nobody to switch to, Next changes nothing.
-    world.session.cycleLeader()
-    #expect(world.session.leader == .miki)
-    #expect(world.companionTargets.isEmpty)
+    for member in PartyMember.allCases {
+      #expect(position(world, member) == BrooklynBridge.level.spawn(member))
+      #expect(try #require(world.root.findEntity(named: "party.\(member.rawValue)")).isEnabled)
+    }
+    #expect(world.session.formationsAvailable && world.session.ordersAvailable)
   }
 
   @Test
@@ -57,29 +50,43 @@ struct BridgeTests {
   }
 
   @Test
-  func restartReturnsMikiAloneToTheStartWithNothingFired() {
+  func restartReturnsTheThreeToTheStartWithNothingFired() {
     let world = GameWorld(level: BrooklynBridge.level)
     let entities = count(world.root)
     for _ in 0..<3 {
       walk(world, to: [6.5, 60])
       #expect(!world.session.firedTriggers.isEmpty)
-      world.session.recruit(.tom)
       world.restart()
-      #expect(world.session.party == [.miki])
+      #expect(world.session.party == [.miki, .tom, .laura])
       #expect(world.session.firedTriggers.isEmpty)
       #expect(world.observation == BrooklynBridge.level.opening)
-      #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))
-      #expect(world.root.findEntity(named: "party.tom")?.isEnabled == false)
+      for member in PartyMember.allCases {
+        #expect(position(world, member) == BrooklynBridge.level.spawn(member))
+        #expect(world.root.findEntity(named: "party.\(member.rawValue)")?.isEnabled == true)
+      }
       #expect(count(world.root) == entities)
     }
   }
 
-  /// Away from the actions, the hint is to look around, and a look points towards Manhattan.
+  /// The three start together, Tom and Laura in the Close formation's places behind Miki: Tom on
+  /// the right and Laura on the left, the sides the D-pad's orders send.
   @Test
-  func aLookAwayFromTheActionsPointsTowardsManhattan() {
+  func theThreeStartTogetherInTheCloseFormation() {
+    let level = BrooklynBridge.level
+    let miki = level.spawn(.miki)
+    #expect(level.party == [.miki, .tom, .laura] && level.lying.isEmpty)
+    #expect(level.spawn(.tom) == miki + SquadPlanner.closeSlots[0])
+    #expect(level.spawn(.laura) == miki + SquadPlanner.closeSlots[1])
+    let session = GameSession(level: level)
+    #expect(session.rightCompanion == .tom && session.leftCompanion == .laura)
+  }
+
+  /// With nothing on the bridge to search or help with, the action press looks around, and a
+  /// look points towards Manhattan.
+  @Test
+  func aLookPointsTowardsManhattan() {
     let world = GameWorld(level: BrooklynBridge.level)
     walk(world, to: [6.5, 104])
-    #expect(world.actionName == nil)
     world.performAction()
     #expect(world.observation == BrooklynBridge.level.lookAround)
   }
@@ -100,24 +107,20 @@ struct BridgeTests {
     }
   }
 
+  /// Next goes round the three, and Restart starts them together again with Miki leading.
   @Test
-  func membersJoinInOrderAndRestartLeavesMikiAlone() {
+  func nextGoesRoundTheThreeAndRestartKeepsThemTogether() {
     let session = GameSession(level: BrooklynBridge.level)
     session.recruit(.tom)
-    session.recruit(.tom)
-    #expect(session.party == [.miki, .tom])
-    #expect(session.nextLeader == .tom)
+    #expect(session.party == [.miki, .tom, .laura], "joining twice changes nothing")
+    for expected in [PartyMember.tom, .laura, .miki] {
+      #expect(session.nextLeader == expected)
+      session.cycleLeader()
+      #expect(session.leader == expected)
+    }
     session.cycleLeader()
-    #expect(session.leader == .tom)
-    session.recruit(.laura)
-    #expect(session.nextLeader == .laura)
-    session.cycleLeader()
-    session.cycleLeader()
-    #expect(session.leader == .miki)
     session.restart()
-    #expect(session.party == [.miki])
-    #expect(session.leader == .miki)
-    #expect(session.nextLeader == nil)
+    #expect(session.party == [.miki, .tom, .laura] && session.leader == .miki)
   }
 
   @Test
@@ -228,17 +231,17 @@ struct BridgeTests {
     #expect(camera.camera.fieldOfViewInDegrees == layout.camera.fieldOfView)
   }
 
+  /// The supply case stays on the outgoing west side as scenery, with nothing in it to search:
+  /// it shows, blocks nobody, and the west exit round it lies outside the guard's whole reach.
   @Test
-  func theSupplyCaseIsVisibleNonblockingAndOutsideTheWholeGuardEnvelope() throws {
+  func theSupplyCaseIsSceneryOutsideTheWholeGuardEnvelope() throws {
     let level = BrooklynBridge.level
     let world = GameWorld(level: level)
     let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
     let box = try #require(scene.findEntity(named: Self.sceneName("bridge-supply-case")))
     let bounds = box.visualBounds(relativeTo: nil)
-    let point = BrooklynBridge.supplyCasePosition
-    #expect(simd_distance([bounds.center.x, bounds.center.z], point) < 0.1)
+    let point = SIMD2(bounds.center.x, bounds.center.z)
     #expect(abs(bounds.min.y) < 0.01 && bounds.max.y < PartyBody.height)
-    #expect(BrooklynBridge.searchStranger.approach.contains(point))
     #expect(!level.boxes.contains { $0.name.contains("supply") })
     let movement = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
     #expect(movement.canTraverse(from: point - [1, 0], to: point + [1, 0]))

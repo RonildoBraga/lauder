@@ -6,11 +6,13 @@ An open-source, Apple-only survival exploration game about three travellers find
 
 The **Brooklyn Bridge opening is the only playable scene**. On 22 November 2026 the maintainer asked to keep the bridge and remove all other scenes and their unused systems before reconsidering what makes the game enjoyable. The combat arena, salvage yard and Relay Run are removed, along with their menu entries, test weapons, elevation, tactical combat and salvage machinery. This is a smaller starting point for the next design discussion, not an assignment to rebuild those experiments.
 
-Miki crosses the snowbound bridge towards Manhattan, meets Tom through a fight and ambush, helps Laura, and reaches the far end with both companions. The bridge keeps its movement, native weapons, encounters, recruitment, party switching, formations, orders, camera and controller/touch/keyboard inputs. Dialogue remains provisional. The [gameplay walkthrough](docs/gameplay-script.md) describes the current opening; the [prototype plan](docs/prototype-plan.md) records verification and the next gate.
+Miki, Tom and Laura cross the snowbound bridge together towards Manhattan, past the robot that guards the first tower, to the far end. The bridge keeps its movement, native weapons, encounters, recruitment, party switching, formations, orders, camera and controller/touch/keyboard inputs. Dialogue remains provisional. The [gameplay walkthrough](docs/gameplay-script.md) describes the current opening; the [prototype plan](docs/prototype-plan.md) records verification and the next gate.
 
 Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/decisions/0001-engine.md)). Blender remains the source of the bridge and character models ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Use simple shapes and colours until a concrete gameplay need warrants art work.
 
 The current bridge-only prototype, including the Blender environment, camera B and C robot guard, is delivered in **TestFlight 0.1.0 (29)**, app/archive source `ea47e2b`. The source-bound standard check and signed archive verification passed. Apple confirmed successful processing and availability to the existing internal testers, with membership unchanged. The [prototype plan](docs/prototype-plan.md#testflight-delivery) records exact sources, checks and delivery proof, including the earlier structural-preparation build **0.1.0 (28)**. Physical-phone installation, behaviour, performance and enjoyment remain unverified for build 29. Build **0.1.0 (30)** was a pre-merge playtest of draft [PR #154](https://github.com/RonildoBraga/lauder/pull/154)'s detailed Miki, a route that the pawns below replace; it was never part of `main`.
+
+**Three together, 26 November 2026:** The maintainer simplified the opening: the three start together at the Brooklyn end, and the first-tower guard is the bridge's only fight. The supply case's search, the knife attacker's ambush, Tom's introduction and Laura's rescue are gone. The [prototype plan](docs/prototype-plan.md#three-together) records the checks; phone behaviour is unverified.
 
 **Controls pass, 26 November 2026:** After seeing a map of the controller, the maintainer asked for three changes. L1 or LB alone now switches leader, going round the party, which leaves R1 / RB free. The status panel's toggle has moved from Circle / B into the pause menu. A press of the right stick, R3 or RS, [locks the aim](docs/decisions/0020-lock-on.md) on a hostile and marks them with a red ring; the next press moves the lock on, and two quick presses let go. The [prototype plan](docs/prototype-plan.md#controls-pass) records the checks; phone behaviour is unverified.
 
@@ -31,10 +33,10 @@ The current bridge-only prototype, including the Blender environment, camera B a
 - [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
 - [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
 - [Art studies](art/README.md): the selected bridge and robot concept C, earlier references and alternatives, with prompts and source credits.
-- [First-tower robot encounter](docs/encounters/bridge-spider-bot.md): implemented guard behaviour, supply-case/bypass progression and remaining playtest questions.
+- [First-tower robot encounter](docs/encounters/bridge-spider-bot.md): implemented guard behaviour, its bypass and remaining playtest questions.
 - [The Quiet Yard](docs/encounters/the-quiet-yard.md): an unimplemented encounter proposal, retained for narrative reference, not an active level or assignment.
 
-The player controls one character at a time, switching leadership while the other recruited characters follow. Miki, Laura and Tom meet as strangers; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.
+The player controls one character at a time, switching leadership while the other two follow. Miki, Laura and Tom travel together from the start; their connections emerge through play. Their backgrounds, enhancement histories and onward journey remain working story proposals. Removing prototype scenes does not settle or discard those narrative questions.
 
 ## Project structure
 
