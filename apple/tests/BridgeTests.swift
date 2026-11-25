@@ -411,23 +411,28 @@ struct BridgeTests {
     }
   }
 
-  /// The panel button, Circle, B or H, hides the status panel and shows it again, while
-  /// exploring or talking; it stays as it was across Restart.
+  /// The pause menu's Status panel choice hides the status panel and shows it again, staying
+  /// in the menu; it stays as it was across Restart. No button does it any more.
   @Test
-  func thePanelButtonHidesAndShowsTheStatusPanel() {
+  func thePauseMenusStatusPanelChoiceHidesAndShowsIt() {
     let world = GameWorld(level: BrooklynBridge.level)
-    var press = InputRules.Input.neutral
-    press.panelPressed = true
+    let confirm = InputRules.Input(
+      movement: .zero, actionPressed: true, pausePressed: false, switchPressed: false)
     #expect(!world.panelHidden)
-    world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
-    #expect(world.panelHidden)
-    // Touch has no button to show it again, so with touch controls it shows anyway, and a
-    // controller brings back the player's choice.
+    pressPause(world)
+    for _ in 0..<3 { world.session.movePauseChoice(by: 1) }
+    #expect(world.session.pauseChoice == .statusPanel)
+    world.update(with: confirm, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(world.panelHidden && world.isPaused)
+    // Touch's pause screen has no Status panel choice to show it again, so with touch controls
+    // it shows anyway, and a controller brings back the player's choice.
     #expect(world.controls.touchControlsEnabled && world.showsPanel)
     world.restart()
     #expect(world.panelHidden)
-    world.update(with: press, sampledIn: .exploring, deltaTime: 1 / 60)
-    #expect(!world.panelHidden)
+    pressPause(world)
+    for _ in 0..<3 { world.session.movePauseChoice(by: 1) }
+    world.update(with: confirm, sampledIn: .paused, deltaTime: 1 / 60)
+    #expect(!world.panelHidden && world.isPaused)
   }
 
   /// The status panel keeps to the essentials: a new line or objective shows for a few seconds

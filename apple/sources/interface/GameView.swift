@@ -209,6 +209,7 @@ struct GameView: View {
     case .resume: "Resume"
     case .restart: "Restart"
     case .vibration: vibrationTitle
+    case .statusPanel: world.panelHidden ? "Status panel: Hidden" : "Status panel: Shown"
     }
   }
 
@@ -306,15 +307,9 @@ struct GameView: View {
     if let next = world.session.nextLeader {
       others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
     }
-    if let previous = world.session.previousLeader, previous != world.session.nextLeader {
-      // With two in the party, Previous leads as the same member as Next.
-      others.append("\(world.controls.previousButtonName) · Lead as \(previous.displayName)")
-    }
     if world.session.formationsAvailable {
       others.append("\(world.controls.formationButtonName) · \(formationAction)")
     }
-    others.append(
-      "\(world.controls.panelButtonName) · \(world.panelHidden ? "Show" : "Hide") panel")
     if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
       // The D-pad's or arrow keys' orders, with the companions in their fixed order.
       others.append("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Both · ▼ Hold")
