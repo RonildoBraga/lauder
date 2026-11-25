@@ -37,17 +37,20 @@ final class GameWorld {
   private(set) var threat: String?
   /// Whether the leader's weapon is drawn.
   private(set) var weaponDrawn = false
+  /// The hostile the aim is locked on, by id, or nil (ADR 0020).
+  private(set) var lockedHostile: String?
   /// How dark the screen is while an encounter starts again, from 0 to 1.
   private(set) var fade: Float = 0
   /// The compass to the level's current goal; nil when there is none.
   private(set) var compass: Compass?
-  /// Whether the player has hidden the status panel. It stays hidden or shown across Restart.
+  /// Whether the player has hidden the status panel with the pause menu's Status panel choice.
+  /// It stays hidden or shown across Restart.
   private(set) var panelHidden = false
   /// Whether the phone or the controller vibrates in play (ADR 0008): the pause menu's choice,
   /// on until the player turns it off.
   private(set) var vibrationEnabled = true
   /// Whether the status panel shows: unless the player has hidden it, and always with touch
-  /// controls, which have no button to show it again.
+  /// controls, whose pause screen has no Status panel choice to show it again.
   var showsPanel: Bool { !panelHidden || controls.touchControlsEnabled }
   /// Whether the latest line and the objective are new enough to show in the status panel.
   private(set) var lineIsFresh = true
@@ -127,6 +130,10 @@ final class GameWorld {
   @ObservationIgnored private(set) var roll: DodgeRoll?
   @ObservationIgnored private var rollCooldown: Float = 0
   @ObservationIgnored private var dodgePressPending = false
+  /// A lock press waiting for the next fixed step (ADR 0020).
+  @ObservationIgnored private var lockPressPending = false
+  /// Whether the touch controls were on in the last frame, to notice them taking over.
+  @ObservationIgnored private var touchWasEnabled = true
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -298,6 +305,12 @@ final class GameWorld {
     vibrationEnabled.toggle()
   }
 
+  /// Lets go of the lock on a hostile, so the stick aims again (ADR 0020).
+  func releaseLock() {
+    fight.releaseLock()
+    lockedHostile = nil
+  }
+
   /// What players have heard and felt since the last call, which empties the list (ADR 0008).
   /// The frame plays them; tests read them.
   func takeCombatEvents() -> [CombatEvent] {
@@ -339,6 +352,11 @@ final class GameWorld {
     with input: InputRules.Input, sampledIn mode: GameSession.Mode, deltaTime: Float,
     inputReady: Bool = true
   ) {
+    // Touch has no lock button, so when it takes over from a controller the lock lets go.
+    if controls.touchControlsEnabled != touchWasEnabled {
+      touchWasEnabled = controls.touchControlsEnabled
+      if touchWasEnabled { releaseLock() }
+    }
     respond(to: input, in: mode)
     if retryElapsed != nil {
       // An encounter is starting again; Pause holds the fade where it is.
@@ -358,6 +376,7 @@ final class GameWorld {
       unsimulatedTime = 0
       firePressPending = false
       dodgePressPending = false
+      lockPressPending = false
       return
     }
     #if DEBUG
@@ -366,7 +385,7 @@ final class GameWorld {
     advanceParty(
       movement: input.movement, aim: input.aim, fireHeld: input.fireHeld,
       firePressed: input.firePressed, dodgePressed: input.dodgePressed,
-      deltaTime: deltaTime)
+      lockPressed: input.lockPressed, deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
         dt: deltaTime,
@@ -391,12 +410,12 @@ final class GameWorld {
         case .resume: togglePause()
         case .restart: restart()
         case .vibration: toggleVibration()
+        case .statusPanel: panelHidden.toggle()
         }
       } else if input.menuMove != 0 {
         session.movePauseChoice(by: input.menuMove)
       }
     case .dialogue:
-      if input.panelPressed { panelHidden.toggle() }
       if input.pausePressed {
         togglePause()
       } else if input.actionPressed {
@@ -405,14 +424,10 @@ final class GameWorld {
         if session.mode != .dialogue { updatePromptAndCompass() }
       }
     case .exploring:
-      if input.panelPressed { panelHidden.toggle() }
       if input.pausePressed {
         togglePause()
       } else if input.switchPressed, session.nextLeader != nil {
         session.cycleLeader()
-        followNewLeader()
-      } else if input.previousPressed, session.previousLeader != nil {
-        session.cycleLeaderBackwards()
         followNewLeader()
       }
       // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
@@ -431,8 +446,8 @@ final class GameWorld {
     controls.requireNeutralInput()
   }
 
-  /// After Next or Previous: the camera eases to the new leader, and a previous leader who
-  /// joins a holding squad holds where they stand.
+  /// After a switch: the camera eases to the new leader, and a previous leader who joins a
+  /// holding squad holds where they stand.
   private func followNewLeader() {
     pinHolds()
     camera.switchLeader()
@@ -508,6 +523,8 @@ final class GameWorld {
     roll = nil
     rollCooldown = 0
     dodgePressPending = false
+    lockPressPending = false
+    lockedHostile = nil
     for member in PartyMember.allCases { showPose(member) }
     joltedMembers = []
     updateWeaponStatus()
@@ -553,13 +570,15 @@ final class GameWorld {
   /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
     movement: SIMD2<Float>, aim: SIMD2<Float>? = nil, fireHeld: Bool = false,
-    firePressed: Bool = false, dodgePressed: Bool = false, deltaTime: Float
+    firePressed: Bool = false, dodgePressed: Bool = false, lockPressed: Bool = false,
+    deltaTime: Float
   ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     self.fireHeld = fireHeld
     aimStick = aim
     if firePressed { firePressPending = true }
     if dodgePressed { dodgePressPending = true }
+    if lockPressed { lockPressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
     // remainder, always under one step, carries to the next frame. A retry, or a conversation a
@@ -615,12 +634,27 @@ final class GameWorld {
     let isRolling = roll != nil
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
+    if lockPressPending {
+      lockPressPending = false
+      let screen = Movement.axes(cameraOffset: level.cameraOffset)
+      fight.pressLock(
+        from: leaderEnd, facing: Movement.facing(yaw: yaw[leader] ?? 0), up: screen.forward,
+        right: screen.right)
+      lockedHostile = fight.lock
+    }
     // Each leader aims their own weapon, whichever way they move. A scripted scene still
     // holds fire, and so does a roll; facing and turn-rate rules are shared by all three
-    // (ADR 0010).
+    // (ADR 0010). A lock aims for the player, at the locked hostile, and the stick waits until
+    // it lets go (ADR 0020).
     let armed = !held && !isRolling
-    aimDirection =
-      armed ? aimStick.map { Movement.aim(for: $0, cameraOffset: level.cameraOffset) } : nil
+    if !armed {
+      aimDirection = nil
+    } else if let locked = fight.lockPoint {
+      let offset = locked - leaderEnd
+      aimDirection = simd_length_squared(offset) > 0.000001 ? simd_normalize(offset) : nil
+    } else {
+      aimDirection = aimStick.map { Movement.aim(for: $0, cameraOffset: level.cameraOffset) }
+    }
     let moving = simd_length_squared(leaderDelta) > 0.000001 ? leaderDelta : nil
     if !isRolling, let wanted = aimDirection ?? facingGoal ?? moving {
       turnLeader(leader, towards: wanted, dt: dt)
@@ -998,6 +1032,7 @@ final class GameWorld {
     let threat = fight.threat
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
+    if lockedHostile != fight.lock { lockedHostile = fight.lock }
     if outcome.retry { retryElapsed = 0 }
   }
 
@@ -1243,7 +1278,7 @@ final class GameWorld {
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader),
-        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0)
+        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0, locked: fight.lock != nil)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

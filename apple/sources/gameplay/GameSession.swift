@@ -13,6 +13,8 @@ final class GameSession {
     case resume, restart
     /// Turns vibration off or on again, staying in the menu (ADR 0008).
     case vibration
+    /// Hides the status panel or shows it again, staying in the menu.
+    case statusPanel
   }
 
   /// How the companions arrange themselves around the leader, in the order the formation
@@ -140,17 +142,10 @@ final class GameSession {
     conversation.map { MissionScript.lines($0)[lineIndex] }
   }
 
-  /// Who Next would switch to, or nil while the leader travels alone.
+  /// Who Next would switch to, going round the party, or nil while the leader travels alone.
   var nextLeader: PartyMember? {
     guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
     return party[(index + 1) % party.count]
-  }
-
-  /// Who Previous would switch to: the member before the leader in switching order, the same as
-  /// Next while there are two, or nil while the leader travels alone (ADR 0005).
-  var previousLeader: PartyMember? {
-    guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
-    return party[(index + party.count - 1) % party.count]
   }
 
   func togglePause() {
@@ -163,7 +158,7 @@ final class GameSession {
     }
   }
 
-  /// Up (-1) and down (1) move through Resume, Restart and Vibration, stopping at either end.
+  /// Up (-1) and down (1) move through the choices, stopping at either end.
   func movePauseChoice(by step: Int) {
     guard mode == .paused, step != 0 else { return }
     let all = availablePauseChoices
@@ -171,12 +166,12 @@ final class GameSession {
     pauseChoice = all[min(max(index + step.signum(), 0), all.count - 1)]
   }
 
-  /// Who the right D-pad direction sends: whoever Next would lead as, since R1 is on the right.
+  /// Who the right D-pad direction sends: whoever Next would lead as.
   var rightCompanion: PartyMember? { party.count > 2 ? nextLeader : nil }
 
-  /// Who the left D-pad direction sends: the member before the leader in the switching order.
-  /// The two sides keep this order for whoever leads, as the HUD's "◀ Laura · Tom ▶" shows.
-  var leftCompanion: PartyMember? { party.count > 2 ? previousLeader : nil }
+  /// Who the left D-pad direction sends: the member Next reaches last. The two sides keep this
+  /// order for whoever leads, as the HUD's "◀ Laura · Tom ▶" shows.
+  var leftCompanion: PartyMember? { party.count > 2 ? companions.last : nil }
 
   /// The leader's companions, in switching order from the leader.
   var companions: [PartyMember] {
@@ -184,16 +179,10 @@ final class GameSession {
     return (1..<party.count).map { party[(index + $0) % party.count] }
   }
 
-  /// Next: lead as the member after the leader, only while exploring.
+  /// Next: lead as the member after the leader, going round the party, only while exploring.
   func cycleLeader() {
     guard let next = nextLeader else { return }
     lead(as: next)
-  }
-
-  /// Previous: lead as the member before the leader, on the same terms as Next (ADR 0005).
-  func cycleLeaderBackwards() {
-    guard let previous = previousLeader else { return }
-    lead(as: previous)
   }
 
   /// A switch clears the new leader's order. The previous leader takes the squad's state: if

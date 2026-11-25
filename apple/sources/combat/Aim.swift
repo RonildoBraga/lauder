@@ -36,18 +36,29 @@ enum Aim {
     let isTarget: Bool
   }
 
-  /// The leader's shot from `start`, along the stick's `aim` when there is one, or else at the
-  /// assisted target or along `facing`: nil when it would meet a hostile who is not yet a target.
-  /// `hostiles` are those standing in view, and `blockers` what stops a shot.
+  /// The leader's shot from `start`: at the `locked` hostile when there is a lock, or else along
+  /// the stick's `aim` when there is one, or else at the assisted target or along `facing`: nil
+  /// when it would meet a hostile who is not yet a target. `hostiles` are those standing in
+  /// view, and `blockers` what stops a shot.
   static func shot(
-    from start: SIMD2<Float>, aim: SIMD2<Float>?, facing: SIMD2<Float>, range: Float,
-    hostiles: [Hostile], blockers: [PartyMotion.Box]
+    from start: SIMD2<Float>, aim: SIMD2<Float>?, locked: String? = nil, facing: SIMD2<Float>,
+    range: Float, hostiles: [Hostile], blockers: [PartyMotion.Box]
   ) -> ShotPath? {
     let isClear = { LineOfSight.isClear(from: $0, to: $1, obstacles: blockers) }
     let targets = hostiles.filter {
       $0.isTarget
     }.map {
       Targeting.Candidate(id: $0.id, position: $0.position)
+    }
+    if let locked {
+      // A lock takes its hostile while they are a target in reach and in sight. Otherwise the
+      // shot flies the way the leader faces, which turns towards them (ADR 0020).
+      if let target = targets.first(where: { $0.id == locked }),
+        simd_distance(target.position, start) <= range, isClear(start, target.position)
+      {
+        return ShotPath(start: start, end: target.position, strike: .body(locked))
+      }
+      return ray(from: start, along: facing, range: range, hostiles: hostiles, blockers: blockers)
     }
     let direction: SIMD2<Float>
     let chosen: String?
@@ -148,4 +159,35 @@ enum Targeting {
     }.max { $0.cosine < $1.cosine }?.id
   }
 
+  /// Whom a lock press takes first: the hostile Fire would take, or else the nearest
+  /// (ADR 0020). `candidates` are those that can be locked.
+  static func firstLock(
+    from position: SIMD2<Float>, facing: SIMD2<Float>, candidates: [Candidate],
+    isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool
+  ) -> String? {
+    target(
+      from: position, facing: facing, candidates: candidates, range: .infinity, isClear: isClear)
+      ?? candidates.min {
+        simd_distance_squared($0.position, position) < simd_distance_squared($1.position, position)
+      }?.id
+  }
+
+  /// Whom a lock press moves the lock to: the next candidate clockwise round `centre` as the
+  /// screen shows the ground, with `up` and `right` its directions there, and `current` again
+  /// when nobody else can be locked; nil when `current` cannot be locked (ADR 0020).
+  static func nextLock(
+    after current: String, around centre: SIMD2<Float>, candidates: [Candidate],
+    up: SIMD2<Float>, right: SIMD2<Float>
+  ) -> String? {
+    func bearing(_ candidate: Candidate) -> Float {
+      let offset = candidate.position - centre
+      let angle = atan2(simd_dot(offset, right), simd_dot(offset, up))
+      return angle < 0 ? angle + 2 * .pi : angle
+    }
+    let round = candidates.map { (id: $0.id, bearing: bearing($0)) }.sorted {
+      $0.bearing == $1.bearing ? $0.id < $1.id : $0.bearing < $1.bearing
+    }
+    guard let index = round.firstIndex(where: { $0.id == current }) else { return nil }
+    return round[(index + 1) % round.count].id
+  }
 }

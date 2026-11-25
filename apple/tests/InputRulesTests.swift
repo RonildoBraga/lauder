@@ -314,9 +314,9 @@ struct InputRulesTests {
     InputRules.Raw(arrowUp: true),
     InputRules.Raw(arrowLeft: true),
     InputRules.Raw(touchGround: true),
-    InputRules.Raw(controllerPrevious: true),
-    InputRules.Raw(keyboardPrevious: true),
     InputRules.Raw(touchVibration: true),
+    InputRules.Raw(controllerLock: true),
+    InputRules.Raw(keyboardLock: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()
@@ -382,54 +382,42 @@ struct InputRulesTests {
     #expect(sample(held, state: &state).formationPressed)
   }
 
-  // MARK: - The panel button
+  // MARK: - Showing the controller
 
-  @Test(arguments: [InputRules.Raw(controllerPanel: true), InputRules.Raw(keyboardPanel: true)])
-  func eachPanelPressCountsOnce(raw: InputRules.Raw) {
-    var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(raw, state: &state).panelPressed)
-    #expect(!sample(raw, state: &state).panelPressed, "a held button does not repeat")
-    #expect(!sample(.init(), state: &state).panelPressed)
-    #expect(sample(raw, state: &state).panelPressed)
-    // In a conversation it works too, so the panel can be hidden while people talk.
-    #expect(!sample(.init(), state: &state).panelPressed)
-    #expect(sample(raw, mode: .dialogue, state: &state).panelPressed)
-  }
-
+  /// The controller's buttons and its stick show the controller as the source again; a stick
+  /// inside the dead zone, the keyboard and touch do not.
   @Test
-  func thePanelKeyIsKeyboardInputAndHoldsTheReleaseGate() {
-    #expect(InputRules.Raw(keyboardPanel: true).hasKeyboardInput)
-    var state = InputRules.State()
-    let held = InputRules.Raw(controllerPanel: true)
-    #expect(!sample(held, state: &state).panelPressed)
-    #expect(state.needsNeutralInput, "a held panel button keeps the gate closed")
-    _ = sample(.init(), state: &state)
-    #expect(!state.needsNeutralInput)
-    #expect(sample(held, state: &state).panelPressed)
-  }
-
-  /// The panel button, like the controller's other buttons and its stick, shows the controller as
-  /// the source again; a stick inside the dead zone, the keyboard and touch do not.
-  @Test
-  func thePanelButtonIsControllerInput() {
-    #expect(InputRules.Raw(controllerPanel: true).hasControllerInput)
+  func theControllersButtonsAndStickAreControllerInput() {
     for raw in [
-      InputRules.Raw(controllerAction: true), .init(dpadUp: true), .init(stick: [0, 0.5]),
+      InputRules.Raw(controllerAction: true), .init(controllerSwitch: true), .init(dpadUp: true),
+      .init(controllerLock: true), .init(stick: [0, 0.5]),
     ] {
       #expect(raw.hasControllerInput)
     }
     #expect(!InputRules.Raw(stick: [0.1, 0]).hasControllerInput)
-    #expect(!InputRules.Raw(keyboardPanel: true).hasControllerInput)
+    #expect(!InputRules.Raw(keyboardSwitch: true).hasControllerInput)
+    #expect(!InputRules.Raw(keyboardLock: true).hasControllerInput)
+    #expect(InputRules.Raw(keyboardLock: true).hasKeyboardInput)
     #expect(!InputRules.Raw(touchAction: true).hasControllerInput)
   }
 
-  @Test
-  func thePauseMenuConsumesPanelPresses() {
+  // MARK: - The lock (ADR 0020)
+
+  /// R3, RS or O: one lock press per press while exploring. Pause and a conversation consume
+  /// it rather than queueing it.
+  @Test(arguments: [InputRules.Raw(controllerLock: true), InputRules.Raw(keyboardLock: true)])
+  func eachLockPressCountsOnceWhileExploring(raw: InputRules.Raw) {
     var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(controllerPanel: true)
-    #expect(!sample(held, mode: .paused, state: &state).panelPressed)
-    // Still held when play resumes: it was consumed, not queued.
-    #expect(!sample(held, state: &state).panelPressed)
+    #expect(sample(raw, state: &state).lockPressed)
+    #expect(!sample(raw, state: &state).lockPressed, "a held press does not repeat")
+    #expect(!sample(.init(), state: &state).lockPressed)
+    #expect(sample(raw, state: &state).lockPressed)
+    for mode in [GameSession.Mode.paused, .dialogue] {
+      #expect(!sample(.init(), state: &state).lockPressed)
+      #expect(!sample(raw, mode: mode, state: &state).lockPressed)
+      // Still held when play resumes: it was consumed, not queued.
+      #expect(!sample(raw, state: &state).lockPressed)
+    }
   }
 
   // MARK: - Squad orders (ADR 0003, phase S3)
@@ -528,45 +516,6 @@ struct InputRulesTests {
     #expect(sample(.init(touchOrder: order), state: &state) == .neutral)
     #expect(!state.needsNeutralInput, "an order alone is not a held control")
     #expect(sample(.init(), state: &state).command == nil)
-  }
-
-  // MARK: - Previous leader
-
-  @Test
-  func nextWinsWhenBothLeadershipButtonsArriveTogether() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let input = sample(.init(controllerSwitch: true, controllerPrevious: true), state: &state)
-    #expect(input.switchPressed && !input.previousPressed)
-  }
-
-  @Test(arguments: [
-    InputRules.Raw(controllerPrevious: true), InputRules.Raw(keyboardPrevious: true),
-  ])
-  func eachPreviousPressCountsOnceWhileExploring(raw: InputRules.Raw) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let pressed = sample(raw, state: &state)
-    #expect(pressed.previousPressed && !pressed.switchPressed)
-    #expect(!sample(raw, state: &state).previousPressed, "a held button does not repeat")
-    #expect(!sample(.init(), state: &state).previousPressed)
-    #expect(sample(raw, state: &state).previousPressed)
-  }
-
-  @Test(arguments: [
-    (InputRules.Raw(keyboardPrevious: true), GameSession.Mode.paused),
-    (InputRules.Raw(keyboardPrevious: true), GameSession.Mode.dialogue),
-  ])
-  func pausedAndTalkingConsumePreviousPresses(
-    raw: InputRules.Raw, mode: GameSession.Mode
-  ) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let consumed = sample(raw, mode: mode, state: &state)
-    #expect(!consumed.previousPressed)
-    // Still held when play resumes: it was consumed, not queued.
-    let held = sample(raw, state: &state)
-    #expect(!held.previousPressed)
-    #expect(sample(.init(), state: &state) == .neutral)
-    let fresh = sample(raw, state: &state)
-    #expect(fresh.previousPressed)
   }
 
   /// ADR 0008: the touch Vibration button acts only in the pause menu, once for each press,
