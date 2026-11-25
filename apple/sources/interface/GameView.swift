@@ -300,6 +300,7 @@ struct GameView: View {
     var others: [String] = []
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
+      others.append("\(world.controls.dodgeButtonName) · Roll")
       if let aim = world.controls.aimControlName { others.append("\(aim) · Aim") }
     }
     if let next = world.session.nextLeader {

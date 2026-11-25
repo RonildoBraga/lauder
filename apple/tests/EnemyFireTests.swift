@@ -57,15 +57,39 @@ struct EnemyFireTests {
     #expect(session.hitsTaken == 0 && session.hits(of: .tom) == 0)
   }
 
+  /// A leader mid-roll is untouchable: the settled shot that would hit her passes through.
+  @Test
+  func aShotPassesThroughALeaderMidRoll() throws {
+    let level = range(windUp: 1)
+    let session = GameSession(level: level)
+    let fight = EncounterSimulation(level: level)
+    #expect(session.beginEncounter(.stranger))
+    fight.begin(try #require(level.encounters.first))
+    _ = step(
+      fight, session: session, at: [0, 5], dt: HostileState.stepOutTime, untouchable: [.miki])
+    var incoming: EncounterSimulation.Shot?
+    for _ in 0..<140 {
+      _ = step(fight, session: session, at: [0, 5], dt: 1 / 120, untouchable: [.miki])
+      if let shot = fight.shots.first {
+        incoming = shot
+        break
+      }
+    }
+    let shot = try #require(incoming)
+    #expect(shot.path.strike != .body(PartyMember.miki.rawValue))
+    #expect(session.hitsTaken == 0)
+  }
+
   private func step(
-    _ fight: EncounterSimulation, session: GameSession, at point: SIMD2<Float>, dt: Float
+    _ fight: EncounterSimulation, session: GameSession, at point: SIMD2<Float>, dt: Float,
+    untouchable: Set<PartyMember> = []
   )
     -> EncounterSimulation.Outcome
   {
     fight.step(
       dt: dt, leader: point, facing: [0, -1], aiming: false, fireHeld: false,
       firePressed: false,
-      figures: [.miki: point, .tom: [-0.6, 3]], session: session)
+      figures: [.miki: point, .tom: [-0.6, 3]], session: session, untouchable: untouchable)
   }
 
   private func range(windUp: Float, firstMiss: Bool = false) -> Level {

@@ -50,6 +50,7 @@ struct TouchControls: UIViewRepresentable {
     private let cycle = TouchZone()
     private let pause = TouchZone(title: "Pause")
     private let fire = TouchZone(title: "Fire")
+    private let dodge = TouchZone(title: "Roll")
     private let formation = TouchZone(title: "Formation")
     private let vibration = TouchZone()
     private let menu = OrderMenu()
@@ -71,7 +72,7 @@ struct TouchControls: UIViewRepresentable {
       backgroundColor = .clear
       isMultipleTouchEnabled = true
       for zone in [
-        stick, action, cycle, pause, fire, formation, vibration,
+        stick, action, cycle, pause, fire, dodge, formation, vibration,
       ] {
         addSubview(zone)
       }
@@ -79,6 +80,8 @@ struct TouchControls: UIViewRepresentable {
       addSubview(menu)
       fire.accessibilityLabel = "Fire"
       fire.accessibilityHint = "Draws the weapon, then fires at the marked target while held."
+      dodge.accessibilityHint =
+        "Rolls a short way in the direction you move. Shots pass through you while you roll."
       formation.accessibilityHint =
         "Changes the formation: Close, Spread, then Column. After an order, calls everyone back."
       vibration.accessibilityHint = "Turns vibration off, or on again."
@@ -105,7 +108,7 @@ struct TouchControls: UIViewRepresentable {
           self.actionBinding, isPressed: isPressed, generation: generation)
       }
       let buttons: [(TouchZone, TouchInput.Button)] = [
-        (cycle, .cycle), (pause, .pause), (fire, .fire), (formation, .formation),
+        (cycle, .cycle), (pause, .pause), (fire, .fire), (dodge, .dodge), (formation, .formation),
         (vibration, .vibration),
       ]
       for (zone, button) in buttons {
@@ -147,6 +150,8 @@ struct TouchControls: UIViewRepresentable {
       cycle.isHidden = nextLeaderName == nil && !cycle.isCaptured
       // Fire shows for every leader, and stays while a finger holds it.
       fire.isHidden = !showsFire && !fire.isCaptured
+      // Roll shows with Fire, for every leader, and stays while a finger holds it.
+      dodge.isHidden = !showsFire && !dodge.isCaptured
       // Formation appears with the second companion; a finger on it keeps it until it lifts.
       formation.isHidden = !showsFormation && !formation.isCaptured
       pause.setTitle(mode == .paused ? "Resume" : "Pause")
@@ -155,7 +160,7 @@ struct TouchControls: UIViewRepresentable {
       vibration.isHidden = mode != .paused && !vibration.isCaptured
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
-      for zone in [stick, cycle, fire, formation] {
+      for zone in [stick, cycle, fire, dodge, formation] {
         zone.alpha = mode == .exploring ? 1 : 0.55
       }
     }
@@ -164,7 +169,7 @@ struct TouchControls: UIViewRepresentable {
       let generation = controls.touchGeneration
       self.generation = generation
       for zone in [
-        stick, action, cycle, pause, fire, formation, vibration,
+        stick, action, cycle, pause, fire, dodge, formation, vibration,
       ] {
         zone.reset(generation: generation)
       }
@@ -185,6 +190,9 @@ struct TouchControls: UIViewRepresentable {
       // Beside Look on the bottom row, within reach of the right thumb.
       fire.frame = CGRect(
         x: bounds.width - 224 - inset - 12, y: bounds.height - 52 - inset, width: 112, height: 52)
+      // Beside Fire on the bottom row, so a thumb can roll out of a burst and shoot back.
+      dodge.frame = CGRect(
+        x: fire.frame.minX - 12 - 112, y: bounds.height - 52 - inset, width: 112, height: 52)
       pause.frame = CGRect(x: bounds.width - 112 - inset, y: inset, width: 112, height: 44)
       // Beside Resume, shown only while paused.
       vibration.frame = CGRect(

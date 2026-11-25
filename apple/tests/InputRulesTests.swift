@@ -587,6 +587,36 @@ struct InputRulesTests {
     #expect(!sample(press, mode: .paused, state: &state).vibrationPressed)
   }
 
+  /// Square, X, Space or the touch Roll button: one roll per press while exploring.
+  @Test
+  func aDodgeIsOneFreshPressWhileExploring() {
+    var state = InputRules.State(needsNeutralInput: false)
+    for raw in [
+      InputRules.Raw(controllerDodge: true), InputRules.Raw(keyboardDodge: true),
+      InputRules.Raw(touchDodge: true),
+    ] {
+      #expect(sample(raw, state: &state).dodgePressed)
+      #expect(!sample(raw, state: &state).dodgePressed, "holding it rolls once")
+      _ = sample(.init(), state: &state)
+    }
+    // Paused or talking, the press is consumed; a switch in the same sample discards it.
+    #expect(!sample(.init(controllerDodge: true), mode: .paused, state: &state).dodgePressed)
+    _ = sample(.init(), state: &state)
+    #expect(!sample(.init(controllerDodge: true), mode: .dialogue, state: &state).dodgePressed)
+    _ = sample(.init(), state: &state)
+    let both = sample(.init(controllerSwitch: true, controllerDodge: true), state: &state)
+    #expect(both.switchPressed && !both.dodgePressed)
+  }
+
+  @Test
+  func aHeldDodgeKeepsTheReleaseGateClosed() {
+    var state = InputRules.State()
+    #expect(sample(.init(keyboardDodge: true), state: &state) == .neutral)
+    #expect(state.needsNeutralInput)
+    _ = sample(.init(), state: &state)
+    #expect(!state.needsNeutralInput)
+  }
+
   private func sample(
     _ raw: InputRules.Raw, mode: GameSession.Mode = .exploring, state: inout InputRules.State
   ) -> InputRules.Input {

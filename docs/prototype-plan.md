@@ -1,10 +1,12 @@
 # Lauder — bridge-only prototype
 
-**Updated:** 23 November 2026
+**Updated:** 25 November 2026
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaces the first human shooter while Miki is alone. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
+
+On 25 November 2026 the maintainer replaced the party's figures with [pawns](visual-direction.md#characters-and-interface) and asked for a [dodge roll](decisions/0019-dodge-roll.md) to escape attacks, then said **“Start building”**. Their verification is recorded under [Pawns and dodge roll](#pawns-and-dodge-roll).
 
 ## Structural preparation
 
@@ -40,13 +42,14 @@ Only the bridge is available. Pause has Resume, Restart and Vibration. There is 
 | Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
 | Draw and fire the leader's native weapon; hold to fire, automatic reload | R2 / RT | Fire with assisted aim | F |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
+| Dodge roll: the leader tumbles 3 m the way they move, or face, while hostile shots pass through | Square / X | Roll | Space |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
 | Choose Resume, Restart or Vibration while paused | Stick or D-pad up/down, then Cross / A | Resume, Restart or Vibration | W/S or up/down, then E |
 | Hide/show status panel | Circle / B | Always shown | H |
 
 Touch is automatic without an extended controller. An attached controller is preferred unless **Use touch controls** is chosen; **Use controller** returns to it. Keyboard remains available. These sources share InputRules and session authority. Xbox uses the shared extended-gamepad path; hardware delivery remains unverified.
 
-Switching preserves positions and progress; held movement can continue on the new leader. Next wins over Previous in one sample. Switch, formation and order commands consume a simultaneous action. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
+Switching preserves positions and progress; held movement can continue on the new leader. Next wins over Previous in one sample. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
 Search and Help are revalidated on press against the leader's position and current progress. The supply case can be searched once after defeating or bypassing the guard, starting the ambush. Helping Laura uses the shared medical kit and starts her recruitment exchange.
 
@@ -110,6 +113,32 @@ The follow-up review for [PR #134](https://github.com/RonildoBraga/lauder/pull/1
 
 **TestFlight integration, 23 November 2026:** The maintainer authorised integrating the reviewed work and delivering it through TestFlight. [PR #134](https://github.com/RonildoBraga/lauder/pull/134) incorporated #128–#133 as one squash because the repository allows squash merges only; the earlier drafts were closed as incorporated rather than individually merged. Integrated app/archive source `ea47e2b40d5fa4a4c4c16149e9755ac5475f9b7e` has the exact tree of reviewed release-preparation commit `26c5d99977290283b41e6a2a3ed93dfcabc17c4c`. Apple discovery selected unused **0.1.0 (29)**, and archive/upload rechecked accepted and processing uploads. The [delivery record](#testflight-delivery) confirms processing and unchanged tester access. Physical-phone behaviour and performance remain unverified.
 
+### Pawns and dodge roll
+
+On 25 November 2026 the maintainer chose simpler figures for the party from a [game-scale mock-up sheet](../art/party/README.md). The maintainer confirmed the pawn as mocked up, with one skin tone for all three and Snow for the white fur, accepted the [dodge roll](decisions/0019-dodge-roll.md)'s starting values, and said **“Start building”**. The decisions are relayed on [issue #142](https://github.com/RonildoBraga/lauder/issues/142).
+
+- **Models:** Miki, Laura and Tom are rebuilt in Blender as the sheet's pawns. They have 216, 296 and 228 triangles, stand 1.535 to 1.635 m tall, and have no rig or textures. Each passes the model intake check and was exported with the registered exporter.
+- **Motion:** `PawnGait` shows each step's resolved movement as a bob, a rock and a lean. `DodgeRoll` supplies the roll's movement and its tumble. The world's fixed step drives both, and both stay presentation apart from the roll's movement.
+- **Checks:** `./scripts/check` passed:
+  - 13 declaration-contract tests, 28 offline release tests, 52 Blender tests and seven sound fingerprints;
+  - Swift formatting and the app build;
+  - Swift Testing on an iOS 27 iPhone 17 simulator: 288 tests in 391 runs.
+
+  New tests cover the walk, the roll's distance and tumble, its cooldown, the dodge press and its release gate, shots passing through a rolling leader, and the pawn models' heights and facing.
+- **Simulator:** the rendered routes passed with no failures or companion warning frames. Mean frame time was 16.7 ms and p99 16.8 ms, Simulator measurements only.
+
+  | Route | Steps |
+  |---|---:|
+  | `first-fight` | 35/35 |
+  | `opening` | 56/56 |
+
+  Played by hand with touch on the iPhone 17 simulator:
+  - **Roll from standing:** Roll tumbles Miki one full turn forward the way she faces, and she lands upright.
+  - **Roll while moving:** with the stick already held to the side, she rolls that way and walks on.
+  - **Walk:** her rock from side to side shows.
+  - **Not exercised by hand:** Space. The Simulator tool's key presses are shorter than a frame, so the game never samples them held; the input tests cover the binding.
+- **Not yet verified:** the phone. That covers how the pawns read at their real size, the walk and the roll's feel, the touch Roll button with a finger on the stick, controllers, frame pacing and the guard fight's balance with a roll.
+
 ### Architecture checks
 
 Integrated source `7158f29a44738cfd0188292ef3839d0338bd7c73` has the exact tree of reviewed source `c01dd03f6532063c959f2da9fcd663b3f9d393f3`. On `c01dd03`, `./scripts/check` passed formatting, the shared app build and hosted Swift suite, including all eight retained headless routes and six new camera/progression regression tests, plus **13 declaration-contract tests**, **28 offline release-contract tests**, **51 Blender tests** and **seven generated sounds**. [GitHub Actions run 45002053969](https://github.com/RonildoBraga/lauder/actions/runs/45002053969) passed on that reviewed source. Source review completed with no outstanding findings.
@@ -131,6 +160,8 @@ The source-bound standard check also passed on app/archive source `7158f29`. Its
 
 App/archive source `ea47e2b40d5fa4a4c4c16149e9755ac5475f9b7e`, integrated through [PR #134](https://github.com/RonildoBraga/lauder/pull/134), delivers the bridge environment, camera B and C robot in **0.1.0 (29)**. It matches the reviewed release tree and passed the source-bound standard check, signed archive identity/signature/team and matching-dSYM verification. At **2026-11-23 05:12:59 UTC**, Apple's read-only verification confirmed Lauder's identity, upload **COMPLETE** with **zero errors**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, an unexpired build and availability to the existing internal testers. Existing internal groups contain the build; group and tester membership are unchanged. Private archives, symbols and full evidence are preserved. TestFlight availability does not establish phone installation, physical behaviour, performance or enjoyment.
 
+Build **0.1.0 (30)** was delivered on 25 November 2026 from the head of draft [PR #154](https://github.com/RonildoBraga/lauder/pull/154), `f80fa13`, before any merge, so that the maintainer could play its detailed Miki on the phone. Its [delivery record](https://github.com/RonildoBraga/lauder/pull/154#issuecomment-7154103454) is on that PR. The [pawns](#pawns-and-dodge-roll) replace that character route, so build 30's characters never reached `main`.
+
 ### Simulator and physical evidence
 
 Simulator is the everyday validation environment. The script drives ordinary input through shared rules, saves screenshots/video and reports frame time, simulation cost, companion spacing and route failures. DEBUG instrumentation and route helpers are absent from Release builds. Test-only flat ranges and a narrow doorway fixture remain outside the app target because they exercise bridge weapons and navigation boundaries.
@@ -141,6 +172,7 @@ The target remains 60 fps on the baseline iPhone 13 Pro Max. Simulator measureme
 
 - Verify the retained bridge's current controller/touch controls, release gates, Pause, interruption recovery and camera on a physical phone at the next agreed checkpoint.
 - Measure representative Release frame pacing and sustained performance before making baseline-device claims.
+- Check on the phone that the pawns read at their real size and that the walk and the dodge roll feel right. Include the touch Roll button pressed while a finger holds the stick, and Square / X on a controller.
 - Ask what is enjoyable and what should change before adding another scene or complex mechanic. TestFlight availability supplies no answer to that question.
 
 ### Historical delivery

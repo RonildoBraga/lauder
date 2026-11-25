@@ -30,6 +30,8 @@ enum InputRules {
     var controllerFormation = false
     /// Circle / B: hides or shows the status panel.
     var controllerPanel = false
+    /// Square / X: the leader's dodge roll.
+    var controllerDodge = false
     /// The D-pad's directions: squad orders while exploring, and up or down in the pause menu.
     var dpadUp = false
     var dpadDown = false
@@ -48,6 +50,8 @@ enum InputRules {
     var keyboardFormation = false
     /// H: hides or shows the status panel.
     var keyboardPanel = false
+    /// Space: the leader's dodge roll.
+    var keyboardDodge = false
     /// The arrow keys, the Simulator keyboard's D-pad.
     var arrowUp = false
     var arrowDown = false
@@ -69,6 +73,8 @@ enum InputRules {
     var touchVibration = false
     var touchFire = false
     var touchFormation = false
+    /// The touch layout's Roll button.
+    var touchDodge = false
     /// A finger pressing the ground, which may open the order menu.
     var touchGround = false
     /// Where the touch menu opened since the last sample: the press's point, which the world
@@ -83,7 +89,7 @@ enum InputRules {
     var hasAimKey: Bool { aimUp || aimDown || aimLeft || aimRight }
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardPrevious
-        || keyboardFire || keyboardFormation || keyboardPanel || hasArrowKey
+        || keyboardFire || keyboardFormation || keyboardPanel || keyboardDodge || hasArrowKey
         || hasAimKey
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
@@ -91,7 +97,7 @@ enum InputRules {
       let deadZone = Movement.deadZone * Movement.deadZone
       return simd_length_squared(stick) > deadZone || simd_length_squared(aimStick) > deadZone
         || controllerAction || controllerPause || controllerSwitch || controllerPrevious
-        || controllerFire || controllerFormation || controllerPanel
+        || controllerFire || controllerFormation || controllerPanel || controllerDodge
         || hasDpad
     }
   }
@@ -114,6 +120,7 @@ enum InputRules {
     var panelWasPressed = false
     var vibrationWasPressed = false
     var previousWasPressed = false
+    var dodgeWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -150,6 +157,8 @@ enum InputRules {
     /// Where the right stick, or I, K, J and L, aims while exploring, in the stick's terms: up
     /// and right on the screen. Nil inside the dead zone (ADR 0007).
     var aim: SIMD2<Float>?
+    /// A fresh dodge press while exploring: the leader rolls the way they move.
+    var dodgePressed = false
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -167,6 +176,7 @@ enum InputRules {
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
     let panel = raw.keyboardPanel || raw.controllerPanel
+    let dodge = raw.keyboardDodge || raw.controllerDodge || raw.touchDodge
     let up = raw.dpadUp || raw.arrowUp
     let down = raw.dpadDown || raw.arrowDown
     let left = raw.dpadLeft || raw.arrowLeft
@@ -197,6 +207,7 @@ enum InputRules {
     next.panelWasPressed = panel
     next.vibrationWasPressed = vibration
     next.previousWasPressed = previous
+    next.dodgeWasPressed = dodge
     let panelEdge = panel && !state.panelWasPressed
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
@@ -210,7 +221,7 @@ enum InputRules {
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
         || panel || raw.hasDpad || raw.touchGround || vibration
-        || previous
+        || previous || dodge
       return (.neutral, next)
     }
     let pauseEdge = pause && !state.pauseWasPressed
@@ -262,7 +273,7 @@ enum InputRules {
       } else if right && !state.rightWasPressed {
         command = .rightGoes
       }
-      // A switch or a squad command in the same sample discards the leader's action.
+      // A switch or a squad command in the same sample discards the leader's action and roll.
       let commanded = switchEdge || previousEdge || formationEdge || command != nil
       return (
         Input(
@@ -278,7 +289,8 @@ enum InputRules {
           markPoint: raw.touchMark,
           panelPressed: panelEdge,
           previousPressed: previousEdge,
-          aim: aim
+          aim: aim,
+          dodgePressed: dodge && !state.dodgeWasPressed && !commanded
         ), next
       )
     }

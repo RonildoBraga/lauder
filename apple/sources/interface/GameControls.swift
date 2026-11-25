@@ -22,6 +22,8 @@ final class GameControls {
   /// and Fire takes the assisted target (ADR 0007).
   private(set) var aimControlName: String?
   private(set) var formationButtonName = "Formation"
+  /// The button that makes the leader dodge-roll.
+  private(set) var dodgeButtonName = "Roll"
   /// The button that hides or shows the status panel; touch has none.
   private(set) var panelButtonName = "Panel"
   /// The button that leads as the member before the leader; touch has none, and Next cycles.
@@ -142,6 +144,7 @@ final class GameControls {
       controllerFire: pad?.rightTrigger.isPressed == true,
       controllerFormation: pad?.buttonY.isPressed == true,
       controllerPanel: pad?.buttonB.isPressed == true,
+      controllerDodge: pad?.buttonX.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
@@ -150,6 +153,7 @@ final class GameControls {
       keyboardSwitch: pressed(.keyQ), keyboardPrevious: pressed(.keyZ),
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
       keyboardPanel: pressed(.keyH),
+      keyboardDodge: pressed(.spacebar),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       aimUp: pressed(.keyI), aimDown: pressed(.keyK), aimLeft: pressed(.keyJ),
@@ -160,6 +164,7 @@ final class GameControls {
       touchVibration: touch.touchVibration,
       touchFire: touch.touchFire,
       touchFormation: touch.touchFormation,
+      touchDodge: touch.touchDodge,
       touchGround: touch.touchGround,
       touchMark: touch.touchMark, touchOrder: touch.touchOrder
     )
@@ -241,34 +246,35 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "R1",
-        previous: "L1", fire: "R2", aim: "Right stick", formation: "Triangle", panel: "Circle")
+        previous: "L1", fire: "R2", aim: "Right stick", formation: "Triangle", panel: "Circle",
+        dodge: "Square")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "RB",
-        previous: "LB", fire: "RT", aim: "Right stick", formation: "Y", panel: "B")
+        previous: "LB", fire: "RT", aim: "Right stick", formation: "Y", panel: "B", dodge: "X")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
         cycle: "Right shoulder", previous: "Left shoulder", fire: "Right trigger",
-        aim: "Right stick", formation: "Button Y", panel: "Button B")
+        aim: "Right stick", formation: "Button Y", panel: "Button B", dodge: "Button X")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", previous: "Z",
-      fire: "F", aim: "IJKL", formation: "R", panel: "H")
+      fire: "F", aim: "IJKL", formation: "R", panel: "H", dodge: "Space")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", previous: "Next",
-      fire: "Fire", aim: nil, formation: "Formation", panel: "Panel")
+      fire: "Fire", aim: nil, formation: "Formation", panel: "Panel", dodge: "Roll")
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, cycle: String, previous: String,
-    fire: String, aim: String?, formation: String, panel: String
+    fire: String, aim: String?, formation: String, panel: String, dodge: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -279,6 +285,7 @@ final class GameControls {
     if aimControlName != aim { aimControlName = aim }
     if formationButtonName != formation { formationButtonName = formation }
     if panelButtonName != panel { panelButtonName = panel }
+    if dodgeButtonName != dodge { dodgeButtonName = dodge }
   }
 
   isolated deinit {
