@@ -65,16 +65,19 @@ enum CombatSound: String, CaseIterable, Sendable {
   case strikeBlock = "strike-block"
   case emptyClick = "empty-click"
 
-  /// What an event sounds like: each weapon its own shot, a strike on a body or a block, and
-  /// an empty click. A hit on the leader is heard as the strike on her body.
+  /// What an event sounds like: each weapon a shot, a strike on a body or a block, and an
+  /// empty click. Until the paired weapons get sounds of their own, each borrows the nearest
+  /// existing shot (ADR 0021); a sword's swing is silent and its strikes are heard. A hit on the
+  /// leader is heard as the strike on her body.
   static func of(_ event: CombatEvent) -> CombatSound? {
     switch event {
     case .fired(let kind, _, _):
       switch kind {
-      case .carbine: .carbine
-      case .lightBurst: .lightBurst
-      case .closeScatter: .closeScatter
+      case .longRifle: .carbine
+      case .assaultRifle, .minigun: .lightBurst
+      case .shotgun: .closeScatter
       case .rifle: .rifle
+      case .energySword, .shieldDome: nil
       }
     case .struckBody: .strikeBody
     case .struckBlock: .strikeBlock
@@ -203,11 +206,11 @@ final class CombatAudio: @unchecked Sendable {
 
 /// The leader's vibrations (ADR 0008): one pattern for each cause, matched to its sound.
 enum HapticCue: CaseIterable, Sendable {
-  /// A firm tap for each shot of Miki's carbine.
+  /// A firm tap for each shot of Miki's long rifle.
   case carbineShot
-  /// A light tick for each shot in Laura's burst.
+  /// A light tick for each shot of a rapid-fire gun: the assault rifle or the minigun.
   case lightBurstShot
-  /// A heavier, longer pulse for Tom's close blast.
+  /// A heavier, longer pulse for Laura's shotgun blast.
   case closeScatterShot
   /// A sharp, heavier jolt when a hostile's shot hits the leader.
   case leaderHit
@@ -217,9 +220,9 @@ enum HapticCue: CaseIterable, Sendable {
   /// What the leader feels of an event; nothing for a companion's or hostile's weapon.
   static func of(_ event: CombatEvent) -> HapticCue? {
     switch event {
-    case .fired(.carbine, _, true): .carbineShot
-    case .fired(.lightBurst, _, true): .lightBurstShot
-    case .fired(.closeScatter, _, true): .closeScatterShot
+    case .fired(.longRifle, _, true): .carbineShot
+    case .fired(.assaultRifle, _, true), .fired(.minigun, _, true): .lightBurstShot
+    case .fired(.shotgun, _, true): .closeScatterShot
     case .leaderHit: .leaderHit
     case .empty: .emptyClick
     default: nil
@@ -273,9 +276,13 @@ final class CombatHaptics {
 
   static func triggerProfile(for weapon: Weapon.Kind) -> TriggerProfile {
     switch weapon {
-    case .carbine, .rifle: TriggerProfile(start: 0.3, end: 0.55, strength: 0.6)
-    case .lightBurst: TriggerProfile(start: 0.18, end: 0.38, strength: 0.3)
-    case .closeScatter: TriggerProfile(start: 0.4, end: 0.7, strength: 0.85)
+    case .longRifle: TriggerProfile(start: 0.35, end: 0.6, strength: 0.75)
+    case .rifle: TriggerProfile(start: 0.3, end: 0.55, strength: 0.6)
+    case .assaultRifle: TriggerProfile(start: 0.18, end: 0.38, strength: 0.3)
+    case .shotgun: TriggerProfile(start: 0.4, end: 0.7, strength: 0.85)
+    case .minigun: TriggerProfile(start: 0.1, end: 0.3, strength: 0.45)
+    // The sword and the shield have no trigger to feel.
+    case .energySword, .shieldDome: TriggerProfile(start: 0, end: 0, strength: 0)
     }
   }
 
@@ -333,7 +340,7 @@ final class CombatHaptics {
       Self.dualSense(trigger.controller)?.rightTrigger.setModeOff()
     }
     if let wanted, let dualSense = Self.dualSense(wanted.controller) {
-      if let weapon = wanted.weapon {
+      if let weapon = wanted.weapon, Self.triggerProfile(for: weapon).strength > 0 {
         let profile = Self.triggerProfile(for: weapon)
         dualSense.rightTrigger.setModeWeaponWithStartPosition(
           profile.start, endPosition: profile.end, resistiveStrength: profile.strength

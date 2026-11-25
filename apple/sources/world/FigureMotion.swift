@@ -129,24 +129,41 @@ struct WeaponPose: Sendable {
   /// From 1 as a shot fires, settling to 0.
   private(set) var kick: Float = 0
   private var held: Float = 0
-  init(kind: Weapon.Kind = .carbine) {
+  init(kind: Weapon.Kind = .rifle) {
     self.kind = kind
   }
 
+  /// How each weapon is held: a sword's kick is its swing, a lift of the blade (ADR 0021).
   static func profile(for kind: Weapon.Kind) -> Profile {
     switch kind {
-    case .carbine, .rifle:
+    case .rifle:
       Profile(
         lowGrip: lowGrip, raisedGrip: raisedGrip, barrel: barrel,
         kickBack: kickBack, kickLift: kickLift)
-    case .lightBurst:
+    case .longRifle:
       Profile(
-        lowGrip: [0.14, -0.02, -0.08], raisedGrip: [0.14, 0.4, -0.12], barrel: 0.32,
-        kickBack: 0.055, kickLift: 6 * .pi / 180)
-    case .closeScatter:
+        lowGrip: lowGrip, raisedGrip: raisedGrip, barrel: 0.6,
+        kickBack: 0.14, kickLift: 12 * .pi / 180)
+    case .assaultRifle:
       Profile(
-        lowGrip: [0.18, -0.05, -0.12], raisedGrip: [0.17, 0.4, -0.16], barrel: 0.5,
+        lowGrip: [0.14, -0.02, -0.08], raisedGrip: [0.14, 0.4, -0.12], barrel: 0.34,
+        kickBack: 0.04, kickLift: 4 * .pi / 180)
+    case .shotgun:
+      Profile(
+        lowGrip: [0.17, -0.04, -0.1], raisedGrip: [0.16, 0.4, -0.14], barrel: 0.45,
         kickBack: 0.16, kickLift: 16 * .pi / 180)
+    case .energySword:
+      Profile(
+        lowGrip: [0.17, -0.05, -0.05], raisedGrip: [0.17, 0.35, -0.1], barrel: 0.9,
+        kickBack: 0, kickLift: 75 * .pi / 180)
+    case .minigun:
+      Profile(
+        lowGrip: [0.19, -0.08, -0.1], raisedGrip: [0.19, 0.25, -0.14], barrel: 0.6,
+        kickBack: 0.02, kickLift: 2 * .pi / 180)
+    case .shieldDome:
+      Profile(
+        lowGrip: [0.16, 0, -0.05], raisedGrip: [0.16, 0.3, -0.1], barrel: 0.1,
+        kickBack: 0, kickLift: 0)
     }
   }
 
@@ -188,7 +205,7 @@ struct WeaponPose: Sendable {
   /// Where the raised weapon's muzzle is on the ground, for a figure at `position` facing
   /// `facing`: where the leader's shots start.
   static func muzzle(
-    from position: SIMD2<Float>, facing: SIMD2<Float>, kind: Weapon.Kind = .carbine
+    from position: SIMD2<Float>, facing: SIMD2<Float>, kind: Weapon.Kind = .rifle
   ) -> SIMD2<Float> {
     let profile = Self.profile(for: kind)
     let right = SIMD2(-facing.y, facing.x)

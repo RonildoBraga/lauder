@@ -1,7 +1,8 @@
 # ADR 0010 — The squad's weapons
 
 **Status:** Built and checked in Simulator; physical checkpoint pending\
-**Date:** 22 November 2026
+**Date:** 22 November 2026\
+**Superseded:** 26 November 2026 by [ADR 0021](0021-paired-weapons.md), which gives each traveller two weapons and drops the shared round count
 
 
 **Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).

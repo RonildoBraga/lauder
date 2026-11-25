@@ -131,28 +131,57 @@ struct SceneStyle {
     figure("spider-bot-heavy")
   }
 
-  /// A party weapon, with its origin at the grip and its barrel ahead along -z. The simple
-  /// shapes differ in length and weight; the same profile locates its visual and shot muzzle.
+  /// A weapon, with its origin at the grip and its barrel ahead along -z. The simple shapes
+  /// differ in length and weight; the same profile locates its visual and shot muzzle. Laura's
+  /// blade glows in her colour, and Tom's shield is a small emitter on his arm (ADR 0021).
   func weapon(for kind: Weapon.Kind) -> Entity {
     let grip = Entity()
     let size: SIMD3<Float> =
       switch kind {
-      case .carbine, .rifle: [0.07, 0.08, 0.55]
-      case .lightBurst: [0.065, 0.07, 0.4]
-      case .closeScatter: [0.13, 0.11, 0.65]
+      case .rifle: [0.07, 0.08, 0.55]
+      case .longRifle: [0.06, 0.08, 0.8]
+      case .assaultRifle: [0.07, 0.09, 0.45]
+      case .shotgun: [0.1, 0.1, 0.6]
+      case .energySword: [0.05, 0.05, 0.16]
+      case .minigun: [0.18, 0.18, 0.75]
+      case .shieldDome: [0.12, 0.1, 0.16]
       }
     grip.name =
       switch kind {
-      case .carbine: "leader.carbine"
-      case .lightBurst: "weapon.light-burst"
-      case .closeScatter: "weapon.close-scatter"
       case .rifle: "weapon.rifle"
+      case .longRifle: "weapon.long-rifle"
+      case .assaultRifle: "weapon.assault-rifle"
+      case .shotgun: "weapon.shotgun"
+      case .energySword: "weapon.energy-sword"
+      case .minigun: "weapon.minigun"
+      case .shieldDome: "weapon.shield"
       }
     let barrel = WeaponPose.profile(for: kind).barrel
+    if kind == .energySword {
+      // The hilt in the hand and the blade ahead of it, glowing in Laura's colour.
+      grip.addChild(block(size: size, at: .zero, material: gear))
+      let blade = block(
+        size: [0.04, 0.04, barrel - size.z / 2], at: [0, 0, -(barrel + size.z / 2) / 2],
+        material: UnlitMaterial(color: Self.colour(of: .laura)))
+      blade.name = "weapon.energy-sword.blade"
+      grip.addChild(blade)
+      return grip
+    }
     grip.addChild(
       block(
         size: size, at: [0, 0, size.z / 2 - barrel], material: gear))
     return grip
+  }
+
+  /// Tom's shield: a see-through dome round him in his colour, as wide as the dome stops shots
+  /// (ADR 0021). Its lower half stays under the snow.
+  func shieldDome() -> ModelEntity {
+    var material = UnlitMaterial(color: Self.colour(of: .tom))
+    material.blending = .transparent(opacity: 0.28)
+    let dome = ModelEntity(
+      mesh: .generateSphere(radius: ShieldDome.radius), materials: [material])
+    dome.name = "tom.shield-dome"
+    return dome
   }
 
   /// Each member's colour, as their model's clothing shows it.

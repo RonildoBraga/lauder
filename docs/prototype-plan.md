@@ -10,7 +10,7 @@ On 25 November 2026 the maintainer replaced the party's figures with [pawns](vis
 
 On 26 November 2026 the maintainer asked for three changes to the controls: one leader switch on L1 / LB that goes round the party, the status panel's toggle moved from Circle / B into the pause menu, and a [lock-on](decisions/0020-lock-on.md) on a press of the right stick. Their verification is recorded under [Controls pass](#controls-pass).
 
-Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together).
+Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
 ## Structural preparation
 
@@ -41,7 +41,8 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Next leader, going round the party | L1 / LB | Next: name | Q |
 | Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
 | Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
-| Draw and fire the leader's native weapon; hold to fire, automatic reload | R2 / RT | Fire with assisted aim | F |
+| Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
+| [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
 | [Lock the aim](decisions/0020-lock-on.md) on a hostile, or move it to the next; two quick presses let go | R3 / RS, a press of the right stick | None: Fire's assisted aim | O |
 | Dodge roll: the leader tumbles 3 m the way they move, or face, while hostile shots pass through | Square / X | Roll | Space |
@@ -51,7 +52,7 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 
 Touch is automatic without an extended controller. An attached controller is preferred unless **Use touch controls** is chosen; **Use controller** returns to it. Keyboard remains available. These sources share InputRules and session authority. Xbox uses the shared extended-gamepad path; hardware delivery remains unverified.
 
-Switching preserves positions and progress; held movement can continue on the new leader. R1 / RB and Circle / B are unassigned. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
+Switching preserves positions and progress; held movement can continue on the new leader. Circle / B is unassigned. A weapon switch needs a fresh press, and each weapon keeps its magazine. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
 Formations and orders still need two companions, so a level that starts with fewer than three offers them once the others join; the bridge starts with all three. There is nothing on the bridge to search or help with, so Look only looks around.
 
@@ -183,6 +184,21 @@ On 26 November 2026 the maintainer asked: **“I want to simplify the starting o
 - **Removed with them:** the Search and Help actions, loot and the medical kit, so Look only looks around. The supply case stays as scenery, and its unused layout names go at the level's next export. The shared rounds stay until the weapons pass replaces them.
 - **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 273 tests in 373 runs. Rewritten tests cover the three starting together in their Close places, the beats in order, a bypass leading on to Manhattan, a retry and Restart keeping the three together, and the closing exchange. The headless routes now run `bridge-walk`, `first-fight`, `fight-retry`, `opening`, `formations`, `orders` and `lock-on`; `ambush` and `laura` went with their scenes.
 - **Not yet verified:** the phone, and how the guard fight plays with the companions beside the leader from the start.
+
+### Paired weapons
+
+On 26 November 2026 the maintainer gave each character two weapons, and chose how the open points work. The request and choices are quoted in [ADR 0021](decisions/0021-paired-weapons.md).
+
+- **Weapons:**
+  - Miki: a long rifle and an assault rifle.
+  - Laura: a shotgun and an energy sword that strikes close by and turns shots from in front of her.
+  - Tom: a minigun that spins up, and a shield dome that stays up round him while Fire is held.
+- **Switching:** R1 / RB, T or the touch **Swap** button brings the other weapon into hand, and each keeps its magazine.
+- **Rounds:** none are counted beyond the magazine, and the status shows the weapon in hand.
+- **Not built yet:** each weapon borrows the nearest existing sound, and dedicated sounds are left for a later pass.
+- **Checks:** CHECKS_B
+- **Simulator:** SIM_B
+- **Not yet verified:** the phone. That covers how each weapon feels, the switch on R1, the touch Swap button, how the blade and the dome read at the phone's size, and the guard fight's balance, which the heavier hits change.
 
 ### Architecture checks
 

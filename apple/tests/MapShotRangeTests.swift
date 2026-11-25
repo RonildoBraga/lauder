@@ -13,7 +13,7 @@ struct MapShotRangeTests {
       from: [0, 1.25, 6], direction: [0, 0, -1], targets: [])
     #expect(shot.strike == .nothing)
     #expect(simd_distance(shot.end, [0, 1.25, -48]) < 0.0001)
-    #expect(simd_distance(shot.start, shot.end) > Weapon.carbine.range)
+    #expect(simd_distance(shot.start, shot.end) > Weapon.longRifle.range)
   }
 
   @Test

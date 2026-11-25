@@ -3,20 +3,19 @@ import simd
 
 @testable import Lauder
 
-/// The production fight, rather than a second ammunition model, owns each traveller's weapon.
+/// The production fight owns each traveller's two weapons and their magazines (ADR 0021).
 @MainActor
 struct SquadWeaponTests {
   @Test(arguments: PartyMember.allCases)
-  func everyLeaderFiresTheirOwnWeaponAndSpendsExactlyOneSharedRound(member: PartyMember) throws {
+  func everyLeaderFiresTheWeaponInHand(member: PartyMember) throws {
     let level = range()
     let session = GameSession(level: level)
     while session.leader != member { session.cycleLeader() }
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     let shot = try #require(fireOnce(fight, session: session, level: level))
-    let weapon = Weapon.forMember(member)
+    let weapon = Weapon.pair(for: member)[0]
     #expect(fight.leaderWeapon.kind == weapon.kind)
-    #expect(session.ammo == level.startingAmmo - 1)
     #expect(fight.status(for: member).loaded == weapon.capacity - 1)
     #expect(shot.path.start == level.spawn(member))
     #expect(
@@ -30,20 +29,21 @@ struct SquadWeaponTests {
   }
 
   @Test
-  func tomsCloseBlastIsOneShotThatDealsTwoHits() throws {
+  func laurasShotgunBlastIsOneShotThatDealsThreeHits() throws {
     let level = range(
-      target: [0, 1], hits: 2, spawns: [.miki: [-2, 3], .tom: [0, 2], .laura: [2, 3]])
+      target: [0, 1], hits: 3, spawns: [.miki: [-2, 3], .tom: [2, 3], .laura: [0, 2]])
     let session = GameSession(level: level)
+    session.cycleLeader()
     session.cycleLeader()
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     let shot = try #require(fireOnce(fight, session: session, level: level))
     #expect(shot.path.strike == .body("target") && fight.shots.count == 1)
-    #expect(session.defeated == ["target"] && session.ammo == level.startingAmmo - 1)
+    #expect(session.defeated == ["target"])
   }
 
   @Test
-  func switchingAwayAndBackCannotRefillLaurasMagazineOrFinishHerBurstEarly() throws {
+  func switchingAwayAndBackCannotRefillLaurasMagazineOrShortenHerInterval() throws {
     let level = range()
     let session = GameSession(level: level)
     session.cycleLeader()
@@ -52,7 +52,6 @@ struct SquadWeaponTests {
     try begin(fight, session: session, level: level)
     _ = try #require(fireOnce(fight, session: session, level: level))
     let loaded = fight.status(for: .laura).loaded
-    let ammo = session.ammo
     for _ in 0..<3 {
       session.cycleLeader()
       step(fight, session: session, level: level)
@@ -62,7 +61,7 @@ struct SquadWeaponTests {
       step(fight, session: session, level: level, fire: true)
       #expect(!fight.shots.contains { if case .party = $0.side { true } else { false } })
     }
-    #expect(fight.status(for: .laura).loaded == loaded && session.ammo == ammo)
+    #expect(fight.status(for: .laura).loaded == loaded)
   }
 
   @Test
@@ -74,7 +73,6 @@ struct SquadWeaponTests {
     try begin(fight, session: session, level: level)
     try fireUntilReload(fight, session: session, level: level)
     let remaining = fight.status(for: .tom).reloadRemaining
-    let ammo = session.ammo
     for _ in 0..<3 {
       session.cycleLeader()
       step(fight, session: session, level: level)
@@ -82,28 +80,28 @@ struct SquadWeaponTests {
     let after = fight.status(for: .tom)
     #expect(after.loaded == 0 && after.reloadRemaining > 0)
     #expect(abs(after.reloadRemaining - (remaining - 3 / 120)) < 0.001)
-    #expect(session.ammo == ammo)
-    for _ in 0..<240 { step(fight, session: session, level: level) }
-    #expect(fight.status(for: .tom).loaded == Weapon.closeScatter.capacity)
-    #expect(fight.status(for: .tom).reloadRemaining == 0 && session.ammo == ammo)
+    for _ in 0..<400 { step(fight, session: session, level: level) }
+    #expect(fight.status(for: .tom).loaded == Weapon.minigun.capacity)
+    #expect(fight.status(for: .tom).reloadRemaining == 0)
   }
 
   @Test
-  func restartRestoresWeaponHandlingAndSharedRounds() throws {
+  func restartRestoresWeaponHandlingAndTheFirstWeapons() throws {
     let level = range()
     let session = GameSession(level: level)
     session.cycleLeader()
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     try fireUntilReload(fight, session: session, level: level)
+    fight.swapWeapon(for: .miki)
     session.restart()
     fight.reset()
     for member in PartyMember.allCases {
       let status = fight.status(for: member)
-      #expect(status.loaded == Weapon.forMember(member).capacity)
+      let first = Weapon.pair(for: member)[0]
+      #expect(status.kind == first.kind && status.loaded == first.capacity)
       #expect(status.reloadRemaining == 0 && !status.isDrawn)
     }
-    #expect(session.ammo == level.startingAmmo)
   }
 
   #if DEBUG
@@ -117,7 +115,6 @@ struct SquadWeaponTests {
           world.playtestSnapshot.weapon.reloadRemaining > 0
         })
       let before = world.playtestSnapshot.weapon
-      let ammo = world.session.ammo
       pressPause(world)
       #expect(world.session.mode == .paused)
       for _ in 0..<120 {
@@ -125,12 +122,10 @@ struct SquadWeaponTests {
       }
       let paused = world.playtestSnapshot.weapon
       #expect(paused.loaded == before.loaded && paused.reloadRemaining == before.reloadRemaining)
-      #expect(world.session.ammo == ammo)
       pressPause(world)
-      _ = run(world, upTo: 2.1)
+      _ = run(world, upTo: 3.2)
       #expect(world.playtestSnapshot.weapon.reloadRemaining == 0)
-      #expect(world.playtestSnapshot.weapon.loaded == Weapon.closeScatter.capacity)
-      #expect(world.session.ammo == ammo)
+      #expect(world.playtestSnapshot.weapon.loaded == Weapon.minigun.capacity)
     }
   #endif
 
@@ -194,8 +189,8 @@ struct SquadWeaponTests {
     return Level(
       id: "squad-weapon-range",
       ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],
-      triggers: [], encounters: [encounter], startingAmmo: 60,
-      party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
+      triggers: [], encounters: [encounter], party: [.miki, .tom, .laura], spawns: spawns,
+      heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.")
   }

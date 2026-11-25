@@ -104,7 +104,7 @@ struct EnemyFireTests {
         Level.Encounter(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 10])),
           retryAt: nil, hostiles: [rifle], cues: [(0, .reveal("rifle")), (0, .engage("rifle"))])
-      ], startingAmmo: 60, party: [.miki, .tom], spawns: [.miki: [0, 5], .tom: [-0.6, 3]],
+      ], party: [.miki, .tom], spawns: [.miki: [0, 5], .tom: [-0.6, 3]],
       heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "Range", objective: "Range", lookAround: "Range", restartNote: "Restart")

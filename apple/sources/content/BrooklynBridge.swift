@@ -80,7 +80,6 @@ enum BrooklynBridge {
     scene: "BrooklynBridge",
     triggers: triggers,
     encounters: [strangerEncounter, arrival],
-    startingAmmo: 12,
     // The three cross together from the start, Miki leading.
     party: [.miki, .tom, .laura],
     spawns: spawns,

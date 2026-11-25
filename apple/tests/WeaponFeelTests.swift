@@ -14,11 +14,12 @@ struct WeaponFeelTests {
 
   @Test
   func theSpreadWidensWithEachShotAndNarrowsAgainWithTime() {
-    let spread = Weapon.carbine.spread
+    // Standing still, the long rifle's first shot lands within 10 cm at its full reach.
+    #expect(Weapon.longRifle.range * tan(Weapon.longRifle.spread.rest) < 0.1)
+    // The assault rifle's rapid fire shows the widening.
+    let spread = Weapon.assaultRifle.spread
     var scatter = Scatter()
     #expect(scatter.angle(spread: spread, speed: 0, turning: 0) == spread.rest)
-    // Standing still, the first shot lands within 10 cm at the carbine's full reach.
-    #expect(Weapon.carbine.range * tan(spread.rest) < 0.1)
     for _ in 0..<3 { scatter.fired(spread: spread) }
     #expect(
       abs(scatter.angle(spread: spread, speed: 0, turning: 0) - (spread.rest + 3 * spread.perShot))
@@ -198,8 +199,8 @@ struct WeaponFeelTests {
     run(world, upTo: 0.5, aim: stick(world, towards: [1, 0]))
     #expect(world.weaponDrawn)
     #expect(world.root.findEntity(named: "leader.aim") == nil)
-    let carbine = world.root.findEntity(named: "leader.carbine")
-    #expect(carbine?.isEnabled == true)
+    let rifle = world.root.findEntity(named: "weapon.long-rifle")
+    #expect(rifle?.isEnabled == true)
   }
 
   @Test
@@ -220,14 +221,19 @@ struct WeaponFeelTests {
     let world = GameWorld(level: range(shooterAt: [0, -6], hits: 50))
     #expect(world.session.holdAll())
     #expect(run(world, upTo: 4) { world.session.hitsTaken > 0 })
-    // The stick draws her carbine while she faces away from the shooter, then lets go.
+    // The stick draws her rifle while she faces away from the shooter, then lets go.
     run(world, upTo: 0.6, aim: stick(world, towards: [0, 1]))
     #expect(world.weaponDrawn && simd_dot(world.facing(of: .miki), [0, 1]) > 0.99)
-    let ammo = world.session.ammo
+    _ = world.takeCombatEvents()
+    func fired() -> Bool {
+      world.takeCombatEvents().contains {
+        if case .fired(_, _, true) = $0 { true } else { false }
+      }
+    }
     // Fire alone turns her round first: no shot leaves while she faces away.
     run(world, upTo: 6 / 60, fire: true)
-    #expect(world.session.ammo == ammo)
-    #expect(run(world, upTo: 0.5, fire: true) { world.session.ammo < ammo })
+    #expect(!fired())
+    #expect(run(world, upTo: 0.5, fire: true) { fired() })
     #expect(simd_dot(world.facing(of: .miki), [0, 1]) < 0)
   }
 
@@ -241,7 +247,7 @@ struct WeaponFeelTests {
       events += world.takeCombatEvents()
       return false
     }
-    #expect(events.contains { if case .fired(.carbine, _, true) = $0 { true } else { false } })
+    #expect(events.contains { if case .fired(.longRifle, _, true) = $0 { true } else { false } })
     #expect(events.contains { if case .struckBlock = $0 { true } else { false } })
     #expect(!events.contains { if case .leaderHit = $0 { true } else { false } })
   }
@@ -261,8 +267,9 @@ struct WeaponFeelTests {
 
   @Test
   func aHostileHitRocksAndOneDownedFallsOverAMoment() throws {
-    // A shooter that takes three hits, ahead of Miki; the companions hold where they stand.
-    let world = GameWorld(level: range(shooterAt: [0, -6], hits: 3))
+    // A shooter that takes two of the long rifle's heavy hits, ahead of Miki; the companions
+    // hold where they stand.
+    let world = GameWorld(level: range(shooterAt: [0, -6], hits: 6))
     #expect(world.session.holdAll())
     let visual = try #require(world.root.findEntity(named: "hostile.a")?.children.first)
     func upright() -> Float { visual.orientation.act([0, 1, 0]).y }
@@ -284,20 +291,24 @@ struct WeaponFeelTests {
   @Test
   func eachEventHasItsSoundAndTheLeadersOwnAVibration() {
     let point = SIMD2<Float>(1, 2)
-    #expect(CombatSound.of(.fired(.carbine, at: point, byLeader: true)) == .carbine)
-    #expect(CombatSound.of(.fired(.lightBurst, at: point, byLeader: false)) == .lightBurst)
-    #expect(CombatSound.of(.fired(.closeScatter, at: point, byLeader: false)) == .closeScatter)
+    // The paired weapons borrow the nearest existing shot until they have their own.
+    #expect(CombatSound.of(.fired(.longRifle, at: point, byLeader: true)) == .carbine)
+    #expect(CombatSound.of(.fired(.assaultRifle, at: point, byLeader: false)) == .lightBurst)
+    #expect(CombatSound.of(.fired(.minigun, at: point, byLeader: false)) == .lightBurst)
+    #expect(CombatSound.of(.fired(.shotgun, at: point, byLeader: false)) == .closeScatter)
+    #expect(CombatSound.of(.fired(.energySword, at: point, byLeader: true)) == nil)
     #expect(CombatSound.of(.fired(.rifle, at: point, byLeader: false)) == .rifle)
     #expect(CombatSound.of(.struckBody(at: point)) == .strikeBody)
     #expect(CombatSound.of(.struckBlock(at: point)) == .strikeBlock)
     #expect(CombatSound.of(.empty(at: point)) == .emptyClick)
     #expect(CombatSound.of(.leaderHit(at: point)) == nil)
-    #expect(HapticCue.of(.fired(.carbine, at: point, byLeader: true)) == .carbineShot)
-    #expect(HapticCue.of(.fired(.lightBurst, at: point, byLeader: true)) == .lightBurstShot)
-    #expect(HapticCue.of(.fired(.closeScatter, at: point, byLeader: true)) == .closeScatterShot)
-    #expect(HapticCue.of(.fired(.carbine, at: point, byLeader: false)) == nil)
-    #expect(HapticCue.of(.fired(.lightBurst, at: point, byLeader: false)) == nil)
-    #expect(HapticCue.of(.fired(.closeScatter, at: point, byLeader: false)) == nil)
+    #expect(HapticCue.of(.fired(.longRifle, at: point, byLeader: true)) == .carbineShot)
+    #expect(HapticCue.of(.fired(.assaultRifle, at: point, byLeader: true)) == .lightBurstShot)
+    #expect(HapticCue.of(.fired(.minigun, at: point, byLeader: true)) == .lightBurstShot)
+    #expect(HapticCue.of(.fired(.shotgun, at: point, byLeader: true)) == .closeScatterShot)
+    #expect(HapticCue.of(.fired(.longRifle, at: point, byLeader: false)) == nil)
+    #expect(HapticCue.of(.fired(.shotgun, at: point, byLeader: false)) == nil)
+    #expect(HapticCue.of(.fired(.energySword, at: point, byLeader: true)) == nil)
     #expect(HapticCue.of(.fired(.rifle, at: point, byLeader: false)) == nil)
     #expect(HapticCue.of(.leaderHit(at: point)) == .leaderHit)
     #expect(HapticCue.of(.empty(at: point)) == .emptyClick)
@@ -363,8 +374,8 @@ struct WeaponFeelTests {
     return Level(
       id: "test-range",
       ground: Level.Box(name: "ground", position: [0, -0.15, 0], size: [40, 0.3, 40]),
-      boxes: boxes, triggers: [], encounters: [fight], startingAmmo: 60,
-      party: [.miki, .tom, .laura], spawns: [.miki: [0, 2], .tom: [-1, 3], .laura: [1, 3]],
+      boxes: boxes, triggers: [], encounters: [fight], party: [.miki, .tom, .laura],
+      spawns: [.miki: [0, 2], .tom: [-1, 3], .laura: [1, 3]],
       heading: [0, -1], cameraOffset: TestYard.cameraOffset,
       fieldOfView: 42, opening: "A range.", objective: "Test.",
       lookAround: "Snow.", restartNote: "Restart.")

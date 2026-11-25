@@ -40,6 +40,8 @@
       case lock
       /// Whether a lock holds.
       case expectLock(Bool)
+      /// A press of the weapon switch: the leader's other weapon (ADR 0021).
+      case swap
     }
 
     /// What the runner can see of the game each frame.
@@ -53,7 +55,6 @@
       let beat: StoryBeat
       let hitsTaken: Int
       let defeated: Int
-      let ammo: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
       let refusedOrders: Int
@@ -192,6 +193,8 @@
           return press(InputRules.Raw(controllerAction: true))
         case .lock:
           return press(InputRules.Raw(controllerLock: true))
+        case .swap:
+          return press(InputRules.Raw(controllerSwap: true))
         case .expectLock(let locked):
           expect(
             snapshot.locked == locked, locked ? "nothing was locked" : "the lock still held")
@@ -314,7 +317,7 @@
           let start = snapshot.level
           if snapshot.leader != start.party[0] || snapshot.party != start.party
             || snapshot.firedTriggers != 0 || snapshot.beat != .crossing || snapshot.defeated != 0
-            || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
+            || snapshot.hitsTaken != 0
             || snapshot.mode != .exploring || snapshot.formation != .close
             || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
 
@@ -572,6 +575,15 @@
         .mark("guard down, lock let go"), .wait(seconds: 1),
       ] + restartRun
 
+    /// Tom's two weapons in the first fight (ADR 0021): he raises his dome against the guard's
+    /// bursts and nobody is hurt, then switches to the minigun and brings the guard down.
+    private static let weapons: [Step] =
+      toTheStranger + [
+        .switchLeader, .swap, .wait(seconds: 0.3), .fire(seconds: 2.5), .mark("Tom's dome"),
+        .fire(seconds: 2), .expectHits(0), .swap, .wait(seconds: 0.3), .fire(seconds: 5),
+        .expectDefeated(1), .mark("guard down to the minigun"), .wait(seconds: 1),
+      ] + restartRun
+
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
     /// the second tower.
     private static let pastTheGuard: [Step] =
@@ -650,6 +662,7 @@
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("opening", opening), ("formations", formations), ("orders", orders), ("lock-on", lockOn),
+      ("weapons", weapons),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

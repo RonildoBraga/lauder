@@ -35,7 +35,7 @@ The two guns toe in towards the same committed point, within limited mount yaw, 
 
 There is **no red aim line or warning cone**. Stance, facing, the commit pause and status feedback announce the attempt; existing muzzle flashes, tracers and impacts describe shots after firing. The initial robot spread is tight, not the human rifle's broad cone. Hits do not restart every wind-up. A burst can cost Miki at most **one injury**, and defeat cancels pending fire immediately.
 
-Start with **six carbine hits** against Miki's **12 starting rounds**. This is a tuning candidate. It must be challenged if standing still and holding Fire is more useful than reading the pattern. There is one ranged pattern; no lunge, melee, grenades, destructible limbs, hidden weak point or extra gun type is added.
+Start with **six hits** to disable it. This is a tuning candidate. Since 26 November 2026 the party's [paired weapons](../decisions/0021-paired-weapons.md) deal heavier hits, two long-rifle shots, one shotgun blast or a sword swing, and count no rounds, so the fight needs retuning. It must be challenged if standing still and holding Fire is more useful than reading the pattern. There is one ranged pattern; no lunge, melee, grenades, destructible limbs, hidden weak point or extra gun type is added.
 
 ## Bypass and the way on
 

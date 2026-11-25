@@ -72,20 +72,16 @@ final class GameSession {
   /// What an encounter's retry returns to: the state when it began.
   private struct Checkpoint {
     let progress: BridgeProgress
-    let ammo: Int
     let defeated: Set<String>
     let hitsDealt: [String: Int]
   }
 
   private let startingParty: [PartyMember]
-  private let startingAmmo: Int
   /// Story policy is a checkpointable value; the session retains mode and shared progress.
   private var progress: BridgeProgress
   var beat: StoryBeat { progress.beat }
   /// Hits each member has taken in the current encounter. On the bridge only the leader is hit.
   private var hits: [PartyMember: Int] = [:]
-  /// Rounds left for the leader's weapon.
-  private(set) var ammo: Int
   /// Hostiles defeated in this run.
   private(set) var defeated: Set<String> = []
   /// Hits dealt to hostiles still standing.
@@ -112,8 +108,6 @@ final class GameSession {
   init(level: Level) {
     precondition(!level.party.isEmpty, "\(level.id) must start with someone.")
     startingParty = level.party
-    startingAmmo = level.startingAmmo
-    ammo = level.startingAmmo
     progress = BridgeProgress()
     party = level.party
     leader = level.party[0]
@@ -280,16 +274,8 @@ final class GameSession {
   /// the party has now is kept, so a retry can return to it.
   func beginEncounter(_ next: StoryBeat) -> Bool {
     guard mode == .exploring, checkpoint == nil, next == nextBeat else { return false }
-    checkpoint = Checkpoint(
-      progress: progress, ammo: ammo, defeated: defeated, hitsDealt: hitsDealt)
+    checkpoint = Checkpoint(progress: progress, defeated: defeated, hitsDealt: hitsDealt)
     progress.begin(next)
-    return true
-  }
-
-  /// One round leaves the leader's weapon; false when it is empty.
-  func spendRound() -> Bool {
-    guard mode == .exploring, ammo > 0 else { return false }
-    ammo -= 1
     return true
   }
 
@@ -338,7 +324,6 @@ final class GameSession {
   func retryEncounter() {
     guard let checkpoint else { return }
     progress = checkpoint.progress
-    ammo = checkpoint.ammo
     defeated = checkpoint.defeated
     hitsDealt = checkpoint.hitsDealt
     hits = [:]
@@ -375,7 +360,6 @@ final class GameSession {
     firedTriggers = []
     progress.restart()
     hits = [:]
-    ammo = startingAmmo
     defeated = []
     hitsDealt = [:]
     checkpoint = nil

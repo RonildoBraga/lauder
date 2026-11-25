@@ -130,6 +130,8 @@ final class GameWorld {
   @ObservationIgnored private var dodgePressPending = false
   /// A lock press waiting for the next fixed step (ADR 0020).
   @ObservationIgnored private var lockPressPending = false
+  /// Tom's dome, shown round him while he leads with it raised (ADR 0021).
+  @ObservationIgnored private let shieldDome: ModelEntity
   /// Whether the touch controls were on in the last frame, to notice them taking over.
   @ObservationIgnored private var touchWasEnabled = true
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
@@ -162,28 +164,44 @@ final class GameWorld {
   /// Every member of the playable party carries a weapon (ADR 0010).
   var showsWeapon: Bool { session.party.contains(session.leader) }
 
-  /// The active member's magazine is a readiness gate within the one shared round count.
+  /// The weapon in the leader's hand and how it stands: its magazine or reload, how long Tom's
+  /// dome lasts, or just the sword. Rounds are not counted beyond the magazine (ADR 0021).
   private(set) var weaponStatus = ""
+  /// The leader's other weapon, which the switch brings into hand.
+  private(set) var otherWeaponName = ""
 
   private func updateWeaponStatus() {
     let state = fight.status(for: session.leader)
     let name = state.kind.name
+    let practice = session.inEncounter ? "" : " · Practice"
     let text: String
-    let suffix = session.inEncounter ? "\(session.ammo) total" : "Practice"
-    if session.inEncounter && session.ammo == 0 {
-      text = "\(name) · No rounds"
-    } else if state.reloadRemaining > 0 {
-      text = String(
-        format: "%@ · Reloading %.1f s · %@", name,
-        ceil(state.reloadRemaining * 10) / 10, suffix)
-    } else {
-      let loaded = session.inEncounter ? min(state.loaded, session.ammo) : state.loaded
-      text = "\(name) · \(loaded) loaded · \(suffix)"
+    switch state.kind {
+    case .energySword:
+      text = name + practice
+    case .shieldDome:
+      let remaining = state.shieldRemaining ?? 0
+      if fight.shieldIsUp {
+        text = String(format: "%@ · Up %.1f s", name, ceil(remaining * 10) / 10)
+      } else if remaining < ShieldDome.duration {
+        text = String(format: "%@ · Recharging %.0f%%", name, remaining / ShieldDome.duration * 100)
+      } else {
+        text = "\(name) · Ready"
+      }
+    default:
+      if state.reloadRemaining > 0 {
+        text =
+          String(format: "%@ · Reloading %.1f s", name, ceil(state.reloadRemaining * 10) / 10)
+          + practice
+      } else {
+        text = "\(name) · \(state.loaded) loaded" + practice
+      }
     }
     if weaponStatus != text { weaponStatus = text }
+    let other = fight.otherWeapon(of: session.leader).kind.name
+    if otherWeaponName != other { otherWeaponName = other }
   }
 
-  var weaponKind: Weapon.Kind? { canFire ? Weapon.forMember(session.leader).kind : nil }
+  var weaponKind: Weapon.Kind? { canFire ? fight.weapon(of: session.leader).kind : nil }
   /// Whether weapon readiness and shared rounds show: during a fight, or while drawn.
   var showsAmmo: Bool { session.inEncounter || weaponDrawn }
   /// Whether an encounter's retry is under way.
@@ -218,6 +236,7 @@ final class GameWorld {
     fight = EncounterSimulation(level: level)
     stage = EncounterStage(level: level, style: style)
     stage.reset(fight)
+    shieldDome = style.shieldDome()
     root.name = level.id
     if let scene = level.scene {
       root.addChild(Self.loadScene(named: scene, for: level))
@@ -256,7 +275,13 @@ final class GameWorld {
     refusalCross.name = "order.refused"
     refusalCross.isEnabled = false
     root.addChild(refusalCross)
-    for (member, weapon) in stage.weaponProps { visuals[member]?.addChild(weapon) }
+    for (member, weapons) in stage.weaponProps {
+      for weapon in weapons.values { visuals[member]?.addChild(weapon) }
+    }
+    // Tom's dome stands round him, centred on the ground under his body.
+    shieldDome.position.y = -PartyBody.height / 2
+    shieldDome.isEnabled = false
+    bodies[.tom]?.addChild(shieldDome)
     placeParty()
     updateCamera(deltaTime: 0)
     updateCompass()
@@ -424,6 +449,11 @@ final class GameWorld {
       } else if input.switchPressed, session.nextLeader != nil {
         session.cycleLeader()
         followNewLeader()
+      }
+      // The leader's other weapon comes into hand (ADR 0021).
+      if input.swapPressed {
+        fight.swapWeapon(for: session.leader)
+        updateWeaponStatus()
       }
       // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
       // an order the button calls everyone back instead.
@@ -599,7 +629,8 @@ final class GameWorld {
       leaderDelta = rolling.advance(dt: dt)
       roll = rolling
     } else {
-      leaderDelta = walking * PartyBody.speed * dt
+      // A running minigun or a raised dome slows the leader (ADR 0021).
+      leaderDelta = walking * PartyBody.speed * fight.leaderWalking * dt
     }
     let isRolling = roll != nil
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
@@ -1003,6 +1034,7 @@ final class GameWorld {
     if self.threat != threat { self.threat = threat }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if lockedHostile != fight.lock { lockedHostile = fight.lock }
+    shieldDome.isEnabled = fight.shieldIsUp
     if outcome.retry { retryElapsed = 0 }
   }
 
@@ -1237,7 +1269,6 @@ final class GameWorld {
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken, defeated: session.defeated.count,
-        ammo: session.ammo,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader),

@@ -317,6 +317,9 @@ struct InputRulesTests {
     InputRules.Raw(touchVibration: true),
     InputRules.Raw(controllerLock: true),
     InputRules.Raw(keyboardLock: true),
+    InputRules.Raw(controllerSwap: true),
+    InputRules.Raw(keyboardSwap: true),
+    InputRules.Raw(touchSwap: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()
@@ -399,6 +402,27 @@ struct InputRulesTests {
     #expect(!InputRules.Raw(keyboardLock: true).hasControllerInput)
     #expect(InputRules.Raw(keyboardLock: true).hasKeyboardInput)
     #expect(!InputRules.Raw(touchAction: true).hasControllerInput)
+  }
+
+  // MARK: - The weapon switch (ADR 0021)
+
+  /// R1, RB, T or the touch Swap button: one switch per press while exploring. Pause and a
+  /// conversation consume it rather than queueing it.
+  @Test(arguments: [
+    InputRules.Raw(controllerSwap: true), .init(keyboardSwap: true), .init(touchSwap: true),
+  ])
+  func eachSwitchPressCountsOnceWhileExploring(raw: InputRules.Raw) {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(raw, state: &state).swapPressed)
+    #expect(!sample(raw, state: &state).swapPressed, "a held press does not repeat")
+    for mode in [GameSession.Mode.paused, .dialogue] {
+      #expect(!sample(.init(), state: &state).swapPressed)
+      #expect(!sample(raw, mode: mode, state: &state).swapPressed)
+      #expect(!sample(raw, state: &state).swapPressed, "consumed, not queued")
+    }
+    #expect(InputRules.Raw(controllerSwap: true).hasControllerInput)
+    #expect(InputRules.Raw(keyboardSwap: true).hasKeyboardInput)
+    #expect(!InputRules.Raw(keyboardSwap: true).hasControllerInput)
   }
 
   // MARK: - The lock (ADR 0020)

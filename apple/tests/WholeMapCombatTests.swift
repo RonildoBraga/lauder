@@ -19,7 +19,7 @@ struct WholeMapCombatTests {
     let incoming = try #require(partyShot(fight, session: session, at: .zero))
     #expect(incoming.path.strike == .body(enemy.id))
     #expect(simd_distance(incoming.path.start, incoming.path.end) > 40)
-    #expect(session.defeated.contains(enemy.id) && session.ammo == level.startingAmmo - 1)
+    #expect(session.defeated.contains(enemy.id))
   }
 
   @Test
@@ -33,7 +33,7 @@ struct WholeMapCombatTests {
     #expect(shot.path.strike == .scenery)
     #expect(abs(shot.path.end.y - 27.5) < 0.001)
     #expect(simd_distance(shot.path.start, shot.path.end) > fight.leaderWeapon.range)
-    #expect(session.defeated.isEmpty && session.ammo == level.startingAmmo - 1)
+    #expect(session.defeated.isEmpty)
   }
 
   @Test
@@ -112,7 +112,7 @@ struct WholeMapCombatTests {
     }
     #expect(fight.hostiles[neutral.id]?.isTargetable == false)
     #expect(fight.hostiles[enemy.id]?.isTargetable == true)
-    #expect(session.ammo == level.startingAmmo && session.defeated.isEmpty)
+    #expect(session.defeated.isEmpty)
   }
 
   private func begin(_ level: Level) throws -> (GameSession, EncounterSimulation) {
@@ -188,7 +188,7 @@ struct WholeMapCombatTests {
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 70])),
           retryAt: nil, hostiles: hostiles,
           cues: hostiles.map { (0, .reveal($0.id)) } + engaged.map { (0, .engage($0)) })
-      ], startingAmmo: 60, party: party, spawns: spawns ?? [.miki: player], heading: [0, -1],
+      ], party: party, spawns: spawns ?? [.miki: player], heading: [0, -1],
       cameraOffset: [0, 10, 10], fieldOfView: 42,
       opening: "Range.", objective: "Range.", lookAround: "Range.", restartNote: "Restart.")
   }

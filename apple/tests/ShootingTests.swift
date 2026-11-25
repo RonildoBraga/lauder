@@ -4,7 +4,7 @@ import simd
 
 @testable import Lauder
 
-/// ADR 0007: the right stick aims Miki's carbine apart from movement, a shot that hits nobody
+/// ADR 0007: the right stick aims Miki's rifle apart from movement, a shot that hits nobody
 /// flies on and strikes a wall, shots outside a fight spend no rounds, every shot shows a streak
 /// and a flash, and the camera's lens narrows in a fight.
 @MainActor
@@ -112,14 +112,14 @@ struct ShootingTests {
   }
 
   @Test
-  func aimingTurnsMikiAndDrawsHerCarbineWhileSheWalksAnotherWay() {
+  func aimingTurnsMikiAndDrawsHerRifleWhileSheWalksAnotherWay() {
     let world = GameWorld(level: TestRange.practice)
     #expect(world.session.leader == .miki && world.showsWeapon && !world.weaponDrawn)
     let start = position(world, .miki)
     let up = stick(world, towards: [0, -1])
     let right = stick(world, towards: [1, 0])
     for _ in 0..<30 { world.advanceParty(movement: up, aim: right, deltaTime: 1 / 60) }
-    // She walks up the screen while she faces her aim, to the right, with her carbine drawn.
+    // She walks up the screen while she faces her aim, to the right, with her rifle drawn.
     #expect(position(world, .miki).y < start.y - 0.5)
     #expect(simd_distance(world.facing(of: .miki), [1, 0]) < 0.01)
     #expect(world.weaponDrawn)
@@ -136,12 +136,12 @@ struct ShootingTests {
     #expect(world.session.leader == member && world.showsWeapon)
     let right = stick(world, towards: [1, 0])
     run(world, upTo: 1.4, fire: true, aim: right)
-    #expect(world.weaponDrawn && world.session.ammo == 0)
+    #expect(world.weaponDrawn)
     #expect(simd_distance(world.facing(of: member), [1, 0]) < 0.01)
     #expect(
       world.takeCombatEvents().contains {
         if case .fired(let kind, _, let byLeader) = $0 {
-          kind == Weapon.forMember(member).kind && byLeader
+          kind == Weapon.pair(for: member)[0].kind && byLeader
         } else {
           false
         }
@@ -151,24 +151,13 @@ struct ShootingTests {
   // MARK: - Shots and rounds
 
   @Test
-  func shotsOutsideAFightStrikeWallsAndSpendNoRounds() {
-    // The fixture has no fights and no rounds; Miki aims at its wall.
+  func shotsOutsideAFightStrikeWalls() {
+    // The fixture has no fights; Miki aims her long rifle at its wall.
     let world = GameWorld(level: TestRange.practice)
     let up = stick(world, towards: [0, -1])
-    run(world, upTo: 1.2, fire: true, aim: up)
-    #expect(world.weaponDrawn && world.session.ammo == 0)
+    run(world, upTo: 2.2, fire: true, aim: up)
+    #expect(world.weaponDrawn)
     #expect(world.shotMarks >= 2)
-  }
-
-  @Test
-  func aShotInAFightSpendsARound() {
-    let world = GameWorld(level: BrooklynBridge.level)
-    let ammo = world.session.ammo
-    walk(world, to: [6.5, 15])
-    #expect(world.session.inEncounter)
-    let up = stick(world, towards: [0, -1])
-    run(world, upTo: 5, fire: true, aim: up)
-    #expect(world.session.ammo < ammo)
   }
 
   // MARK: - The lens
