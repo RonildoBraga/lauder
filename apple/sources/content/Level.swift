@@ -109,8 +109,6 @@ struct Level {
   var scene: String?
   let triggers: [Trigger]
   var encounters: [Encounter] = []
-  /// Rounds for the leader's weapon when a run starts.
-  var startingAmmo = 0
   /// Who is in the party when a run starts, leader first.
   let party: [PartyMember]
   /// Where each member's body starts, including members who join later.

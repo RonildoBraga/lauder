@@ -7,7 +7,8 @@ import simd
 final class EncounterStage {
   let container = Entity()
   let effects: ShotEffects
-  let weaponProps: [PartyMember: Entity]
+  /// Each member's two weapons, one entity for each; only the one in hand shows, while drawn.
+  let weaponProps: [PartyMember: [Weapon.Kind: Entity]]
   private var bodies: [String: Entity] = [:]
   private var visuals: [String: Entity] = [:]
   private var hostileWeaponProps: [String: Entity] = [:]
@@ -24,8 +25,14 @@ final class EncounterStage {
     shots.name = "combat.shots"
     effects = ShotEffects(style: style, in: shots)
     weaponProps = Dictionary(
-      uniqueKeysWithValues: PartyMember.allCases.map {
-        ($0, style.weapon(for: Weapon.forMember($0).kind))
+      uniqueKeysWithValues: PartyMember.allCases.map { member in
+        (
+          member,
+          Dictionary(
+            uniqueKeysWithValues: Weapon.pair(for: member).map {
+              ($0.kind, style.weapon(for: $0.kind))
+            })
+        )
       })
     targetMarker = style.targetMarker()
     lockMarker = style.lockMarker()
@@ -122,12 +129,15 @@ final class EncounterStage {
     }
     let drawn = fight.drawnWeapons
     for member in PartyMember.allCases {
-      guard let prop = weaponProps[member] else { continue }
-      prop.isEnabled = drawn.contains(member)
-      if let pose = fight.weaponPoses[member] {
-        let transform = pose.transform
-        prop.position = transform.position
-        prop.orientation = transform.orientation
+      guard let props = weaponProps[member] else { continue }
+      let inHand = fight.weapon(of: member).kind
+      for (kind, prop) in props {
+        prop.isEnabled = kind == inHand && drawn.contains(member)
+        if kind == inHand, let pose = fight.weaponPoses[member] {
+          let transform = pose.transform
+          prop.position = transform.position
+          prop.orientation = transform.orientation
+        }
       }
     }
   }

@@ -121,6 +121,7 @@ struct GameView: View {
           actionTitle: touchActionTitle,
           nextLeaderName: world.session.nextLeader?.displayName,
           showsFire: world.showsWeapon,
+          swapTitle: world.otherWeaponName,
           showsFormation: world.session.formationsAvailable,
           formationTitle: formationAction,
           orderNames: orderNames,
@@ -301,6 +302,8 @@ struct GameView: View {
     var others: [String] = []
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
+      // The other of the leader's two weapons (ADR 0021).
+      others.append("\(world.controls.swapButtonName) · \(world.otherWeaponName)")
       others.append("\(world.controls.dodgeButtonName) · Roll")
       if let lock = world.controls.lockButtonName, world.lockedHostile != nil {
         // The lock aims, so the stick does not until it lets go (ADR 0020).

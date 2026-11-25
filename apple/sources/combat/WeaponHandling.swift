@@ -1,6 +1,6 @@
-/// One member's weapon timing, kept through changes between leading and following. All
-/// mutation belongs to the fight's fixed step; a readiness query never consumes a shot, so
-/// cover can predict exposure before the hostile's shot resolves in that same step.
+/// One weapon's timing, kept through switches between weapons and between leading and
+/// following. All mutation belongs to the fight's fixed step; a readiness query never consumes a
+/// shot, so cover can predict exposure before the hostile's shot resolves in that same step.
 struct WeaponHandling: Sendable {
   let weapon: Weapon
   private(set) var isDrawn = false
@@ -16,8 +16,8 @@ struct WeaponHandling: Sendable {
     magazineRemaining = weapon.capacity
   }
 
-  /// Shared by the leader and the companion firing rules. Their separate ammunition policy
-  /// is checked by the caller: reloading neither spends nor creates the shared rounds.
+  /// Shared by the leader and the companion firing rules. Rounds are not counted beyond the
+  /// magazine: an empty one reloads by itself (ADR 0021).
   var isReady: Bool {
     isDrawn && drawRemaining <= 0 && cooldown <= 0 && reloadRemaining <= 0
       && magazineRemaining > 0
@@ -59,15 +59,15 @@ struct WeaponHandling: Sendable {
     drawRemaining = 0
   }
 
-  /// Commit one actual discharge after the caller has checked readiness, aim and ammunition.
-  /// An empty magazine starts reloading immediately, regardless of the shared pool; the
-  /// caller's ammunition check still prevents a later shot when that pool is empty.
+  /// Commit one actual discharge, or a sword's swing, after the caller has checked readiness
+  /// and aim. An empty magazine starts reloading immediately.
   mutating func fired() {
     guard isReady else { return }
     if burstRemaining == 0 { burstRemaining = max(1, weapon.burst) }
     burstRemaining -= 1
-    magazineRemaining -= 1
     cooldown = burstRemaining > 0 ? weapon.burstGap : weapon.interval
+    guard weapon.usesMagazine else { return }
+    magazineRemaining -= 1
     if magazineRemaining == 0 {
       burstRemaining = 0
       cooldown = weapon.interval

@@ -13,7 +13,6 @@ struct FirstFightTests {
   @Test
   func anEncounterBeginsOnceInOrderAndARetryReturnsToItsStart() {
     let session = GameSession(level: BrooklynBridge.level)
-    #expect(session.ammo == 12)
     #expect(session.beat == .crossing && !session.inEncounter)
     session.togglePause()
     #expect(!session.beginEncounter(.stranger))
@@ -21,14 +20,13 @@ struct FirstFightTests {
     #expect(session.beginEncounter(.stranger))
     #expect(!session.beginEncounter(.stranger))
     #expect(session.beat == .stranger && session.inEncounter)
-    #expect(session.spendRound())
     #expect(!session.hit("stranger", toughness: 2))
     #expect(!session.takeHit())
     #expect(!session.takeHit())
     #expect(session.takeHit())
     session.retryEncounter()
     #expect(session.beat == .crossing && !session.inEncounter)
-    #expect(session.ammo == 12 && session.hitsTaken == 0 && session.defeated.isEmpty)
+    #expect(session.hitsTaken == 0 && session.defeated.isEmpty)
     // The second time, the hit dealt before the retry no longer counts.
     #expect(session.beginEncounter(.stranger))
     #expect(!session.takeHit())
@@ -40,15 +38,7 @@ struct FirstFightTests {
     #expect(session.defeated == ["stranger"] && session.hitsTaken == 0 && !session.inEncounter)
     #expect(!session.takeHit())
     session.restart()
-    #expect(session.beat == .crossing && session.defeated.isEmpty && session.ammo == 12)
-  }
-
-  @Test
-  func roundsRunOut() {
-    let session = GameSession(level: BrooklynBridge.level)
-    for _ in 0..<12 { #expect(session.spendRound()) }
-    #expect(!session.spendRound())
-    #expect(session.ammo == 0)
+    #expect(session.beat == .crossing && session.defeated.isEmpty)
   }
 
   // MARK: - Fire input
@@ -94,12 +84,8 @@ struct FirstFightTests {
     walk(world, to: [6.5, 10])
     #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
-    #expect(world.session.ammo <= 6 && world.session.ammo >= 0)
     #expect(world.session.hitsTaken == 0 && world.threat == nil)
     #expect(world.observation == "The guard robot is down.")
-    let rounds = world.session.ammo
-    run(world, upTo: 1, fire: true)
-    #expect(world.session.ammo == rounds)
   }
 
   @Test
@@ -110,19 +96,17 @@ struct FirstFightTests {
     #expect(world.session.beat == .stranger && world.session.inEncounter)
     run(world, upTo: 8)
     #expect(world.session.hitsTaken == 0 && world.session.inEncounter)
-    #expect(world.session.ammo == 12)
   }
 
-  /// The west exit resolves the guard with no rounds spent and no kill, and the three walk on
+  /// The west exit resolves the guard with no shot fired and no kill, and the three walk on
   /// with nothing left to search or help with: the action press looks around.
   @Test
-  func theWestExitSupportsAZeroAmmunitionBypass() {
+  func theWestExitResolvesTheGuardWithoutAShot() {
     let world = GameWorld(level: BrooklynBridge.level)
-    for _ in 0..<12 { #expect(world.session.spendRound()) }
     walk(world, to: [-6.5, 30])
     walk(world, to: [-6.5, -3])
     #expect(world.session.beat == .stranger && world.session.inEncounter)
-    #expect(world.session.ammo == 0 && !world.isRetrying)
+    #expect(!world.isRetrying)
     walk(world, to: [-8.5, -8])
     #expect(!world.session.inEncounter && world.session.beat == .stranger)
     #expect(!world.session.defeated.contains("stranger"))
@@ -161,7 +145,7 @@ struct FirstFightTests {
     #expect(world.session.hitsTaken == GameSession.hitsAllowed)
     #expect(run(world, upTo: 2) { !world.isRetrying })
     #expect(world.session.beat == .crossing && world.session.hitsTaken == 0)
-    #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
+    #expect(world.session.defeated.isEmpty)
     #expect(!world.session.inEncounter)
     let retryAt = try #require(BrooklynBridge.strangerEncounter.retryAt)
     #expect(simd_distance(position(world, .miki), retryAt) < 0.01)
@@ -212,7 +196,7 @@ struct FirstFightTests {
     run(world, upTo: 3)
     world.restart()
     #expect(world.session.beat == .crossing && !world.session.inEncounter)
-    #expect(world.session.ammo == 12 && world.session.defeated.isEmpty)
+    #expect(world.session.defeated.isEmpty)
     #expect(world.session.hitsTaken == 0)
     #expect(!world.weaponDrawn && world.threat == nil && !body.isEnabled)
     #expect(position(world, .miki) == BrooklynBridge.level.spawn(.miki))

@@ -224,7 +224,7 @@ struct RobotGuardTests {
   }
 
   @Test
-  func retreatKeepsTheUnresolvedEncountersInjuriesRobotDamageAndSpentRounds() throws {
+  func retreatKeepsTheUnresolvedEncountersInjuriesAndRobotDamage() throws {
     let level = range()
     let session = GameSession(level: level)
     let fight = EncounterSimulation(level: level)
@@ -235,16 +235,15 @@ struct RobotGuardTests {
       if session.hitsTaken == 1 { break }
     }
     #expect(session.hitsTaken == 1)
-    #expect(session.spendRound())
     #expect(!session.hit("robot", toughness: 6))
     // Leave sight/range without taking the authored safe exit. The active encounter's
-    // search and return to patrol must not restore either side's damage or ammunition.
+    // search and return to patrol must not restore either side's damage.
     for _ in 0..<1_200 {
       _ = fight.step(
         dt: dt, leader: [0, 24], facing: [0, -1], aiming: false,
         fireHeld: false, firePressed: false, figures: [.miki: [0, 24]], session: session)
     }
-    #expect(session.inEncounter && session.hitsTaken == 1 && session.ammo == 11)
+    #expect(session.inEncounter && session.hitsTaken == 1)
     #expect(fight.hostiles["robot"]?.robot?.phase == .patrol)
     for _ in 0..<4 { #expect(!session.hit("robot", toughness: 6)) }
     #expect(session.hit("robot", toughness: 6))
@@ -262,12 +261,10 @@ struct RobotGuardTests {
       if session.hitsTaken == 1 { break }
     }
     #expect(session.hitsTaken == 1)
-    #expect(session.spendRound())
-    let ammo = session.ammo
     #expect(fight.resolveRobotBypass(id: "robot", session: session))
-    #expect(!session.inEncounter && session.defeated.isEmpty && session.ammo == ammo)
+    #expect(!session.inEncounter && session.defeated.isEmpty)
     // Injuries are encounter-local: both victory and the completed safe bypass recover
-    // them. Spent ammunition stays spent, and the bypass does not count as a robot kill.
+    // them, and the bypass does not count as a robot kill.
     #expect(session.hitsTaken == 0)
     #expect(fight.hostiles["robot"]?.robot?.isCleared == true && fight.threat == nil)
     for _ in 0..<600 {
@@ -313,7 +310,7 @@ struct RobotGuardTests {
         Level.Encounter(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 10])),
           retryAt: [0, 10], hostiles: [robot], cues: [(0, .reveal("robot")), (0, .engage("robot"))])
-      ], startingAmmo: 12, party: [.miki], spawns: [.miki: [0, 8]], heading: [0, -1],
+      ], party: [.miki], spawns: [.miki: [0, 8]], heading: [0, -1],
       cameraOffset: BrooklynBridge.cameraOffset, fieldOfView: 22,
       opening: "Range", objective: "Range", lookAround: "Range", restartNote: "Restart")
   }

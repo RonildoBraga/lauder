@@ -7,6 +7,8 @@ struct TouchInput {
     case action, cycle, pause, restart, fire, formation
     /// The leader's dodge roll.
     case dodge
+    /// The leader's other weapon (ADR 0021).
+    case swap
     /// A finger pressing the ground, where holding opens the order menu (ADR 0003, phase S3).
     case ground
     /// The pause menu's Vibration choice, shown only while paused (ADR 0008).
@@ -62,6 +64,7 @@ struct TouchInput {
       touchVibration: pressed.contains(.vibration),
       touchFire: pressed.contains(.fire), touchFormation: pressed.contains(.formation),
       touchDodge: pressed.contains(.dodge),
+      touchSwap: pressed.contains(.swap),
       touchGround: pressed.contains(.ground),
       touchMark: mark, touchOrder: order)
   }

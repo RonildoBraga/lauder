@@ -1,6 +1,6 @@
 # ADR 0019 — Dodge roll
 
-**Status:** Accepted, with starting values to tune in play; implemented with the party's [pawns](../visual-direction.md#characters-and-interface) in [PR #155](https://github.com/RonildoBraga/lauder/pull/155). Physical-phone behaviour is unverified.
+**Status:** Accepted, with starting values to tune in play; implemented with the party's [pawns](../visual-direction.md#characters-and-interface) in [PR #155](https://github.com/RonildoBraga/lauder/pull/155). Played on the phone in TestFlight build 32, where the maintainer said the weapons and controls feel right ([playtest](../prototype-plan.md#build-32-playtest)).
 
 **Date:** 25 November 2026
 

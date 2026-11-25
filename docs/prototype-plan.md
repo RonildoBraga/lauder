@@ -10,7 +10,7 @@ On 25 November 2026 the maintainer replaced the party's figures with [pawns](vis
 
 On 26 November 2026 the maintainer asked for three changes to the controls: one leader switch on L1 / LB that goes round the party, the status panel's toggle moved from Circle / B into the pause menu, and a [lock-on](decisions/0020-lock-on.md) on a press of the right stick. Their verification is recorded under [Controls pass](#controls-pass).
 
-Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together).
+Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
 ## Structural preparation
 
@@ -41,7 +41,8 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Next leader, going round the party | L1 / LB | Next: name | Q |
 | Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
 | Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
-| Draw and fire the leader's native weapon; hold to fire, automatic reload | R2 / RT | Fire with assisted aim | F |
+| Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
+| [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
 | [Lock the aim](decisions/0020-lock-on.md) on a hostile, or move it to the next; two quick presses let go | R3 / RS, a press of the right stick | None: Fire's assisted aim | O |
 | Dodge roll: the leader tumbles 3 m the way they move, or face, while hostile shots pass through | Square / X | Roll | Space |
@@ -51,7 +52,7 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 
 Touch is automatic without an extended controller. An attached controller is preferred unless **Use touch controls** is chosen; **Use controller** returns to it. Keyboard remains available. These sources share InputRules and session authority. Xbox uses the shared extended-gamepad path; hardware delivery remains unverified.
 
-Switching preserves positions and progress; held movement can continue on the new leader. R1 / RB and Circle / B are unassigned. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
+Switching preserves positions and progress; held movement can continue on the new leader. Circle / B is unassigned. A weapon switch needs a fresh press, and each weapon keeps its magazine. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
 Formations and orders still need two companions, so a level that starts with fewer than three offers them once the others join; the bridge starts with all three. There is nothing on the bridge to search or help with, so Look only looks around.
 
@@ -146,7 +147,7 @@ On 25 November 2026 the maintainer chose simpler figures for the party from a [g
   - the touch Roll button covered the conversation panel's lines.
 
   The two new GameWorld tests fail without their fix.
-- **Not yet verified:** the phone. That covers how the pawns read at their real size, the walk and the roll's feel, the touch Roll button with a finger on the stick, controllers, frame pacing and the guard fight's balance with a roll.
+- **Phone:** in the [build 32 playtest](#build-32-playtest) the maintainer said the weapons and controls, the roll among them, feel right. Not yet verified: frame pacing, how the pawns read at their real size, the touch Roll button with a finger on the stick, and the guard fight's balance with a roll.
 
 ### Controls pass
 
@@ -172,7 +173,7 @@ Checks:
   The first rendered run showed no ring. The towers' baked shadows lie 3 cm over the snow and covered it, and the guard stands in the Brooklyn tower's shadow. The ring now stands above them, and the route's screenshot shows it round the guard.
 - **Found on the way:** the assisted target's red disc and the companions' order rings are also drawn below those shadows, so a tower's shadow hides them. That predates this change and is left as it was.
 - **Not exercised by hand:** a controller and the O key. The Simulator delivers no controller input, and its key presses are shorter than a frame, so the route drives the lock through the same input rules instead.
-- **Not yet verified:** the phone. That covers L1's switch, the pause menu's new choice, the lock with a real DualSense, how the ring reads at the phone's size, and the guard fight's balance with a lock.
+- **Phone:** in the [build 32 playtest](#build-32-playtest) the maintainer said the weapons and controls feel right. Not yet verified: frame pacing, how the ring reads at the phone's size, and the guard fight's balance with a lock.
 
 ### Three together
 
@@ -182,7 +183,33 @@ On 26 November 2026 the maintainer asked: **“I want to simplify the starting o
 - **Story:** the beats are the crossing, the first-tower guard and the Manhattan end. The supply case's search, the knife attacker's ambush with Tom's shot, Laura's rescue and the medical kit are gone, with their conversations. The closing exchange stays.
 - **Removed with them:** the Search and Help actions, loot and the medical kit, so Look only looks around. The supply case stays as scenery, and its unused layout names go at the level's next export. The shared rounds stay until the weapons pass replaces them.
 - **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 273 tests in 373 runs. Rewritten tests cover the three starting together in their Close places, the beats in order, a bypass leading on to Manhattan, a retry and Restart keeping the three together, and the closing exchange. The headless routes now run `bridge-walk`, `first-fight`, `fight-retry`, `opening`, `formations`, `orders` and `lock-on`; `ambush` and `laura` went with their scenes.
-- **Not yet verified:** the phone, and how the guard fight plays with the companions beside the leader from the start.
+- **Phone:** played in the [build 32 playtest](#build-32-playtest). Not yet verified: frame pacing, and how the guard fight plays with the companions beside the leader from the start.
+
+### Paired weapons
+
+On 26 November 2026 the maintainer gave each character two weapons, and chose how the open points work. The request and choices are quoted in [ADR 0021](decisions/0021-paired-weapons.md).
+
+- **Weapons:**
+  - Miki: a long rifle and an assault rifle.
+  - Laura: a shotgun and an energy sword that strikes close by and turns shots from in front of her.
+  - Tom: a minigun that spins up, and a shield dome that stays up round him while Fire is held.
+- **Switching:** R1 / RB, T or the touch **Swap** button brings the other weapon into hand, and each keeps its magazine.
+- **Rounds:** none are counted beyond the magazine, and the status shows the weapon in hand.
+- **Not built yet:** each weapon borrows the nearest existing sound, and dedicated sounds are left for a later pass.
+- **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 283 tests in 395 runs. New tests cover the pairs and the switch keeping each magazine, the switch press, the long rifle's heavy hit, the assault rifle's rapid fire past a reload, the minigun's spin-up and slower walk, the dome stopping shots for everyone inside it and shots landing once it drops, its run-down and recharge, and the sword striking in front within reach and turning shots from in front only.
+- **Simulator:** in the new `weapons` route Tom raises his dome against the guard's bursts and nobody is hurt, then switches to the minigun and brings the guard down. Its screenshot shows the dome round all three, with the status reading **Shield · Up**. Mean frame time was 16.7 ms and p99 16.8 ms, Simulator measurements only.
+
+  | Route | Steps |
+  |---|---:|
+  | `weapons` | 28/28 |
+  | `first-fight` | 35/35 |
+- **Phone:** in the [build 32 playtest](#build-32-playtest) the maintainer said the weapons and controls feel right. Not yet verified: frame pacing, the touch Swap button, how the blade and the dome read at the phone's size, and the guard fight's balance, which the heavier hits change.
+
+### Build 32 playtest
+
+TestFlight 0.1.0 (32) was delivered on 26 November 2026 from the head of [PR #158](https://github.com/RonildoBraga/lauder/pull/158), `0a50613`, before any merge. It carries the pawns and dodge roll, the controls pass, the three starting together and the paired weapons. The [delivery record](https://github.com/RonildoBraga/lauder/pull/158#issuecomment-7176893712) gives Apple's confirmation.
+
+Asked **“How do the weapons and controls feel on your phone?”**, the maintainer answered **“Feels right”**. That is the maintainer's judgement of the weapons and controls as played. No frame-pacing capture was taken, and the question did not cover the guard fight's balance or how the pawns read at their size.
 
 ### Architecture checks
 

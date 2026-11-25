@@ -13,6 +13,8 @@ struct TouchControls: UIViewRepresentable {
   let nextLeaderName: String?
   /// Whether Fire is shown for the active character's weapon (ADR 0007, ADR 0010).
   let showsFire: Bool
+  /// The leader's other weapon, which the Swap button brings into hand (ADR 0021).
+  let swapTitle: String
   /// Whether Formation is shown: once the leader has two companions.
   let showsFormation: Bool
   /// "Formation", or "Follow" while anyone is going or holding, when it calls them back.
@@ -34,7 +36,7 @@ struct TouchControls: UIViewRepresentable {
   func updateUIView(_ uiView: Surface, context: Context) {
     uiView.update(
       actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
-      showsFormation: showsFormation,
+      swapTitle: swapTitle, showsFormation: showsFormation,
       formationTitle: formationTitle, orderNames: orderNames,
       vibrationTitle: vibrationTitle, mode: mode, generation: generation)
   }
@@ -51,6 +53,7 @@ struct TouchControls: UIViewRepresentable {
     private let pause = TouchZone(title: "Pause")
     private let fire = TouchZone(title: "Fire")
     private let dodge = TouchZone(title: "Roll")
+    private let swap = TouchZone()
     private let formation = TouchZone(title: "Formation")
     private let vibration = TouchZone()
     private let menu = OrderMenu()
@@ -72,7 +75,7 @@ struct TouchControls: UIViewRepresentable {
       backgroundColor = .clear
       isMultipleTouchEnabled = true
       for zone in [
-        stick, action, cycle, pause, fire, dodge, formation, vibration,
+        stick, action, cycle, pause, fire, dodge, swap, formation, vibration,
       ] {
         addSubview(zone)
       }
@@ -85,6 +88,7 @@ struct TouchControls: UIViewRepresentable {
       formation.accessibilityHint =
         "Changes the formation: Close, Spread, then Column. After an order, calls everyone back."
       vibration.accessibilityHint = "Turns vibration off, or on again."
+      swap.accessibilityHint = "Brings the leader's other weapon into hand."
       stick.accessibilityLabel = "Move"
       stick.accessibilityHint = "Drag to move the active character. Lift your finger to stop."
       stick.accessibilityTraits = .allowsDirectInteraction
@@ -109,7 +113,7 @@ struct TouchControls: UIViewRepresentable {
       }
       let buttons: [(TouchZone, TouchInput.Button)] = [
         (cycle, .cycle), (pause, .pause), (fire, .fire), (dodge, .dodge), (formation, .formation),
-        (vibration, .vibration),
+        (vibration, .vibration), (swap, .swap),
       ]
       for (zone, button) in buttons {
         zone.changed = { [weak controls] _, isPressed, generation in
@@ -121,7 +125,7 @@ struct TouchControls: UIViewRepresentable {
     required init?(coder: NSCoder) { nil }
 
     func update(
-      actionTitle: String, nextLeaderName: String?, showsFire: Bool,
+      actionTitle: String, nextLeaderName: String?, showsFire: Bool, swapTitle: String,
       showsFormation: Bool, formationTitle: String, orderNames: (left: String, right: String)?,
       vibrationTitle: String, mode: GameSession.Mode, generation: Int
     ) {
@@ -151,8 +155,11 @@ struct TouchControls: UIViewRepresentable {
       // Fire shows for every leader, and stays while a finger holds it.
       fire.isHidden = !showsFire && !fire.isCaptured
       // Roll shows with Fire while exploring, so it never covers a conversation's lines, and
-      // stays while a finger holds it.
+      // stays while a finger holds it. Swap sits above it on the same terms.
       dodge.isHidden = (!showsFire || mode != .exploring) && !dodge.isCaptured
+      swap.setTitle("Swap: \(swapTitle)")
+      swap.accessibilityLabel = "Swap to \(swapTitle)"
+      swap.isHidden = (!showsFire || mode != .exploring) && !swap.isCaptured
       // Formation appears with the second companion; a finger on it keeps it until it lifts.
       formation.isHidden = !showsFormation && !formation.isCaptured
       pause.setTitle(mode == .paused ? "Resume" : "Pause")
@@ -161,7 +168,7 @@ struct TouchControls: UIViewRepresentable {
       vibration.isHidden = mode != .paused && !vibration.isCaptured
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
-      for zone in [stick, cycle, fire, dodge, formation] {
+      for zone in [stick, cycle, fire, dodge, swap, formation] {
         zone.alpha = mode == .exploring ? 1 : 0.55
       }
     }
@@ -170,7 +177,7 @@ struct TouchControls: UIViewRepresentable {
       let generation = controls.touchGeneration
       self.generation = generation
       for zone in [
-        stick, action, cycle, pause, fire, dodge, formation, vibration,
+        stick, action, cycle, pause, fire, dodge, swap, formation, vibration,
       ] {
         zone.reset(generation: generation)
       }
@@ -194,6 +201,10 @@ struct TouchControls: UIViewRepresentable {
       // Beside Fire on the bottom row, so a thumb can roll out of a burst and shoot back.
       dodge.frame = CGRect(
         x: fire.frame.minX - 12 - 112, y: bounds.height - 52 - inset, width: 112, height: 52)
+      // Above Roll and Fire, up to Next's column: the leader's other weapon.
+      swap.frame = CGRect(
+        x: dodge.frame.minX, y: bounds.height - 116 - inset,
+        width: cycle.frame.minX - 12 - dodge.frame.minX, height: 52)
       pause.frame = CGRect(x: bounds.width - 112 - inset, y: inset, width: 112, height: 44)
       // Beside Resume, shown only while paused.
       vibration.frame = CGRect(

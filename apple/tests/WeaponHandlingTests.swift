@@ -4,7 +4,12 @@ import Testing
 
 /// The same weapon must keep its mechanical limits when its owner changes roles.
 struct WeaponHandlingTests {
-  @Test(arguments: [Weapon.carbine, .lightBurst, .closeScatter])
+  /// A test-only burst weapon: none of the paired weapons fires bursts, but the handling does.
+  static let burst = Weapon(
+    kind: .assaultRifle, range: 12, interval: 1.8, drawTime: 0.5, capacity: 18, reloadTime: 1.4,
+    burst: 3, burstGap: 0.12)
+
+  @Test(arguments: [Weapon.longRifle, .assaultRifle, .shotgun, .minigun, .energySword])
   func drawingOnceWaitsForReadinessWithoutRestartingTheDelay(weapon: Weapon) {
     var handling = WeaponHandling(weapon: weapon)
     #expect(!handling.isDrawn && !handling.isReady)
@@ -17,7 +22,7 @@ struct WeaponHandlingTests {
     #expect(handling.isReady)
   }
 
-  @Test(arguments: [Weapon.carbine, .lightBurst, .closeScatter])
+  @Test(arguments: [Weapon.longRifle, .assaultRifle, .shotgun, .minigun])
   func anEmptyMagazineAutomaticallyReloadsWithoutFiringThroughTheWait(weapon: Weapon) {
     var handling = WeaponHandling(weapon: weapon)
     handling.draw()
@@ -40,8 +45,8 @@ struct WeaponHandlingTests {
   }
 
   @Test
-  func lauraFiresThreeShortGapsThenWaitsBetweenBursts() {
-    let weapon = Weapon.lightBurst
+  func aBurstFiresThreeShortGapsThenWaitsBetweenBursts() {
+    let weapon = Self.burst
     var handling = WeaponHandling(weapon: weapon)
     handling.draw()
     handling.advance(dt: weapon.drawTime + 0.001)
@@ -61,7 +66,7 @@ struct WeaponHandlingTests {
 
   @Test
   func releasingAnUnfinishedBurstCannotRefillOrShortenItsRecovery() {
-    let weapon = Weapon.lightBurst
+    let weapon = Self.burst
     var handling = WeaponHandling(weapon: weapon)
     handling.draw()
     handling.advance(dt: weapon.drawTime + 0.001)
@@ -76,7 +81,7 @@ struct WeaponHandlingTests {
 
   @Test
   func anEmptyClickConsumesNoMagazineRoundAndKeepsTheOrdinaryRateLimit() {
-    let weapon = Weapon.carbine
+    let weapon = Weapon.longRifle
     var handling = WeaponHandling(weapon: weapon)
     handling.draw()
     handling.advance(dt: weapon.drawTime + 0.001)
@@ -87,5 +92,21 @@ struct WeaponHandlingTests {
     #expect(!handling.isReady)
     handling.advance(dt: 0.002)
     #expect(handling.isReady)
+  }
+
+  /// The sword swings at its own pace and never runs out: it has no magazine (ADR 0021).
+  @Test
+  func theSwordSwingsWithoutAMagazine() {
+    let weapon = Weapon.energySword
+    var handling = WeaponHandling(weapon: weapon)
+    handling.draw()
+    handling.advance(dt: weapon.drawTime + 0.001)
+    for _ in 0..<(weapon.capacity * 2) {
+      #expect(handling.isReady)
+      handling.fired()
+      #expect(!handling.isReady, "a swing waits for the next")
+      handling.advance(dt: weapon.interval + 0.001)
+    }
+    #expect(handling.magazineRemaining == weapon.capacity && handling.reloadRemaining == 0)
   }
 }

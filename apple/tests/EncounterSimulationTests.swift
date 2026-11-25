@@ -7,21 +7,19 @@ import simd
 @MainActor
 struct EncounterSimulationTests {
   @Test
-  func practiceFireProducesOneShotAndDrainableFeedbackWithoutSpendingRounds() throws {
+  func practiceFireProducesOneShotAndDrainableFeedback() throws {
     let level = TestRange.practice
     let session = GameSession(level: level)
     let fight = EncounterSimulation(level: level)
-    let ammo = session.ammo
     let shot = try #require(fireOnce(fight, session: session))
 
     #expect(fight.isDrawn && fight.pose.raise == 1)
     #expect(shot.path.start == leader && shot.path.strike == .scenery)
-    #expect(shot.muzzle == WeaponPose.muzzle(from: leader, facing: [0, -1]))
-    #expect(session.ammo == ammo)
+    #expect(shot.muzzle == WeaponPose.muzzle(from: leader, facing: [0, -1], kind: .longRifle))
     let events = fight.takeEvents()
     #expect(
       events == [
-        .fired(.carbine, at: leader, byLeader: true), .struckBlock(at: shot.path.end),
+        .fired(.longRifle, at: leader, byLeader: true), .struckBlock(at: shot.path.end),
       ])
     #expect(fight.takeEvents().isEmpty)
 
@@ -50,7 +48,7 @@ struct EncounterSimulationTests {
     #expect(shot.path.start == figures[.tom] && shot.path.strike == .body("shooter"))
     #expect(
       fight.takeEvents() == [
-        .fired(.closeScatter, at: [-1, 3], byLeader: false), .struckBody(at: [0, -4]),
+        .fired(.minigun, at: [-1, 3], byLeader: false), .struckBody(at: [0, -4]),
       ])
     #expect(fight.takeEvents().isEmpty)
   }
@@ -60,7 +58,8 @@ struct EncounterSimulationTests {
     [.miki: leader, .tom: [-1, 3], .laura: [1, 3]]
   }
 
-  /// Drive the production simulation until the carbine fires, respecting its draw and cooldown.
+  /// Drive the production simulation until the long rifle fires, respecting its draw and
+  /// cooldown.
   private func fireOnce(_ fight: EncounterSimulation, session: GameSession) -> EncounterSimulation
     .Shot?
   {
@@ -100,8 +99,8 @@ struct EncounterSimulationTests {
     return Level(
       id: "simulation-range",
       ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],
-      triggers: [], encounters: [encounter], startingAmmo: 60,
-      party: [.miki, .tom, .laura], spawns: figures, heading: [0, -1],
+      triggers: [], encounters: [encounter], party: [.miki, .tom, .laura], spawns: figures,
+      heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.")
   }

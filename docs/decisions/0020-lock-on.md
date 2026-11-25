@@ -1,6 +1,6 @@
 # ADR 0020 — Lock-on
 
-**Status:** Accepted, with starting values to tune in play; implemented in the [controls pass](../prototype-plan.md#controls-pass), [PR #156](https://github.com/RonildoBraga/lauder/pull/156). Physical-phone behaviour is unverified.
+**Status:** Accepted, with starting values to tune in play; implemented in the [controls pass](../prototype-plan.md#controls-pass), [PR #156](https://github.com/RonildoBraga/lauder/pull/156). Played on the phone in TestFlight build 32, where the maintainer said the weapons and controls feel right ([playtest](../prototype-plan.md#build-32-playtest)).
 
 **Date:** 26 November 2026
 

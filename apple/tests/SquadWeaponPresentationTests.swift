@@ -4,11 +4,15 @@ import simd
 
 @testable import Lauder
 
-/// The visual weapon tip and shot origin must agree for all three weapons. These value and
-/// geometry checks do not establish the sound or haptic feel of a physical device.
+/// The visual weapon tip and shot origin must agree for all six of the party's weapons. These
+/// value and geometry checks do not establish the sound or haptic feel of a physical device.
 @MainActor
 struct SquadWeaponPresentationTests {
-  @Test(arguments: [Weapon.Kind.carbine, .lightBurst, .closeScatter])
+  nonisolated static let partyKinds = PartyMember.allCases.flatMap {
+    Weapon.pair(for: $0).map(\.kind)
+  }
+
+  @Test(arguments: partyKinds)
   func theRaisedGripAndPropTipMatchTheShotsMuzzle(kind: Weapon.Kind) {
     let profile = WeaponPose.profile(for: kind)
     let prop = SceneStyle().weapon(for: kind)
@@ -28,19 +32,14 @@ struct SquadWeaponPresentationTests {
 
   @Test
   func aResetKeepsTheWeaponsOwnPoseAndRecoil() {
-    var burst = WeaponPose(kind: .lightBurst)
-    var carbine = WeaponPose()
-    var scatter = WeaponPose(kind: .closeScatter)
-    burst.fired()
-    carbine.fired()
-    scatter.fired()
-    let burstKick = burst.transform.position.z - WeaponPose.profile(for: .lightBurst).raisedGrip.z
-    let carbineKick = carbine.transform.position.z - WeaponPose.raisedGrip.z
-    let scatterKick =
-      scatter.transform.position.z - WeaponPose.profile(for: .closeScatter).raisedGrip.z
-    #expect(burstKick < carbineKick && carbineKick < scatterKick)
+    func kick(_ kind: Weapon.Kind) -> Float {
+      var pose = WeaponPose(kind: kind)
+      pose.fired()
+      return pose.transform.position.z - WeaponPose.profile(for: kind).raisedGrip.z
+    }
+    #expect(kick(.assaultRifle) < kick(.longRifle) && kick(.longRifle) < kick(.shotgun))
 
-    for kind in [Weapon.Kind.carbine, .lightBurst, .closeScatter] {
+    for kind in Self.partyKinds {
       var pose = WeaponPose(kind: kind)
       pose.fired()
       pose.holster()
@@ -50,16 +49,20 @@ struct SquadWeaponPresentationTests {
     }
   }
 
+  /// Each gun's trigger break is bounded and distinct; the sword and the shield have none.
   @Test
-  func theThreeTriggerBreaksAreBoundedAndDistinct() {
-    let burst = CombatHaptics.triggerProfile(for: .lightBurst)
-    let carbine = CombatHaptics.triggerProfile(for: .carbine)
-    let scatter = CombatHaptics.triggerProfile(for: .closeScatter)
-    #expect(burst.strength < carbine.strength && carbine.strength < scatter.strength)
-    #expect(burst.start < carbine.start && carbine.start < scatter.start)
-    for profile in [burst, carbine, scatter] {
+  func theGunsTriggerBreaksAreBoundedAndDistinct() {
+    let assault = CombatHaptics.triggerProfile(for: .assaultRifle)
+    let long = CombatHaptics.triggerProfile(for: .longRifle)
+    let shotgun = CombatHaptics.triggerProfile(for: .shotgun)
+    #expect(assault.strength < long.strength && long.strength < shotgun.strength)
+    #expect(assault.start < long.start && long.start < shotgun.start)
+    for kind in Self.partyKinds where kind.shoots {
+      let profile = CombatHaptics.triggerProfile(for: kind)
       #expect(profile.start >= 0 && profile.start < profile.end && profile.end <= 1)
       #expect(profile.strength > 0 && profile.strength <= 1)
     }
+    #expect(CombatHaptics.triggerProfile(for: .energySword).strength == 0)
+    #expect(CombatHaptics.triggerProfile(for: .shieldDome).strength == 0)
   }
 }
