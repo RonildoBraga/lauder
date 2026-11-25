@@ -1,0 +1,45 @@
+# Wrist and finger animation review
+
+**25 November 2026 — findings and proposed next step; no rig/runtime change.** The maintainer asked to review the implementation for natural wrist and individual finger animation while the [free Quaternius motion trial](../blender/studies/miki-quaternius-motion/README.md) was being prepared.
+
+The body/wrist animation pipeline exists. **Independent finger articulation is not implemented**, and the trial's assumed palm calibration plus the runtime weapon-grip orientation need review before claiming natural hand motion. This is a project capability gap, not a limitation imposed by Swift or RealityKit.
+
+## Verified current state
+
+| Area | Finding | Evidence |
+| --- | --- | --- |
+| Target skeleton | 17 bones, including two quaternion-animated hand bones. No finger or forearm-twist bones. | Saved [fitted source](../blender/studies/miki-option-a-motion/character/miki-option-a-motion.blend) and [trial source](../blender/studies/miki-quaternius-motion/character/miki-quaternius.blend), inspected read-only. |
+| Visible hands | Five distinct glove digits exist on each side, so remodelling is not the first step. Each hand is a dense imported surface; good bend topology and joint placement still need a deformation test. | Native neutral hand crops and mesh/weight inspection. |
+| Skinning | Distal hand regions have 1,706 left and 1,710 right vertices influenced only by their hand and forearm groups. Of those, 1,473 left and 1,386 right are rigidly hand-weighted. There are no digit vertex groups or finger shape keys. | Existing source weights, read-only. Counts include the wrist transition, not independently segmented finger counts. |
+| Wrist playback | Unarmed hand rotations use quaternion interpolation. They already support full three-dimensional orientation. | [PartyAnimation.swift](../apple/sources/world/PartyAnimation.swift), `mix`, `Source.pose` and `Source.globals`. |
+| Trial palm calibration | `target_thumb = Vector((-sign, 0, 0))` estimates a palm frame. Actual glove inspection shows a palm-across direction mainly along −Y; a read-only left-hand landmark estimate differs by about 98 degrees from the assumed axis. Matching forearm/hand bend angles alone therefore does not prove correct palm roll. | [retarget.py](../blender/studies/miki-quaternius-motion/retarget.py), `corrections`; neutral geometry crops. |
+| Motion donor | The exact free donor has 65 joints: 30 articulated digit bones plus ten terminal digit leaves, with three articulated bones for each thumb/finger on both hands. It has no twist bones. | [Original archive and provenance](../blender/studies/miki-quaternius-motion/source/provenance.json). |
+| Donor finger movement | Selected Run/Crouch clips hold different static finger poses. Within-cycle local finger changes are below 0.0003 degrees, consistent with export noise; local wrist rotation is effectively constant too. World hand orientation still moves through the arms. | All actual glTF finger rotation samples, read-only. Do not describe these clips as captured finger opening/closing. |
+| Retargeting | Only 17 target joints are mapped. All donor digit channels are discarded. | [retarget.py](../blender/studies/miki-quaternius-motion/retarget.py), `names` mapping. |
+| Export | The canonical export deliberately requires exactly 17 bones, a shared library and identical baked channel sets across clips. Additional digit joints currently fail that contract. | [party_animation.py](../blender/extensions/lauder_levels/party_animation.py), `prepare_party_animation` and `bake_party_timeline`. |
+| Runtime grip | `hold` replaces the right wrist's global rotation with one generic weapon frame, including low carry. The left hand joins towards that same frame during the final 30% of raising. A corrected imported palm orientation can therefore be replaced. | [PartyAnimation.swift](../apple/sources/world/PartyAnimation.swift), `hold` and `Source.solve`. |
+| Runtime extensibility | Joint/parent arrays are imported dynamically, so general pose playback is not limited to 17 entries. However, the aim/weapon arm mask includes only six upper-arm/forearm/hand joints and excludes any future fingers. | [PartyAnimation.swift](../apple/sources/world/PartyAnimation.swift), `Source.init`, `arms`, `pose` and `globals`. |
+| Test coverage | Existing grip checks establish wrist position, reach and floor clearance, without palm-normal/thumb-direction or individual digit deformation checks. Integration/look tests assert the current 17-joint contract. | [PartyAnimationTests](../apple/tests/PartyAnimationTests.swift), [PartyAnimationIntegrationTests](../apple/tests/PartyAnimationIntegrationTests.swift), [LevelLookTests](../apple/tests/LevelLookTests.swift). |
+
+The exact saved trial source remains `7dfe9f05b046b52add5db576ebee3790087df6708c2cf8ced59d561f5048fb17`; the prior fitted source remains `d3b2480f847bfcdcb51271d128a8f12470aedb112cace7721af854a6ac625864`. Review did not change either. The current native Quaternius preview remains a diagnostic comparison, with its documented garment intersections and palm-calibration limitation.
+
+## Proposed bounded hand pilot
+
+This sequence is a recommendation for agreement, not an assertion that articulated hands are already implemented.
+
+1. **Measure hand frames on the actual mesh.** Record wrist centre, finger direction, thumb side and palm normal independently for each hand. Use visible thumb/palm markers when comparing source and target. Confirm wrist bend and side-to-side motion separately from forearm rotation; consider twist distribution only if the skin demonstrably collapses.
+2. **Add finger chains in an isolated derivative.** A candidate is three articulated bones per digit: 30 added bones, or 47 total including the existing ROOT. Final placement/count follows the actual mesh and thumb anatomy; terminal display leaves need not deform the mesh. Keep the existing body rig unchanged during the pilot.
+3. **Reweight only the hand regions.** Preserve vertex coordinates/topology, face/hair, UVs, texture and materials. Finger articulation necessarily changes hand skin weights: leaving those weights rigid would leave the fingers rigid even after adding bones. Neutral appearance can remain exact. Test one digit first before mirroring carefully to the other side; the imported mesh is not perfectly identical between sides.
+4. **Test useful hand poses.** Demonstrate relaxed hands, a fist, one moving digit at a time, thumb opposition and a rifle grip with a separately controlled index finger. The free donor's distinct static hand poses are useful inputs; transitions and active finger motion still need deliberate authoring. Keep the rifle a separate model.
+5. **Calibrate weapon grips.** Use separate left/right palm-to-grip frames rather than one universal wrist orientation. Layer finger-local grip poses with the existing arm solve. Keep weapon transforms, shots, movement and damage simulation-owned.
+6. **Promote only after Blender review.** Update the deliberate skeleton contract, shared Action channel coverage, retarget signatures/mapping and affected tests together. Validate the intended named hierarchy in one shared schema; do not merely remove the 17-bone guard. Review how the shared skeleton reaches Laura/Tom before changing canonical assets. Bake ordinary bone keys for export; no runtime procedural finger solver is needed for these poses.
+
+## Verification required for that later change
+
+- Exact neutral geometry, material, UV and texture preservation; hand-weight changes documented separately.
+- Isolated thumb/finger movement with no unintended adjacent-finger or forearm influence; joint flexion and palm/forearm roll inspected from several angles.
+- Relaxed-to-grip transitions, palm normals, thumb direction, trigger/index separation and grip clearance through low carry, aim and recoil. Wrist position alone is insufficient.
+- A fresh native USDZ/RealityKit deformation proof showing actual finger vertices move independently, all intended joints survive and independent character instances remain independent.
+- Updated repository checks and rendered Simulator integration. Physical performance and controls need a later assigned phone checkpoint; bone count alone does not establish an iPhone budget.
+
+[Apple's JointTransforms documentation](https://developer.apple.com/documentation/realitykit/jointtransforms) describes named-joint skeletal poses. The engine supports the general mechanism; this review identifies the model, mapping, grip layer and project-contract work still needed.
