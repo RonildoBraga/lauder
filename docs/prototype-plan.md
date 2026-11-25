@@ -114,6 +114,16 @@ The two donor clips are fitted to the 17-bone target with calibrated limb axes, 
 
 **Next gate:** agree the [hand-animation review](hand-animation-review.md) findings and a bounded hand-rig/palm-calibration pilot before selecting clips and assigning clothing cleanup. The current trial has no independent finger joints; the review is not an implementation assignment. Canonical party models, shared source Actions, runtime, phone validation, purchases, merge and release remain outside this trial.
 
+### Measured hand-rig pilot
+
+The maintainer assigned measured palm/wrist alignment and individual finger controls, preserving Miki's appearance and showing relaxed hands, fists and rifle grips in Blender before game integration. The [isolated pilot](../blender/studies/miki-hand-rig/README.md) adds 30 measured digit joints (47 total), direct FK controls and localized weights on 3,244 hand-region vertices. Geometry, face/hair, UVs, packed JPEG, materials, existing garment targets, old 17 rest bones and nonhand weights remain exact.
+
+Three ordinary Actions demonstrate open/fist movement, a separate rifle inspection hold with off-trigger index flex, and ten independent digits plus wrist movement. Measured palm frames replace the estimated thumb-axis convention for these poses. Independent skin tests verify digit-tip movement with stationary neighboring tip cohorts and exact reset. Bounded hand self-contact and whole-glove/actual-rifle checks pass at the recorded sampled phases. The public helpers reproduce the skinning and hand poses, reject protected output paths and preserve inputs. All 62 existing Blender/export tests pass; the study records fresh public source/review transfer and packaging checks.
+
+A scratch USDZ imports 47 joints and 181 sampled poses into macOS RealityKit with independent instance pose state, but cross-tool CPU skin reconstruction has an unresolved nonidentity-bind-space mismatch. This is partial import evidence, not deformation-fidelity verification or an established engine defect. Resolve it before promoting this model.
+
+**Next gate:** maintainer visual review before canonical skeleton/export and runtime grip integration. That integration still needs the deliberate skeleton contract, full clip channel coverage, palm/weapon calibration, finger grip masks, updated tests and normal app/Simulator checks. Existing locomotion garment issues, extreme hand poses, scoped aim, physical-phone performance, purchases, merge and release remain outside this pilot.
+
 ### Miki concept mesh review
 
 **Retained comparison at `0d94c18`:** This section describes the earlier Blender source and its verification. The current appearance-review gate is the [angular art reset](#angular-character-art-reset) below.

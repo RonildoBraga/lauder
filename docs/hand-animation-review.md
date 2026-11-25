@@ -2,9 +2,11 @@
 
 **25 November 2026 — findings and proposed next step; no rig/runtime change.** The maintainer asked to review the implementation for natural wrist and individual finger animation while the [free Quaternius motion trial](../blender/studies/miki-quaternius-motion/README.md) was being prepared.
 
-The body/wrist animation pipeline exists. **Independent finger articulation is not implemented**, and the trial's assumed palm calibration plus the runtime weapon-grip orientation need review before claiming natural hand motion. This is a project capability gap, not a limitation imposed by Swift or RealityKit.
+**Assigned follow-up:** The maintainer subsequently said: “Go ahead with the hand-rig pilot. Fix the palm and wrist alignment, add individual finger controls, preserve Miki’s appearance, and show me relaxed hands, fists and rifle grips in Blender before game integration.” The [new native pilot](../blender/studies/miki-hand-rig/README.md) implements measured palm frames, 30 added digit joints and localized skinning in an isolated derivative. This review's table describes the original 17-bone baseline. Its runtime/export findings remain open; the 47-bone pilot is not integrated into the game.
 
-## Verified current state
+In the reviewed baseline, the body/wrist animation pipeline existed but **independent finger articulation was not implemented**. The trial's assumed palm calibration and runtime weapon-grip orientation required review before claiming natural hand motion. This is a project capability gap, not a limitation imposed by Swift or RealityKit.
+
+## Verified original baseline
 
 | Area | Finding | Evidence |
 | --- | --- | --- |
@@ -23,9 +25,9 @@ The body/wrist animation pipeline exists. **Independent finger articulation is n
 
 The exact saved trial source remains `7dfe9f05b046b52add5db576ebee3790087df6708c2cf8ced59d561f5048fb17`; the prior fitted source remains `d3b2480f847bfcdcb51271d128a8f12470aedb112cace7721af854a6ac625864`. Review did not change either. The current native Quaternius preview remains a diagnostic comparison, with its documented garment intersections and palm-calibration limitation.
 
-## Proposed bounded hand pilot
+## Bounded hand pilot and later integration
 
-This sequence is a recommendation for agreement, not an assertion that articulated hands are already implemented.
+The maintainer assigned the native hand pilot above. Measurement, finger chains, localized skinning, hand poses and native rifle-grip presentation are demonstrated there. Runtime/export promotion and game integration remain separate work.
 
 1. **Measure hand frames on the actual mesh.** Record wrist centre, finger direction, thumb side and palm normal independently for each hand. Use visible thumb/palm markers when comparing source and target. Confirm wrist bend and side-to-side motion separately from forearm rotation; consider twist distribution only if the skin demonstrably collapses.
 2. **Add finger chains in an isolated derivative.** A candidate is three articulated bones per digit: 30 added bones, or 47 total including the existing ROOT. Final placement/count follows the actual mesh and thumb anatomy; terminal display leaves need not deform the mesh. Keep the existing body rig unchanged during the pilot.

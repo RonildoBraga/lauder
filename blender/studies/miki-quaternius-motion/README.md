@@ -4,6 +4,8 @@
 
 This separate study transfers existing motion onto the [current fitted Option A Miki](../miki-option-a-motion/README.md). Its face, hair, proportions, dress, UVs, texture, skin weights, rest skeleton and four garment shape targets remain unchanged. It replaces no canonical model or shared animation. The earlier fixed Run hand roll and Sneak outward-arm offsets are not applied to these clips.
 
+**Follow-up:** The maintainer subsequently assigned the [measured hand-rig pilot](../miki-hand-rig/README.md). That separate derivative adds finger articulation and measured palm alignment for hand-review poses while preserving neutral appearance. This original 17-bone motion trial and its documented palm/garment limitations remain unchanged; running/crouching on the new hand rig is still separate work.
+
 ## Watch in Blender
 
 Open [miki-quaternius-review.blend](miki-quaternius-review.blend), keeping its `character` folder beside it. Play the timeline. The scene selector provides:
