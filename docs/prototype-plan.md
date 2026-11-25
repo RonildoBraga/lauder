@@ -147,7 +147,7 @@ On 25 November 2026 the maintainer chose simpler figures for the party from a [g
   - the touch Roll button covered the conversation panel's lines.
 
   The two new GameWorld tests fail without their fix.
-- **Not yet verified:** the phone. That covers how the pawns read at their real size, the walk and the roll's feel, the touch Roll button with a finger on the stick, controllers, frame pacing and the guard fight's balance with a roll.
+- **Phone:** in the [build 32 playtest](#build-32-playtest) the maintainer said the weapons and controls, the roll among them, feel right. Not yet verified: frame pacing, how the pawns read at their real size, the touch Roll button with a finger on the stick, and the guard fight's balance with a roll.
 
 ### Controls pass
 
@@ -173,7 +173,7 @@ Checks:
   The first rendered run showed no ring. The towers' baked shadows lie 3 cm over the snow and covered it, and the guard stands in the Brooklyn tower's shadow. The ring now stands above them, and the route's screenshot shows it round the guard.
 - **Found on the way:** the assisted target's red disc and the companions' order rings are also drawn below those shadows, so a tower's shadow hides them. That predates this change and is left as it was.
 - **Not exercised by hand:** a controller and the O key. The Simulator delivers no controller input, and its key presses are shorter than a frame, so the route drives the lock through the same input rules instead.
-- **Not yet verified:** the phone. That covers L1's switch, the pause menu's new choice, the lock with a real DualSense, how the ring reads at the phone's size, and the guard fight's balance with a lock.
+- **Phone:** in the [build 32 playtest](#build-32-playtest) the maintainer said the weapons and controls feel right. Not yet verified: frame pacing, how the ring reads at the phone's size, and the guard fight's balance with a lock.
 
 ### Three together
 
@@ -183,7 +183,7 @@ On 26 November 2026 the maintainer asked: **“I want to simplify the starting o
 - **Story:** the beats are the crossing, the first-tower guard and the Manhattan end. The supply case's search, the knife attacker's ambush with Tom's shot, Laura's rescue and the medical kit are gone, with their conversations. The closing exchange stays.
 - **Removed with them:** the Search and Help actions, loot and the medical kit, so Look only looks around. The supply case stays as scenery, and its unused layout names go at the level's next export. The shared rounds stay until the weapons pass replaces them.
 - **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 273 tests in 373 runs. Rewritten tests cover the three starting together in their Close places, the beats in order, a bypass leading on to Manhattan, a retry and Restart keeping the three together, and the closing exchange. The headless routes now run `bridge-walk`, `first-fight`, `fight-retry`, `opening`, `formations`, `orders` and `lock-on`; `ambush` and `laura` went with their scenes.
-- **Not yet verified:** the phone, and how the guard fight plays with the companions beside the leader from the start.
+- **Phone:** played in the [build 32 playtest](#build-32-playtest). Not yet verified: frame pacing, and how the guard fight plays with the companions beside the leader from the start.
 
 ### Paired weapons
 
@@ -203,7 +203,13 @@ On 26 November 2026 the maintainer gave each character two weapons, and chose ho
   |---|---:|
   | `weapons` | 28/28 |
   | `first-fight` | 35/35 |
-- **Not yet verified:** the phone. That covers how each weapon feels, the switch on R1, the touch Swap button, how the blade and the dome read at the phone's size, and the guard fight's balance, which the heavier hits change.
+- **Phone:** in the [build 32 playtest](#build-32-playtest) the maintainer said the weapons and controls feel right. Not yet verified: frame pacing, the touch Swap button, how the blade and the dome read at the phone's size, and the guard fight's balance, which the heavier hits change.
+
+### Build 32 playtest
+
+TestFlight 0.1.0 (32) was delivered on 26 November 2026 from the head of [PR #158](https://github.com/RonildoBraga/lauder/pull/158), `0a50613`, before any merge. It carries the pawns and dodge roll, the controls pass, the three starting together and the paired weapons. The [delivery record](https://github.com/RonildoBraga/lauder/pull/158#issuecomment-7176893712) gives Apple's confirmation.
+
+Asked **“How do the weapons and controls feel on your phone?”**, the maintainer answered **“Feels right”**. That is the maintainer's judgement of the weapons and controls as played. No frame-pacing capture was taken, and the question did not cover the guard fight's balance or how the pawns read at their size.
 
 ### Architecture checks
 
