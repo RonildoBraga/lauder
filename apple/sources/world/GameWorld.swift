@@ -120,6 +120,13 @@ final class GameWorld {
   @ObservationIgnored private var facingGoal: SIMD2<Float>?
   /// Members still rocking from a shot or a hit in the latest step (ADR 0008).
   @ObservationIgnored private var joltedMembers: Set<PartyMember> = []
+  /// How each pawn shows its walk, from the movement resolved in each step (the visual
+  /// direction's pawns have no rig).
+  @ObservationIgnored private var gaits: [PartyMember: PawnGait] = [:]
+  /// The leader's dodge roll while it lasts, and the wait before the next. Tests read the roll.
+  @ObservationIgnored private(set) var roll: DodgeRoll?
+  @ObservationIgnored private var rollCooldown: Float = 0
+  @ObservationIgnored private var dodgePressPending = false
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -345,9 +352,12 @@ final class GameWorld {
     }
     guard running else { return }
     guard !skipNextStep else {
-      // Time owed from before an interruption is not replayed afterwards.
+      // Time owed from before an interruption is not replayed afterwards, and nor is a Fire or
+      // dodge press that no step took up before it.
       skipNextStep = false
       unsimulatedTime = 0
+      firePressPending = false
+      dodgePressPending = false
       return
     }
     #if DEBUG
@@ -355,7 +365,7 @@ final class GameWorld {
     #endif
     advanceParty(
       movement: input.movement, aim: input.aim, fireHeld: input.fireHeld,
-      firePressed: input.firePressed,
+      firePressed: input.firePressed, dodgePressed: input.dodgePressed,
       deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
@@ -494,6 +504,10 @@ final class GameWorld {
   private func resetPlay(around spot: SIMD2<Float>) {
     fight.reset()
     stage.reset(fight)
+    gaits = [:]
+    roll = nil
+    rollCooldown = 0
+    dodgePressPending = false
     for member in PartyMember.allCases { showPose(member) }
     joltedMembers = []
     updateWeaponStatus()
@@ -539,12 +553,13 @@ final class GameWorld {
   /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
     movement: SIMD2<Float>, aim: SIMD2<Float>? = nil, fireHeld: Bool = false,
-    firePressed: Bool = false, deltaTime: Float
+    firePressed: Bool = false, dodgePressed: Bool = false, deltaTime: Float
   ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     self.fireHeld = fireHeld
     aimStick = aim
     if firePressed { firePressPending = true }
+    if dodgePressed { dodgePressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
     // remainder, always under one step, carries to the next frame. A retry, or a conversation a
@@ -567,6 +582,8 @@ final class GameWorld {
   private func simulateStep(movement: SIMD2<Float>, dt: Float) {
     if squadLeader != session.leader { changeLeader() }
     pinHolds()
+    let before = positions
+    defer { showWalks(from: before, dt: dt) }
     let leader = session.leader
     guard let leaderStart = position(of: leader) else { return }
     let motion = self.motion
@@ -576,21 +593,46 @@ final class GameWorld {
     let held = fight.holdsParty
     let movement = held ? .zero : movement
     let direction = Movement.direction(for: movement, cameraOffset: level.cameraOffset)
-    let leaderDelta = SIMD2(direction.x, direction.z) * PartyBody.speed * dt
+    let walking = SIMD2(direction.x, direction.z)
+    // A roll belongs to the leader who began it and stops when a scene holds the party; either
+    // way the next waits for its cooldown (ADR 0019).
+    rollCooldown = max(0, rollCooldown - dt)
+    if let rolling = roll, held || rolling.member != leader {
+      roll = nil
+      rollCooldown = DodgeRoll.cooldown
+    }
+    if dodgePressPending {
+      dodgePressPending = false
+      startRoll(leader, moving: walking, held: held)
+    }
+    let leaderDelta: SIMD2<Float>
+    if var rolling = roll {
+      leaderDelta = rolling.advance(dt: dt)
+      roll = rolling
+    } else {
+      leaderDelta = walking * PartyBody.speed * dt
+    }
+    let isRolling = roll != nil
     let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
     // Each leader aims their own weapon, whichever way they move. A scripted scene still
-    // holds fire; facing and turn-rate rules are shared by all three (ADR 0010).
-    let armed = !held
+    // holds fire, and so does a roll; facing and turn-rate rules are shared by all three
+    // (ADR 0010).
+    let armed = !held && !isRolling
     aimDirection =
       armed ? aimStick.map { Movement.aim(for: $0, cameraOffset: level.cameraOffset) } : nil
     let moving = simd_length_squared(leaderDelta) > 0.000001 ? leaderDelta : nil
-    if let wanted = aimDirection ?? facingGoal ?? moving {
+    if !isRolling, let wanted = aimDirection ?? facingGoal ?? moving {
       turnLeader(leader, towards: wanted, dt: dt)
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
-    stepStage(leader: leader, at: leaderEnd, armed: armed, dt: dt)
+    stepStage(
+      leader: leader, at: leaderEnd, armed: armed, untouchable: isRolling ? [leader] : [], dt: dt)
+    if roll?.isFinished == true {
+      roll = nil
+      rollCooldown = DodgeRoll.cooldown
+    }
     if retryElapsed != nil { return }
     // The hold lasts through the step whose cue ends the scene and begins its exchange.
     if held || session.mode != .exploring {
@@ -905,7 +947,8 @@ final class GameWorld {
 
   /// Advance the bridge fight, its cues, feedback and retry.
   private func stepStage(
-    leader: PartyMember, at position: SIMD2<Float>, armed: Bool, dt: Float
+    leader: PartyMember, at position: SIMD2<Float>, armed: Bool,
+    untouchable: Set<PartyMember> = [], dt: Float
   ) {
     // The authored west-side exit lies beyond the entire guard's acquisition envelope. Close
     // the encounter before another fixed-step shot or supply-case action can begin the ambush.
@@ -924,7 +967,8 @@ final class GameWorld {
     let outcome = fight.step(
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
       aiming: aimDirection != nil, fireHeld: armed && fireHeld,
-      firePressed: armed && firePressPending, figures: figures, session: session)
+      firePressed: armed && firePressPending, figures: figures, session: session,
+      untouchable: untouchable)
     stage.update(fight, dt: dt)
     updateWeaponStatus()
     firePressPending = false
@@ -1080,10 +1124,44 @@ final class GameWorld {
       visuals[member]?.position = [0, Self.lyingDrop, 0]
       return
     }
-    let jolt = (fight.jolts[member] ?? BodyJolt()).pose(height: PartyBody.height)
+    if let roll, roll.member == member {
+      let tumble = roll.pose(height: PartyBody.height)
+      visuals[member]?.scale = tumble.scale
+      visuals[member]?.orientation = tumble.tilt * facing
+      visuals[member]?.position = tumble.offset
+      return
+    }
+    // A pawn's walk and a jolt both lean the figure about its feet; the walk also lifts it.
+    let gait = gaits[member] ?? PawnGait()
+    let lean =
+      (fight.jolts[member]?.lean ?? .zero)
+      + gait.lean(facing: Movement.facing(yaw: yaw[member] ?? 0))
+    let pose = BodyJolt.pose(lean: lean, height: PartyBody.height)
     visuals[member]?.scale = [1, 1, 1]
-    visuals[member]?.orientation = jolt.tilt * facing
-    visuals[member]?.position = jolt.offset
+    visuals[member]?.orientation = pose.tilt * facing
+    visuals[member]?.position = pose.offset + [0, gait.lift, 0]
+  }
+
+  /// Each pawn shows the step it has just taken: a bob, a rock to the side and a lean, drawn
+  /// from where its body moved.
+  private func showWalks(from before: [PartyMember: SIMD2<Float>], dt: Float) {
+    for member in session.party {
+      guard let start = before[member], let end = position(of: member) else { continue }
+      gaits[member, default: PawnGait()].step(moved: end - start, dt: dt)
+      showPose(member)
+    }
+  }
+
+  /// The leader's dodge roll begins, the way they move, or the way they face with no movement
+  /// held. A scene that holds the party, a roll under way or its cooldown stops it.
+  private func startRoll(_ leader: PartyMember, moving: SIMD2<Float>, held: Bool) {
+    guard !held, roll == nil, rollCooldown <= 0, session.party.contains(leader),
+      !lying.contains(leader)
+    else { return }
+    let way = simd_length_squared(moving) > 0.000001 ? moving : facing(of: leader)
+    roll = DodgeRoll(member: leader, direction: way)
+    facingGoal = nil
+    setYaw(leader, Movement.yaw(towards: way))
   }
 
   /// Where each member of the party stands. Members who have not joined are not included.

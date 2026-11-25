@@ -183,8 +183,9 @@ struct SceneStyle {
 
   /// A figure from its model. The model stands on the ground at its origin and faces Blender's
   /// -y, the game's +z, so it is turned half a turn to face -z, and lowered to stand below the
-  /// body's centre, which the game moves and turns. Its front mark makes facing readable without
-  /// a rig or animation.
+  /// body's centre, which the game moves and turns. A hostile's front mark shows which way it
+  /// faces. A pawn shows it through its headwear and its lean, for the world leans, lifts and
+  /// tumbles a pawn as it moves; neither has a rig.
   private func figure(_ name: String) -> Entity {
     let model = Self.model(named: name).clone(recursive: true)
     model.orientation = simd_quatf(angle: .pi, axis: [0, 1, 0])

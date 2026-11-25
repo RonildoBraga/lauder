@@ -21,19 +21,19 @@
   "models/laura": {
     "format": 1,
     "made from": {
-      "blender/assets/laura/laura.blend": "292ebf6e6a77f34750bdeedb891e3b2953067ba6a75e397bc1b55e07c1892130"
+      "blender/assets/laura/laura.blend": "5ee01d95f7bba3d62481722ea0c7e781b87d34a561fbc77659c92e1d15ee3ab6"
     },
     "wrote": {
-      "apple/sources/content/models/laura.usdz": "c6c15f667239a0a5dc16fdb1a726003ce743fbf71532e52badb2bb988633651a"
+      "apple/sources/content/models/laura.usdz": "d55e809c8af6531248b6f9c7812ceac15de94978490e8c480ec939202dddbf52"
     }
   },
   "models/miki": {
     "format": 1,
     "made from": {
-      "blender/assets/miki/miki.blend": "9bc3d548aa95219302c3b65417b0144b8a173400e14e070c2895e6e33a854d13"
+      "blender/assets/miki/miki.blend": "72881bcac051b1dbd2937a9b77c84bc60274604e684b2ca8665079f3ca075833"
     },
     "wrote": {
-      "apple/sources/content/models/miki.usdz": "a74a575534fab68e6477cec380cbe07809d442c77af685d5b8816837c9eef039"
+      "apple/sources/content/models/miki.usdz": "7d3388cc7ee54e6c4ff7558c4fe67d4db2845666b43fd6fb7c1998711bba2742"
     }
   },
   "models/spider-bot-heavy": {
@@ -50,10 +50,10 @@
   "models/tom": {
     "format": 1,
     "made from": {
-      "blender/assets/tom/tom.blend": "116e654622f34ecfd031767e240be89af8deffeb997b240db61a3de6881bdc52"
+      "blender/assets/tom/tom.blend": "6d29491c1e4be8a61a7e0e335635a50cafd40d41ed06f4608556ae370ca631a3"
     },
     "wrote": {
-      "apple/sources/content/models/tom.usdz": "9ad84f118b8abbe1b434aac31471735284f538b3deb2493ba2f4eea3b452705a"
+      "apple/sources/content/models/tom.usdz": "6e41f75c22942343c21fb89b0a237842d720724907797badc5da49fd61e82f01"
     }
   }
 }

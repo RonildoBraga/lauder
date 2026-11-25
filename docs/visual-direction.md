@@ -56,8 +56,9 @@ One shared set of colours serves every level and model. At least 80% of the scre
 | Faded teal | `#5E7C80` | Accent: vehicles and old paintwork |
 | Mustard | `#B69A5A` | Accent: taxis and warning paint |
 | Amber | `#E2A64B` | Things to use and the leader's ring; kept clearly apart from Laura's orange |
+| Skin | `#D9A27E` | The party's heads and faces: one tone for all three, chosen on 25 November 2026 |
 
-The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. Hostiles are dark red, `#7A2E2A`, the only red figures on the ice. The bridge environment pass uses `#A9B7C6` as the baked shadow material's base colour, replacing the earlier neutral `#CBC9CA`. These are sRGB palette values, converted to scene-linear values in Blender. The lights change their displayed appearance; the palette is not a sampled screen-colour or phone performance claim.
+The party keeps its colours: Miki `#40A696`, Laura `#E69C4A` and Tom `#6182CF`. Their pawns add Ink for Miki's hair and Tom's beanie, and Snow for Laura's hood rim and Tom's pompom. Hostiles are dark red, `#7A2E2A`, the only red figures on the ice. The bridge environment pass uses `#A9B7C6` as the baked shadow material's base colour, replacing the earlier neutral `#CBC9CA`. These are sRGB palette values, converted to scene-linear values in Blender. The lights change their displayed appearance; the palette is not a sampled screen-colour or phone performance claim.
 
 ## Materials
 
@@ -95,7 +96,11 @@ The rejected first robot blockout used asset-specific matte materials from the e
 
 ## Characters and interface
 
-- Characters are about 400 triangles each, with one distinct silhouette and one strong colour per person, and a soft contact shadow. Facing shows through the body's shape. No rigging is needed at this size.
+- The party are pawns, which the maintainer chose on 25 November 2026 from a [game-scale mock-up sheet](../art/party/README.md): in play they are only about 18 points tall on the phone.
+  - All three share one body, under 300 triangles: a tapering eight-sided body with shoulders, a round head and a soft contact shadow.
+  - One strong colour per person and their headwear tell them apart: Miki's dark hair, Laura's hood with its Snow rim, and Tom's dark beanie with its Snow pompom. Their faces share the Skin tone.
+  - Miki's hair and Laura's hood sit behind their faces, so the bare face shows which way they look.
+  - No rigging is needed at this size. Each pawn bobs once a step, rocks from side to side and leans into its movement. The leader's [dodge roll](decisions/0019-dodge-roll.md) tumbles the whole figure. Hostiles keep their own models.
 - The interface is light and small, so the world stays the subject: frosted panels with ink words. The status panel keeps to the essentials: the party and its formation, a new objective or line for a few seconds, and a threat or the carbine's rounds while they matter; Circle / B or H hides it. A compass at the top centre points to the next goal with its distance. A controller's or keyboard's controls that apply show in one strip at the bottom, and the touch buttons are frosted too. Controls and their rules do not change.
 
 ## The bridge in the frozen world

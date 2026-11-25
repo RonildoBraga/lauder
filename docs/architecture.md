@@ -56,7 +56,7 @@ The owned update samples controls, resolves InputRules using session mode, handl
 
 Controller, keyboard and touch share InputRules; the [input contract](prototype-plan.md#input-and-interaction-contract) lists bindings. Controller preference and **Use touch controls / Use controller** choose a source without bypassing session authority. PS5 and Xbox use extended-gamepad elements; Xbox physical delivery remains unverified.
 
-Pause wins over simultaneous commands. Next wins over Previous, and switches, formation and order commands suppress a same-sample action while consuming its held edge. Dialogue and Pause consume unavailable gameplay presses rather than queueing them. Holding movement through a leader switch moves the new leader without moving anybody to a new position.
+Pause wins over simultaneous commands. Next wins over Previous, and switches, formation and order commands suppress a same-sample action or dodge roll while consuming its held edge. Dialogue and Pause consume unavailable gameplay presses rather than queueing them. Holding movement through a leader switch moves the new leader without moving anybody to a new position.
 
 Pause/resume, source changes, interruption and reconnection require neutral input. Every held key, button and finger counts, including a centred-stick contact. Source changes cancel touch captures using generation tokens; stale callbacks cannot write into a fresh source. Keep the touch surface mounted on Pause so release is observable. A quick tap is latched until a sample, then delivered once.
 
@@ -65,6 +65,10 @@ Pause has **Resume**, **Restart** and **Vibration**, opens on Resume and navigat
 ## Movement and presentation
 
 Movement maps camera-relative input onto the flat ground. PartyMotion applies exact blocker clearance and separation. NavigationGrid routes through legal space; SquadPlanner chooses distinct formation places, and CompanionMotor follows/settles/yields rather than copying every footprint. Narrow space compresses the formation, which expands when room returns. Orders project a marked point through the current camera and reject inaccessible destinations rather than teleporting anybody.
+
+The leader's [dodge roll](decisions/0019-dodge-roll.md) replaces their walking movement for 0.45 s. `DodgeRoll` supplies each fixed step's share of its 3 m and PartyMotion resolves it like any movement. `EncounterSimulation` leaves the rolling leader out of the hostiles' shot targets, while hostiles still see and follow them.
+
+The party's pawns have no rig. Each fixed step, `PawnGait` turns the movement a body has just made into a bob, a rock to the side and a lean. The figure turns about its feet, and the lean adds to the shot and hit jolt ([ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md)). A move of over a metre in one step, such as a retry, resets the walk. A rolling leader shows the roll's tumble instead. All of this is presentation; the bodies that move, collide and are hit stay where the simulation resolved them.
 
 The camera follows the active leader and eases on a switch, retaining the elevated angle. Aiming/fighting narrows its lens. The bridge's tall towers fade when between camera and party. Goals from the authored layout drive the compass. Status messages expire in play time; Pause and dialogue hold them.
 

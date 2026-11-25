@@ -5,6 +5,8 @@ import simd
 struct TouchInput {
   enum Button: Hashable {
     case action, cycle, pause, restart, fire, formation
+    /// The leader's dodge roll.
+    case dodge
     /// A finger pressing the ground, where holding opens the order menu (ADR 0003, phase S3).
     case ground
     /// The pause menu's Vibration choice, shown only while paused (ADR 0008).
@@ -59,6 +61,7 @@ struct TouchInput {
       touchSwitch: pressed.contains(.cycle), touchRestart: pressed.contains(.restart),
       touchVibration: pressed.contains(.vibration),
       touchFire: pressed.contains(.fire), touchFormation: pressed.contains(.formation),
+      touchDodge: pressed.contains(.dodge),
       touchGround: pressed.contains(.ground),
       touchMark: mark, touchOrder: order)
   }

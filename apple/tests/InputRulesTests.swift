@@ -587,6 +587,42 @@ struct InputRulesTests {
     #expect(!sample(press, mode: .paused, state: &state).vibrationPressed)
   }
 
+  /// Square, X, Space or the touch Roll button: one roll per press while exploring.
+  @Test
+  func aDodgeIsOneFreshPressWhileExploring() {
+    var state = InputRules.State(needsNeutralInput: false)
+    for raw in [
+      InputRules.Raw(controllerDodge: true), InputRules.Raw(keyboardDodge: true),
+      InputRules.Raw(touchDodge: true),
+    ] {
+      #expect(sample(raw, state: &state).dodgePressed)
+      #expect(!sample(raw, state: &state).dodgePressed, "holding it rolls once")
+      _ = sample(.init(), state: &state)
+    }
+    // Pressed while paused or talking and still held afterwards, it does not roll: the press
+    // was consumed there, not queued.
+    for mode in [GameSession.Mode.paused, .dialogue] {
+      _ = sample(.init(controllerDodge: true), mode: mode, state: &state)
+      #expect(!sample(.init(controllerDodge: true), state: &state).dodgePressed, "\(mode)")
+      _ = sample(.init(), state: &state)
+    }
+    // A switch in the same sample discards it.
+    let both = sample(.init(controllerSwitch: true, controllerDodge: true), state: &state)
+    #expect(both.switchPressed && !both.dodgePressed)
+  }
+
+  /// A held Square, X or Roll keeps the release gate closed, as every other button does.
+  @Test
+  func aHeldDodgeKeepsTheReleaseGateClosed() {
+    for raw in [InputRules.Raw(controllerDodge: true), InputRules.Raw(touchDodge: true)] {
+      var state = InputRules.State()
+      #expect(sample(raw, state: &state) == .neutral)
+      #expect(state.needsNeutralInput)
+      _ = sample(.init(), state: &state)
+      #expect(!state.needsNeutralInput)
+    }
+  }
+
   private func sample(
     _ raw: InputRules.Raw, mode: GameSession.Mode = .exploring, state: inout InputRules.State
   ) -> InputRules.Input {

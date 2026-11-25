@@ -64,28 +64,51 @@ struct LevelLookTests {
   }
 
   /// Each member of the party, and each hostile, shows the model that Blender exports to a scene
-  /// file of its own (ADR 0002): standing on the ground below its body's centre, 1.58 m
-  /// tall, and facing the figure's -z, where its front mark is.
+  /// file of its own (ADR 0002), standing on the ground below its body's centre and facing the
+  /// figure's -z. A pawn's face is the front of its head, which its headwear leaves bare: Miki's
+  /// hair and Laura's hood sit behind it, and Laura's rim frames it. Tom's beanie sits square on
+  /// his head. The pawns' headwear sets their heights; the hostile's front mark is its front.
   @Test
   func thePartyAndTheHostilesComeFromTheirModels() throws {
     let world = GameWorld(level: BrooklynBridge.level)
+    let heights: [PartyMember: Float] = [.miki: 1.535, .laura: 1.54, .tom: 1.635]
     for member in PartyMember.allCases {
-      let body = try #require(world.root.findEntity(named: "party.\(member.rawValue)"))
-      try expectFigure(in: body, from: member.rawValue)
+      let name = member.rawValue
+      let body = try #require(world.root.findEntity(named: "party.\(name)"))
+      let figure = try expectFigure(in: body, from: name, height: try #require(heights[member]))
+      func centre(_ part: String) throws -> SIMD3<Float> {
+        let entity = try #require(figure.findEntity(named: "\(name)_\(part)"), "\(name) \(part)")
+        return entity.visualBounds(relativeTo: figure).center
+      }
+      let head = try centre("head")
+      #expect(abs(head.x) < 0.001 && abs(head.z) < 0.001, "\(name)'s head is over the feet")
+      switch member {
+      case .miki:
+        #expect(try centre("hair").z - head.z > 0.03, "Miki's hair is behind her face")
+      case .laura:
+        #expect(try centre("hood").z - head.z > 0.05, "Laura's hood is behind her face")
+        #expect(try centre("rim").z - head.z < -0.15, "Laura's rim frames her face")
+      case .tom:
+        let beanie = try centre("beanie")
+        #expect(abs(beanie.x) < 0.001 && abs(beanie.z) < 0.001, "Tom's beanie sits square")
+      }
     }
     let hostile = try #require(world.root.findEntity(named: "hostile.attacker"))
-    try expectFigure(in: hostile, from: "hostile")
+    let figure = try expectFigure(in: hostile, from: "hostile", height: 1.58)
+    let mark = try #require(figure.findEntity(named: "hostile_mark"))
+    let ahead = mark.position(relativeTo: figure)
+    #expect(abs(ahead.x) < 0.001 && abs(ahead.z + 0.16) < 0.001, "the hostile faces -z")
   }
 
-  private func expectFigure(in body: Entity, from name: String) throws {
+  /// The figure that holds `name`'s model, which stands on the ground below the body's centre
+  /// and is `height` tall.
+  private func expectFigure(in body: Entity, from name: String, height: Float) throws -> Entity {
     let model = try #require(body.findEntity(named: "\(name).model"))
     let figure = try #require(model.parent)
-    let mark = try #require(model.findEntity(named: "\(name)_mark"))
-    let ahead = mark.position(relativeTo: figure)
-    #expect(abs(ahead.x) < 0.001 && abs(ahead.z + 0.16) < 0.001, "\(name) faces -z")
     let bounds = model.visualBounds(relativeTo: figure)
     #expect(abs(bounds.min.y + PartyBody.height / 2) < 0.001, "\(name) stands on the ground")
-    #expect(abs(bounds.max.y - bounds.min.y - 1.58) < 0.001, "\(name) is 1.58 m tall")
+    #expect(abs(bounds.max.y - bounds.min.y - height) < 0.001, "\(name) is \(height) m tall")
+    return figure
   }
 
   /// World markers keep a readable size on screen (the visual direction). From the bridge's far

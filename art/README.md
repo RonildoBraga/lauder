@@ -6,6 +6,7 @@ The subsequent scene-first assignment is implemented in the bridge's [Blender so
 
 - [Frozen Brooklyn Bridge](bridge/README.md): the selected high gameplay-view concept.
 - [Robot enemy](robot/README.md): earlier dark armed references and three [bulkier alternatives](robot/bulk-studies/README.md), with C selected for modelling and A retained for later.
+- [Party pawns](party/README.md): the game-scale mock-up sheet from which the maintainer chose and confirmed the party's pawns.
 
 Superseded images were removed at the maintainer's request. The [first-tower behaviour proposal](../docs/encounters/bridge-spider-bot.md) remains under discussion before implementation.
 

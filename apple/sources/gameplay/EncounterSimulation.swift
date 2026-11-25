@@ -168,9 +168,12 @@ final class EncounterSimulation {
 
   /// Cues, hostile attacks and leader fire share one fixed step. Visible figures also supply
   /// scripted shots, including Tom's intervention. Practice shots spend no shared ammunition.
+  /// Hostile shots pass through `untouchable` members, such as a leader mid-roll, though
+  /// hostiles still see and follow them.
   func step(
     dt: Float, leader: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool, fireHeld: Bool,
-    firePressed: Bool, figures: [PartyMember: SIMD2<Float>], session: GameSession
+    firePressed: Bool, figures: [PartyMember: SIMD2<Float>], session: GameSession,
+    untouchable: Set<PartyMember> = []
   ) -> Outcome {
     var outcome = Outcome()
     shots.removeAll(keepingCapacity: true)
@@ -230,6 +233,7 @@ final class EncounterSimulation {
       }
     }
     let party = figures.filter { session.party.contains($0.key) }
+    let targets = party.filter { !untouchable.contains($0.key) }
     var threatNow: String?
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
@@ -240,7 +244,7 @@ final class EncounterSimulation {
           dt: dt, target: leader, hasSight: hasSight, obstacles: movementObstacles,
           party: Array(party.values))
         {
-          fireRobot(discharge, state: &state, party: party, session: session, outcome: &outcome)
+          fireRobot(discharge, state: &state, party: targets, session: session, outcome: &outcome)
         }
         if let robot = state.robot {
           switch robot.phase {
@@ -276,7 +280,7 @@ final class EncounterSimulation {
         if let discharge = rifle.takeShot(using: &generator) {
           fireHostile(
             spec.id, from: origin, discharge: discharge,
-            party: party, session: session, outcome: &outcome)
+            party: targets, session: session, outcome: &outcome)
         }
         enemyRandom[spec.id] = generator
       }

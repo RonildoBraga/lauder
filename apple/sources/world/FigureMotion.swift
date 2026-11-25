@@ -34,6 +34,11 @@ struct BodyJolt: Sendable {
   /// The tilt to apply after the figure's turn, and how far its centre moves so that its feet
   /// stay where they stand, for a figure `height` tall whose centre is its origin.
   func pose(height: Float) -> (tilt: simd_quatf, offset: SIMD3<Float>) {
+    Self.pose(lean: lean, height: height)
+  }
+
+  /// The same for any lean, such as a jolt's added to a pawn's walk (`PawnGait`).
+  static func pose(lean: SIMD2<Float>, height: Float) -> (tilt: simd_quatf, offset: SIMD3<Float>) {
     let angle = simd_length(lean)
     guard angle > 0 else { return (simd_quatf(angle: 0, axis: [0, 1, 0]), .zero) }
     let direction = lean / angle
