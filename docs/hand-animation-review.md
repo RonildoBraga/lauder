@@ -4,6 +4,8 @@
 
 **Assigned follow-up:** The maintainer subsequently said: “Go ahead with the hand-rig pilot. Fix the palm and wrist alignment, add individual finger controls, preserve Miki’s appearance, and show me relaxed hands, fists and rifle grips in Blender before game integration.” The [new native pilot](../blender/studies/miki-hand-rig/README.md) implements measured palm frames, 30 added digit joints and localized skinning in an isolated derivative. This review's table describes the original 17-bone baseline. Its runtime/export findings remain open; the 47-bone pilot is not integrated into the game.
 
+**Further assigned review:** after accepting the hand poses, the maintainer requested exported deformation verification plus running, sneaking and shooting. The [complete-motion study](../blender/studies/miki-hand-motion/README.md) preserves neutral appearance and uses a deliberately linear-skinned derivative to match the tested native export path. The earlier large bind-space discrepancy came from a test exporter deleting the alignment parent; a separate dual-quaternion/linear method difference was measured rather than hidden. These authoring corrections do not update the canonical skeleton/export contract or runtime grip layer below.
+
 In the reviewed baseline, the body/wrist animation pipeline existed but **independent finger articulation was not implemented**. The trial's assumed palm calibration and runtime weapon-grip orientation required review before claiming natural hand motion. This is a project capability gap, not a limitation imposed by Swift or RealityKit.
 
 ## Verified original baseline

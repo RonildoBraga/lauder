@@ -1,0 +1,28 @@
+{
+  "artifacts": [
+    {
+      "file": "character/miki-hand-motion.blend",
+      "bytes": 4166410,
+      "sha256": "899ebf7f3986b666419a26d5a38b1d4c6c278cf915e072c4ce4a5944a6c7af95"
+    },
+    {
+      "file": "miki-hand-motion-review.blend",
+      "bytes": 3483516,
+      "sha256": "9b825285cb767d92e1b88a9f50b9df7a90a96aa5ea55de6e43b225c06fb6ffe6"
+    },
+    {
+      "file": "motion-preview.mp4",
+      "bytes": 515400,
+      "sha256": "5ac5c52a06da177c371f8114aadfc51ef5655cd3f1faed91f679c46f64b884a4"
+    }
+  ],
+  "movie": {
+    "frames": 240,
+    "fps": 30,
+    "duration_seconds": 8,
+    "width": 720,
+    "height": 900,
+    "codec": "H264",
+    "pixel_format": "yuv420p"
+  }
+}

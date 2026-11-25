@@ -4,7 +4,7 @@
 
 This separate study transfers existing motion onto the [current fitted Option A Miki](../miki-option-a-motion/README.md). Its face, hair, proportions, dress, UVs, texture, skin weights, rest skeleton and four garment shape targets remain unchanged. It replaces no canonical model or shared animation. The earlier fixed Run hand roll and Sneak outward-arm offsets are not applied to these clips.
 
-**Follow-up:** The maintainer subsequently assigned the [measured hand-rig pilot](../miki-hand-rig/README.md). That separate derivative adds finger articulation and measured palm alignment for hand-review poses while preserving neutral appearance. This original 17-bone motion trial and its documented palm/garment limitations remain unchanged; running/crouching on the new hand rig is still separate work.
+**Follow-up:** The maintainer subsequently assigned the [measured hand-rig pilot](../miki-hand-rig/README.md), then accepted its hand poses and assigned [export verification with complete running, sneaking and shooting](../miki-hand-motion/README.md). The new motion study uses the existing fitted project body clips with corrected hands, rather than these known-clipping deep-crouch paths. This original 17-bone downloaded comparison and its documented palm/garment limitations remain unchanged.
 
 ## Watch in Blender
 

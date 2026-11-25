@@ -1,0 +1,500 @@
+{
+  "source_sha256": "899ebf7f3986b666419a26d5a38b1d4c6c278cf915e072c4ce4a5944a6c7af95",
+  "evidence_kind": "Numeric LBS reconstruction from actual RealityKit-imported vertex/influence/morph/pose buffers, plus separate actual ARView.snapshot images. GPU vertices were not read back.",
+  "coordinate_space": "Blender world / identity-rig skeleton space in metres; common USD stage axis wrapper excluded on both sides.",
+  "tolerance_m": 1e-05,
+  "maximum_error_m": 6.205967936778212e-06,
+  "cases": {
+    "run": {
+      "source_sha256": "899ebf7f3986b666419a26d5a38b1d4c6c278cf915e072c4ce4a5944a6c7af95",
+      "usdz_sha256": "828d5ff81696393e7e2e5e693be036ea5ff3ae6603e73810bcabc8b0fc290854",
+      "action": "miki.hand-motion.run",
+      "preserve_volume": false,
+      "native_joint_count": 47,
+      "matched_original_vertex_count": 10269,
+      "source_vertex_count": 10269,
+      "native_independent_instances": true,
+      "native_blend_animation_count": 3,
+      "geometry_bind_applied_before_skin": true,
+      "pose_reference_space": "Blender world / identity-rig skeleton space, metres; USD stage axis wrapper is excluded on both sides.",
+      "records": [
+        {
+          "frame": 1.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 6.205967936778212e-06,
+          "mean_error_m": 5.935248150630436e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0.30491843819618225,
+            "Skirt_front_L": 0.5734930634498596,
+            "Skirt_front_R": 0.5734930634498596
+          },
+          "worst": {
+            "error_m": 6.205967936778212e-06,
+            "source_vertex_id": 6873,
+            "actual": [
+              0.13233969274262875,
+              -0.6261442236563345,
+              0.016028538690748297
+            ],
+            "expected": [
+              0.13233964145183563,
+              -0.6261504292488098,
+              0.016028493642807007
+            ]
+          }
+        },
+        {
+          "frame": 25.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 4.549903951631882e-06,
+          "mean_error_m": 5.549759544552759e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.9975024461746216,
+            "Skirt_front_R": 0.9975024461746216
+          },
+          "worst": {
+            "error_m": 4.549903951631882e-06,
+            "source_vertex_id": 4925,
+            "actual": [
+              -0.11581418014587574,
+              -0.4481553609918994,
+              0.6581494470677698
+            ],
+            "expected": [
+              -0.11581391841173172,
+              -0.4481599032878876,
+              0.6581494212150574
+            ]
+          }
+        },
+        {
+          "frame": 49.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 3.854635340745855e-06,
+          "mean_error_m": 5.222277062195041e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.7067136764526367,
+            "Skirt_front_R": 0.7067136764526367
+          },
+          "worst": {
+            "error_m": 3.854635340745855e-06,
+            "source_vertex_id": 122,
+            "actual": [
+              -0.11543760848678636,
+              -0.36875768808742315,
+              0.5381344104874588
+            ],
+            "expected": [
+              -0.11543769389390945,
+              -0.3687615394592285,
+              0.5381342768669128
+            ]
+          }
+        },
+        {
+          "frame": 73.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 5.6389169213087615e-06,
+          "mean_error_m": 7.036330652860514e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0.49512243270874023,
+            "Skirt_front_L": 0.7130461931228638,
+            "Skirt_front_R": 0.7130461931228638
+          },
+          "worst": {
+            "error_m": 5.6389169213087615e-06,
+            "source_vertex_id": 6875,
+            "actual": [
+              0.1456680032273131,
+              -0.6104334901688148,
+              0.030886265920327925
+            ],
+            "expected": [
+              0.14566771686077118,
+              -0.610439121723175,
+              0.03088623471558094
+            ]
+          }
+        },
+        {
+          "frame": 79.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 6.205967936778212e-06,
+          "mean_error_m": 5.935248150630436e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0.30491843819618225,
+            "Skirt_front_L": 0.5734930634498596,
+            "Skirt_front_R": 0.5734930634498596
+          },
+          "worst": {
+            "error_m": 6.205967936778212e-06,
+            "source_vertex_id": 6873,
+            "actual": [
+              0.13233969274262875,
+              -0.6261442236563345,
+              0.016028538690748297
+            ],
+            "expected": [
+              0.13233964145183563,
+              -0.6261504292488098,
+              0.016028493642807007
+            ]
+          }
+        }
+      ],
+      "maximum_error_m": 6.205967936778212e-06,
+      "maximum_shape_weight_error": 0.0,
+      "tolerance_m": 1e-05,
+      "passes_10um": true,
+      "diagnostic_passes_5um": false
+    },
+    "sneak": {
+      "source_sha256": "899ebf7f3986b666419a26d5a38b1d4c6c278cf915e072c4ce4a5944a6c7af95",
+      "usdz_sha256": "3e432ce93142dfb257bf5bbaa0fda5ef937aeb8231fae80fc07e7bacc26035dc",
+      "action": "miki.hand-motion.sneak",
+      "preserve_volume": false,
+      "native_joint_count": 47,
+      "matched_original_vertex_count": 10269,
+      "source_vertex_count": 10269,
+      "native_independent_instances": true,
+      "native_blend_animation_count": 3,
+      "geometry_bind_applied_before_skin": true,
+      "pose_reference_space": "Blender world / identity-rig skeleton space, metres; USD stage axis wrapper is excluded on both sides.",
+      "records": [
+        {
+          "frame": 1.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 4.102337255851364e-06,
+          "mean_error_m": 4.9592693579406e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.7835435271263123,
+            "Skirt_front_R": 0.7835435271263123
+          },
+          "worst": {
+            "error_m": 4.102337255851364e-06,
+            "source_vertex_id": 6905,
+            "actual": [
+              0.11387357499292217,
+              -0.39616985353963197,
+              0.5342867414652985
+            ],
+            "expected": [
+              0.11387356370687485,
+              -0.39617395401000977,
+              0.534286618232727
+            ]
+          }
+        },
+        {
+          "frame": 37.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 3.6340662410717025e-06,
+          "mean_error_m": 3.911553293236508e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.6582748889923096,
+            "Skirt_front_R": 0.6582748889923096
+          },
+          "worst": {
+            "error_m": 3.6340662410717025e-06,
+            "source_vertex_id": 1149,
+            "actual": [
+              0.11282569871390803,
+              -0.3484935797619685,
+              0.449960336682249
+            ],
+            "expected": [
+              0.11282575130462646,
+              -0.348497211933136,
+              0.44996023178100586
+            ]
+          }
+        },
+        {
+          "frame": 73.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 4.060740632980976e-06,
+          "mean_error_m": 4.927715778354922e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.7835437059402466,
+            "Skirt_front_R": 0.7835437059402466
+          },
+          "worst": {
+            "error_m": 4.060740632980976e-06,
+            "source_vertex_id": 125,
+            "actual": [
+              -0.11299422594512912,
+              -0.39565288356478384,
+              0.535031816162269
+            ],
+            "expected": [
+              -0.11299418658018112,
+              -0.395656943321228,
+              0.5350317358970642
+            ]
+          }
+        },
+        {
+          "frame": 109.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 3.5740863997983295e-06,
+          "mean_error_m": 4.0802159466518946e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.6582750678062439,
+            "Skirt_front_R": 0.6582750678062439
+          },
+          "worst": {
+            "error_m": 3.5740863997983295e-06,
+            "source_vertex_id": 122,
+            "actual": [
+              -0.1154637363031952,
+              -0.34855953223899605,
+              0.44942521167843164
+            ],
+            "expected": [
+              -0.11546383798122406,
+              -0.3485631048679352,
+              0.44942522048950195
+            ]
+          }
+        },
+        {
+          "frame": 145.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 4.102337255851364e-06,
+          "mean_error_m": 4.9592693579406e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0.7835435271263123,
+            "Skirt_front_R": 0.7835435271263123
+          },
+          "worst": {
+            "error_m": 4.102337255851364e-06,
+            "source_vertex_id": 6905,
+            "actual": [
+              0.11387357499292217,
+              -0.39616985353963197,
+              0.5342867414652985
+            ],
+            "expected": [
+              0.11387356370687485,
+              -0.39617395401000977,
+              0.534286618232727
+            ]
+          }
+        }
+      ],
+      "maximum_error_m": 4.102337255851364e-06,
+      "maximum_shape_weight_error": 0.0,
+      "tolerance_m": 1e-05,
+      "passes_10um": true,
+      "diagnostic_passes_5um": true
+    },
+    "shoot": {
+      "source_sha256": "899ebf7f3986b666419a26d5a38b1d4c6c278cf915e072c4ce4a5944a6c7af95",
+      "usdz_sha256": "9c34d145aa410a6207c35354107d24cbf0d26a426f9d983e3e1e33953ae9aa43",
+      "action": "miki.hand-motion.shoot",
+      "preserve_volume": false,
+      "native_joint_count": 47,
+      "matched_original_vertex_count": 10269,
+      "source_vertex_count": 10269,
+      "native_independent_instances": true,
+      "native_blend_animation_count": 3,
+      "geometry_bind_applied_before_skin": true,
+      "pose_reference_space": "Blender world / identity-rig skeleton space, metres; USD stage axis wrapper is excluded on both sides.",
+      "records": [
+        {
+          "frame": 1.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 1.2702917140517687e-06,
+          "mean_error_m": 3.615400080463309e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0,
+            "Skirt_front_R": 0
+          },
+          "worst": {
+            "error_m": 1.2702917140517687e-06,
+            "source_vertex_id": 6875,
+            "actual": [
+              0.1455300876444256,
+              -0.11123476963273103,
+              0.01582799936177414
+            ],
+            "expected": [
+              0.14553005993366241,
+              -0.11123602837324142,
+              0.015828168019652367
+            ]
+          }
+        },
+        {
+          "frame": 121.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 1.2327286132790783e-06,
+          "mean_error_m": 5.628603552174349e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0,
+            "Skirt_front_R": 0
+          },
+          "worst": {
+            "error_m": 1.2327286132790783e-06,
+            "source_vertex_id": 6875,
+            "actual": [
+              0.1455301120547249,
+              -0.11123482310158758,
+              0.01582791459615447
+            ],
+            "expected": [
+              0.14553005993366241,
+              -0.11123602837324142,
+              0.015828168019652367
+            ]
+          }
+        },
+        {
+          "frame": 186.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 1.2702917140517687e-06,
+          "mean_error_m": 3.7690111943563077e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0,
+            "Skirt_front_R": 0
+          },
+          "worst": {
+            "error_m": 1.2702917140517687e-06,
+            "source_vertex_id": 6875,
+            "actual": [
+              0.1455300876444256,
+              -0.11123476963273103,
+              0.01582799936177414
+            ],
+            "expected": [
+              0.14553005993366241,
+              -0.11123602837324142,
+              0.015828168019652367
+            ]
+          }
+        },
+        {
+          "frame": 241.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 1.2702917140517687e-06,
+          "mean_error_m": 3.9483844453933163e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0,
+            "Skirt_front_R": 0
+          },
+          "worst": {
+            "error_m": 1.2702917140517687e-06,
+            "source_vertex_id": 6875,
+            "actual": [
+              0.1455300876444256,
+              -0.11123476963273103,
+              0.01582799936177414
+            ],
+            "expected": [
+              0.14553005993366241,
+              -0.11123602837324142,
+              0.015828168019652367
+            ]
+          }
+        },
+        {
+          "frame": 361.0,
+          "native_vertices": 17014,
+          "maximum_error_m": 1.2702917140517687e-06,
+          "mean_error_m": 3.615400080463309e-07,
+          "shape_weight_max_error": 0.0,
+          "active_shape_weights": {
+            "Skirt_back_L": 0,
+            "Skirt_back_R": 0,
+            "Skirt_front_L": 0,
+            "Skirt_front_R": 0
+          },
+          "worst": {
+            "error_m": 1.2702917140517687e-06,
+            "source_vertex_id": 6875,
+            "actual": [
+              0.1455300876444256,
+              -0.11123476963273103,
+              0.01582799936177414
+            ],
+            "expected": [
+              0.14553005993366241,
+              -0.11123602837324142,
+              0.015828168019652367
+            ]
+          }
+        }
+      ],
+      "maximum_error_m": 1.2702917140517687e-06,
+      "maximum_shape_weight_error": 0.0,
+      "tolerance_m": 1e-05,
+      "passes_10um": true,
+      "diagnostic_passes_5um": true
+    }
+  },
+  "limitations": [
+    "Five representative poses per clip, not continuous whole-timeline native numeric comparison.",
+    "macOS RealityKit evidence, not iPhone performance or gameplay integration.",
+    "Run exceeds the retained stricter 5 micrometre diagnostic; all cases pass the declared 10 micrometre bound."
+  ],
+  "native_renders": [
+    {
+      "file": "native-running.png",
+      "action": "miki.hand-motion.run",
+      "frame": 25
+    },
+    {
+      "file": "native-sneaking.png",
+      "action": "miki.hand-motion.sneak",
+      "frame": 73
+    },
+    {
+      "file": "native-shooting.png",
+      "action": "miki.hand-motion.shoot",
+      "frame": 186
+    }
+  ],
+  "export_coordinates": "Final exports retain the alignment parent and original local mesh coordinates; no explicit world bake is used. geomBindTransform is included in reconstruction.",
+  "tolerance_interpretation": "Explicit transform round-trip/reconstruction tolerance. The largest residual is at a rigid foot vertex; imported morph offsets match USD exactly.",
+  "independent_clone_joint_and_blend_state": true,
+  "exact_joint_reset": true
+}
