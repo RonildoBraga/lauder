@@ -73,9 +73,7 @@ final class GameSession {
   private struct Checkpoint {
     let progress: BridgeProgress
     let ammo: Int
-    let medicalKits: Int
     let defeated: Set<String>
-    let searched: Set<String>
     let hitsDealt: [String: Int]
   }
 
@@ -90,10 +88,6 @@ final class GameSession {
   private(set) var ammo: Int
   /// Hostiles defeated in this run.
   private(set) var defeated: Set<String> = []
-  /// Bodies or supply containers searched in this run.
-  private(set) var searched: Set<String> = []
-  /// Medical kits in the party's small shared inventory.
-  private(set) var medicalKits = 0
   /// Hits dealt to hostiles still standing.
   private var hitsDealt: [String: Int] = [:]
   /// Set while an encounter is under way.
@@ -120,7 +114,7 @@ final class GameSession {
     startingParty = level.party
     startingAmmo = level.startingAmmo
     ammo = level.startingAmmo
-    progress = BridgeProgress(encounters: level.encounters)
+    progress = BridgeProgress()
     party = level.party
     leader = level.party[0]
   }
@@ -287,9 +281,7 @@ final class GameSession {
   func beginEncounter(_ next: StoryBeat) -> Bool {
     guard mode == .exploring, checkpoint == nil, next == nextBeat else { return false }
     checkpoint = Checkpoint(
-      progress: progress, ammo: ammo, medicalKits: medicalKits, defeated: defeated,
-      searched: searched,
-      hitsDealt: hitsDealt)
+      progress: progress, ammo: ammo, defeated: defeated, hitsDealt: hitsDealt)
     progress.begin(next)
     return true
   }
@@ -321,27 +313,6 @@ final class GameSession {
     defeated.insert(hostile)
   }
 
-  /// A downed hostile's body is searched and its loot taken: true the first time.
-  func search(_ body: String, loot: Level.Loot) -> Bool {
-    guard mode == .exploring, defeated.contains(body), searched.insert(body).inserted else {
-      return false
-    }
-    ammo += loot.rounds
-    medicalKits += loot.medicalKits
-    return true
-  }
-
-  /// The bridge case finishes opening during its ambush cue. Neither bypass nor a robot
-  /// defeat yields body loot; this one-time collection works after either resolution.
-  func collectSupplies(id: String, loot: Level.Loot) -> Bool {
-    guard mode == .exploring, beat == .ambush, inEncounter,
-      id == BrooklynBridge.supplyCaseID, searched.insert(id).inserted
-    else { return false }
-    ammo += loot.rounds
-    medicalKits += loot.medicalKits
-    return true
-  }
-
   /// A conversation that a scene starts, rather than an action: true if it began.
   func converse(_ conversation: MissionScript.Conversation) -> Bool {
     guard mode == .exploring else { return false }
@@ -368,9 +339,7 @@ final class GameSession {
     guard let checkpoint else { return }
     progress = checkpoint.progress
     ammo = checkpoint.ammo
-    medicalKits = checkpoint.medicalKits
     defeated = checkpoint.defeated
-    searched = checkpoint.searched
     hitsDealt = checkpoint.hitsDealt
     hits = [:]
     self.checkpoint = nil
@@ -382,38 +351,12 @@ final class GameSession {
     hits = [:]
   }
 
-  /// Whether the action is offered at its approach now.
-  func offers(_ action: Level.ActionID) -> Bool {
-    progress.offers(action, searched: searched, inEncounter: inEncounter)
-  }
-
-  /// The world checks the approach; this authority checks mode, then asks the bridge rules.
-  /// Checkpoint creation precedes any inventory cost.
-  func perform(_ action: Level.ActionID) -> ActionResult {
-    guard mode == .exploring else { return .unavailable }
-    switch progress.action(
-      action, searched: searched, medicalKits: medicalKits,
-      inEncounter: inEncounter)
-    {
-    case .refused(let result):
-      return result
-    case .begin(let beat, let cost, let unavailable):
-      guard beginEncounter(beat) else { return unavailable }
-      medicalKits -= cost
-      return .done
-    }
-  }
-
-  /// The action press during a conversation: the next line, or after the last, what it settles
-  /// takes effect and play resumes.
+  /// The action press during a conversation: the next line, or after the last, play resumes.
   func advanceDialogue() {
     guard mode == .dialogue, let conversation else { return }
     if lineIndex + 1 < MissionScript.lines(conversation).count {
       lineIndex += 1
     } else {
-      let completion = progress.completion(of: conversation)
-      if let member = completion.recruit { recruit(member) }
-      progress.finish(completion)
       self.conversation = nil
       lineIndex = 0
       mode = .exploring
@@ -434,8 +377,6 @@ final class GameSession {
     hits = [:]
     ammo = startingAmmo
     defeated = []
-    searched = []
-    medicalKits = 0
     hitsDealt = [:]
     checkpoint = nil
     conversation = nil

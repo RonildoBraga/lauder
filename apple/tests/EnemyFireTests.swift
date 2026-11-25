@@ -99,7 +99,7 @@ struct EnemyFireTests {
     return Level(
       id: "enemy-fire-range",
       ground: .box("floor", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],
-      interactions: [], triggers: [],
+      triggers: [],
       encounters: [
         Level.Encounter(
           beat: .stranger, start: .area(.init(minimum: [-10, -10], maximum: [10, 10])),

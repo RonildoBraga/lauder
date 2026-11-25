@@ -183,7 +183,7 @@ struct LockOnTests {
       retryAt: leader, hostiles: robots, cues: cues)
     return Level(
       id: "lock-range", ground: .box("ground", at: [0, -0.15, 0], size: [80, 0.3, 80]), boxes: [],
-      interactions: [], triggers: [], encounters: [encounter], startingAmmo: 60, party: [.miki],
+      triggers: [], encounters: [encounter], startingAmmo: 60, party: [.miki],
       spawns: [.miki: leader, .tom: [-1, 9], .laura: [1, 9]], heading: [0, -1],
       cameraOffset: BrooklynBridge.cameraOffset,
       fieldOfView: 22, opening: "A range.", objective: "Test.", lookAround: "Snow.",

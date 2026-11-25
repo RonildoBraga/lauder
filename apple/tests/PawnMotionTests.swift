@@ -101,12 +101,13 @@ struct DodgeRollTests {
   @Test
   func switchingLeaderEndsARollAndStartsTheCooldown() {
     let world = GameWorld(level: BrooklynBridge.level)
-    world.session.recruit(.laura)
     world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
     #expect(world.roll?.member == .miki)
     world.session.cycleLeader()
     world.advanceParty(movement: .zero, deltaTime: 1 / 60)
     #expect(world.roll == nil, "the switch ends Miki's roll")
+    // Round the party, Tom then Laura, and back to Miki.
+    world.session.cycleLeader()
     world.session.cycleLeader()
     world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
     #expect(world.roll == nil, "the next roll waits for the cooldown")

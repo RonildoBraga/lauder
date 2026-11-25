@@ -46,9 +46,9 @@ The world loads the bridge synchronously and retains it across Restart. Figure m
 
 ## Runtime ownership
 
-GameSession composes a BridgeProgress value and owns exploring/dialogue/paused mode, the recruited party in switching order and active leader, Close/Spread/Column, each companion's following/going/holding order, one-shot trigger progress, bridge story beat, shared ammunition/medical kits, fight checkpoint/hits/defeated IDs and dialogue cursor. BridgeProgress plans concrete bridge actions and recruitment; the session validates mode, creates checkpoints before costs, and applies accepted effects. Recruiting takes effect after the corresponding exchange. StoryBeat is shared content data without a dependency on GameSession.
+GameSession composes a BridgeProgress value and owns exploring/dialogue/paused mode, the party in switching order and active leader, Close/Spread/Column, each companion's following/going/holding order, one-shot trigger progress, bridge story beat, shared ammunition, fight checkpoint/hits/defeated IDs and dialogue cursor. BridgeProgress keeps the bridge's beats in order: only the next can begin. A level can still start with fewer than three and recruit the others, a rule the tests keep; the bridge starts with all three. StoryBeat is shared content data without a dependency on GameSession.
 
-GameWorld owns a body for every stable member ID, their visibility and position, companion routes/motors/targets, the navigation grid and flat movement blockers. Unrecruited figures stay hidden except Laura lying where the bridge places her. It owns a WorldCamera and one EncounterSimulation/EncounterStage pair. WorldCamera owns camera/landmark presentation; CameraRig computes its motion and projection without scene entities. App activity, input availability and input readiness are operational gates, not extra gameplay modes.
+GameWorld owns a body for every stable member ID, their visibility and position, companion routes/motors/targets, the navigation grid and flat movement blockers. Figures outside the party stay hidden unless a level has them lying where they wait; on the bridge all three travel from the start. It owns a WorldCamera and one EncounterSimulation/EncounterStage pair. WorldCamera owns camera/landmark presentation; CameraRig computes its motion and projection without scene entities. App activity, input availability and input readiness are operational gates, not extra gameplay modes.
 
 The owned update samples controls, resolves InputRules using session mode, handles the accepted intent and advances fixed-step movement/combat while allowed. Entity transforms do not publish through SwiftUI every frame. UI observes coarse state and plays emitted feedback while active.
 
@@ -74,11 +74,11 @@ The camera follows the active leader and eases on a switch, retaining the elevat
 
 ## The opening
 
-The bridge starts with Miki alone. Timed encounter cues reveal/engage the first-tower robot, grant the separate case's supplies, script the ambush and Tom's shot, help Laura stand and begin brief conversations. Content owns text and authored points. The session owns which beats have completed; the world owns where bodies stand. The internal `stranger` beat and `searchStranger` action retain their stable identifiers across the robot replacement.
+The bridge starts with Miki, Tom and Laura together, Tom and Laura in the Close formation's places behind Miki. Its beats are the crossing, the first-tower guard and the Manhattan end. Timed encounter cues reveal/engage the robot and begin the closing exchange. Content owns text and authored points. The session owns which beats have completed; the world owns where bodies stand. The internal `stranger` beat retains its stable identifier across the robot replacement.
 
-### Interactions
+### The action press
 
-Search and Help check the leader's accessible approach and session progress again on press. Search opens the supply case once after the guard is defeated or bypassed, granting rounds/a kit and beginning the ambush. Help spends the shared kit and begins Laura's scene. These rules need no generic quest or inventory framework.
+With the supply case's search and Laura's Help gone, the bridge has no contextual actions: while exploring, the action press looks around. Scene cues such as a member appearing, standing up or taking a scripted shot remain for later scenes.
 
 ### Fights
 
@@ -92,7 +92,7 @@ EncounterStage projects poses, tracers/flashes/impacts and reusable target marke
 
 ### Scenes
 
-An encounter that holds the party advances only its cues: the ambush, helping Laura and the closing exchange. Movement, Fire and actions cannot interrupt its placement. Pause still works. A conversation suspends the remaining frame; its final line settles recruitment. These are bridge story sequences, not extra playable levels.
+An encounter that holds the party advances only its cues: on the bridge, the closing exchange. Movement, Fire and actions cannot interrupt its placement. Pause still works. A conversation suspends the remaining frame. These are bridge story sequences, not extra playable levels.
 
 ## Restart and lifecycle
 

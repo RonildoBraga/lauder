@@ -66,7 +66,7 @@ struct BallisticsTests {
   private func yard(boxes: [Level.Box] = []) -> Level {
     Level(
       id: "ballistics-test", ground: TestYard.ground, boxes: boxes,
-      interactions: [], triggers: [], party: [.miki],
+      triggers: [], party: [.miki],
       spawns: [.miki: .zero, .laura: [-1, 1], .tom: [1, 1]], heading: [0, -1],
       cameraOffset: [0, 10, 10], fieldOfView: 42, opening: "A yard.", objective: "Explore.",
       lookAround: "Ground.", restartNote: "Restart.")

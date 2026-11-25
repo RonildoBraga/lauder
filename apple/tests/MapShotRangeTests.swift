@@ -83,7 +83,7 @@ struct MapShotRangeTests {
     Level(
       id: "map-shot-range",
       ground: ground ?? .box("floor", at: [0, -0.15, -18], size: [52, 0.3, 60]),
-      boxes: boxes, interactions: [], triggers: [],
+      boxes: boxes, triggers: [],
       party: [.miki], spawns: [.miki: [0, 6]], heading: [0, -1],
       cameraOffset: [0, 10, 10], fieldOfView: 42,
       opening: "Range.", objective: "Range.", lookAround: "Range.", restartNote: "Restart.")

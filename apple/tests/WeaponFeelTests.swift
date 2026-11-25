@@ -363,7 +363,7 @@ struct WeaponFeelTests {
     return Level(
       id: "test-range",
       ground: Level.Box(name: "ground", position: [0, -0.15, 0], size: [40, 0.3, 40]),
-      boxes: boxes, interactions: [], triggers: [], encounters: [fight], startingAmmo: 60,
+      boxes: boxes, triggers: [], encounters: [fight], startingAmmo: 60,
       party: [.miki, .tom, .laura], spawns: [.miki: [0, 2], .tom: [-1, 3], .laura: [1, 3]],
       heading: [0, -1], cameraOffset: TestYard.cameraOffset,
       fieldOfView: 42, opening: "A range.", objective: "Test.",

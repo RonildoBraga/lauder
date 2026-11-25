@@ -36,8 +36,7 @@ enum TestYard {
   ]
 
   static let level = Level(
-    id: "test-yard", ground: ground, boxes: boxes, interactions: [],
-    triggers: [], party: [.miki, .laura, .tom],
+    id: "test-yard", ground: ground, boxes: boxes, triggers: [], party: [.miki, .laura, .tom],
     spawns: [.miki: [-8, 3], .laura: [-8, 3.8], .tom: [-8, 4.6]], heading: [0, -1],
     cameraOffset: cameraOffset, fieldOfView: 42, opening: "A walled yard.",
     objective: "Move together.", lookAround: "Low walls, and a room with one way in.",

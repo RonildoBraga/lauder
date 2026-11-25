@@ -313,7 +313,7 @@
         case .expectRestarted:
           let start = snapshot.level
           if snapshot.leader != start.party[0] || snapshot.party != start.party
-            || snapshot.firedTriggers != 0 || snapshot.beat != .alone || snapshot.defeated != 0
+            || snapshot.firedTriggers != 0 || snapshot.beat != .crossing || snapshot.defeated != 0
             || snapshot.hitsTaken != 0 || snapshot.ammo != start.startingAmmo
             || snapshot.mode != .exploring || snapshot.formation != .close
             || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
@@ -508,14 +508,14 @@
     // MARK: - Scenarios
 
     /// Restart from the pause menu: Pause, down to Restart, confirm. The check comes before the
-    /// companions step into formation around Miki.
+    /// companions step into formation round Miki again.
     private static let restartRun: [Step] = [
       .pause, .wait(seconds: 0.5), .menu(1), .wait(seconds: 0.3), .mark("restart chosen"),
       .wait(seconds: 0.6), .act, .expectRestarted, .mark("restarted"), .wait(seconds: 1),
     ]
 
-    /// Miki alone from Brooklyn to Manhattan, resolving the first guard and crossing both
-    /// towers before Restart. The supply-case scene is exercised by the ambush/opening routes.
+    /// The three from Brooklyn to Manhattan, resolving the first guard and crossing both towers.
+    /// Each trigger shows its line once a run, even walked into again, and Restart clears them.
     private static let bridgeWalk: [Step] =
       [
         .mark("start"), .walk([6.5, 66]), .mark("buried road"), .walk([6.5, 20]),
@@ -523,8 +523,8 @@
         .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
         .mark("beyond the first tower"), .walk([6.5, -206.15]), .mark("mid-span"),
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .mark("Manhattan end"),
-        .expectTriggers(5), .walk([-7, -494.3]), .walk([-7, -502.3]), .expectTriggers(5),
-        .wait(seconds: 0.5),
+        .talk, .expectBeat(.arrived), .expectTriggers(5), .walk([-7, -494.3]),
+        .walk([-7, -502.3]), .expectTriggers(5), .wait(seconds: 0.5),
       ] + restartRun + [.expectTriggers(0)]
 
     /// Through the east arch into the guard's acquisition range. The stable stranger beat is
@@ -556,7 +556,8 @@
     /// again at its checkpoint with inventory restored; the second attempt returns fire.
     private static let fightRetry: [Step] =
       toTheStranger + [
-        .wait(seconds: 20), .expectBeat(.alone), .expectHits(0), .expectDefeated(0), .mark("retry"),
+        .wait(seconds: 20), .expectBeat(.crossing), .expectHits(0), .expectDefeated(0),
+        .mark("retry"),
         .walk([6.5, 10]), .expectBeat(.stranger), .fire(seconds: 4),
         .expectDefeated(1), .mark("won after the retry"),
       ]
@@ -571,58 +572,28 @@
         .mark("guard down, lock let go"), .wait(seconds: 1),
       ] + restartRun
 
-    /// Resolve the guard, cross the clear outgoing floor to the case, then Tom's ambush.
-    private static let toTom: [Step] =
+    /// From the start through the first-tower guard's fight, then on beyond mid-span towards
+    /// the second tower.
+    private static let pastTheGuard: [Step] =
       toTheStranger + [
-        .fire(seconds: 4), .expectDefeated(1), .walk([6.5, -4]),
-        .walk(BrooklynBridge.supplyCasePosition), .mark("at the supply case"),
-        .act, .wait(seconds: 2.3), .mark("the attacker"),
-        .wait(seconds: 1.3), .talk, .expectBeat(.withTom), .expectParty([.miki, .tom]),
-        .expectDefeated(2), .mark("Tom joins"),
+        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
+        .walk([6.5, -206.15]), .walk([-7, -240]), .mark("beyond mid-span"),
       ]
 
-    /// The ambush (ADR 0004, M3): after resolving the guard Miki opens the case, the attacker
-    /// runs at her out of the west arch, Tom drops him and joins after a short exchange. Tom then
-    /// follows her on to mid-span, and a Restart leaves Miki alone again.
-    private static let ambush: [Step] =
-      toTom + [
-        .walk([6.5, -12]), .mark("beyond the tower with Tom"), .walk([6.5, -206.15]),
-        .mark("mid-span with Tom"), .wait(seconds: 0.5),
-      ] + restartRun + [.expectParty([.miki])]
-
-    /// From the start to Laura joining (M4): with Tom, beyond mid-span, where a woman calls out;
-    /// Help uses the medical kit, she stands, and the exchange ends with her joining.
-    private static let toLaura: [Step] =
-      toTom + [
-        .walk([6.5, -206.15]), .walk([6.5, -225.15]), .walk([-6.5, -230.15]),
-        .wait(seconds: 0.6), .expectBeat(.lauraFound), .mark("Laura found"),
-        .wait(seconds: 2), .walk([-7, -234.15]),
-        .mark("at Laura"), .act, .wait(seconds: 1.8), .mark("on her feet"), .wait(seconds: 0.8),
-        .talk, .expectBeat(.withLaura), .expectParty([.miki, .tom, .laura]),
-        .mark("Laura joins"),
-      ]
-
-    /// Laura (M4): she joins, then both companions follow Miki on towards Manhattan, and a
-    /// Restart leaves Miki alone again.
-    private static let laura: [Step] =
-      toLaura + [.walk([-7, -257.15]), .mark("three together"), .wait(seconds: 0.5)] + restartRun
-      + [.expectParty([.miki])]
-
-    /// The whole opening (M4): from the Brooklyn end to the Manhattan end, through the fight, the
-    /// ambush and Laura, then the closing exchange with all three, then a Restart.
+    /// The whole opening: the three from the Brooklyn end to the Manhattan end, through the
+    /// guard's fight, then the closing exchange, then a Restart that starts them together again.
     private static let opening: [Step] =
-      toLaura + [
+      pastTheGuard + [
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .talk,
         .expectBeat(.arrived), .mark("Manhattan, together"), .expectTriggers(5),
         .wait(seconds: 0.5),
-      ] + restartRun + [.expectParty([.miki]), .expectTriggers(0)]
+      ] + restartRun + [.expectParty([.miki, .tom, .laura]), .expectTriggers(0)]
 
-    /// Formations (M5): once Laura joins, the formation button cycles Close, Spread and Column
-    /// on the open snow. Spread keeps its width through the second tower's west arch, which is
-    /// wide enough for it; the closing exchange keeps the formation, and Restart returns to Close
-    /// with Miki alone.
+    /// Formations (M5): beyond mid-span, the formation button cycles Close, Spread and Column on
+    /// the open snow. Spread keeps its width through the second tower's west arch, which is wide
+    /// enough for it; the closing exchange keeps the formation, and Restart returns to Close.
     private static let formations: [Step] =
-      toLaura + [
+      pastTheGuard + [
         .expectFormation(.close), .formation, .expectFormation(.spread), .walk([-7, -250]),
         .mark("spread"), .walk([-7, -275]), .formation, .expectFormation(.column),
         .walk([-7, -295]), .mark("column"), .walk([-7, -300]), .formation,
@@ -631,16 +602,16 @@
         .mark("second tower in spread"), .walk([-7, -472]), .mark("in the arch in spread"),
         .walk([-7, -502.3]), .talk, .expectBeat(.arrived), .expectFormation(.spread),
         .mark("Manhattan, together"), .wait(seconds: 0.5),
-      ] + restartRun + [.expectParty([.miki])]
+      ] + restartRun + [.expectFormation(.close)]
 
-    /// Squad orders (ADR 0003, phase S3), once Laura joins. The D-pad sends both companions
+    /// Squad orders (ADR 0003, phase S3), beyond mid-span. The D-pad sends both companions
     /// ahead, and they hold there while Miki walks off until Formation calls them back. Then one
     /// companion goes while the other follows, the other goes beside the first, and Hold keeps
     /// both where they stand. A switch leaves the previous leader holding with them. Touch
     /// orders send both to a marked spot and refuse one aimed off the buried road, and the end of
     /// the opening waits for companions left holding until they are called back.
     private static let orders: [Step] =
-      toLaura + [
+      pastTheGuard + [
         .walk([-7, -270]), .wait(seconds: 1), .mark("ready"), .order(.bothGo),
         .expectOrder(.tom, "going"), .expectOrder(.laura, "going"), .wait(seconds: 0.5),
         .mark("both going"), .wait(seconds: 3.5), .expectOrder(.tom, "holding"),
@@ -670,16 +641,15 @@
         .expectRefused(1), .mark("refused off the road"), .wait(seconds: 0.6), .formation,
         .walk([-7, -440]),
         .wait(seconds: 2), .order(.hold), .walk([-7, -502.3]), .wait(seconds: 2),
-        .expectBeat(.withLaura), .mark("waiting for the others"), .wait(seconds: 0.6), .formation,
+        .expectBeat(.stranger), .mark("waiting for the others"), .wait(seconds: 0.6), .formation,
         .awaitConversation(seconds: 45), .talk, .expectBeat(.arrived),
         .mark("Manhattan, together"), .wait(seconds: 0.5),
-      ] + restartRun + [.expectParty([.miki])]
+      ] + restartRun + [.expectParty([.miki, .tom, .laura])]
 
     /// Every bridge scenario, by the name `apple/scripts/playtest` gives it.
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
-      ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-      ("orders", orders), ("lock-on", lockOn),
+      ("opening", opening), ("formations", formations), ("orders", orders), ("lock-on", lockOn),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

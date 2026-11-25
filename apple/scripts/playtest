@@ -32,8 +32,7 @@ from preflight import check_assets, iphone_simulator, mask  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
 SCENARIOS = [
-    "bridge-walk", "first-fight", "fight-retry", "ambush", "laura", "opening",
-    "formations", "orders", "lock-on",
+    "bridge-walk", "first-fight", "fight-retry", "opening", "formations", "orders", "lock-on",
 ]
 
 

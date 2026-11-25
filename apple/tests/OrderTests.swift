@@ -14,7 +14,7 @@ struct OrderTests {
 
   @Test
   func ordersWaitForTheSecondCompanion() {
-    let session = GameSession(level: BrooklynBridge.level)
+    let session = GameSession(level: TestRange.mikiAlone)
     session.recruit(.tom)
     #expect(!session.ordersAvailable, "Tom alone follows")
     #expect(!session.send(.tom, to: [0, 0]))
@@ -29,8 +29,8 @@ struct OrderTests {
 
   @Test
   func theSidesKeepTheSwitchingOrderForWhoeverLeads() {
-    // The bridge's party joins as Miki, Tom and Laura. Right is whoever Next would lead as.
-    let session = GameSession(level: BrooklynBridge.level)
+    // The party joins as Miki, Tom and Laura. Right is whoever Next would lead as.
+    let session = GameSession(level: TestRange.mikiAlone)
     session.recruit(.tom)
     #expect(session.leftCompanion == nil && session.rightCompanion == nil)
     session.recruit(.laura)
@@ -289,7 +289,7 @@ struct OrderTests {
 
   @Test
   func ordersReachTheWorldOnlyWhileExploringAndOnceOffered() {
-    let world = GameWorld(level: BrooklynBridge.level)
+    let world = GameWorld(level: TestRange.mikiAlone)
     give(.bothGo, to: world)
     #expect(world.session.orders.isEmpty, "Miki is alone")
     let yard = GameWorld(level: TestYard.level)

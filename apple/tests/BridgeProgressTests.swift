@@ -3,56 +3,45 @@ import Testing
 
 @testable import Lauder
 
-/// Progression is a value inside the session, while the session keeps authority over mode,
-/// inventory and retry. These checks cover the boundaries affected by that separation.
+/// Progression is a value inside the session, while the session keeps authority over mode and
+/// retry. The three cross together, so the bridge's story is the guard's fight, then the
+/// Manhattan end.
 @MainActor
 struct BridgeProgressTests {
   @Test
-  func aResolvedBypassOffersTheCaseWithoutInventingARobotDefeat() {
+  func theThreeStartTogetherAndTheBeatsComeInOrder() {
     let session = GameSession(level: BrooklynBridge.level)
-    #expect(
-      !session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
+    #expect(session.party == [.miki, .tom, .laura] && session.leader == .miki)
+    #expect(session.beat == .crossing && session.formationsAvailable)
+    #expect(!session.beginEncounter(.arrived), "Manhattan comes after the guard")
     #expect(session.beginEncounter(.stranger))
-    #expect(!session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger) == .notYet)
-    for _ in 0..<12 { #expect(session.spendRound()) }
-    // EncounterSimulation closes a verified safe bypass without marking the guard defeated.
+    #expect(!session.beginEncounter(.arrived), "not during the fight")
     session.endEncounter()
-    #expect(session.defeated.isEmpty && session.ammo == 0)
-    #expect(session.offers(.searchStranger))
-    #expect(session.perform(.searchStranger) == .done)
-    #expect(session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
-    #expect(
-      !session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
-    #expect(session.ammo == 6 && session.medicalKits == 1)
-    #expect(session.defeated.isEmpty && session.searched == [BrooklynBridge.supplyCaseID])
+    #expect(session.beginEncounter(.arrived))
+    #expect(session.beat == .arrived && session.nextBeat == nil)
+    session.restart()
+    #expect(session.beat == .crossing && session.party == [.miki, .tom, .laura])
+  }
+
+  /// A safe bypass ends the guard's encounter without inventing a defeat, and the Manhattan end
+  /// still follows.
+  @Test
+  func aResolvedBypassLeadsOnToManhattanWithoutARobotDefeat() {
+    let session = GameSession(level: BrooklynBridge.level)
+    #expect(session.beginEncounter(.stranger))
+    session.endEncounter()
+    #expect(session.defeated.isEmpty && session.beat == .stranger)
+    #expect(session.beginEncounter(.arrived))
   }
 
   @Test
-  func retryingHelpRestoresTheStoryAndTheKitFromBeforeTheCost() {
-    let session = readyToHelp()
-    #expect(session.perform(.helpLaura) == .done)
-    #expect(session.beat == .helpingLaura && session.medicalKits == 0)
+  func retryingTheFightRestoresTheStoryFromBeforeIt() {
+    let session = GameSession(level: BrooklynBridge.level)
+    #expect(session.beginEncounter(.stranger))
     for _ in 0..<GameSession.hitsAllowed { _ = session.takeHit() }
     session.retryEncounter()
-    #expect(session.beat == .lauraFound && !session.inEncounter)
-    #expect(session.medicalKits == 1 && session.offers(.helpLaura))
-    #expect(session.party == [.miki, .tom] && session.searched == [BrooklynBridge.supplyCaseID])
-    #expect(session.perform(.helpLaura) == .done)
-    #expect(session.medicalKits == 0)
-    #expect(session.perform(.helpLaura) == .alreadyDone)
-    #expect(session.medicalKits == 0)
-  }
-
-  @Test
-  func aPausedActionCannotBeginProgressOrSpendItsCost() {
-    let session = readyToHelp()
-    session.togglePause()
-    #expect(session.perform(.helpLaura) == .unavailable)
-    #expect(session.beat == .lauraFound && session.medicalKits == 1 && !session.inEncounter)
-    session.togglePause()
-    #expect(session.perform(.helpLaura) == .done)
-    #expect(session.beat == .helpingLaura && session.medicalKits == 0)
+    #expect(session.beat == .crossing && !session.inEncounter)
+    #expect(session.beginEncounter(.stranger))
   }
 
   @Test
@@ -68,47 +57,16 @@ struct BridgeProgressTests {
     }
   }
 
+  /// The closing exchange at the Manhattan end ends the opening; nobody joins any more.
   @Test
-  func aStoryBeatNotificationSeesTheMemberAlreadyRecruited() async {
+  func theClosingExchangeChangesNobody() {
     let session = GameSession(level: BrooklynBridge.level)
     #expect(session.beginEncounter(.stranger))
-    session.defeat("stranger")
     session.endEncounter()
-    #expect(session.perform(.searchStranger) == .done)
-    session.endEncounter()
-    #expect(session.converse(.metTom))
-    for _ in MissionScript.lines(.metTom).dropLast() { session.advanceDialogue() }
-    #expect(session.beat == .ambush && session.party == [.miki])
-    await confirmation { changed in
-      withObservationTracking {
-        _ = session.beat
-      } onChange: {
-        MainActor.assumeIsolated {
-          #expect(session.party == [.miki, .tom])
-          // Observation notifies before the property changes, after recruitment commits.
-          #expect(session.beat == .ambush)
-          changed()
-        }
-      }
-      session.advanceDialogue()
-    }
-    #expect(session.party == [.miki, .tom] && session.beat == .withTom)
-    #expect(session.mode == .exploring)
-  }
-
-  private func readyToHelp() -> GameSession {
-    let session = GameSession(level: BrooklynBridge.level)
-    #expect(session.beginEncounter(.stranger))
-    session.defeat("stranger")
-    session.endEncounter()
-    #expect(session.perform(.searchStranger) == .done)
-    #expect(session.collectSupplies(id: BrooklynBridge.supplyCaseID, loot: BrooklynBridge.supplies))
-    session.endEncounter()
-    #expect(session.converse(.metTom))
-    for _ in MissionScript.lines(.metTom) { session.advanceDialogue() }
-    #expect(session.beginEncounter(.lauraFound))
-    session.endEncounter()
-    #expect(session.beat == .lauraFound && session.medicalKits == 1)
-    return session
+    #expect(session.beginEncounter(.arrived))
+    #expect(session.converse(.arrival))
+    for _ in MissionScript.lines(.arrival) { session.advanceDialogue() }
+    #expect(session.mode == .exploring && session.party == [.miki, .tom, .laura])
+    #expect(session.beat == .arrived)
   }
 }

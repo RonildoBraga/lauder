@@ -31,8 +31,6 @@ final class GameWorld {
   private var shownLine: String
   @ObservationIgnored private var lineCount = 0
   private(set) var diagnostic: String?
-  /// The leader's contextual action here, such as "Search"; nil when there is none.
-  private(set) var actionName: String?
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
   /// Whether the leader's weapon is drawn.
@@ -234,9 +232,6 @@ final class GameWorld {
       }
     }
     camera.attach(to: root)
-    // The session refers to each action by its name, so no action is defined twice.
-    let actions = level.interactions.map(\.id)
-    precondition(Set(actions).count == actions.count, "\(level.id) defines an action twice.")
     root.addChild(stage.container)
     style.addLights(level.lights, to: root)
     for member in PartyMember.allCases {
@@ -264,7 +259,7 @@ final class GameWorld {
     for (member, weapon) in stage.weaponProps { visuals[member]?.addChild(weapon) }
     placeParty()
     updateCamera(deltaTime: 0)
-    updatePromptAndCompass()
+    updateCompass()
     updateWeaponStatus()
   }
 
@@ -421,7 +416,7 @@ final class GameWorld {
       } else if input.actionPressed {
         session.advanceDialogue()
         // What a finished conversation settles has just taken effect.
-        if session.mode != .dialogue { updatePromptAndCompass() }
+        if session.mode != .dialogue { updateCompass() }
       }
     case .exploring:
       if input.pausePressed {
@@ -452,38 +447,13 @@ final class GameWorld {
     pinHolds()
     camera.switchLeader()
     showLeaderMarker()
-    updatePromptAndCompass()
+    updateCompass()
   }
 
-  /// The leader's action press. Identity, approach and progress are checked afresh, so a
-  /// prompt left over from before a move or a switch cannot act.
+  /// The leader's action press while exploring: the bridge has nothing to search or help with
+  /// any more, so the leader looks around.
   func performAction() {
-    guard session.mode == .exploring, !fight.holdsParty,
-      let position = self.position(of: session.leader)
-    else { return }
-    let here = level.interactions.filter { $0.approach.contains(position) }
-    // Several actions can share an approach; the one offered now comes first.
-    if let interaction = here.first(where: { session.offers($0.id) }) ?? here.first {
-      switch session.perform(interaction.id) {
-      case .done:
-        observation = interaction.result
-        // An action can begin a scene, as the search begins the ambush (ADR 0004, M3).
-        if let encounter = level.encounters.first(where: {
-          if case .action(let action) = $0.start { action == interaction.id } else { false }
-        }) {
-          fight.begin(encounter)
-          retrySpot = encounter.retryAt
-        }
-      case .alreadyDone:
-        observation = interaction.repeated
-      case .notYet:
-        observation = interaction.early
-      case .unavailable:
-        break
-      }
-      updatePromptAndCompass()
-      return
-    }
+    guard session.mode == .exploring, !fight.holdsParty else { return }
     observation = level.lookAround
   }
 
@@ -548,7 +518,7 @@ final class GameWorld {
     unsimulatedTime = 0
     camera.reset(over: spot)
     updateCamera(deltaTime: 0)
-    updatePromptAndCompass()
+    updateCompass()
   }
 
   /// Every body at its spawn point, facing the level's starting direction. Members who have
@@ -590,7 +560,7 @@ final class GameWorld {
     }
     updateCamera(deltaTime: elapsed)
     ageLines(by: elapsed)
-    updatePromptAndCompass()
+    updateCompass()
     checkTriggers()
     if crossRemaining > 0 {
       crossRemaining -= elapsed
@@ -992,7 +962,7 @@ final class GameWorld {
       let robot = encounter.hostiles.first(where: { $0.attack == .robot }),
       fight.resolveRobotBypass(id: robot.id, session: session)
     {
-      observation = "Clear of the guard. A supply case lies ahead."
+      observation = "Clear of the guard."
     }
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
@@ -1259,13 +1229,6 @@ final class GameWorld {
     if next != compass { compass = next }
   }
 
-  /// The compass, and the leader's action prompt where they stand.
-  private func updatePromptAndCompass() {
-    updateCompass()
-    guard let player = bodies[session.leader] else { return }
-    updatePrompt(at: SIMD2(player.position.x, player.position.z))
-  }
-
   #if DEBUG
     /// What a scripted playtest can see each frame.
     var playtestSnapshot: PlaytestRunner.Snapshot {
@@ -1337,14 +1300,6 @@ final class GameWorld {
       }
     }
   #endif
-
-  /// The leader's currently available bridge interaction.
-  private func updatePrompt(at position: SIMD2<Float>) {
-    let name = level.interactions.first {
-      $0.approach.contains(position) && session.offers($0.id)
-    }?.name
-    if actionName != name { actionName = name }
-  }
 
   private static func freshMotors() -> [PartyMember: CompanionMotor] {
     Dictionary(uniqueKeysWithValues: PartyMember.allCases.map { ($0, CompanionMotor(for: $0)) })

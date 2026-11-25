@@ -100,7 +100,7 @@ struct EncounterSimulationTests {
     return Level(
       id: "simulation-range",
       ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],
-      interactions: [], triggers: [], encounters: [encounter], startingAmmo: 60,
+      triggers: [], encounters: [encounter], startingAmmo: 60,
       party: [.miki, .tom, .laura], spawns: figures, heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.")
