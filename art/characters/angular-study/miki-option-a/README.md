@@ -2,6 +2,8 @@
 
 **25 November 2026 — concept A selected; derived references ready for visual review.** After rejecting the high-collar dress mesh, the maintainer requested a fresh concept → Tripo → Blender process using the lessons from earlier attempts. The maintainer then chose **“lets proceed with option A”** from the two new concept illustrations. This selects the compact tailored-dress design below, not a finished mesh, exact hidden construction or the generated reference sheets as final art.
 
+**Follow-up:** After the references were shown, the maintainer said to proceed with the proposed single unrigged Tripo candidate. The [native P2.0 trial](../../../../blender/studies/miki-option-a-tripo/README.md) now awaits actual model appearance review. The no-Tripo boundary recorded below describes this reference-production step, not that separate trial.
+
 ## Selected design
 
 ![Selected Miki concept A](concept-v1.png)

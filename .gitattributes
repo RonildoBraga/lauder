@@ -89,3 +89,6 @@ art/characters/angular-study/miki-option-a/concept-v1.png filter=lfs diff=lfs me
 art/characters/angular-study/miki-option-a/front-a-pose-v1.png filter=lfs diff=lfs merge=lfs -text
 art/characters/angular-study/miki-option-a/body-turnaround-v1.png filter=lfs diff=lfs merge=lfs -text
 art/characters/angular-study/miki-option-a/head-and-collar-v1.png filter=lfs diff=lfs merge=lfs -text
+
+# Untouched textured vendor export for the isolated Option A trial.
+blender/studies/miki-option-a-tripo/source/miki-option-a-p2-textured.zip filter=lfs diff=lfs merge=lfs -text
