@@ -1,6 +1,6 @@
 # ADR 0021 — Paired weapons
 
-**Status:** Accepted, with starting values to tune in play; implemented in the [paired weapons](../prototype-plan.md#paired-weapons) pass. Physical-phone behaviour is unverified.
+**Status:** Accepted, with starting values to tune in play; implemented in the [paired weapons](../prototype-plan.md#paired-weapons) pass, [PR #158](https://github.com/RonildoBraga/lauder/pull/158). Physical-phone behaviour is unverified.
 
 **Date:** 26 November 2026
 
