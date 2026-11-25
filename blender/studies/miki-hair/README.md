@@ -1,6 +1,6 @@
 # Miki swept-hair study
 
-**Status: assigned appearance study, awaiting visual review.** After the [head cleanup](../miki-head-cleanup/README.md), the maintainer asked to proceed with Miki's separate swept hair and native reference/game-camera views. The cleaned head is the working base for this pass; its geometry, materials and source provenance remain unchanged. Body, skeleton and animation fitting follow appearance review.
+**Status: retained hair source and appearance comparison.** After the [head cleanup](../miki-head-cleanup/README.md), the maintainer asked to proceed with Miki's separate swept hair and native reference/game-camera views. The cleaned head is the working base for this pass; its geometry, materials and source provenance remain unchanged. The maintainer subsequently assigned [neck/collar and shared-motion fitting](../miki-motion/README.md); that derivative references this unchanged hair source.
 
 ## Open and inspect
 
