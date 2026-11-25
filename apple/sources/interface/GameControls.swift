@@ -25,6 +25,9 @@ final class GameControls {
   private(set) var formationButtonName = "Formation"
   /// The button that makes the leader dodge-roll.
   private(set) var dodgeButtonName = "Roll"
+  /// The press that locks the aim on a hostile, such as R3; touch has none, and Fire's
+  /// assisted aim picks for it (ADR 0020).
+  private(set) var lockButtonName: String?
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -141,6 +144,7 @@ final class GameControls {
       controllerFire: pad?.rightTrigger.isPressed == true,
       controllerFormation: pad?.buttonY.isPressed == true,
       controllerDodge: pad?.buttonX.isPressed == true,
+      controllerLock: pad?.rightThumbstickButton?.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
@@ -148,7 +152,7 @@ final class GameControls {
       keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
       keyboardSwitch: pressed(.keyQ),
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
-      keyboardDodge: pressed(.spacebar),
+      keyboardDodge: pressed(.spacebar), keyboardLock: pressed(.keyO),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       aimUp: pressed(.keyI), aimDown: pressed(.keyK), aimLeft: pressed(.keyJ),
@@ -241,34 +245,34 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "L1",
-        fire: "R2", aim: "Right stick", formation: "Triangle", dodge: "Square")
+        fire: "R2", aim: "Right stick", formation: "Triangle", dodge: "Square", lock: "R3")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "LB",
-        fire: "RT", aim: "Right stick", formation: "Y", dodge: "X")
+        fire: "RT", aim: "Right stick", formation: "Y", dodge: "X", lock: "RS")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
         cycle: "Left shoulder", fire: "Right trigger", aim: "Right stick", formation: "Button Y",
-        dodge: "Button X")
+        dodge: "Button X", lock: "Right stick press")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F",
-      aim: "IJKL", formation: "R", dodge: "Space")
+      aim: "IJKL", formation: "R", dodge: "Space", lock: "O")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
-      aim: nil, formation: "Formation", dodge: "Roll")
+      aim: nil, formation: "Formation", dodge: "Roll", lock: nil)
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, cycle: String, fire: String, aim: String?,
-    formation: String, dodge: String
+    formation: String, dodge: String, lock: String?
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -278,6 +282,7 @@ final class GameControls {
     if aimControlName != aim { aimControlName = aim }
     if formationButtonName != formation { formationButtonName = formation }
     if dodgeButtonName != dodge { dodgeButtonName = dodge }
+    if lockButtonName != lock { lockButtonName = lock }
   }
 
   isolated deinit {

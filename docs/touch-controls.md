@@ -12,7 +12,7 @@ Roll makes the leader [dodge-roll](decisions/0019-dodge-roll.md) 3 m the way the
 
 Next switches leadership once per press without changing positions. Formation cycles Close, Spread and Column; after an order it reads Follow and calls companions back. Once both companions have joined, hold on open ground for about a third of a second to open the order menu. Lift on Both to send both, slide left/right to send that member or down to Hold. Slide up, lift before the menu opens or move more than about 12 points first to cancel. The camera ray fixes the marked ground point when the menu opens. An unreachable destination gives a brief red cross; accepted destinations show each companion's ring.
 
-Pause keeps Resume at the top right, Look reads Restart and Vibration switches On/Off. There is no scene selector, test-weapon choice, Signature or Regroup action. The status panel stays visible with touch. Controller/keyboard equivalents are in the [input contract](prototype-plan.md#input-and-interaction-contract).
+Pause keeps Resume at the top right, Look reads Restart and Vibration switches On/Off. There is no scene selector, test-weapon choice, Signature, Regroup action or [lock-on](decisions/0020-lock-on.md): Fire's assisted aim picks the target. The status panel stays visible with touch. Controller/keyboard equivalents are in the [input contract](prototype-plan.md#input-and-interaction-contract).
 
 ## Input ownership
 

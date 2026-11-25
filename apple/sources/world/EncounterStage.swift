@@ -13,6 +13,11 @@ final class EncounterStage {
   private var hostileWeaponProps: [String: Entity] = [:]
   private var robots: [String: RobotPresentation] = [:]
   private let targetMarker: Entity
+  /// The red ring round the locked hostile (ADR 0020).
+  private let lockMarker: Entity
+  /// The lock ring's scale round a person, and round the robot, whose legs reach further.
+  private let lockScale: Float
+  private let robotLockScale: Float
 
   init(level: Level, style: SceneStyle) {
     let shots = Entity()
@@ -23,9 +28,16 @@ final class EncounterStage {
         ($0, style.weapon(for: Weapon.forMember($0).kind))
       })
     targetMarker = style.targetMarker()
+    lockMarker = style.lockMarker()
+    lockScale = style.markerScale
+    robotLockScale = max(
+      style.markerScale,
+      (RobotModelGeometry.navigationRadius + PartyBody.radius) / SceneStyle.lockRingRadius)
     container.name = "combat"
     targetMarker.name = "combat.target"
+    lockMarker.name = "combat.lock"
     container.addChild(targetMarker)
+    container.addChild(lockMarker)
     container.addChild(shots)
 
     for spec in level.encounters.flatMap(\.hostiles) {
@@ -99,6 +111,14 @@ final class EncounterStage {
       targetMarker.isEnabled = true
     } else {
       targetMarker.isEnabled = false
+    }
+    if let id = fight.lock, let point = fight.lockPoint {
+      let scale = robots[id] == nil ? lockScale : robotLockScale
+      lockMarker.scale = [scale, 1, scale]
+      lockMarker.position = [point.x, SceneStyle.lockRingHeight, point.y]
+      lockMarker.isEnabled = true
+    } else {
+      lockMarker.isEnabled = false
     }
     let drawn = fight.drawnWeapons
     for member in PartyMember.allCases {

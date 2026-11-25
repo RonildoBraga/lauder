@@ -1,12 +1,14 @@
 # Lauder — bridge-only prototype
 
-**Updated:** 25 November 2026
+**Updated:** 26 November 2026
 
 **Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaces the first human shooter while Miki is alone. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
 On 25 November 2026 the maintainer replaced the party's figures with [pawns](visual-direction.md#characters-and-interface) and asked for a [dodge roll](decisions/0019-dodge-roll.md) to escape attacks, then said **“Start building”**. Their verification is recorded under [Pawns and dodge roll](#pawns-and-dodge-roll).
+
+On 26 November 2026 the maintainer asked for three changes to the controls: one leader switch on L1 / LB that goes round the party, the status panel's toggle moved from Circle / B into the pause menu, and a [lock-on](decisions/0020-lock-on.md) on a press of the right stick. Their verification is recorded under [Controls pass](#controls-pass).
 
 ## Structural preparation
 
@@ -41,6 +43,7 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
 | Draw and fire the leader's native weapon; hold to fire, automatic reload | R2 / RT | Fire with assisted aim | F |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
+| [Lock the aim](decisions/0020-lock-on.md) on a hostile, or move it to the next; two quick presses let go | R3 / RS, a press of the right stick | None: Fire's assisted aim | O |
 | Dodge roll: the leader tumbles 3 m the way they move, or face, while hostile shots pass through | Square / X | Roll | Space |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
 | Choose Resume, Restart, Vibration or Status panel while paused | Stick or D-pad up/down, then Cross / A | Resume, Restart or Vibration | W/S or up/down, then E |
@@ -48,7 +51,7 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 
 Touch is automatic without an extended controller. An attached controller is preferred unless **Use touch controls** is chosen; **Use controller** returns to it. Keyboard remains available. These sources share InputRules and session authority. Xbox uses the shared extended-gamepad path; hardware delivery remains unverified.
 
-Switching preserves positions and progress; held movement can continue on the new leader. R1 / RB and Circle / B are unassigned. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
+Switching preserves positions and progress; held movement can continue on the new leader. R1 / RB and Circle / B are unassigned. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
 Search and Help are revalidated on press against the leader's position and current progress. The supply case can be searched once after defeating or bypassing the guard, starting the ambush. Helping Laura uses the shared medical kit and starts her recruitment exchange.
 
@@ -144,6 +147,32 @@ On 25 November 2026 the maintainer chose simpler figures for the party from a [g
 
   The two new GameWorld tests fail without their fix.
 - **Not yet verified:** the phone. That covers how the pawns read at their real size, the walk and the roll's feel, the touch Roll button with a finger on the stick, controllers, frame pacing and the guard fight's balance with a roll.
+
+### Controls pass
+
+On 26 November 2026, after reviewing a map of the controller's buttons, the maintainer asked for three changes in a Claude session, which has no public permalink:
+- **“instead of using R1 and L1 to navigate through the characters, we should just use L1 and go in circles”**. L1 / LB is now the only leader switch. It goes round the party in the order that Next keeps on touch and Q on a keyboard: Miki, Tom, then Laura. Previous and its Z key are gone, and R1 / RB is unassigned. The D-pad keeps its sides, so right sends whoever L1 would lead as.
+- **“The circle button used for status panel, we should remove from the circle button and just make as a option in the pause menu.”** The pause menu has a fourth choice, **Status panel: Shown** or **Hidden**, which stays in the menu as Vibration does. Circle / B and the H key no longer hide the panel and are unassigned. Touch is unchanged: its pause screen has no such choice, and the panel always shows.
+- **The [lock-on](decisions/0020-lock-on.md)**, quoted in its decision record. A press of the right stick locks the aim on a hostile, circled in red; the next press moves it on, and two quick presses let go.
+
+Checks:
+- **`./scripts/check` passed:**
+  - 13 declaration-contract tests, 28 offline release tests, 52 Blender tests and seven sound fingerprints;
+  - Swift formatting and the app build;
+  - Swift Testing on an iOS 27 iPhone 17 simulator: 290 tests in 392 runs.
+
+  New tests cover the lock press and its release gate, the first lock and going round clockwise, a quick second press letting go, letting go out of reach, the locked shot, the red ring's place and size, and Restart. A world test fights three guards: the stick aims left, the lock turns the leader right, and Fire downs the locked guard, not the one ahead. The pause menu's tests cover the Status panel choice.
+- **Simulator:** the new `lock-on` route locks on the first-tower guard, fires until it is down and checks that the lock let go. Mean frame time was 16.7 ms and p99 16.8 ms, Simulator measurements only.
+
+  | Route | Steps |
+  |---|---:|
+  | `lock-on` | 25/25 |
+  | `first-fight` | 35/35 |
+
+  The first rendered run showed no ring. The towers' baked shadows lie 3 cm over the snow and covered it, and the guard stands in the Brooklyn tower's shadow. The ring now stands above them, and the route's screenshot shows it round the guard.
+- **Found on the way:** the assisted target's red disc and the companions' order rings are also drawn below those shadows, so a tower's shadow hides them. That predates this change and is left as it was.
+- **Not exercised by hand:** a controller and the O key. The Simulator delivers no controller input, and its key presses are shorter than a frame, so the route drives the lock through the same input rules instead.
+- **Not yet verified:** the phone. That covers L1's switch, the pause menu's new choice, the lock with a real DualSense, how the ring reads at the phone's size, and the guard fight's balance with a lock.
 
 ### Architecture checks
 

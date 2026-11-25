@@ -315,6 +315,8 @@ struct InputRulesTests {
     InputRules.Raw(arrowLeft: true),
     InputRules.Raw(touchGround: true),
     InputRules.Raw(touchVibration: true),
+    InputRules.Raw(controllerLock: true),
+    InputRules.Raw(keyboardLock: true),
   ])
   func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
     var state = InputRules.State()
@@ -388,13 +390,34 @@ struct InputRulesTests {
   func theControllersButtonsAndStickAreControllerInput() {
     for raw in [
       InputRules.Raw(controllerAction: true), .init(controllerSwitch: true), .init(dpadUp: true),
-      .init(stick: [0, 0.5]),
+      .init(controllerLock: true), .init(stick: [0, 0.5]),
     ] {
       #expect(raw.hasControllerInput)
     }
     #expect(!InputRules.Raw(stick: [0.1, 0]).hasControllerInput)
     #expect(!InputRules.Raw(keyboardSwitch: true).hasControllerInput)
+    #expect(!InputRules.Raw(keyboardLock: true).hasControllerInput)
+    #expect(InputRules.Raw(keyboardLock: true).hasKeyboardInput)
     #expect(!InputRules.Raw(touchAction: true).hasControllerInput)
+  }
+
+  // MARK: - The lock (ADR 0020)
+
+  /// R3, RS or O: one lock press per press while exploring. Pause and a conversation consume
+  /// it rather than queueing it.
+  @Test(arguments: [InputRules.Raw(controllerLock: true), InputRules.Raw(keyboardLock: true)])
+  func eachLockPressCountsOnceWhileExploring(raw: InputRules.Raw) {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(raw, state: &state).lockPressed)
+    #expect(!sample(raw, state: &state).lockPressed, "a held press does not repeat")
+    #expect(!sample(.init(), state: &state).lockPressed)
+    #expect(sample(raw, state: &state).lockPressed)
+    for mode in [GameSession.Mode.paused, .dialogue] {
+      #expect(!sample(.init(), state: &state).lockPressed)
+      #expect(!sample(raw, mode: mode, state: &state).lockPressed)
+      // Still held when play resumes: it was consumed, not queued.
+      #expect(!sample(raw, state: &state).lockPressed)
+    }
   }
 
   // MARK: - Squad orders (ADR 0003, phase S3)

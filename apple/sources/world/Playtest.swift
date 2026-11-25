@@ -36,6 +36,10 @@
       /// Observe the real simulation state, bounded so a broken guard fails the route.
       case waitForRobotPhase(RobotGuard.Phase, seconds: Float)
       case expectRobotShots(atLeast: Int)
+      /// A press of the right stick, which locks the aim on a hostile (ADR 0020).
+      case lock
+      /// Whether a lock holds.
+      case expectLock(Bool)
     }
 
     /// What the runner can see of the game each frame.
@@ -60,6 +64,8 @@
       /// Observed first-tower guard state. Defaults preserve unrelated test fixtures.
       var robotPhase: RobotGuard.Phase? = nil
       var robotShots = 0
+      /// Whether the aim is locked on a hostile (ADR 0020).
+      var locked = false
     }
 
     struct Frame {
@@ -184,6 +190,11 @@
           advance()
         case .act:
           return press(InputRules.Raw(controllerAction: true))
+        case .lock:
+          return press(InputRules.Raw(controllerLock: true))
+        case .expectLock(let locked):
+          expect(
+            snapshot.locked == locked, locked ? "nothing was locked" : "the lock still held")
         case .formation:
           return press(InputRules.Raw(controllerFormation: true))
         case .expectFormation(let formation):
@@ -550,6 +561,16 @@
         .expectDefeated(1), .mark("won after the retry"),
       ]
 
+    /// The lock (ADR 0020) in the first fight: a press of the right stick locks on the guard and
+    /// rings it in red, Fire takes it with the stick at rest, and once it is down the lock lets
+    /// go.
+    private static let lockOn: [Step] =
+      toTheStranger + [
+        .wait(seconds: 0.5), .lock, .expectLock(true), .wait(seconds: 0.6),
+        .mark("locked on the guard"), .fire(seconds: 4), .expectDefeated(1), .expectLock(false),
+        .mark("guard down, lock let go"), .wait(seconds: 1),
+      ] + restartRun
+
     /// Resolve the guard, cross the clear outgoing floor to the case, then Tom's ambush.
     private static let toTom: [Step] =
       toTheStranger + [
@@ -658,7 +679,7 @@
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("ambush", ambush), ("laura", laura), ("opening", opening), ("formations", formations),
-      ("orders", orders),
+      ("orders", orders), ("lock-on", lockOn),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

@@ -29,6 +29,9 @@ enum InputRules {
     var controllerFormation = false
     /// Square / X: the leader's dodge roll.
     var controllerDodge = false
+    /// R3 / RS, a press of the right stick: lock the aim on a hostile, or move the lock to the
+    /// next; two quick presses let go (ADR 0020).
+    var controllerLock = false
     /// The D-pad's directions: squad orders while exploring, and up or down in the pause menu.
     var dpadUp = false
     var dpadDown = false
@@ -46,6 +49,8 @@ enum InputRules {
     var keyboardFormation = false
     /// Space: the leader's dodge roll.
     var keyboardDodge = false
+    /// O: the keyboard's lock, as a press of the right stick (ADR 0020).
+    var keyboardLock = false
     /// The arrow keys, the Simulator keyboard's D-pad.
     var arrowUp = false
     var arrowDown = false
@@ -83,14 +88,14 @@ enum InputRules {
     var hasAimKey: Bool { aimUp || aimDown || aimLeft || aimRight }
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardFire
-        || keyboardFormation || keyboardDodge || hasArrowKey || hasAimKey
+        || keyboardFormation || keyboardDodge || keyboardLock || hasArrowKey || hasAimKey
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
     var hasControllerInput: Bool {
       let deadZone = Movement.deadZone * Movement.deadZone
       return simd_length_squared(stick) > deadZone || simd_length_squared(aimStick) > deadZone
         || controllerAction || controllerPause || controllerSwitch || controllerFire
-        || controllerFormation || controllerDodge || hasDpad
+        || controllerFormation || controllerDodge || controllerLock || hasDpad
     }
   }
 
@@ -111,6 +116,7 @@ enum InputRules {
     var menuDirection = 0
     var vibrationWasPressed = false
     var dodgeWasPressed = false
+    var lockWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -144,6 +150,9 @@ enum InputRules {
     var aim: SIMD2<Float>?
     /// A fresh dodge press while exploring: the leader rolls the way they move.
     var dodgePressed = false
+    /// A fresh lock press while exploring: lock the aim on a hostile or move the lock on, or,
+    /// soon after the last, let go (ADR 0020).
+    var lockPressed = false
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -160,6 +169,7 @@ enum InputRules {
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
     let dodge = raw.keyboardDodge || raw.controllerDodge || raw.touchDodge
+    let lock = raw.keyboardLock || raw.controllerLock
     let up = raw.dpadUp || raw.arrowUp
     let down = raw.dpadDown || raw.arrowDown
     let left = raw.dpadLeft || raw.arrowLeft
@@ -189,6 +199,7 @@ enum InputRules {
       menuDirection: direction)
     next.vibrationWasPressed = vibration
     next.dodgeWasPressed = dodge
+    next.lockWasPressed = lock
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
       next.needsNeutralInput =
@@ -200,7 +211,7 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || raw.hasDpad || raw.touchGround || vibration || dodge
+        || raw.hasDpad || raw.touchGround || vibration || dodge || lock
       return (.neutral, next)
     }
     let pauseEdge = pause && !state.pauseWasPressed
@@ -214,7 +225,7 @@ enum InputRules {
     switch mode {
     case .paused:
       // The pause menu: up/down choose, action confirms, and the touch buttons choose directly.
-      // Switch, formation and order presses are consumed.
+      // Switch, formation, lock and order presses are consumed.
       return (
         Input(
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
@@ -223,7 +234,8 @@ enum InputRules {
           vibrationPressed: vibration && !state.vibrationWasPressed), next
       )
     case .dialogue:
-      // Action shows the next line; movement, switch, formation and order presses are consumed.
+      // Action shows the next line; movement, switch, formation, lock and order presses are
+      // consumed.
       return (
         Input(
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false),
@@ -263,7 +275,8 @@ enum InputRules {
           commandPoint: commandPoint,
           markPoint: raw.touchMark,
           aim: aim,
-          dodgePressed: dodge && !state.dodgeWasPressed && !commanded
+          dodgePressed: dodge && !state.dodgeWasPressed && !commanded,
+          lockPressed: lock && !state.lockWasPressed
         ), next
       )
     }

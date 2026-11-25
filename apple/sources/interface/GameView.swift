@@ -302,7 +302,14 @@ struct GameView: View {
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
       others.append("\(world.controls.dodgeButtonName) · Roll")
-      if let aim = world.controls.aimControlName { others.append("\(aim) · Aim") }
+      if let lock = world.controls.lockButtonName, world.lockedHostile != nil {
+        // The lock aims, so the stick does not until it lets go (ADR 0020).
+        others.append("\(lock) · Next target")
+        others.append("\(lock) twice · Let go")
+      } else {
+        if let aim = world.controls.aimControlName { others.append("\(aim) · Aim") }
+        if let lock = world.controls.lockButtonName { others.append("\(lock) · Lock on") }
+      }
     }
     if let next = world.session.nextLeader {
       others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
