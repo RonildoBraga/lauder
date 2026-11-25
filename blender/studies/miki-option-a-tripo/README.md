@@ -2,6 +2,8 @@
 
 **25 November 2026 — native static review prepared; appearance pending.** The maintainer selected [concept A](../../../art/characters/angular-study/miki-option-a/README.md), then said **“proceed”** after reviewing the prepared body/head references and the proposed single unrigged Tripo candidate. This study preserves that first generated result for visual review before skeleton, animation or further mesh work.
 
+**Follow-up:** The maintainer called this an improvement and explicitly assigned animation preparation and shared-skeleton fitting with its appearance preserved. The [new fitted Run/Sneak study](../miki-option-a-motion/README.md) is a separate derivative. The raw exports and this unrigged source remain unchanged; this static study's original next gate is historical.
+
 ## Inspect the actual model
 
 Open [miki-option-a-review.blend](miki-option-a-review.blend), keeping `character` beside it. **01 Colour review** uses the generated material; **02 Clay review** exposes the same geometry without the texture. The review links one [editable character source](character/miki-option-a.blend) and owns the studio, floor, six orthographic cameras and material override. The character source owns no camera, floor or lights.

@@ -98,6 +98,14 @@ The maintainer subsequently said to proceed with that trial. The [new P2.0 nativ
 
 **Next gate:** review the actual colour/clay and multi-angle model before fitting or geometry changes. Preserve the selected raw result during any simplification; fit the rig to accepted proportions and test one run/sneak cycle before expanding. Keep equipment separate. Do not carry the rejected outfit's dense corrective-key scheme into a new wardrobe. The prior full-body-fit appearance below is superseded, despite its bounded technical checks. No runtime assets, app checks, physical tests, merge or release are included in this static trial.
 
+### Miki Option A fitted Run/Sneak review
+
+The maintainer subsequently assigned animation preparation and fitting of the existing skeleton, with current appearance preserved. The [separate fitted study](../blender/studies/miki-option-a-motion/README.md) retains all 10,269 vertices, the material and original JPEG; only three exactly zero-area source faces are removed. The same 17 names/parents are fitted to the body, with normalized skinning, boot-shaft blending, a pelvis-bound upper pants cap and four fixed, zero-at-rest garment targets. Run hand roll and Sneak arm fitting improve glove presentation without new geometry or source clips.
+
+Neutral front/face/profile comparisons retain the selected appearance within tiny recorded pixel/transform differences. The independent 240 Hz audit covers 157 Run and 289 Sneak poses, with no strict tested free-dress/pants crossings, exact loop endpoints, preserved head/hair shape and positive sole clearance. The public refresh helper reproduces 19 evaluated skin poses with active garment drivers exactly and rejects changed fitting inputs. All 62 Blender/export tests pass. Fresh public source/review dependency, driver isolation, privacy and pose-transfer checks establish the delivered artifacts; the study records the exact scope and known original eye-triangle defects.
+
+The native review shows four Run cycles followed by three Sneak cycles in 6.2 seconds, with a separately held neutral scene and a decoded native movie. **Next gate:** maintainer visual review of movement and the stylised dress response before other clips, rifle fitting or runtime intake. Do not infer final animation approval, phone performance, merge or release from the authoring checks. The original Tripo model, shared source Actions, canonical characters and application remain unchanged.
+
 ### Miki concept mesh review
 
 **Retained comparison at `0d94c18`:** This section describes the earlier Blender source and its verification. The current appearance-review gate is the [angular art reset](#angular-character-art-reset) below.
