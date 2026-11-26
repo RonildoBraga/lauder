@@ -1,7 +1,7 @@
 # Bridge cover and companion spacing
 
 **Date:** 27 November 2026\
-**Status:** In development on `codex/bridge-cover-spacing`, following [issue #174](https://github.com/RonildoBraga/lauder/issues/174). Source and rendered verification are pending. The latest delivered preview remains [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview).
+**Status:** Implemented and source/Simulator verified on `codex/bridge-cover-spacing`, in [PR #175](https://github.com/RonildoBraga/lauder/pull/175) for [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The [prototype plan](prototype-plan.md#bridge-cover-and-spacing--in-development) records the exact source and results. Merge and another release remain separate decisions; the latest delivered preview remains [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview).
 
 ## Assignment and comparison
 
