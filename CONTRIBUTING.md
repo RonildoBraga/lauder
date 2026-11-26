@@ -194,6 +194,22 @@ python3 apple/scripts/testflight upload --output .local/testflight/delivery
 python3 apple/scripts/testflight wait --output .local/testflight/delivery --timeout 600
 ```
 
+For an explicitly maintainer-authorised **internal TestFlight preview before merge**, commit
+the discovered unused build number and finish review on a clean named non-main branch. Add
+`--reviewed-preview` to the archive command only:
+
+```sh
+python3 apple/scripts/testflight archive --output .local/testflight/delivery --reviewed-commit REVIEWED_COMMIT_SHA --reviewed-preview
+```
+
+The exact reviewed tree is still required, and archive still runs the complete standard check.
+The manifest and check receipt record the branch. Archive and upload require that same branch,
+commit and tree throughout; changing to another branch at the same commit is refused. Upload
+uses the recorded preview context without a command-line override. Discovery, upload, status
+and wait reject `--reviewed-preview`; their other safeguards are unchanged. The normal archive
+command still requires clean `main`. A preview is not permission to merge or evidence of phone
+acceptance, and it still needs the maintainer's release go-ahead.
+
 The command refreshes accepted/processing reservations before archive and upload. Upload rechecks the source, check receipt, archive fingerprint and fixed internal-only export settings. It records the attempt before invoking Xcode and uses exclusive operation locks. An attempted or interrupted upload is never replayed automatically: inspect `status` and private logs before deciding how to recover. Do not remove an attempt receipt merely to retry.
 
 `status` makes one read-only check; `wait` polls for at most the requested interval. Both return **0 only when the existing internal testers can access the processed, unexpired Lauder build**, **2 while pending or after a wait timeout**, and **1 on an error**. Verification requires unchanged existing group/tester membership. These commands do not invite testers, change group membership, alter distribution settings or submit an App Store review. Upload-command success alone is not completion.

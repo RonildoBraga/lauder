@@ -171,6 +171,126 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(release.ReleaseError):
             release.verify_receipt(self.folder, expected)
 
+    def source_repository(self):
+        repository = self.folder / "preview-source"
+        repository.mkdir()
+        hooks = self.folder / "preview-no-hooks"
+        hooks.mkdir()
+        def git(*arguments):
+            return subprocess.run(["git", "-C", str(repository), *arguments], check=True,
+                                  capture_output=True, text=True).stdout.strip()
+        git("init", "-q", "-b", "main")
+        git("config", "user.name", "Release contract fixture")
+        git("config", "user.email", "release-tests@example.invalid")
+        git("config", "core.hooksPath", str(hooks))
+        git("config", "commit.gpgSign", "false")
+        (repository / "README.md").write_text("Reviewed source.\n")
+        git("add", "README.md")
+        git("commit", "-q", "-m", "Create reviewed fixture")
+        return repository, git
+
+    def test_preview_requires_clean_exact_branch_and_keeps_default_main_identity(self):
+        repository, git = self.source_repository()
+        with patch.object(release, "ROOT", repository):
+            main = release.source()
+            self.assertEqual(set(main), {"sourceCommit", "sourceTree"})
+            release.frozen(main)
+            with self.assertRaises(release.ReleaseError):
+                release.source("main")
+            git("checkout", "-q", "-b", "codex/preview")
+            with self.assertRaisesRegex(release.ReleaseError, "integrated main"):
+                release.source()
+            preview = release.source("codex/preview")
+            self.assertEqual(preview, {**main, "previewBranch": "codex/preview"})
+            release.frozen(preview)
+            git("checkout", "-q", "-b", "codex/other")
+            self.assertEqual(git("rev-parse", "HEAD"), preview["sourceCommit"])
+            with self.assertRaisesRegex(release.ReleaseError, "original named branch"):
+                release.frozen(preview)
+            git("checkout", "-q", "codex/preview")
+            for path in (repository / "README.md", repository / "untracked.swift"):
+                original = path.read_text() if path.exists() else None
+                path.write_text("Unreviewed source.\n")
+                with self.assertRaisesRegex(release.ReleaseError, "clean source checkout"):
+                    release.frozen(preview)
+                if original is None:
+                    path.unlink()
+                else:
+                    path.write_text(original)
+            git("commit", "-q", "--allow-empty", "-m", "Different commit, same tree")
+            self.assertEqual(git("rev-parse", "HEAD^{tree}"), preview["sourceTree"])
+            with self.assertRaisesRegex(release.ReleaseError, "Source changed"):
+                release.frozen(preview)
+            git("checkout", "-q", "--detach", preview["sourceCommit"])
+            with self.assertRaisesRegex(release.ReleaseError, "original named branch"):
+                release.frozen(preview)
+            with self.assertRaisesRegex(release.ReleaseError, "named non-main"):
+                release.archive(None, self.folder, preview["sourceCommit"], True)
+
+    def test_preview_context_and_flag_types_are_not_coerced(self):
+        for value in (None, True, False, 0, 1, [], {}, "", "main", "HEAD", "-branch", "bad..branch"):
+            with self.subTest(value=value):
+                with self.assertRaises(release.ReleaseError):
+                    release.frozen({"sourceCommit": "a", "sourceTree": "b", "previewBranch": value})
+        for value in (None, 0, 1, "true", [], {}):
+            with self.subTest(flag=value):
+                with self.assertRaisesRegex(release.ReleaseError, "boolean"):
+                    release.archive(None, self.folder, "abcdef1", value)
+        for command in ("discover", "upload", "status", "wait"):
+            with self.subTest(command=command), \
+                    patch.object(release, "delivery_directory") as directory, \
+                    patch.object(release, "AppleAPI") as api, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(release.main([command, "--output", str(self.folder),
+                                               "--reviewed-preview"]), 1)
+                directory.assert_not_called()
+                api.assert_not_called()
+
+    def test_preview_archive_freezes_branch_in_manifest_and_check_receipt(self):
+        repository, git = self.source_repository()
+        git("checkout", "-q", "-b", "codex/preview")
+        git("checkout", "-q", "-b", "codex/different-review")
+        (repository / "README.md").write_text("Different reviewed tree.\n")
+        git("add", "README.md")
+        git("commit", "-q", "-m", "Different review fixture")
+        other_review = git("rev-parse", "HEAD")
+        git("checkout", "-q", "codex/preview")
+        (self.folder / "manifest.json").unlink()
+        release.save(self.folder, "discovery.json", {"bundleIdentifier": release.BUNDLE, "version": "0.1.0"})
+        release.save(self.folder, "app.json", FakeApple().app)
+        def fake_logged(arguments, path):
+            release.frozen(release.source("codex/preview"))
+            path.write_text("Checks passed." if path.name == "check.log" else "Archive fixture.")
+        with patch.object(release, "ROOT", repository), \
+                patch.object(release, "identity", return_value=("0.1.0", "28")), \
+                patch.object(release, "team", return_value="TESTTEAM01"), \
+                patch.object(release, "authentication", return_value=[]), \
+                patch.object(release, "unused"), patch.object(release, "verify_archive"), \
+                patch.object(release, "logged", side_effect=fake_logged), \
+                contextlib.redirect_stdout(io.StringIO()):
+            expected = release.source("codex/preview")
+            with self.assertRaisesRegex(release.ReleaseError, "reviewed source tree"):
+                release.archive(FakeApple(), self.folder, other_review, True)
+            release.archive(FakeApple(), self.folder, expected["sourceCommit"], True)
+            manifest = release.read(self.folder, "manifest.json")
+            self.assertEqual(manifest["previewBranch"], "codex/preview")
+            self.assertEqual(release.read(self.folder, "checks.json")["previewBranch"], "codex/preview")
+            release.verify_receipt(self.folder, manifest)
+            for branch in (None, "codex/other"):
+                changed = dict(manifest)
+                if branch is None:
+                    changed.pop("previewBranch")
+                else:
+                    changed["previewBranch"] = branch
+                with self.assertRaises(release.ReleaseError):
+                    release.verify_receipt(self.folder, changed)
+            git("checkout", "-q", "-b", "codex/other")
+            api = FakeApple()
+            with self.assertRaisesRegex(release.ReleaseError, "original named branch"):
+                release.upload(api, self.folder)
+            self.assertEqual(api.calls, [])
+            self.assertNotIn("uploadStartedAt", release.read(self.folder, "manifest.json"))
+
     def test_upload_attempt_is_not_automatically_replayed(self):
         manifest = release.read(self.folder, "manifest.json")
         manifest["uploadStartedAt"] = "attempted"
