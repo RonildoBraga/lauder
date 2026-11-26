@@ -126,8 +126,16 @@ struct TouchInputTests {
     (CGVector(dx: 70, dy: -20), .right),
     (CGVector(dx: 15, dy: 60), .hold),
     (CGVector(dx: -10, dy: -60), nil),
+    (CGVector(dx: -30, dy: -60), nil),
+    (CGVector(dx: 30, dy: -60), nil),
+    (CGVector(dx: -40, dy: -60), .attack),
+    (CGVector(dx: 40, dy: -60), .defend),
     (CGVector(dx: -98, dy: -62), .attack),
     (CGVector(dx: 98, dy: -62), .defend),
+    (CGVector(dx: -110, dy: -60), .left),
+    (CGVector(dx: 110, dy: -60), .right),
+    (CGVector(dx: -30, dy: -20), .attack),
+    (CGVector(dx: 30, dy: -20), .defend),
   ])
   func slidingChoosesTheItemInThatDirection(offset: CGVector, choice: OrderPress.Choice?) {
     var press = OrderPress(at: CGPoint(x: 200, y: 150), time: 0)
@@ -148,18 +156,59 @@ struct TouchInputTests {
     #expect(OrderPress.Choice.right.command == .rightGoes)
   }
 
-  @Test
-  func aClampedOrderMenuSelectsItsVisibleStanceItemsAndKeepsSmallDriftNeutral() {
-    var press = OrderPress(at: CGPoint(x: 280, y: 280), time: 0)
+  @Test(arguments: [
+    (CGPoint(x: 200, y: 30), CGVector(dx: -40, dy: 0), OrderPress.Choice.left),
+    (CGPoint(x: 200, y: 30), CGVector(dx: 40, dy: 0), .right),
+    (CGPoint(x: 200, y: 280), CGVector(dx: -40, dy: 0), .left),
+    (CGPoint(x: 200, y: 280), CGVector(dx: 40, dy: 0), .right),
+    (CGPoint(x: 20, y: 150), CGVector(dx: 40, dy: 0), .right),
+    (CGPoint(x: 380, y: 150), CGVector(dx: -40, dy: 0), .left),
+  ])
+  func slidingSidewaysAtAMenuEdgeStillSelectsACompanion(
+    start: CGPoint, offset: CGVector, expected: OrderPress.Choice
+  ) {
+    // These origins clamp the 280 × 168 menu in a 400 × 300 view. The gesture is measured
+    // from the finger, so moving the menu's artwork never turns sideways travel into a stance.
+    var press = OrderPress(at: start, time: 0)
     let opened = press.open(at: 1)
     #expect(opened)
-    let centre = CGPoint(x: 140, y: 84)
-    press.move(to: CGPoint(x: 282, y: 281), menuCentre: centre)
-    #expect(press.release == .both, "small drift does not select a clamped item under the finger")
-    press.move(to: CGPoint(x: 42, y: 22), menuCentre: centre)
-    #expect(press.release == .attack && press.release?.command == .attack)
-    press.move(to: CGPoint(x: 238, y: 22), menuCentre: centre)
-    #expect(press.release == .defend && press.release?.command == .defend)
+    press.move(to: CGPoint(x: start.x + offset.dx, y: start.y + offset.dy))
+    #expect(press.release == expected)
+    #expect(press.start == start, "selection never moves the marked ground point")
+  }
+
+  @Test(arguments: [CGFloat(0), 5, 15])
+  func anExtremeTopPressKeepsSidewaysAndReturnGesturesSafe(y: CGFloat) {
+    let start = CGPoint(x: 200, y: y)
+    var press = OrderPress(at: start, time: 0)
+    let opened = press.open(at: 1)
+    #expect(opened)
+    // Every sample stays on the screen. These starts cannot provide enough upward travel
+    // for a stance or the cancel sector, so this test does not claim those gestures work.
+    press.move(to: CGPoint(x: 240, y: y))
+    #expect(press.release == .right)
+    press.move(to: CGPoint(x: 160, y: y))
+    #expect(press.release == .left)
+    press.move(to: CGPoint(x: 203, y: y))
+    #expect(press.release == .both)
+    press.move(to: CGPoint(x: 200, y: 0))
+    #expect(press.release == .both, "short upward travel cannot arm a stance")
+    press.cancel()
+    #expect(press.release == nil, "a cancelled touch never sends the prior choice")
+  }
+
+  @Test(arguments: [OrderPress.Choice.attack, .defend])
+  func returningToTheFingerStartClearsAStanceEvenNearTheTopEdge(stance: OrderPress.Choice) {
+    let start = CGPoint(x: 200, y: 40)
+    var press = OrderPress(at: start, time: 0)
+    let opened = press.open(at: 1)
+    #expect(opened)
+    press.move(to: CGPoint(x: start.x + (stance == .attack ? -40 : 40), y: 9))
+    #expect(press.release == stance)
+    press.move(to: CGPoint(x: start.x + 3, y: start.y + 1))
+    #expect(press.release == .both && press.release?.command == .bothGo)
+    press.move(to: CGPoint(x: start.x + 20, y: start.y - 10))
+    #expect(press.release == .both, "the entire centre radius clears a previous choice")
     press.cancel()
     #expect(press.release == nil)
   }

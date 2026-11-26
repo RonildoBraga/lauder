@@ -75,6 +75,52 @@ struct RobotGuardTests {
     #expect(robot.shotSerial == 0)
   }
 
+  @Test(arguments: [Float(12.01), 13, 14])
+  func aVisibleTargetBeyondAttackRangeCannotHoldTrackingForever(distance: Float) throws {
+    var robot = readyRobot()
+    let point = SIMD2<Float>(0, distance)
+    for _ in 0..<120 {
+      _ = robot.step(dt: dt, target: point, hasSight: true, obstacles: [], party: [])
+      if robot.phase == .tracking { break }
+    }
+    try #require(robot.phase == .tracking)
+    // Quiet detection still reaches 14 m, and the full existing tracking warning remains.
+    for _ in 0..<116 {
+      #expect(robot.step(dt: dt, target: point, hasSight: true, obstacles: [], party: []) == nil)
+      #expect(robot.phase == .tracking)
+    }
+    for _ in 0..<8 {
+      _ = robot.step(dt: dt, target: point, hasSight: true, obstacles: [], party: [])
+      if robot.phase == .searching { break }
+    }
+    #expect(robot.phase == .searching && robot.shotSerial == 0)
+    #expect(robot.committedPoint == nil)
+    // A later in-range observation must start a new complete warning, not bank a shot.
+    _ = robot.step(dt: dt, target: [0, 8], hasSight: true, obstacles: [], party: [])
+    #expect(robot.phase == .notice)
+    for _ in 0..<120 {
+      #expect(robot.step(dt: dt, target: [0, 8], hasSight: true, obstacles: [], party: []) == nil)
+    }
+    #expect(robot.shotSerial == 0)
+    for _ in 0..<120 {
+      _ = robot.step(dt: dt, target: [0, 8], hasSight: true, obstacles: [], party: [])
+      if robot.shotSerial > 0 { break }
+    }
+    #expect(robot.shotSerial == 1)
+  }
+
+  @Test
+  func theAttackRangeBoundaryStillCommitsAfterItsCompleteWarning() throws {
+    var robot = readyRobot()
+    for _ in 0..<240 {
+      _ = robot.step(
+        dt: dt, target: [0, RobotGuard.attackRange], hasSight: true, obstacles: [], party: [])
+      if robot.phase == .committed { break }
+    }
+    #expect(robot.phase == .committed)
+    #expect(robot.committedPoint == SIMD2<Float>(0, RobotGuard.attackRange))
+  }
+
   @Test
   func theMachineDoesNotAcquireBehindItsConeOrAcrossTheMap() {
     for target: SIMD2<Float> in [[0, -8], [0, 15]] {

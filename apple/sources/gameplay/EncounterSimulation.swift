@@ -577,13 +577,20 @@ final class EncounterSimulation {
           from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
         var retaliation = false
         if spec.strategicGuard, let robot = state.robot {
-          let eligible = Set(
+          let visible = Set(
             party.compactMap { member, point -> PartyMember? in
               simd_distance(point, state.position) <= RobotGuard.detectionRange
                 && ballistics.isClear(
                   from: ballistics.point(state.position, above: 1.52),
                   to: ballistics.point(point))
                 ? member : nil
+            })
+          // Retaliation must be able to reach commitment. Keep the wider sight set for
+          // quiet detection and the fixed target's complete pre-commit warning.
+          let eligible = Set(
+            visible.filter { member in
+              party[member].map { simd_distance($0, state.position) <= RobotGuard.attackRange }
+                ?? false
             })
           var selection = guardTargets[spec.id] ?? GuardTargeting()
           selection.advance(dt: dt)
@@ -597,7 +604,7 @@ final class EncounterSimulation {
           chosenPoint =
             selected.flatMap { party[$0] }
             ?? robot.committedPoint ?? state.position
-          hasSight = selected.map { eligible.contains($0) } ?? false
+          hasSight = selected.map { visible.contains($0) } ?? false
           retaliation = selection.isRetaliation
         }
         if let discharge = state.stepRobot(

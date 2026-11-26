@@ -26,7 +26,7 @@ struct OrderPress {
   static let holdTime: TimeInterval = 0.35
   /// How far the finger may drift, in points, before the menu opens.
   static let slop: CGFloat = 12
-  /// Within this distance of where the menu opened, a release means Both.
+  /// Within this distance of where the finger came down, a release means Both.
   static let centre: CGFloat = 30
 
   /// Where the finger came down: the marked point and the default selection centre.
@@ -51,15 +51,13 @@ struct OrderPress {
     return true
   }
 
-  mutating func move(to point: CGPoint, menuCentre: CGPoint? = nil) {
+  mutating func move(to point: CGPoint) {
     guard !isCancelled else { return }
     let offset = CGVector(dx: point.x - start.x, dy: point.y - start.y)
     if isOpen {
-      // A menu clamped at a screen edge uses its visible item's centre. A small finger drift
-      // still keeps the initial Both choice rather than selecting an item moved under it.
-      if menuCentre != nil, hypot(offset.dx, offset.dy) <= Self.slop { return }
-      let centre = menuCentre ?? start
-      choice = Self.choice(for: CGVector(dx: point.x - centre.x, dy: point.y - centre.y))
+      // Clamping the menu's artwork must not change the finger's directions. Re-evaluate
+      // even near the start, so returning there clears a previously selected stance.
+      choice = Self.choice(for: offset)
     } else if hypot(offset.dx, offset.dy) > Self.slop {
       isCancelled = true
     }
@@ -74,11 +72,18 @@ struct OrderPress {
   var release: Choice? { isOpen && !isCancelled ? choice : nil }
 
   /// The menu's item in the direction the finger slid: the companions' names to the left and
-  /// right, Hold below, and Attack/Defend on the two upper diagonals. Straight up cancels.
+  /// right, Hold below, and Attack/Defend on the two upper diagonals. The upper 60-degree
+  /// sector cancels; near-horizontal travel still selects a companion.
   static func choice(for offset: CGVector) -> Choice? {
     guard hypot(offset.dx, offset.dy) >= centre else { return .both }
-    if offset.dy < -centre, abs(offset.dx) > centre / 2 {
-      return offset.dx < 0 ? .attack : .defend
+    if offset.dy < 0 {
+      let horizontal = abs(offset.dx)
+      let vertical = -offset.dy
+      let diagonalRatio = CGFloat(3).squareRoot()
+      if horizontal <= vertical / diagonalRatio { return nil }
+      if horizontal < vertical * diagonalRatio {
+        return offset.dx < 0 ? .attack : .defend
+      }
     }
     if abs(offset.dx) >= abs(offset.dy) { return offset.dx < 0 ? .left : .right }
     return offset.dy > 0 ? .hold : nil

@@ -251,8 +251,7 @@ struct TouchControls: UIViewRepresentable {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
       guard let touch = pressing(touches) else { return }
-      let centre = press?.isOpen == true ? menu.convert(menu.choiceCentre, to: self) : nil
-      press?.move(to: touch.location(in: self), menuCentre: centre)
+      press?.move(to: touch.location(in: self))
       if press?.isOpen == true {
         menu.highlight(press?.choice)
       } else if press?.isCancelled == true {
