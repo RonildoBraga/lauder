@@ -11,7 +11,7 @@ The player always controls the leader. The other two may move and fight within t
 
 The maintainer then clarified: **“they should only attack and complet the steps if I press to attack”** and **“if I press to defend on the d pad then they should seek cover and try to go back to me”**. This replaces automatic engagement permission with an explicit standing squad stance. The player firing or the guard noticing the party does not authorise companion attacks.
 
-After build 34 the maintainer reported **“The Attack and Defend controls are working”**. This is basic command feedback, not every-input or sustained-performance acceptance. Their subsequent **“proceed”** authorises the [guard-retaliation comparison](guard-retaliation.md), recorded in [issue #171](https://github.com/RonildoBraga/lauder/issues/171), without changing the companion command contract. Its source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development); it has not been merged or delivered.
+After build 34 the maintainer reported **“The Attack and Defend controls are working”**. This is basic command feedback, not every-input or sustained-performance acceptance. Their subsequent **“proceed”** authorises the [guard-retaliation comparison](guard-retaliation.md), recorded in [issue #171](https://github.com/RonildoBraga/lauder/issues/171), without changing the companion command contract. Its source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The later authorised [build 35 preview](prototype-plan.md#build-35-testflight-preview) is available to existing testers; the PRs remain unmerged and phone acceptance is pending.
 
 ## Attack and Defend
 

@@ -1,11 +1,11 @@
 # Guard retaliation
 
 **Date:** 26 November 2026\
-**Status:** Implemented for review on `codex/guard-retaliation`; source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). This branch has not been merged or delivered. The latest delivered preview remains [TestFlight 0.1.0 (34)](prototype-plan.md#build-34-testflight-preview).
+**Status:** Delivered as internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) from `8a9908a` on `codex/testflight-guard-retaliation`, with the same app code as reviewed `251ee09`. Source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The preview PRs remain unmerged; phone gameplay acceptance is pending.
 
 ## Direction and comparison
 
-After build 34 the maintainer reported **“The Attack and Defend controls are working”**, then said **“proceed”** to a bounded retaliation proposal. [Issue #171](https://github.com/RonildoBraga/lauder/issues/171) records this relayed chat direction. The report confirms the basic commands, not every physical input path or sustained performance. The assignment does not authorise a merge, new release or cover/level changes.
+After build 34 the maintainer reported **“The Attack and Defend controls are working”**, then said **“proceed”** to a bounded retaliation proposal. [Issue #171](https://github.com/RonildoBraga/lauder/issues/171) records this relayed chat direction. The report confirms the basic commands, not every physical input path or sustained performance. That implementation assignment did not authorise a merge, release or cover/level changes. After reviewing the Simulator preview, the maintainer separately replied **“proceed”** to publishing the reviewed version for a short TestFlight comparison. [PR #173](https://github.com/RonildoBraga/lauder/pull/173) records the resulting internal preview; merge and cover/balance edits remain unassigned.
 
 The question is whether the existing guard responding to attacking companions gives Attack and Defend useful consequences. Keep the current damage, three-round precision/five-round fan patterns, warning/recovery timings and [dismantling rules](strategic-guard.md#prototype-dismantling-sequence). Compare this change before tuning cover placement or expanding the encounter.
 
