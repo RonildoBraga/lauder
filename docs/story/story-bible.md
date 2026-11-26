@@ -11,6 +11,8 @@
 
 **Companion-autonomy revision, 26 November 2026:** After the generic phone feedback **“It worked nice”**, the maintainer asked for independent companions and explicitly chose **“Companions can complete the weakpoint steps too”**. The [bounded assignment](../companion-autonomy.md) is implemented on its feature branch; the [prototype plan](../prototype-plan.md#companion-autonomy--in-development) owns validation and delivery status. The player keeps the leader, while the other characters may contribute their native actions once combat is engaged. Changing leader remains available but is not mandatory for each step. This does not settle anyone's biography, promise automatic success or authorise a merge.
 
+The maintainer then clarified that companion combat requires an explicit Attack order. Defend stops their attacks and makes them seek cover while returning toward the leader; it is the default stance. This gives the player control over when the trio commits to a fight without changing their identities or biographies. [Attack and Defend](../companion-autonomy.md#attack-and-defend) records the control contract.
+
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.

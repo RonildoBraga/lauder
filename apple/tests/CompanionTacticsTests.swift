@@ -171,10 +171,72 @@ struct CompanionTacticsTests {
     #expect(try #require(danger.position).x >= 1)
   }
 
+  @Test
+  func defendNeverAimsDrawsOrFiresAtAnyRoleOrStage() {
+    for member in PartyMember.allCases {
+      for stage in [GuardStrategy.Phase.sensor, .coupling, .reactor] {
+        var planner = CompanionTactics()
+        let result = plan(
+          &planner,
+          input(
+            member: member, leader: member == .miki ? .laura : .miki, stance: .defend, stage: stage),
+          canFire: { _, _, _ in
+            Issue.record("Defend must not request a combat ray")
+            return true
+          })
+        #expect(!result.fire && result.weapon == nil && result.lookAt == nil)
+      }
+    }
+  }
+
+  @Test
+  func defendReturnsToLegalNearbyLeaderCover() throws {
+    var planner = CompanionTactics()
+    let result = plan(
+      &planner,
+      input(position: [0, -3.5], leaderPosition: .zero, baseTarget: [0, -0.9], stance: .defend),
+      canTraverse: { _, end in end.x >= 0 },
+      isCovered: { simd_distance($0, [0, -0.9]) < 0.1 })
+    let goal = try #require(result.position)
+    #expect(simd_distance(goal, [0, -0.9]) < 0.1)
+    #expect(simd_distance(goal, [0, -3.5]) <= CompanionTactics.localRadius)
+    #expect(!result.fire && result.weapon == nil && result.lookAt == nil)
+  }
+
+  @Test
+  func defendDoesNotCampRemoteCoverOrTakeAnIllegalShortcutBack() {
+    var planner = CompanionTactics()
+    let start = SIMD2<Float>(0, -7)
+    let recalled = plan(
+      &planner,
+      input(position: start, leaderPosition: .zero, baseTarget: [0, -0.9], stance: .defend),
+      isCovered: { simd_distance($0, start) < 0.1 })
+    #expect(recalled.position == nil && recalled.activity == .following)
+    let blocked = plan(
+      &planner,
+      input(position: [0, -3.5], leaderPosition: .zero, baseTarget: [0, -0.9], stance: .defend),
+      canTraverse: { _, _ in false }, isCovered: { _ in true })
+    #expect(blocked.position == nil && blocked.activity == .following)
+  }
+
+  @Test
+  func defendImmediatelyInvalidatesAnAttackGoalAndKeepsNewExplicitOrders() {
+    var planner = CompanionTactics()
+    let attack = plan(&planner, input())
+    #expect(attack.fire && attack.position != nil)
+    let defend = plan(&planner, input(stance: .defend, dt: 0.001))
+    #expect(defend == .init(activity: .following))
+    let holding = plan(&planner, input(order: .holding([0, -6]), stance: .defend))
+    #expect(holding == .init(activity: .holding))
+    let going = plan(&planner, input(order: .going([1, -5]), stance: .defend))
+    #expect(going == .init(activity: .ordered))
+  }
+
   private func input(
     member: PartyMember = .miki, leader: PartyMember = .laura,
     position: SIMD2<Float> = [0, -6], leaderPosition: SIMD2<Float> = [0, -6],
-    order: GameSession.Order = .following, active: Bool = true,
+    baseTarget: SIMD2<Float>? = nil, order: GameSession.Order = .following,
+    stance: GameSession.CombatStance = .attack, active: Bool = true,
     phase: RobotGuard.Phase = .recovering, stage: GuardStrategy.Phase = .sensor,
     exposed: Bool = true, points: [GuardWeakpoint]? = nil, dt: Float = 1 / 60
   ) -> CompanionTactics.Input {
@@ -182,7 +244,8 @@ struct CompanionTacticsTests {
       stage == .sensor ? .sensor : stage == .coupling ? .coupling : .reactor
     return .init(
       member: member, leader: leader, position: position, leaderPosition: leaderPosition,
-      baseTarget: position, order: order, active: active, guardPosition: .zero,
+      baseTarget: baseTarget ?? position, order: order, stance: stance, active: active,
+      guardPosition: .zero,
       guardFacing: [0, -1], phase: phase, stage: stage,
       weakpoints: points ?? [weakpoint(part, exposed: exposed)], dt: dt)
   }

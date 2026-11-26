@@ -47,6 +47,9 @@
       case waitForRetry(seconds: Float)
       /// Miki stays under player control; Laura and Tom supply their own combat contributions.
       case companionFight
+      case companionPrerequisites
+      case defendGuard(seconds: Float)
+      case expectCombatStance(GameSession.CombatStance)
     }
 
     /// What the runner can see of the game each frame.
@@ -78,6 +81,8 @@
       var robotFacing: SIMD2<Float>? = nil
       var isRetrying = false
       var companionActivities: [PartyMember: CompanionTactics.Activity] = [:]
+      var combatStance = GameSession.CombatStance.defend
+      var partyWeapons: [PartyMember: EncounterSimulation.WeaponStatus] = [:]
     }
 
     struct Frame {
@@ -99,6 +104,7 @@
         var reactorDamage: Int? = nil
         var windowRemaining: Float? = nil
         var companionActivities: [String: String]? = nil
+        var combatStance: String? = nil
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -146,6 +152,9 @@
     private var lastGuardDodge: Float = -10
     private var guardStageSeen: GuardStrategy.Phase?
     private var companionMarks: Set<String> = []
+    private var defendBaseline: GuardStrategy?
+    private var defendLoaded: [PartyMember: Int] = [:]
+    private var defendDistances: [PartyMember: Float] = [:]
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -214,7 +223,8 @@
               robotShots: snapshot.robotShots,
               guardPhase: snapshot.guardStrategy.map { String(describing: $0.phase) },
               reactorDamage: snapshot.guardStrategy?.reactorDamage,
-              windowRemaining: snapshot.guardStrategy?.windowRemaining))
+              windowRemaining: snapshot.guardStrategy?.windowRemaining,
+              combatStance: String(describing: snapshot.combatStance)))
           announce(label)
           advance()
         case .act:
@@ -227,6 +237,16 @@
           if let raw = dismantleGuard(snapshot) { return raw }
         case .companionFight:
           if let raw = companionFight(snapshot) { return raw }
+        case .companionPrerequisites:
+          if snapshot.guardStrategy?.couplingBreached == true {
+            advance()
+            continue
+          }
+          if let raw = companionFight(snapshot) { return raw }
+        case .defendGuard(let seconds):
+          if let raw = defendGuard(snapshot, seconds: seconds) { return raw }
+        case .expectCombatStance(let stance):
+          expect(snapshot.combatStance == stance, "combat stance was \(snapshot.combatStance)")
         case .waitForRetry(let seconds):
           if snapshot.beat == .crossing && snapshot.robotPhase == .hidden && !snapshot.isRetrying {
             // Retry restores the content before its fade finishes. Once it has finished,
@@ -253,8 +273,10 @@
         case .order(let command):
           let dpad =
             switch command {
-            case .bothGo: InputRules.Raw(dpadUp: true)
-            case .hold: InputRules.Raw(dpadDown: true)
+            case .attack: InputRules.Raw(dpadUp: true)
+            case .defend: InputRules.Raw(dpadDown: true)
+            case .bothGo: InputRules.Raw(keyboardBothGo: true)
+            case .hold: InputRules.Raw(keyboardHold: true)
             case .leftGoes: InputRules.Raw(dpadLeft: true)
             case .rightGoes: InputRules.Raw(dpadRight: true)
             }
@@ -365,6 +387,7 @@
             || snapshot.firedTriggers != 0 || snapshot.beat != .crossing || snapshot.defeated != 0
             || snapshot.hitsTaken != 0
             || snapshot.mode != .exploring || snapshot.formation != .close
+            || snapshot.combatStance != .defend
             || !snapshot.orders.isEmpty || snapshot.refusedOrders != 0
 
           {
@@ -449,6 +472,11 @@
     private mutating func companionFight(_ snapshot: Snapshot) -> InputRules.Raw? {
       guard snapshot.leader == .miki else {
         failures.append("companion fight took control from Miki")
+        advance()
+        return nil
+      }
+      guard snapshot.combatStance == .attack else {
+        failures.append("companion fight requires an explicit Attack order")
         advance()
         return nil
       }
@@ -538,8 +566,73 @@
           companionActivities: Dictionary(
             uniqueKeysWithValues: snapshot.companionActivities.map {
               ($0.key.rawValue, $0.value.rawValue)
-            })))
+            }), combatStance: String(describing: snapshot.combatStance)))
       announce(label)
+    }
+
+    /// Observe an actual cease-fire while returning companions remain subject to real
+    /// movement, cover and incoming attacks. Only the player's ordinary escape inputs run.
+    private mutating func defendGuard(_ snapshot: Snapshot, seconds: Float) -> InputRules.Raw? {
+      guard snapshot.combatStance == .defend, snapshot.orders.isEmpty,
+        !snapshot.isRetrying, let current = snapshot.guardStrategy,
+        let leader = snapshot.positions[snapshot.leader]
+      else {
+        failures.append("Defend did not clear orders and maintain the active fight")
+        advance()
+        return nil
+      }
+      if defendBaseline == nil {
+        defendBaseline = current
+        defendLoaded = snapshot.partyWeapons.mapValues(\.loaded)
+        defendDistances = Dictionary(
+          uniqueKeysWithValues: snapshot.positions.compactMap {
+            $0.key == snapshot.leader ? nil : ($0.key, simd_distance($0.value, leader))
+          })
+      }
+      let stopped =
+        current.sensorDisabled == defendBaseline?.sensorDisabled
+        && current.couplingBreached == defendBaseline?.couplingBreached
+        && current.reactorDamage == defendBaseline?.reactorDamage
+      let spent = snapshot.partyWeapons.contains { member, state in
+        member != snapshot.leader && state.loaded < (defendLoaded[member] ?? state.loaded)
+      }
+      if !stopped || spent || snapshot.companionActivities.values.contains(.attacking) {
+        failures.append("a companion attacked or spent rounds after Defend")
+        advance()
+        return nil
+      }
+      defendLoaded = snapshot.partyWeapons.mapValues(\.loaded)
+      if stepTime >= seconds {
+        let distant = defendDistances.filter { $0.value > 3 }
+        let returned =
+          distant.isEmpty
+          || distant.contains { member, gap in
+            snapshot.positions[member].map { simd_distance($0, leader) < gap - 0.5 } == true
+          }
+        if !returned {
+          failures.append("Defend did not bring a distant companion toward the leader")
+        }
+        recordGuardMark("Defend recalled without companion fire", snapshot: snapshot)
+        advance()
+        return nil
+      }
+      var raw = InputRules.Raw()
+      if guardRelease {
+        guardRelease = false
+      } else if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
+        let centre = snapshot.robotPosition, simd_distance(leader, centre) > 0.1
+      {
+        let radial = leader - centre
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let escape =
+          movement.canTraverse(from: leader, to: leader + tangent * 3) ? tangent : -tangent
+        raw.stick = Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+      }
+      return raw
     }
 
     /// A bounded player script, not a simulation shortcut: no teleports, state writes or
@@ -743,6 +836,9 @@
       pressFrame = 0
       presses = 0
       talking = false
+      defendBaseline = nil
+      defendLoaded = [:]
+      defendDistances = [:]
     }
 
     /// Append the mark to marks.log as it happens, so `apple/scripts/playtest` can take a
@@ -880,6 +976,10 @@
     /// Miki supplies only the sensor shot; her two companions move and fight for themselves.
     private static let companions: [Step] =
       toTheStranger + [
+        .order(.attack), .expectCombatStance(.attack), .mark("Attack permits companions"),
+        .companionPrerequisites, .order(.hold), .order(.defend), .expectCombatStance(.defend),
+        .mark("Defend recalls the squad"), .defendGuard(seconds: 3),
+        .order(.attack), .expectCombatStance(.attack), .mark("Attack resumes companions"),
         .companionFight, .expectDefeated(1), .expectParty([.miki, .tom, .laura]),
         .mark("guard dismantled without switching"), .wait(seconds: 1),
       ] + restartRun

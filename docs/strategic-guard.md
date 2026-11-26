@@ -26,7 +26,7 @@ Wrong weapons, closed armour and hits outside the required opening do not bypass
 ## Movement, attacks and control
 
 - The player switches leader manually with L1 / LB, Q or touch **Next**, retaining the existing party order and neutral-input rules. R1 / RB, T or touch **Swap** selects that character's other weapon.
-- In delivered build 33, the other two follow or obey move/hold orders without attacks. On the autonomy branch they may fight and complete their own native steps after engagement, respecting the [bounded contract](companion-autonomy.md). The player always owns the leader.
+- In delivered build 33, the other two follow or obey move/hold orders without attacks. On the autonomy branch they may fight and complete their own native steps after an explicit Attack order and engagement, respecting the [bounded contract](companion-autonomy.md). Defend stops their attacks and recalls them using nearby cover. The player always owns the leader.
 - Tom can use his existing moving shield dome while he leads. Switching away drops it; the player cannot keep an unattended shield active while Miki or Laura attacks.
 - The guard alternates a **three-round precision burst** and a **five-round fan cannon attack**. Body/gun movement, a readable wind-up, the committed attack and recovery communicate its state; no red line reveals its exact aim.
 - Actual rays and tower geometry decide whether shots meet cover. Laura's sword also respects solid cover. Dodge movement still resolves against the bridge's blockers and the rolling leader retains the agreed temporary shot immunity.
@@ -36,7 +36,7 @@ Existing input and aim/lock rules serve the encounter. No additional ability bar
 
 ## Companion autonomy — in development
 
-After the maintainer's generic build 33 feedback **“It worked nice”**, the follow-up choice **“Companions can complete the weakpoint steps too”** authorises independent contributions. All three roles remain necessary; switching is optional for directing each step. Companions must not initiate an unaware or bypassed fight, break Hold/Go movement priority, outrun the initial 8 m leader leash or ignore retreat/regrouping. Formation/Follow retains its existing order-clearing/formation-cycle meaning and adds a temporary regroup interval of at least 2 seconds and until followers return near; there is no new Recall button or permanent passive mode. Real geometry, exposure, weapon state and ordinary vulnerability apply. No automatic shield, signature or teleport is added. The [autonomy document](companion-autonomy.md) owns the detailed branch contract and verification requirements.
+After the maintainer's generic build 33 feedback **“It worked nice”**, the choice **“Companions can complete the weakpoint steps too”** authorises independent contributions. The maintainer then required an explicit Attack order before they fight, and a Defend command that seeks cover and returns toward the leader. The squad defaults to Defend; Up/Down on the D-pad or keyboard orders Attack/Defend. Defend clears old position orders and revokes firing, while later Go/Hold orders remain defensive. All three roles remain necessary; switching is optional for directing each step. The initial 8 m leash, real geometry, exposure, weapon state and ordinary vulnerability apply. Formation/Follow still regroups temporarily without changing stance. No automatic shield, signature or teleport is added. The [autonomy document](companion-autonomy.md) owns the detailed branch contract and verification requirements.
 
 ## Verification boundary
 

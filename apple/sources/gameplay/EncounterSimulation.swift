@@ -349,7 +349,8 @@ final class EncounterSimulation {
     _ intents: [PartyMember: CompanionTactics.Intent], session: GameSession, dt: Float
   ) {
     let active =
-      session.inEncounter && companionGuard(near: aimOrigin) != nil
+      session.combatStance == .attack && session.inEncounter
+        && companionGuard(near: aimOrigin) != nil
       ? Set(
         intents.keys.filter {
           $0 != session.leader && session.party.contains($0) && intents[$0]?.lookAt != nil
@@ -382,7 +383,9 @@ final class EncounterSimulation {
     _ intents: [PartyMember: CompanionTactics.Intent], figures: [PartyMember: SIMD2<Float>],
     session: GameSession, outcome: inout Outcome
   ) {
-    guard let leader = figures[session.leader], let guardState = companionGuard(near: leader) else {
+    guard session.combatStance == .attack, let leader = figures[session.leader],
+      let guardState = companionGuard(near: leader)
+    else {
       return
     }
     for member in session.companions where autonomousMembers.contains(member) {

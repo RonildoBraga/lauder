@@ -1,5 +1,6 @@
 import CoreGraphics
 import Testing
+import UIKit
 import simd
 
 @testable import Lauder
@@ -125,6 +126,8 @@ struct TouchInputTests {
     (CGVector(dx: 70, dy: -20), .right),
     (CGVector(dx: 15, dy: 60), .hold),
     (CGVector(dx: -10, dy: -60), nil),
+    (CGVector(dx: -98, dy: -62), .attack),
+    (CGVector(dx: 98, dy: -62), .defend),
   ])
   func slidingChoosesTheItemInThatDirection(offset: CGVector, choice: OrderPress.Choice?) {
     var press = OrderPress(at: CGPoint(x: 200, y: 150), time: 0)
@@ -143,6 +146,60 @@ struct TouchInputTests {
     press.cancel()
     #expect(press.release == nil)
     #expect(OrderPress.Choice.right.command == .rightGoes)
+  }
+
+  @Test
+  func aClampedOrderMenuSelectsItsVisibleStanceItemsAndKeepsSmallDriftNeutral() {
+    var press = OrderPress(at: CGPoint(x: 280, y: 280), time: 0)
+    let opened = press.open(at: 1)
+    #expect(opened)
+    let centre = CGPoint(x: 140, y: 84)
+    press.move(to: CGPoint(x: 282, y: 281), menuCentre: centre)
+    #expect(press.release == .both, "small drift does not select a clamped item under the finger")
+    press.move(to: CGPoint(x: 42, y: 22), menuCentre: centre)
+    #expect(press.release == .attack && press.release?.command == .attack)
+    press.move(to: CGPoint(x: 238, y: 22), menuCentre: centre)
+    #expect(press.release == .defend && press.release?.command == .defend)
+    press.cancel()
+    #expect(press.release == nil)
+  }
+
+  @Test(arguments: [GameSession.Command.attack, .defend])
+  func touchStancesAreSingleEventsAndCannotSurviveSourceCancellation(command: GameSession.Command) {
+    var touch = TouchInput()
+    let order = InputRules.TouchOrder(command: command, point: nil)
+    touch.setOrder(order, generation: 0)
+    #expect(touch.sample().touchOrder == order)
+    #expect(touch.sample().touchOrder == nil)
+    touch.setOrder(order, generation: 0)
+    touch.cancel()
+    touch.setOrder(order, generation: 0)
+    #expect(touch.sample().touchOrder == nil)
+    touch.setOrder(order, generation: touch.generation)
+    var state = InputRules.State()
+    let gated = InputRules.resolve(touch.sample(), mode: .exploring, state: state)
+    state = gated.state
+    #expect(gated.input.command == nil)
+    #expect(InputRules.resolve(touch.sample(), mode: .exploring, state: state).input.command == nil)
+  }
+
+  @MainActor
+  @Test
+  func stanceAccessibilityActionsUseTheExistingFormationControlOnlyDuringPlay() throws {
+    let surface = TouchControls.Surface(controls: GameControls())
+    func update(_ mode: GameSession.Mode) {
+      surface.update(
+        actionTitle: "Look", nextLeaderName: "Tom", showsFire: true, swapTitle: "Assault rifle",
+        showsFormation: true, formationTitle: "Formation", orderNames: ("Tom", "Laura"),
+        vibrationTitle: "Vibration: On", mode: mode, generation: 0)
+    }
+    update(.exploring)
+    let formation = try #require(surface.subviews.first { $0.accessibilityLabel == "Formation" })
+    #expect(formation.accessibilityCustomActions?.map(\.name) == ["Squad Attack", "Squad Defend"])
+    update(.paused)
+    #expect(formation.accessibilityCustomActions == nil)
+    update(.dialogue)
+    #expect(formation.accessibilityCustomActions == nil)
   }
 
   @Test

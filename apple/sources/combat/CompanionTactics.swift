@@ -14,6 +14,7 @@ struct CompanionTactics {
     let leaderPosition: SIMD2<Float>
     let baseTarget: SIMD2<Float>
     let order: GameSession.Order
+    let stance: GameSession.CombatStance
     let active: Bool
     let guardPosition: SIMD2<Float>
     let guardFacing: SIMD2<Float>
@@ -39,6 +40,7 @@ struct CompanionTactics {
     let member: PartyMember
     let leader: PartyMember
     let order: GameSession.Order
+    let stance: GameSession.CombatStance
     let phase: RobotGuard.Phase
     let stage: GuardStrategy.Phase
     let threatened: Bool
@@ -80,8 +82,8 @@ struct CompanionTactics {
     }
     let threatened = isThreatened(input.position) && !isCovered(input.position)
     let next = Context(
-      member: input.member, leader: input.leader, order: input.order, phase: input.phase,
-      stage: input.stage, threatened: threatened)
+      member: input.member, leader: input.leader, order: input.order, stance: input.stance,
+      phase: input.phase, stage: input.stage, threatened: threatened)
     if context != next {
       goal = nil
       sincePlan = .infinity
@@ -89,6 +91,41 @@ struct CompanionTactics {
     context = next
     sincePlan += input.dt
 
+    func legal(_ position: SIMD2<Float>) -> Bool {
+      simd_distance(position, input.leaderPosition) <= Self.leaderLeash
+        && canStand(position) && canTraverse(input.position, position)
+    }
+    func safe(_ position: SIMD2<Float>) -> Bool {
+      !isThreatened(position) || isCovered(position)
+    }
+    if input.stance == .defend {
+      // Defend recalls the squad; cover must not turn into a remote, implicit Hold order.
+      // A subsequently issued Go/Hold still owns movement, with no combat authority.
+      if case .holding = input.order {
+        goal = nil
+        return Intent(activity: .holding)
+      }
+      let fromLeader = simd_distance(input.position, input.leaderPosition)
+      let fromBase = simd_distance(input.position, input.baseTarget)
+      func returning(_ point: SIMD2<Float>) -> Bool {
+        let toLeader = simd_distance(point, input.leaderPosition)
+        let toBase = simd_distance(point, input.baseTarget)
+        let nearFormation = toLeader <= 2.6 && toBase <= 1.5
+        return simd_distance(point, input.position) <= Self.localRadius
+          && legal(point) && isCovered(point)
+          && (nearFormation || toBase < fromBase - 0.25)
+          && (fromLeader <= 2.6 ? toLeader <= 2.6 : toLeader < fromLeader - 0.25)
+      }
+      if sincePlan >= Self.replanInterval || goal.map({ !returning($0) }) != false {
+        goal =
+          ([input.position, input.baseTarget] + Self.near(input.position)
+          + Self.near(input.baseTarget)).filter(returning).min {
+            simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+          }
+        sincePlan = 0
+      }
+      return Intent(position: goal, activity: goal == nil ? .following : .avoiding)
+    }
     let assignment = Self.assignment(member: input.member, stage: input.stage)
     let points = input.weakpoints.filter { $0.part == assignment?.part }
     let point = points.min {
@@ -98,13 +135,6 @@ struct CompanionTactics {
     var intent = Intent(
       lookAt: point?.ground ?? input.guardPosition, weapon: assignment?.weapon,
       activity: fallback)
-    func legal(_ position: SIMD2<Float>) -> Bool {
-      simd_distance(position, input.leaderPosition) <= Self.leaderLeash
-        && canStand(position) && canTraverse(input.position, position)
-    }
-    func safe(_ position: SIMD2<Float>) -> Bool {
-      !isThreatened(position) || isCovered(position)
-    }
     if case .holding = input.order {
       goal = nil
       if let assignment, canStand(input.position),

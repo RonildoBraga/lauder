@@ -30,6 +30,7 @@ struct CompanionEngagementTests {
       cameraOffset: BrooklynBridge.cameraOffset, fieldOfView: 22,
       opening: "Range", objective: "Test", lookAround: "Range", restartNote: "Restart")
     let session = GameSession(level: level)
+    session.setCombatStance(.attack)
     let fight = EncounterSimulation(level: level)
     #expect(session.beginEncounter(encounter.beat))
     fight.begin(encounter)

@@ -871,7 +871,8 @@ final class GameWorld {
         input: CompanionTactics.Input(
           member: member, leader: session.leader, position: position, leaderPosition: leader,
           baseTarget: base, order: session.order(of: member),
-          active: !regrouping && retreatRemaining == 0,
+          stance: session.combatStance,
+          active: session.combatStance == .defend || (!regrouping && retreatRemaining == 0),
           guardPosition: guardState.robot.position, guardFacing: guardState.robot.facing,
           phase: guardState.robot.phase, stage: guardState.strategy.phase,
           weakpoints: fight.weakpoints(for: guardState.id), dt: dt),
@@ -923,6 +924,22 @@ final class GameWorld {
     guard session.mode == .exploring, session.ordersAvailable, !fight.holdsParty,
       let leader = position(of: session.leader)
     else { return }
+    if command == .attack || command == .defend {
+      guard session.setCombatStance(command == .attack ? .attack : .defend) else { return }
+      companionIntents = [:]
+      tactics = [:]
+      formationTargets = [:]
+      companionStatus = ""
+      touchMark = nil
+      // Defend has its own persistent cease-fire and cover/recall policy. A temporary
+      // Formation/Follow interval must not prevent that policy from choosing safe return legs.
+      regrouping = false
+      regroupRemaining = 0
+      if command == .attack { retreatRemaining = 0 }
+      for member in session.companions { motors[member]?.wake() }
+      showOrders()
+      return
+    }
     if command == .hold {
       session.holdAll()
       pinHolds()
@@ -980,7 +997,7 @@ final class GameWorld {
       }
       session.send(member, to: target)
       motors[member]?.wake()
-    case .hold:
+    case .hold, .attack, .defend:
       break
     }
     showOrders()
@@ -1459,7 +1476,10 @@ final class GameWorld {
         guardStrategy: fight.guardStrategies["stranger"],
         guardPoints: fight.weakpoints(for: "stranger"),
         robotPosition: robot?.position, robotFacing: robot?.facing, isRetrying: isRetrying,
-        companionActivities: companionIntents.mapValues(\.activity))
+        companionActivities: companionIntents.mapValues(\.activity),
+        combatStance: session.combatStance,
+        partyWeapons: Dictionary(
+          uniqueKeysWithValues: session.party.map { ($0, fight.status(for: $0)) }))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

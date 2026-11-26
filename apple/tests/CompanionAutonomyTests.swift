@@ -8,9 +8,92 @@ import simd
 struct CompanionAutonomyTests {
   #if DEBUG
     @Test
+    func defaultDefendPreventsCompanionAttacksEvenAfterThePlayerEngagesAndOpensTheSensor() throws {
+      let world = GameWorld(level: BrooklynBridge.level)
+      walk(world, to: [6.5, 10])
+      update(world)
+      try #require(world.session.combatStance == .defend)
+      let before = world.playtestSnapshot.partyWeapons
+      for _ in 0..<60 * 20 {
+        let snapshot = world.playtestSnapshot
+        if snapshot.guardStrategy?.sensorDisabled == true { break }
+        let point = try #require(snapshot.guardPoints.first)
+        let aim = Movement.stick(
+          towards: point.ground - position(world, .miki), cameraOffset: world.level.cameraOffset)
+        update(world, raw: InputRules.Raw(aimStick: aim, controllerFire: point.exposed))
+        try #require(!world.isRetrying)
+        #expect(!world.playtestSnapshot.companionActivities.values.contains(.attacking))
+      }
+      try #require(world.playtestSnapshot.guardStrategy?.sensorDisabled == true)
+      for _ in 0..<60 * 2 { update(world) }
+      let after = world.playtestSnapshot
+      #expect(after.combatStance == .defend && after.leader == .miki)
+      #expect(
+        after.guardStrategy?.couplingBreached == false && after.guardStrategy?.reactorDamage == 0)
+      for member in [PartyMember.laura, .tom] {
+        #expect(try #require(after.partyWeapons[member]).loaded >= #require(before[member]).loaded)
+      }
+      #expect(!after.companionActivities.values.contains(.attacking))
+    }
+
+    @Test
+    func defendRecallsAnAttackingSquadWithoutSpendingAIRoundsOrTakingPlayerControl() throws {
+      let world = GameWorld(level: BrooklynBridge.level)
+      walk(world, to: [6.5, 10])
+      attack(world)
+      var preparation = PlaytestRunner(steps: [.companionPrerequisites], name: "defend-preparation")
+      for _ in 0..<60 * 92 where !preparation.isFinished {
+        drive(&preparation, in: world)
+      }
+      try #require(preparation.summary?.passed == true)
+      try #require(world.playtestSnapshot.guardStrategy?.couplingBreached == true)
+      update(world, raw: InputRules.Raw(keyboardHold: true))
+      update(world)
+      try #require(!world.session.orders.isEmpty)
+      let formation = world.session.formation
+      update(world, raw: InputRules.Raw(dpadDown: true))
+      update(world)
+      try #require(world.session.combatStance == .defend && world.session.orders.isEmpty)
+      #expect(world.session.formation == formation)
+      let stopped = world.playtestSnapshot
+      var defence = PlaytestRunner(steps: [.defendGuard(seconds: 3)], name: "defend-contract")
+      for _ in 0..<60 * 5 where !defence.isFinished { drive(&defence, in: world) }
+      let summary = try #require(defence.summary)
+      try #require(summary.passed, "\(summary.failures)")
+      #expect(world.session.leader == .miki && !world.isRetrying)
+      #expect(
+        world.playtestSnapshot.guardStrategy?.reactorDamage == stopped.guardStrategy?.reactorDamage)
+      for member in [PartyMember.laura, .tom] {
+        #expect(
+          try #require(world.playtestSnapshot.partyWeapons[member]).loaded
+            >= #require(stopped.partyWeapons[member]).loaded)
+      }
+
+      let playerLoaded = world.playtestSnapshot.weapon.loaded
+      for _ in 0..<60 * 2 where world.playtestSnapshot.weapon.loaded == playerLoaded {
+        let point = try #require(world.playtestSnapshot.guardPoints.first)
+        update(
+          world,
+          raw: InputRules.Raw(
+            aimStick: Movement.stick(
+              towards: point.ground - position(world, .miki), cameraOffset: world.level.cameraOffset
+            ),
+            controllerFire: true))
+        try #require(!world.isRetrying)
+      }
+      #expect(
+        world.playtestSnapshot.weapon.loaded < playerLoaded, "Defend leaves player Fire available")
+      #expect(world.session.combatStance == .defend && world.session.leader == .miki)
+      #expect(
+        world.playtestSnapshot.guardStrategy?.reactorDamage == stopped.guardStrategy?.reactorDamage)
+      #expect(!world.playtestSnapshot.companionActivities.values.contains(.attacking))
+    }
+
+    @Test
     func mikiCanKeepLeadingWhileLauraAndTomCompleteTheirOwnSteps() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
+      attack(world)
       var runner = PlaytestRunner(steps: [.companionFight], name: "companion-contract")
       var sawLauraAttack = false
       var sawTomAttack = false
@@ -49,6 +132,7 @@ struct CompanionAutonomyTests {
       update(world, raw: InputRules.Raw(controllerSwitch: true))
       update(world)
       try #require(world.session.leader == .tom)
+      attack(world)
       var sawMikiAttack = false
       var sawLauraAttack = false
       for destination: SIMD2<Float> in [[6.5, 30], [6.5, 10]] {
@@ -118,6 +202,7 @@ struct CompanionAutonomyTests {
     @Test
     func aQuietWestBypassDoesNotBecomeAnAutonomousFight() {
       let world = GameWorld(level: BrooklynBridge.level)
+      attack(world)
       walk(world, to: [-6.5, 30])
       walk(world, to: [-6.5, 15])
       for _ in 0..<60 * 6 { update(world) }
@@ -135,8 +220,8 @@ struct CompanionAutonomyTests {
     func holdAnchorsAndGoDestinationsKeepMovementAuthorityInAnEngagedFight() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
-      update(world)
-      update(world, raw: InputRules.Raw(dpadDown: true))
+      attack(world)
+      update(world, raw: InputRules.Raw(keyboardHold: true))
       update(world)
       var anchors: [PartyMember: SIMD2<Float>] = [:]
       for member in [PartyMember.laura, .tom] {
@@ -189,6 +274,7 @@ struct CompanionAutonomyTests {
     func pauseFreezesAutonomousMovementTurningAndGuardProgress() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
+      attack(world)
       var runner = PlaytestRunner(steps: [.companionFight], name: "companion-pause")
       for _ in 0..<60 * 25 where world.playtestSnapshot.guardStrategy?.sensorDisabled != true {
         runner.tick(dt: 1 / 60)
@@ -214,7 +300,40 @@ struct CompanionAutonomyTests {
       world.update(
         with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: 1 / 60)
     }
+
+    private func attack(_ world: GameWorld) {
+      update(world)
+      update(world, raw: InputRules.Raw(dpadUp: true))
+      update(world)
+      #expect(world.session.combatStance == .attack)
+    }
+
+    private func drive(_ runner: inout PlaytestRunner, in world: GameWorld) {
+      runner.tick(dt: 1 / 60)
+      update(world, raw: runner.input(world.playtestSnapshot))
+      runner.record(
+        PlaytestRunner.Frame(
+          dt: 1 / 60, leader: world.session.leader, positions: world.playtestSnapshot.positions,
+          targets: world.companionTargets, warning: world.diagnostic, simulationMilliseconds: 0))
+    }
   #endif
+
+  @Test
+  func defendRejectsStaleNativeCompanionFireUntilAttackIsExplicitlyRestored() throws {
+    let range = try NativeRange()
+    try range.openCore()
+    range.session.setCombatStance(.defend)
+    let before = range.strategy
+    let loaded = range.fight.status(for: .tom).loaded
+    for _ in 0..<120 {
+      range.stepTom()
+      #expect(!range.fight.shots.contains { $0.actor == .tom })
+    }
+    #expect(range.strategy.reactorDamage == before.reactorDamage)
+    #expect(range.fight.status(for: .tom).loaded == loaded)
+    range.session.setCombatStance(.attack)
+    #expect(try #require(range.firstTomShot()).actor == .tom)
+  }
 
   @Test
   func aCompanionUsesItsOwnMagazineCadenceAndPausedWeaponClock() throws {
@@ -309,6 +428,7 @@ struct CompanionAutonomyTests {
         fieldOfView: 22,
         opening: "Range", objective: "Test", lookAround: "Range", restartNote: "Restart")
       session = GameSession(level: level)
+      session.setCombatStance(.attack)
       fight = EncounterSimulation(level: level)
       #expect(session.beginEncounter(.stranger))
       fight.begin(encounter)

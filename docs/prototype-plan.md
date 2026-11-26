@@ -16,9 +16,29 @@ Later that day the maintainer started Miki, Tom and Laura together and kept the 
 
 The maintainer reported build 33 **“It worked nice”**, then asked for independent companions and chose **“Companions can complete the weakpoint steps too”**. This authorises the [bounded companion contract](companion-autonomy.md), not a generic AI framework or new scene. All three characters still contribute through their actual native weapons; changing leader is available but no longer mandatory for every step.
 
-Companions engage after the guard notices the party or the player attacks, choose nearby legal positions/cover and avoid committed fire where possible, with an initial 8 m leader leash. Hold anchors and Go destinations override autonomous movement. Formation/Follow retains its existing meaning and also clears tactical intentions for a temporary regroup, at least 2 seconds and until followers return near. Retreat suppresses attacks and regroups uncommanded followers; persistent Hold/Go orders remain until cleared. Actual rays, armour, weapon readiness/ammunition/cadence and turn rates remain authoritative; companions gain no teleportation, immunity, automatic shields or signatures.
+The maintainer then clarified that companions should attack only after **Attack**, while **Defend** on the D-pad should make them seek cover and return. The squad now defaults to Defend. D-pad/arrow Up orders Attack; Down orders Defend, immediately revoking companion fire permission and clearing old position orders to recall them via nearby legal cover. Fire alone controls only the leader. The stance persists across leader switches; Retry/Restart returns to Defend. This correction has passed the checks below.
 
-Verification on 26 November 2026:
+With Attack permission and an engaged guard, companions choose nearby legal positions/cover and avoid committed fire where possible, with an initial 8 m leader leash. Hold anchors and Go destinations otherwise override autonomous movement, and subsequently issued position orders do not arm attacks. Formation/Follow retains its existing meaning and temporary regroup without changing stance; retreat suppresses attacks. Actual rays, armour, weapon readiness/ammunition/cadence and turn rates remain authoritative; companions gain no teleportation, immunity, automatic shields or signatures.
+
+### Explicit stance verification
+
+On 26 November 2026, `./scripts/check` passed after the correction: 13 declaration-contract tests, 31 release-contract tests, 52 Blender extension tests, seven generated sounds, strict Swift formatting, the app build and hosted Swift Testing, including all nine headless gameplay routes. No Swift source warnings remained. Added coverage verifies default Defend despite real player engagement, no companion damage/ammo spend after Defend even with stale fire intentions, recall replacing Hold without cycling formation, player Fire remaining available, Attack restored only by command, local returning cover, command priority, touch cancellation, Pause/dialogue and stance reset on Retry/Restart. Read-only implementation and input reviews found no remaining correctness blocker.
+
+Clean rendered iPhone 17 / iOS 27.0 Simulator runs, through shared input:
+
+| Route | Duration | Warning frames | Frame p99 / max | Party update mean / p99 | Body overlap frames |
+|---|---:|---:|---:|---:|---:|
+| `companions` | 54.9 s | 0 | 16.74 / 50.75 ms | 1.440 / 4.921 ms | 0.0% |
+| `first-fight` | 80.9 s | 0 | 16.72 / 33.34 ms | 1.941 / 7.054 ms | 0.7% |
+| `weapons` | 62.2 s | 0 | 16.73 / 37.78 ms | 1.698 / 5.094 ms | 1.2% |
+
+All three passed, including Restart. The new route explicitly ordered Attack, allowed the real sensor/coupling steps, issued Hold then Defend, observed three seconds with no companion damage or ammo spend while recalling, then issued Attack again and completed the core. Miki remained player-controlled. The observed state stayed Defend throughout the cease-fire and core damage stayed zero; the final accepted core count reached 12 only after the new Attack. The widest leader gaps were 3.44, 3.82 and 3.58 m respectively. The HUD showed the stance and Up/Down commands. A subsequent native Simulator UI check invoked the touch Formation control's exposed Squad Attack and Squad Defend actions and observed each HUD transition, ending in Defend.
+
+These are Simulator results; brief overlaps and the recorded frame maxima remain limitations, and the controller-hint strip remains dense. The touch-menu selection/clamping and cancellation tests passed, but the UI check used its accessibility actions rather than a physical ground-menu gesture. No new physical controller, multi-touch, sustained phone performance or enjoyment is established. Review and authorised delivery remain outstanding; TestFlight build 33 remains the delivered version.
+
+### Earlier autonomous-engagement verification
+
+The first autonomy source, `14193d5`, passed these checks on 26 November 2026 before the explicit stance correction:
 
 - `./scripts/check` passed on the final source: 13 declaration-contract tests, 31 offline release-contract tests, 52 Blender extension tests, seven generated sounds, strict Swift formatting, the shared app build and hosted Swift Testing suite. This includes 20 new companion tests and all nine headless gameplay routes, with no Swift source warnings in the final run.
 - Pure planner and native/world tests cover role weapons, closed components, real contact/cover/ally rays, draw/cadence/magazines, facing, awareness and player-contact activation, quiet bypass, local routes/leash, cached-target invalidation, threat avoidance, order priority, leader authority and Pause. The nine headless gameplay routes passed in the integrated run.
@@ -95,7 +115,9 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Look around, advance dialogue or confirm menu | Cross / A | Look, Continue, or Restart while paused | E |
 | Next leader, going round the party | L1 / LB | Next: name | Q |
 | Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
-| Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
+| Permit companion attacks / cease fire and recall via cover | D-pad up / down | Hold on ground, slide upper-left Attack / upper-right Defend | Up / down arrows |
+| Send left / right member ahead | D-pad left / right | Hold on ground, then a name | Left / right arrows |
+| Both go / both hold | No direct binding | Hold on ground, then Both / Hold | G / H |
 | Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
 | [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
