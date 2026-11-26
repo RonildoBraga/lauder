@@ -1,7 +1,7 @@
 # First-tower strategic guard
 
 **Date:** 27 November 2026\
-**Status:** Shared health, optional weak-point bonuses and [damage feedback](damage-feedback.md) are in development on `codex/guard-damage` under [issue #183](https://github.com/RonildoBraga/lauder/issues/183), based on [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`. New source/rendered verification is pending in the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) remains the delivered preview. Earlier records below describe its mandatory dismantling baseline, not proof of this revision.
+**Status:** Shared health, optional weak-point bonuses and [damage feedback](damage-feedback.md) are implemented on `codex/guard-damage` under [issue #183](https://github.com/RonildoBraga/lauder/issues/183), based on [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`. Source/rendered verification passed on `533f012`, recorded in the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) remains the delivered preview. Earlier records below describe its mandatory dismantling baseline, not proof of this revision.
 
 The maintainer confirmed build 34's basic Attack/Defend commands and authorised [guard retaliation](guard-retaliation.md) in [issue #171](https://github.com/RonildoBraga/lauder/issues/171). That earlier comparison retained the mandatory damage rules and is delivered in build 35. On 27 November the maintainer asked for every successful hit to cause damage and then said **“Proceed with your recommendations”** to shared health, meaningful normal attacks and optional weakness rewards (chat; no public permalink). The [damage contract](damage-feedback.md) records that new authorisation; it does not authorise merge or another release.
 
@@ -48,7 +48,7 @@ The maintainer's 26 November assignment required all three contributions. Build 
 
 ## Verification boundary
 
-The manual build 33 prototype passed its recorded source/Simulator checks and was delivered for phone testing. Current damage/feedback verification is pending; earlier results do not establish this revision. The review questions are:
+The manual build 33 prototype passed its recorded source/Simulator checks and was delivered for phone testing. Current damage/feedback source and Simulator checks passed on `533f012`, recorded in the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Phone acceptance and balance remain unverified. The verification contract is:
 
 1. Verify positive ordinary/closed/unmatched damage, matched exposed bonuses, optional structural progress, repeated recovery windows, shared-health victory, truthful feedback and both attack patterns with meaningful rule and integration tests. Check solo victory and player/companion equality rather than retaining the old compulsory-role tests.
 2. Exercise the real control path in rendered Simulator: defeat the guard through ordinary fire and through useful weakness opportunities, miss a window and return, switch leaders and weapons, use cover/dodge, retreat, take the west bypass, retry, Pause/Resume and Restart. Check bounded companion contributions and order priority. The shield must still drop on a switch.

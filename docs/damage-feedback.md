@@ -1,7 +1,7 @@
 # Guard damage and feedback
 
 **Date:** 27 November 2026\
-**Status:** In development on `codex/guard-damage`, following [issue #183](https://github.com/RonildoBraga/lauder/issues/183). This revision starts from [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`, retaining its bridge cover and companion spacing. Source, rendered Simulator and physical-phone verification are pending for the new damage rules. The [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development) owns completed results when available. Internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) remains the delivered preview.
+**Status:** Implemented on `codex/guard-damage`, following [issue #183](https://github.com/RonildoBraga/lauder/issues/183). This revision starts from [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`, retaining its bridge cover and companion spacing. Source and rendered Simulator checks passed on `533f012`, recorded in [PR #184](https://github.com/RonildoBraga/lauder/pull/184) and the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Physical-phone behaviour, balance and performance remain unverified. Internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) remains the delivered preview.
 
 ## Maintainer direction
 
