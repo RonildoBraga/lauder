@@ -1,8 +1,10 @@
 # Lauder — architecture
 
-**Updated:** 23 November 2026
+**Updated:** 26 November 2026
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
+
+The [strategic first-tower guard](strategic-guard.md) is authorised and in development on `codex/strategic-bridge-guard`. The merged baseline below remains distinguishable from this locally verified branch revision; the [prototype plan](prototype-plan.md#strategic-guard--in-development) records its gates.
 
 ## Decision and platform
 
@@ -17,7 +19,7 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | Owner | Responsibility | Boundary |
 |---|---|---|
 | Game | Hold the bridge's stable GameWorld | SwiftUI reevaluation does not rebuild it; no level-switch flow |
-| GameSession | Mode, party/leader, formations/orders, inventory, combat checkpoints, dialogue and accepted commands | Authority over live session progress; no entities |
+| GameSession | Mode, party/leader, formations/orders, combat checkpoints, dialogue and accepted commands | Authority over live session progress; no entities |
 | BridgeProgress / StoryBeat | Bridge progression, action eligibility/costs and recruitment policy / authored story markers | Checkpointable rules and independent content data |
 | WorldCamera / CameraRig | Camera entity and landmark fading / follow, lean, switching, lens and projection | Presentation owner and value-only camera motion |
 | GameWorld | Bodies, scene, camera, movement, companion routing, encounters and one owned update subscription | Spatial state; no duplicate session progress |
@@ -56,11 +58,11 @@ The owned update samples controls, resolves InputRules using session mode, handl
 
 Controller, keyboard and touch share InputRules; the [input contract](prototype-plan.md#input-and-interaction-contract) lists bindings. Controller preference and **Use touch controls / Use controller** choose a source without bypassing session authority. PS5 and Xbox use extended-gamepad elements; Xbox physical delivery remains unverified.
 
-Pause wins over simultaneous commands. Next wins over Previous, and switches, formation and order commands suppress a same-sample action or dodge roll while consuming its held edge. Dialogue and Pause consume unavailable gameplay presses rather than queueing them. Holding movement through a leader switch moves the new leader without moving anybody to a new position.
+Pause wins over simultaneous commands. A single Next command cycles Miki, Tom and Laura; there is no Previous binding. Switches, formation and order commands suppress a same-sample action or dodge roll while consuming its held edge. Dialogue and Pause consume unavailable gameplay presses rather than queueing them. Holding movement through a leader switch moves the new leader without moving anybody to a new position.
 
 Pause/resume, source changes, interruption and reconnection require neutral input. Every held key, button and finger counts, including a centred-stick contact. Source changes cancel touch captures using generation tokens; stale callbacks cannot write into a fresh source. Keep the touch surface mounted on Pause so release is observable. A quick tap is latched until a sample, then delivered once.
 
-Pause has **Resume**, **Restart** and **Vibration**, opens on Resume and navigates on fresh up/down presses. Action confirms; Escape/Options/Menu resumes. Touch exposes the same intents directly. Restart takes effect without an extra confirmation. The pause view shows the bundle's actual version/build.
+Pause has **Resume**, **Restart**, **Vibration** and **Status panel**, opens on Resume and navigates on fresh up/down presses. Action confirms; Escape/Options/Menu resumes. Touch exposes Resume, Restart and Vibration directly and always shows the status panel. Restart takes effect without an extra confirmation. The pause view shows the bundle's actual version/build.
 
 ## Movement and presentation
 
@@ -71,6 +73,8 @@ The leader's [dodge roll](decisions/0019-dodge-roll.md) replaces their walking m
 The party's pawns have no rig. Each fixed step, `PawnGait` turns the movement a body has just made into a bob, a rock to the side and a lean. The figure turns about its feet, and the lean adds to the shot and hit jolt ([ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md)). A move of over a metre in one step, such as a retry, resets the walk. A rolling leader shows the roll's tumble instead. All of this is presentation; the bodies that move, collide and are hit stay where the simulation resolved them.
 
 The camera follows the active leader and eases on a switch, retaining the elevated angle. Aiming/fighting narrows its lens. The bridge's tall towers fade when between camera and party. Goals from the authored layout drive the compass. Status messages expire in play time; Pause and dialogue hold them.
+
+The strategic branch gives the leader, target, lock, order and DEBUG destination markers one shared centre height, 4.5 cm over the snow, so their undersides clear the towers' baked shadow planes at 3 cm. Marker placement remains presentation; it does not move a body or alter targeting.
 
 ## The opening
 
@@ -86,7 +90,9 @@ Every leader carries two weapons and switches between them ([ADR 0021](decisions
 
 Manual aim turns the leader at a bounded rate; without it, assistance picks a visible target in effective reach and Fire waits until facing it. A [lock](decisions/0020-lock-on.md) takes the stick's place: the leader turns to the locked hostile, and Fire waits until facing them. Spread follows movement, turning and recent shots. Ballistics traces actual shots through the flat level bounds, body cylinders and real box heights; a miss can strike scenery and a long ray is not truncated at assistance reach. Unengaged people hold deliberate fire. No line exposes an enemy's exact aim.
 
-The first-tower robot patrols a bounded area, notices a visible target, braces and tracks, then commits its aim point before an alternating three-round burst. Its gun transforms supply the actual 3D ray origins/directions; seeded spread and the tower's geometry resolve hits without a proximity stance/shield system. A burst can cause at most one injury, and a third injury invokes the bridge encounter's retry. Six carbine hits disable the robot without a human fall animation. Reaching the authored west exit instead clears the encounter and pending fire without recording a kill, restoring ammunition or resetting the robot's recorded damage. Both completed resolutions recover the party's encounter-local injuries; retreat while the encounter remains active preserves them. Companions have no autonomous combat or signature ability in this scene; Tom's ambush shot is an authored cue. Generic human rifle timing, including its deliberate first miss, remains covered by test fixtures rather than the first bridge encounter.
+In the merged baseline, the first-tower robot patrols a bounded area, notices a visible target, braces and tracks, then commits its aim point before an alternating three-round burst. Its gun transforms supply the actual 3D ray origins/directions; seeded spread and tower geometry resolve hits. The paired-weapons pass still uses the guard's six-hit toughness. A burst can cause at most one injury, and a third injury invokes the bridge encounter's retry. Reaching the authored west exit instead clears the encounter and pending fire without recording a kill. Both completed resolutions recover encounter-local injuries; retreat while the encounter remains active preserves progress. Companions have no autonomous combat or signature ability in this scene. Tom's ambush is removed; generic human timing and scripted-shot cues remain covered by test fixtures.
+
+The strategic branch replaces that guard's ordinary toughness with the [dismantling contract](strategic-guard.md#agreed-dismantling-sequence): persistent sensor and coupling prerequisites, then accepted minigun reactor hits during repeated recovery windows. Robot combat values own that state and attack timing; EncounterSimulation accepts actual weapon/hit evidence and emits feedback, while EncounterStage presents the result. Manual leader switching, weapon handling, real cover/rays and the west bypass retain their existing owners. This is one encounter's state, not a second session authority or a general companion AI. The branch also prevents a sword swing damaging through solid cover using the existing 3D Ballistics visibility query.
 
 EncounterStage projects poses, tracers/flashes/impacts and reusable target markers. Feedback events select the retained native weapon/impact sounds and leader haptic cues. Sound/haptic playback follows lifecycle and the Vibration preference.
 
@@ -106,7 +112,7 @@ Persistence remains unimplemented later hardening. Define versioned value snapsh
 
 ## Checks
 
-Tests cover bridge beats/interactions/recruitment/retry, session authority and input priority/release, camera mapping, native weapon timing and feedback, actual long rays/neutral safety, collision and squad motion. A test-only yard with a narrow doorway exercises clearance the bridge cannot provide; a flat range exercises weapon rules without changing app content.
+Tests cover bridge progression/retry, session authority and input priority/release, camera mapping, native weapon timing and feedback, actual long rays/neutral safety, collision and squad motion. Separate fixtures retain recruitment and scripted-cue rules without restoring those removed bridge scenes. A test-only yard with a narrow doorway exercises clearance the bridge cannot provide; a flat range exercises weapon rules without changing app content.
 
 Portable contract checks compare scenario and resource declarations across Swift, Python and Blender. Offline TestFlight contract tests also run without credentials or network access. The versioned `apple/scripts/testflight` command owns release discovery, source-bound checks, signing/archive verification, upload and read-only processing/tester verification; its team/credentials and receipts/archives stay private. The same standard check runs in CI on the selected compatible Xcode image; the PR records the actual result.
 
@@ -114,4 +120,4 @@ Eight DEBUG scripted routes use ordinary input in headless and rendered Simulato
 
 ## Deliberately deferred
 
-Other playable scenes and the retired prototypes' frameworks, autonomous combat, cover stances, tactical enemies, grenades, signatures, elevation, salvage-repair interactions, weapon benches, health/hunger, crafting, skill trees, persistence, networking and art expansion. Current architecture is the bridge's needs; new work follows an agreed gameplay question and explicit assignment.
+Other playable scenes and the retired prototypes' frameworks, autonomous companion combat, cover stances, further tactical enemies beyond the assigned guard, grenades, signatures, elevation, salvage-repair interactions, weapon benches, health/hunger, crafting, skill trees, persistence, networking and art expansion. Current architecture is the bridge's needs; new work follows an agreed gameplay question and explicit assignment.

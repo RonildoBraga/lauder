@@ -7,6 +7,8 @@
 
 **Opening revision, 26 November 2026:** The maintainer simplified the opening: **“I want to simplify the starting of the game so all the 3 companions will start together so no need to meet Tom and Laura later in the game”**. Asked what then happens to the scenes that introduced Tom and Laura, the maintainer chose **“Guard fight only”**. The three start together, the guard is the bridge's only fight, and the supply case's search, the knife attacker, Tom's intervention and Laura's rescue are gone. Why they travel together, and whether they were strangers, is now open.
 
+**Strategic guard assignment, 26 November 2026:** The maintainer authorised a [dismantling encounter](../strategic-guard.md) using Miki's long rifle, Laura's sword and Tom's minigun, with manual changes of leader. It is in development on its branch, locally checked but not a delivered or player-accepted story beat. It gives the opening a concrete act of cooperation without explaining the trio's histories; the west-arch bypass remains an alternative.
+
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
@@ -16,14 +18,14 @@
 - Chapter One begins with Miki, Tom and Laura crossing the Brooklyn Bridge together towards Manhattan. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The opening is set in a post-apocalyptic New York. The cause and wider extent of the collapse remain uncertain.
 - The whole world is frozen. Rivers and the sea lie under ice, and most of the land is buried under snow: flat, white and largely empty, broken by a few structures and landmarks. Why it froze, and how the freeze relates to the collapse, remains uncertain.
-- Exploration, purposeful salvage and survival lead the experience. The opening teaches combat through two short encounters on the bridge; afterwards combat stays occasional and light. All three characters carry weapons and can defend themselves and support one another. Ordinary cooperation, humour and care remain possible.
+- Exploration, purposeful salvage and survival lead the experience. The opening has one optional guard encounter on the bridge; afterwards combat stays occasional. All three characters carry weapons and can defend themselves and support one another. Ordinary cooperation, humour and care remain possible.
 - Human enhancement exists through discreet internal synthetic replacements and biological or genetic changes. Characters retain a human exterior; exposed machinery is not the visual direction.
 
 The control description is understood as **one human player directing a party of up to three**, with the others as computer-controlled companions. Three simultaneous human players or online co-op are not assumed by this document.
 
 ### What remains open
 
-Miki, Laura and Tom are the proposed playable trio. Their precise skills, weapons, ability rules, enhancement histories, ages and biographies are working choices. The approved coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
+Miki, Laura and Tom are the playable trio. Their paired weapons and the assigned first-guard roles are agreed; further skills, signature-ability rules, enhancement histories, ages and biographies remain working choices. The coordinated-squad intent does not settle those details. Nina is proposed as a supporting character outside that trio.
 
 No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The opening no longer shows how the three came to travel together, or whether they were strangers; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
@@ -71,7 +73,9 @@ These distinctions are not complete identities. All three can observe, talk, hel
 
 Each character should be useful as leader and capable of ordinary weapon defence. Their distinctions concern range, exposure, positioning and the situation they can improve, rather than an obligatory sequence of three specialist actions. Keep ordinary travel comfortable under every leader; Tom should not make routine exploration slower simply because he has a stronger build.
 
-In the proposed first combat experiment, companions provide basic weapon support while the player triggers only the active character's signature ability. They do not spend signatures automatically or require the player to manage three ability bars. Using another member's signature therefore means switching to them first, and the controls and threats must allow for that:
+The assigned first-tower guard deliberately teaches three contributions in sequence: Miki disables a sensor with the long rifle, Laura breaches a side coupling with the sword, and Tom damages an exposed reactor with the minigun over repeated recovery windows. Those first two results persist for the attempt. This is a specific machine's dismantling rule, not a requirement that every future fight use a fixed combination or a new implementation of the proposed signatures below. Companions follow/hold without automatic attacks, and switching away from Tom drops his shield.
+
+In the separate Quiet Yard proposal, companions would provide basic weapon support while the player triggers only the active character's signature ability. This remains unimplemented and is not the assigned guard's control model. They would not spend signatures automatically or require the player to manage three ability bars. Using another member's signature would mean switching to them first, and the controls and threats must allow for that:
 
 - Every member is at most two presses away: Next, on L1 / LB on a controller or as a button on touch, goes round the party.
 - A threat's wind-up lasts long enough to switch and act; about 1.5 seconds is a starting value for playtests.
@@ -142,7 +146,7 @@ He is strongest where a close approach needs holding and weakest against distant
 
 ### How the trio complements itself
 
-Miki can create a brief opening, Laura can use another angle, and Tom can make space to leave or hold a close approach. Those are alternatives and opportunities for teamwork, not a mandatory combo. Ordinary fire and positioning must remain useful with any leader, and no character is a passive escort or a compulsory healer. Their exploration contributions remain central: understanding equipment, reading access and handling a load continue to matter outside a fight.
+Miki can create a brief opening, Laura can use another angle, and Tom can make space to leave or hold a close approach. Beyond the first guard's explicit teaching sequence, those are alternatives and opportunities for teamwork rather than a mandatory combination for every encounter. Ordinary fire and positioning should remain useful with any leader, and no character is a passive escort or a compulsory healer. Their exploration contributions remain central: understanding equipment, reading access and handling a load continue to matter outside a fight.
 
 The weapons make survival capability visible before the player learns where it came from. Their ownership does not settle military history, allegiance, kinship or enhancement origins. Reveal those histories through relevant encounters and choices; explain the usable combat rules when they first matter.
 
@@ -206,7 +210,7 @@ People can cooperate, disagree or compete over resources without belonging to a 
 
 | Place | Working purpose |
 |---|---|
-| The Brooklyn Bridge | The opening crossing, where Miki meets Tom and Laura |
+| The Brooklyn Bridge | The opening crossing, travelled by Miki, Tom and Laura together |
 | Manhattan | Where the crossing leads; what the party finds there is not yet written |
 | The Basin | Damaged inland district Miki has helped maintain |
 | East Span | Recently closed crossing interrupting the travellers' routes |
@@ -223,14 +227,14 @@ The repaired set serves others as well as the party. It establishes contact and 
 
 ## Chapter One — Across the bridge
 
-The first-tower and supply-case beats reflect the assigned C robot replacement. Its prototype behaviour and verification are recorded in the [encounter document](../encounters/bridge-spider-bot.md) and [prototype plan](../prototype-plan.md); narrative intent does not by itself establish a successful runtime check.
+The first tower retains the C robot; the supply-case interaction and recruitment beats are removed. The [encounter document](../encounters/bridge-spider-bot.md) records the preceding prototype, and the [strategic guard](../strategic-guard.md) records the assigned revision. Implementation status and verification belong in the [prototype plan](../prototype-plan.md); narrative intent does not establish a successful runtime check.
 
 **Immediate goal:** Cross the Brooklyn Bridge into Manhattan.\
 **Emotional movement:** Three travellers begin to rely on one another.\
 **Party:** Miki, Tom and Laura, together from the start.\
 **Achievement:** The three reach Manhattan together.
 
-The whole opening is built, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Its final dialogue remains to be written; the game's lines are provisional.
+The merged baseline contains the whole opening, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. The strategic first-guard revision is locally checked on its branch; delivery and player acceptance remain pending. Final dialogue remains to be written; the game's lines are provisional.
 
 Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 
@@ -240,7 +244,7 @@ The three start at the Brooklyn end. Snow has buried the bridge's road, everythi
 
 ### 2. The guard at the first tower
 
-A dark, four-legged machine still patrols the first tower. Miki notices its continued vigilance, but the scene gives no account of its maker or orders. The player can draw and return fire, using the tower's stone while the machine braces, commits its aim and fires a burst. The other arch offers a route beyond its guard area instead.
+A dark, four-legged machine still patrols the first tower. Miki notices its continued vigilance, but the scene gives no account of its maker or orders. In the assigned strategic revision, she reads and disables its sensor, Laura reaches a side coupling and breaches it, and Tom uses the reactor's recovery openings. The player directs each contribution by changing leader, using the tower's stone and the machine's readable attack cycle to survive. Their cooperation is shown before its personal history is explained. The other arch still offers a route beyond the guard area instead.
 
 ### 3. Onwards
 

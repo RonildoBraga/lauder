@@ -276,6 +276,9 @@ struct GameView: View {
       if let threat = world.threat {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
       }
+      if let hint = world.guardHint {
+        Text(hint).font(.caption.weight(.semibold))
+      }
       if world.showsAmmo {
         Text(world.weaponStatus).font(.caption)
       }

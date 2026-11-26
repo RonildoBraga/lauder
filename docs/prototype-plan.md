@@ -2,7 +2,7 @@
 
 **Updated:** 26 November 2026
 
-**Status:** The maintainer requested a smaller starting point before a gameplay revamp: keep the Brooklyn Bridge and delete the other playable scenes and their unused systems. [ADR 0017](decisions/0017-bridge-only-reset.md) records the boundary. New mechanics and scenes await a design decision.
+**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The maintainer has now authorised the [strategic guard](strategic-guard.md) as the next small gameplay experiment. It is in development on `codex/strategic-bridge-guard`; local checks and rendered Simulator verification pass, while review, merge and delivery remain outstanding. Further scenes and mechanics require their own decision.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
@@ -12,15 +12,39 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Strategic guard — in development
+
+The maintainer authorised an encounter that rewards manually directing all three existing characters. [Strategic guard](strategic-guard.md) records its accepted rules: Miki's long rifle persistently disables the sensor, Laura's sword persistently breaches a side coupling, and Tom's minigun supplies 12 accepted reactor rounds across repeatable 4-second exposure windows opened by recovery. Ordinary armour damage and wrong-role weapons cannot skip those contributions. The guard alternates three precision rounds and a five-round fan cannon attack, with readable wind-ups and no exact red aim line. The west bypass stays open.
+
+L1 / LB, Q and touch Next still switch leader manually; followers follow or hold and do not attack automatically. Tom's dome drops on a leader switch. The branch also fixes sword strikes through solid cover and raises ground markers above baked tower shadows. Existing pawns, camera, scene, input authority and real shot geometry remain the basis of the experiment.
+
+Verification on 26 November 2026:
+
+- `./scripts/check` passed: declaration contracts and 13 contract tests, 28 offline release-contract tests, 52 Blender extension tests, seven generated sounds, strict Swift formatting, the app build and hosted Swift Testing suite. All eight headless gameplay routes passed through ordinary input.
+- Contact tests cover assisted/manual/locked shots, every missing-role solo/pair, wrong weapons, real armour/cover, outside-hull side contact, elevated targets, persistent progress, missed windows, Pause, retry and reset. Continuous hull tests cover walking, rolling, sliding and safe overlap escape.
+- Read-only peer review identified the hull-entry and low-cover elevation defects; both were addressed and re-reviewed with no remaining blocker.
+
+Rendered iPhone 17 / iOS 27.0 Simulator results:
+
+| Route | Duration | Companion warning frames | Frame p99 | Party update mean / p99 |
+|---|---:|---:|---:|---:|
+| `first-fight` | 81.0 s | 0 | 16.75 ms | 0.993 / 2.017 ms |
+| `weapons` | 65.0 s | 0 | 16.89 ms | 1.006 / 2.249 ms |
+| `lock-on` | 54.7 s | 0 | 16.76 ms | 1.010 / 2.006 ms |
+
+All three routes passed, including the complete dismantling sequence and Restart. Captures show the front sensor, side coupling, closed/open core and countdown, both attack warnings, and ground markers above the tower shadows. These are Simulator measurements on the Mac, not phone performance results. Component spheres remain prototype targeting cues and the controller-hint strip remains dense.
+
+Remaining gates: source-bound PR review, the affected physical controls/readability/performance checkpoint before a playable-feature merge, and separate authorisation for merge and delivery. No new release, merged implementation or phone acceptance is claimed. Successful Simulator checks do not establish balance or enjoyment.
+
 ## Structural preparation
 
-The approved structural preparation is merged: [PR #125](https://github.com/RonildoBraga/lauder/pull/125) separates camera motion and bridge progression, clarifies encounter naming, splits combat values into cohesive files and adds narrow declaration checks with CI. [PR #126](https://github.com/RonildoBraga/lauder/pull/126) adds reproducible TestFlight tooling. [ADR 0018](decisions/0018-runtime-boundaries.md) records the boundaries. Gameplay and story are unchanged; the next gameplay task is the design gate below.
+The approved structural preparation is merged: [PR #125](https://github.com/RonildoBraga/lauder/pull/125) separates camera motion and bridge progression, clarifies encounter naming, splits combat values into cohesive files and adds narrow declaration checks with CI. [PR #126](https://github.com/RonildoBraga/lauder/pull/126) adds reproducible TestFlight tooling. [ADR 0018](decisions/0018-runtime-boundaries.md) records the boundaries. Those structural changes did not change gameplay or story.
 
 ## Purpose and scope
 
 Use the retained bridge to decide what is enjoyable before expanding again. This cleanup preserves its existing opening, party movement, native weapons and input paths. It does not redesign the story or author a replacement core loop.
 
-The story's foundations remain in the [story bible](story/story-bible.md). Exploration and salvage lead the intended game, with occasional combat; the current opening samples movement, a guard that can be fought or bypassed, a supply case and recruitment. Later narrative proposals are reference material, not playable content or assignments.
+The story's foundations remain in the [story bible](story/story-bible.md). Exploration and salvage lead the intended game, with occasional combat; the current opening samples movement, one guard that can be fought or bypassed, and a crossing by all three from the start. The supply-case interaction and recruitment scenes are removed. Later narrative proposals are reference material, not playable content or assignments.
 
 ## The opening
 
@@ -152,7 +176,7 @@ On 25 November 2026 the maintainer chose simpler figures for the party from a [g
 ### Controls pass
 
 On 26 November 2026, after reviewing a map of the controller's buttons, the maintainer asked for three changes in a Claude session, which has no public permalink:
-- **“instead of using R1 and L1 to navigate through the characters, we should just use L1 and go in circles”**. L1 / LB is now the only leader switch. It goes round the party in the order that Next keeps on touch and Q on a keyboard: Miki, Tom, then Laura. Previous and its Z key are gone, and R1 / RB is unassigned. The D-pad keeps its sides, so right sends whoever L1 would lead as.
+- **“instead of using R1 and L1 to navigate through the characters, we should just use L1 and go in circles”**. L1 / LB is now the only leader switch. It goes round the party in the order that Next keeps on touch and Q on a keyboard: Miki, Tom, then Laura. Previous and its Z key are gone. This pass freed R1 / RB; the later paired-weapons pass below assigned it to Swap. The D-pad keeps its sides, so right sends whoever L1 would lead as.
 - **“The circle button used for status panel, we should remove from the circle button and just make as a option in the pause menu.”** The pause menu has a fourth choice, **Status panel: Shown** or **Hidden**, which stays in the menu as Vibration does. Circle / B and the H key no longer hide the panel and are unassigned. Touch is unchanged: its pause screen has no such choice, and the panel always shows.
 - **The [lock-on](decisions/0020-lock-on.md)**, quoted in its decision record. A press of the right stick locks the aim on a hostile, circled in red; the next press moves it on, and two quick presses let go.
 
@@ -213,11 +237,11 @@ Asked **“How do the weapons and controls feel on your phone?”**, the maintai
 
 All four pull requests then merged into `main` on 26 November 2026, in order: [#155](https://github.com/RonildoBraga/lauder/pull/155) as `c757cad`, [#156](https://github.com/RonildoBraga/lauder/pull/156) as `a8e7dc9`, [#157](https://github.com/RonildoBraga/lauder/pull/157) as `52fa921` and [#158](https://github.com/RonildoBraga/lauder/pull/158) as `135c2a4`. `main`'s app sources are those of `0a50613`; only the five documents that record the playtest differ. Main's check [passed](https://github.com/RonildoBraga/lauder/actions/runs/45720003568) on `135c2a4`.
 
-### Architecture checks
+### Historical architecture checks
 
 Integrated source `7158f29a44738cfd0188292ef3839d0338bd7c73` has the exact tree of reviewed source `c01dd03f6532063c959f2da9fcd663b3f9d393f3`. On `c01dd03`, `./scripts/check` passed formatting, the shared app build and hosted Swift suite, including all eight retained headless routes and six new camera/progression regression tests, plus **13 declaration-contract tests**, **28 offline release-contract tests**, **51 Blender tests** and **seven generated sounds**. [GitHub Actions run 45002053969](https://github.com/RonildoBraga/lauder/actions/runs/45002053969) passed on that reviewed source. Source review completed with no outstanding findings.
 
-The retained headless routes are `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening`, `formations` and `orders`.
+At that historical source, the retained headless routes were `bridge-walk`, `first-fight`, `fight-retry`, `ambush`, `laura`, `opening`, `formations` and `orders`. The current merged baseline instead has eight: `bridge-walk`, `first-fight`, `fight-retry`, `opening`, `formations`, `orders`, `lock-on` and `weapons`. The strategic branch updates these existing routes for the dismantling fight; use `./apple/scripts/playtest --list` for the checked-out source.
 
 Rendered Simulator checks on `b533e2ff8ee210eb030737293e47524ed008f47e` passed with no route failures or companion warning frames:
 
@@ -261,13 +285,13 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
-The C first-tower runtime prototype is implemented and its source/Simulator checks pass. Review whether the short loop is readable and enjoyable; source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
+The preceding C first-tower prototype is implemented in the merged baseline, with its recorded source/Simulator checks. The maintainer has authorised the strategic revision above; complete and review that bounded experiment, then assess whether its loop is readable and enjoyable. Source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
 
 The broader squad combat direction, [The Quiet Yard](encounters/the-quiet-yard.md) and later narrative plans remain reference rather than assignments. The removed S4 experiments stay retired.
 
 ## Outside the first playable
 
-Additional playable scenes, tactical combat AI, signature abilities, salvage-repair machinery, extra equipment, elevation, skill trees, health/hunger systems, multiplayer, crafting, branching dialogue, finished art, persistence, cloud services and App Store submission. The reset does not assign any replacement for them.
+Additional playable scenes, general tactical combat AI beyond the assigned guard, autonomous companion attacks, signature abilities, salvage-repair machinery, extra equipment, elevation, skill trees, health/hunger systems, multiplayer, crafting, branching dialogue, finished art, persistence, cloud services and App Store submission. The strategic guard does not assign those systems.
 
 ## Later hardening
 

@@ -40,6 +40,8 @@ struct Level {
     let standAt: SIMD2<Float>
     let hits: Int
     var attack = Attack.shoot
+    /// This introductory guard is dismantled by all three travellers, rather than body damage.
+    var strategicGuard = false
     /// The visible aim before each shot, long enough to take cover or answer.
     var windUp: Float = 0
     /// The pause after each shot before the next aim begins.

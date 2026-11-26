@@ -41,7 +41,7 @@ struct HostileState {
     self.spec = spec
     position = spec.hiddenAt
     if spec.attack == .robot {
-      robot = RobotGuard(home: spec.standAt)
+      robot = RobotGuard(home: spec.standAt, strategicPatterns: spec.strategicGuard)
       position = spec.standAt
     }
   }
