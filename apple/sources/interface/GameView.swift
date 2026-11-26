@@ -279,6 +279,9 @@ struct GameView: View {
       if let hint = world.guardHint {
         Text(hint).font(.caption.weight(.semibold))
       }
+      if !world.companionStatus.isEmpty {
+        Text(world.companionStatus).font(.caption)
+      }
       if world.showsAmmo {
         Text(world.weaponStatus).font(.caption)
       }

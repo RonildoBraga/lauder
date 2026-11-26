@@ -34,6 +34,7 @@ final class GameWorld {
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
   private(set) var guardHint: String?
+  private(set) var companionStatus = ""
   /// Whether the leader's weapon is drawn.
   private(set) var weaponDrawn = false
   /// The hostile the aim is locked on, by id, or nil (ADR 0020).
@@ -86,6 +87,12 @@ final class GameWorld {
   @ObservationIgnored private var route: RouteMemory
   @ObservationIgnored private var planner: SquadPlanner
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
+  @ObservationIgnored private var tactics: [PartyMember: CompanionTactics] = [:]
+  @ObservationIgnored private var companionIntents: [PartyMember: CompanionTactics.Intent] = [:]
+  @ObservationIgnored private var formationTargets: [PartyMember: SIMD2<Float>] = [:]
+  @ObservationIgnored private var regroupRemaining: Float = 0
+  @ObservationIgnored private var regrouping = false
+  @ObservationIgnored private var retreatRemaining: Float = 0
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
   /// Members lying hurt where they wait, until a scene stands them up (Laura, M4).
@@ -459,6 +466,12 @@ final class GameWorld {
       // The squad's planner takes the new formation in the next step (ADR 0003, phase S2). After
       // an order the button calls everyone back instead.
       if input.formationPressed {
+        if !companionIntents.isEmpty {
+          regrouping = true
+          regroupRemaining = 2
+          companionIntents = [:]
+          tactics = [:]
+        }
         session.pressFormation()
         showOrders()
       }
@@ -536,6 +549,13 @@ final class GameWorld {
   private func resetSquad(around spot: SIMD2<Float>) {
     threat = nil
     guardHint = nil
+    companionStatus = ""
+    companionIntents = [:]
+    formationTargets = [:]
+    tactics = [:]
+    regrouping = false
+    regroupRemaining = 0
+    retreatRemaining = 0
     weaponDrawn = false
     fireHeld = false
     aimStick = nil
@@ -607,7 +627,6 @@ final class GameWorld {
     defer { showWalks(from: before, dt: dt) }
     let leader = session.leader
     guard let leaderStart = position(of: leader) else { return }
-    let motion = self.motion
     let grid = self.grid
     // A scripted scene holds the party where they stand, whoever leads; only its cues place and
     // turn anyone, and switching leader during it moves no one.
@@ -664,6 +683,7 @@ final class GameWorld {
     }
     let leaderVelocity = (leaderEnd - leaderStart) / dt
     route.record(leaderEnd)
+    planCompanions(leader: leaderEnd, velocity: leaderVelocity, dt: dt)
     stepStage(
       leader: leader, at: leaderEnd, armed: armed, untouchable: isRolling ? [leader] : [], dt: dt)
     if roll?.isFinished == true {
@@ -682,7 +702,7 @@ final class GameWorld {
     // point, and the others share the formation's places (phase S3).
     let current = positions
     let isClear: (SIMD2<Float>, SIMD2<Float>) -> Bool = { from, to in
-      motion.canTraverse(from: from, to: to)
+      self.canTraverseParty(from: from, to: to)
     }
     let session = self.session
     let following = current.filter { member, _ in
@@ -696,6 +716,22 @@ final class GameWorld {
     for member in session.party where member != leader {
       if let point = Self.point(of: session.order(of: member)) { targets[member] = point }
     }
+    formationTargets = targets
+    var fixedTargets: Set<PartyMember> = []
+    for member in session.companions {
+      if session.order(of: member) == .following,
+        let target = companionIntents[member]?.position
+      {
+        targets[member] = target
+        fixedTargets.insert(member)
+      }
+      if let start = current[member], let target = targets[member],
+        let detour = guardWaypoint(from: start, towards: target)
+      {
+        targets[member] = detour
+        fixedTargets.insert(member)
+      }
+    }
     companionTargets = targets
     for member in session.party where member != leader {
       guard let start = current[member], let target = targets[member],
@@ -706,13 +742,22 @@ final class GameWorld {
         target: target, leaderPosition: leaderEnd, leaderVelocity: leaderVelocity,
         others: current.compactMap { $0.key == member ? nil : $0.value },
         speed: PartyBody.speed, dt: dt,
-        targetMoves: order == .following)
+        targetMoves: order == .following && !fixedTargets.contains(member))
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = resolvePartyMotion(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
       motors[member] = motor
       place(member, at: end)
-      turn(member, moved: end - start, dt: dt)
+      if let look = companionIntents[member]?.lookAt, simd_distance(look, end) > 0.001 {
+        let current = yaw[member] ?? 0
+        setYaw(
+          member,
+          Movement.turn(
+            from: current, towards: Movement.yaw(towards: look - end),
+            limit: Movement.companionTurnRate * dt))
+      } else {
+        turn(member, moved: end - start, dt: dt)
+      }
       // A going companion holds once they reach their ordered point.
       if case .going(let point) = order,
         simd_distance(end, point) <= Self.arrivalDistance
@@ -741,6 +786,121 @@ final class GameWorld {
         radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
     }
     return motion.canTraverse(from: start, to: end) ? end : start
+  }
+
+  private func canStandParty(_ point: SIMD2<Float>) -> Bool {
+    grid.isWalkable(point)
+      && fight.hostiles.values.allSatisfy { state in
+        guard state.spec.strategicGuard, state.isVisible, !state.isDown,
+          let robot = state.robot, !robot.isCleared
+        else { return true }
+        return simd_distance(point, state.position)
+          >= RobotModelGeometry.bodyRadius + PartyBody.radius + PartyMotion.skin
+      }
+  }
+
+  private func canTraverseParty(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Bool {
+    guard motion.canTraverse(from: start, to: end) else { return false }
+    return fight.hostiles.values.allSatisfy { state in
+      guard state.spec.strategicGuard, state.isVisible, !state.isDown,
+        let robot = state.robot, !robot.isCleared
+      else { return true }
+      let resolved = GuardCollision.resolve(
+        start: start, delta: end - start, centre: state.position,
+        radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
+      return simd_distance(resolved, end) < 0.001
+    }
+  }
+
+  /// Static grid routes also need short legal legs round a living machine's dynamic hull.
+  private func guardWaypoint(from start: SIMD2<Float>, towards target: SIMD2<Float>) -> SIMD2<
+    Float
+  >? {
+    for state in fight.hostiles.values
+    where state.spec.strategicGuard && state.isVisible && !state.isDown {
+      guard let robot = state.robot, !robot.isCleared else { continue }
+      let end = GuardCollision.resolve(
+        start: start, delta: target - start, centre: state.position,
+        radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
+      guard simd_distance(end, target) > 0.01 else { continue }
+      let radial = start - state.position
+      guard simd_length(radial) > 0.001 else { return nil }
+      let direction = simd_normalize(radial)
+      let radius = min(4, max(2.5, simd_length(radial)))
+      return [Float(0.4), -0.4, 0.8, -0.8].map { angle in
+        let rotated = SIMD2(
+          direction.x * cos(angle) - direction.y * sin(angle),
+          direction.x * sin(angle) + direction.y * cos(angle))
+        return state.position + rotated * radius
+      }.filter { canStandParty($0) && canTraverseParty(from: start, to: $0) }
+        .min { simd_distance_squared($0, target) < simd_distance_squared($1, target) }
+    }
+    return nil
+  }
+
+  private func planCompanions(leader: SIMD2<Float>, velocity: SIMD2<Float>, dt: Float) {
+    let current = positions
+    guard let guardState = fight.companionGuard(near: leader), !fight.holdsParty else {
+      companionIntents = [:]
+      tactics = [:]
+      if !companionStatus.isEmpty { companionStatus = "" }
+      return
+    }
+    let away = leader - guardState.robot.position
+    if simd_length(away) > 0.001, simd_dot(velocity, simd_normalize(away)) > 1 {
+      retreatRemaining = 1
+    } else {
+      retreatRemaining = max(0, retreatRemaining - dt)
+    }
+    if regrouping {
+      regroupRemaining = max(0, regroupRemaining - dt)
+      if regroupRemaining == 0,
+        session.companions.allSatisfy({
+          current[$0].map { simd_distance($0, leader) < 2.6 } ?? false
+        })
+      {
+        regrouping = false
+      }
+    }
+    var next: [PartyMember: CompanionTactics.Intent] = [:]
+    for member in session.companions {
+      guard let position = current[member] else { continue }
+      var policy = tactics[member] ?? CompanionTactics()
+      let base = formationTargets[member] ?? position
+      let intent = policy.plan(
+        input: CompanionTactics.Input(
+          member: member, leader: session.leader, position: position, leaderPosition: leader,
+          baseTarget: base, order: session.order(of: member),
+          active: !regrouping && retreatRemaining == 0,
+          guardPosition: guardState.robot.position, guardFacing: guardState.robot.facing,
+          phase: guardState.robot.phase, stage: guardState.strategy.phase,
+          weakpoints: fight.weakpoints(for: guardState.id), dt: dt),
+        canStand: { self.canStandParty($0) },
+        canTraverse: { self.canTraverseParty(from: $0, to: $1) },
+        canFire: {
+          self.fight.companionCanFire(member, from: $0, at: $1, weapon: $2, figures: current)
+        },
+        isCovered: { self.fight.companionHasCover(at: $0, from: guardState.robot) },
+        isThreatened: { self.fight.companionIsThreatened(at: $0, by: guardState.robot) })
+      tactics[member] = policy
+      next[member] = intent
+    }
+    companionIntents = next
+    let status = session.companions.compactMap { member -> String? in
+      guard let activity = next[member]?.activity else { return nil }
+      let action =
+        switch activity {
+        case .following: "following"
+        case .ordered: "moving to order"
+        case .holding: "holding"
+        case .approaching: "repositioning"
+        case .waiting: "ready"
+        case .attacking: "attacking"
+        case .avoiding: "seeking safety"
+        }
+      return "\(member.displayName): \(action)"
+    }.joined(separator: " · ")
+    if companionStatus != status { companionStatus = status }
   }
 
   // MARK: - Squad orders
@@ -904,7 +1064,7 @@ final class GameWorld {
 
   /// Somewhere a companion can stand, in the leader's area, reached straight from `origin`.
   private func fits(_ spot: SIMD2<Float>, near origin: SIMD2<Float>, in region: Int32) -> Bool {
-    grid.isWalkable(spot) && grid.region(at: spot) == region
+    canStandParty(spot) && grid.region(at: spot) == region
       && motion.canTraverse(from: origin, to: spot)
   }
 
@@ -1019,7 +1179,11 @@ final class GameWorld {
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
       aiming: aimDirection != nil, fireHeld: armed && fireHeld,
       firePressed: armed && firePressPending, figures: figures, session: session,
-      untouchable: untouchable)
+      untouchable: untouchable, companionIntents: companionIntents,
+      facings: Dictionary(
+        uniqueKeysWithValues: figures.keys.map {
+          ($0, Movement.facing(yaw: yaw[$0] ?? 0))
+        }))
     stage.update(fight, dt: dt)
     updateWeaponStatus()
     firePressPending = false
@@ -1114,6 +1278,7 @@ final class GameWorld {
     let previous = squadLeader
     let leader = session.leader
     squadLeader = leader
+    formationTargets = [:]
     updateWeaponStatus()
     facingGoal = nil
     if let point = position(of: leader) { route.reset(to: point) }
@@ -1293,7 +1458,8 @@ final class GameWorld {
         robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0, locked: fight.lock != nil,
         guardStrategy: fight.guardStrategies["stranger"],
         guardPoints: fight.weakpoints(for: "stranger"),
-        robotPosition: robot?.position, robotFacing: robot?.facing, isRetrying: isRetrying)
+        robotPosition: robot?.position, robotFacing: robot?.facing, isRetrying: isRetrying,
+        companionActivities: companionIntents.mapValues(\.activity))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

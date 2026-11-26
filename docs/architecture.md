@@ -4,7 +4,7 @@
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
 
-The [strategic first-tower guard](strategic-guard.md) is authorised and in development on `codex/strategic-bridge-guard`. The merged baseline below remains distinguishable from this locally verified branch revision; the [prototype plan](prototype-plan.md#strategic-guard--in-development) records its gates.
+The [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). Review, phone acceptance and delivery remain outstanding. The merged baseline, delivered preview and new branch remain distinguishable.
 
 ## Decision and platform
 
@@ -23,6 +23,7 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | BridgeProgress / StoryBeat | Bridge progression, action eligibility/costs and recruitment policy / authored story markers | Checkpointable rules and independent content data |
 | WorldCamera / CameraRig | Camera entity and landmark fading / follow, lean, switching, lens and projection | Presentation owner and value-only camera motion |
 | GameWorld | Bodies, scene, camera, movement, companion routing, encounters and one owned update subscription | Spatial state; no duplicate session progress |
+| CompanionTactics | Local role, firing stance, threat avoidance and cover intentions for non-leaders in the engaged strategic guard fight | Pure values and geometry queries; no entities, orders, damage or weapon execution authority |
 | EncounterSimulation | Native weapon handling, targeting, actual rays, hostile timing, cues, recoil/hit/fall values and feedback events | Plain Swift, no RealityKit or sound/haptic playback |
 | RobotGuard | Bounded first-tower patrol, sight, finite turns, commitment, bursts and per-burst hit allowance | Value state advanced by EncounterSimulation; no entities |
 | EncounterStage | Reusable hostile/weapon entities, robot joint presentation, target markers and shot effects | Presentation only; no damage or navigation authority |
@@ -90,7 +91,7 @@ Every leader carries two weapons and switches between them ([ADR 0021](decisions
 
 Manual aim turns the leader at a bounded rate; without it, assistance picks a visible target in effective reach and Fire waits until facing it. A [lock](decisions/0020-lock-on.md) takes the stick's place: the leader turns to the locked hostile, and Fire waits until facing them. Spread follows movement, turning and recent shots. Ballistics traces actual shots through the flat level bounds, body cylinders and real box heights; a miss can strike scenery and a long ray is not truncated at assistance reach. Unengaged people hold deliberate fire. No line exposes an enemy's exact aim.
 
-In the merged baseline, the first-tower robot patrols a bounded area, notices a visible target, braces and tracks, then commits its aim point before an alternating three-round burst. Its gun transforms supply the actual 3D ray origins/directions; seeded spread and tower geometry resolve hits. The paired-weapons pass still uses the guard's six-hit toughness. A burst can cause at most one injury, and a third injury invokes the bridge encounter's retry. Reaching the authored west exit instead clears the encounter and pending fire without recording a kill. Both completed resolutions recover encounter-local injuries; retreat while the encounter remains active preserves progress. Companions have no autonomous combat or signature ability in this scene. Tom's ambush is removed; generic human timing and scripted-shot cues remain covered by test fixtures.
+In the merged baseline, the first-tower robot patrols a bounded area, notices a visible target, braces and tracks, then commits its aim point before an alternating three-round burst. Its gun transforms supply the actual 3D ray origins/directions; seeded spread and tower geometry resolve hits. The paired-weapons pass still uses the guard's six-hit toughness. A burst can cause at most one injury, and a third injury invokes the bridge encounter's retry. Reaching the authored west exit instead clears the encounter and pending fire without recording a kill. Both completed resolutions recover encounter-local injuries; retreat while the encounter remains active preserves progress. Delivered build 33 has no autonomous companion combat or signature abilities. The new guard-specific autonomy assignment extends the former; signatures remain deferred. Tom's ambush is removed; generic human timing and scripted-shot cues remain covered by test fixtures.
 
 The strategic branch replaces that guard's ordinary toughness with the [prototype dismantling rules](strategic-guard.md#prototype-dismantling-sequence): persistent sensor and coupling prerequisites, then accepted minigun reactor hits during repeated exposure windows opened by recovery. Robot combat values own that state and attack timing; EncounterSimulation accepts actual weapon/hit evidence and emits feedback, while EncounterStage presents the result. Manual leader switching, weapon handling, real cover/rays and the west bypass retain their existing owners. This is one encounter's state, not a second session authority or a general companion AI. The branch also prevents a sword swing damaging through solid cover using the existing 3D Ballistics visibility query.
 
@@ -99,6 +100,12 @@ EncounterStage projects poses, tracers/flashes/impacts and reusable target marke
 ### Scenes
 
 An encounter that holds the party advances only its cues: on the bridge, the closing exchange. Movement, Fire and actions cannot interrupt its placement. Pause still works. A conversation suspends the remaining frame. These are bridge story sequences, not extra playable levels.
+
+## Bounded companion autonomy — in development
+
+The player remains the only authority driving the leader. CompanionTactics supplies pure, local intentions for non-leaders in an engaged strategic-guard encounter: Miki may shoot the sensor, Laura may seek a legal side strike, and Tom may fire at an exposed core. EncounterSimulation executes both player and companion weapons through actor-owned handling, physical rays/contact, armour and accepted role progress; GameWorld retains legal spatial movement and the existing session's order/leader authority. Ordinary weapon cadence, turning, magazines/reloads and vulnerability apply rather than scripted component damage. Fresh formation targets remain separate from tactical overrides, and fixed tactical legs do not inherit formation-target velocity.
+
+Companions may seek nearby firing/cover positions and avoid committed fire, bounded by an initial 8 m leader leash. Hold anchors and Go destinations override autonomous movement. The existing Formation/Follow intent clears tactical intentions and regroups for at least 2 seconds and until followers are near, while keeping its order-clearing or formation-cycle behaviour. Retreat suppresses attacks and returns uncommanded companions to following; explicit orders remain authoritative until cleared. An unaware guard or quiet bypass cannot be engaged by a companion. Switching cancels autonomous control of the new leader immediately; transient intentions reset with lifecycle/encounter gates. This is encounter-specific decision logic within existing owners, not a general AI framework or a new source of session progress. [Companion autonomy](companion-autonomy.md) defines the accepted scope and pending checks.
 
 ## Restart and lifecycle
 
@@ -120,4 +127,4 @@ Eight DEBUG scripted routes use ordinary input in headless and rendered Simulato
 
 ## Deliberately deferred
 
-Other playable scenes and the retired prototypes' frameworks, autonomous companion combat, cover stances, further tactical enemies beyond the assigned guard, grenades, signatures, elevation, salvage-repair interactions, weapon benches, health/hunger, crafting, skill trees, persistence, networking and art expansion. Current architecture is the bridge's needs; new work follows an agreed gameplay question and explicit assignment.
+Other playable scenes and the retired prototypes' frameworks, autonomy outside the assigned guard, automatic cover stances, further tactical enemies beyond that guard, grenades, signatures, elevation, salvage-repair interactions, weapon benches, health/hunger, crafting, skill trees, persistence, networking and art expansion. Current architecture is the bridge's needs; new work follows an agreed gameplay question and explicit assignment.

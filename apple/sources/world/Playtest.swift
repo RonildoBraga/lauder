@@ -45,6 +45,8 @@
       /// Dismantle the guard through ordinary movement, leader/weapon switches and Fire.
       case dismantleGuard
       case waitForRetry(seconds: Float)
+      /// Miki stays under player control; Laura and Tom supply their own combat contributions.
+      case companionFight
     }
 
     /// What the runner can see of the game each frame.
@@ -75,6 +77,7 @@
       var robotPosition: SIMD2<Float>? = nil
       var robotFacing: SIMD2<Float>? = nil
       var isRetrying = false
+      var companionActivities: [PartyMember: CompanionTactics.Activity] = [:]
     }
 
     struct Frame {
@@ -95,6 +98,7 @@
         var guardPhase: String? = nil
         var reactorDamage: Int? = nil
         var windowRemaining: Float? = nil
+        var companionActivities: [String: String]? = nil
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -141,6 +145,7 @@
     private var guardRelease = false
     private var lastGuardDodge: Float = -10
     private var guardStageSeen: GuardStrategy.Phase?
+    private var companionMarks: Set<String> = []
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -220,6 +225,8 @@
           return press(InputRules.Raw(controllerSwap: true))
         case .dismantleGuard:
           if let raw = dismantleGuard(snapshot) { return raw }
+        case .companionFight:
+          if let raw = companionFight(snapshot) { return raw }
         case .waitForRetry(let seconds):
           if snapshot.beat == .crossing && snapshot.robotPhase == .hidden && !snapshot.isRetrying {
             // Retry restores the content before its fade finishes. Once it has finished,
@@ -435,6 +442,104 @@
     private mutating func expect(_ holds: Bool, _ found: String) {
       if !holds { failures.append("\(found) at \(Self.seconds(elapsed))") }
       advance()
+    }
+
+    /// Native cooperation with no automatic leader switch or fire after the sensor breaks.
+    /// The script may reposition/roll Miki to keep the fight engaged, just as a player can.
+    private mutating func companionFight(_ snapshot: Snapshot) -> InputRules.Raw? {
+      guard snapshot.leader == .miki else {
+        failures.append("companion fight took control from Miki")
+        advance()
+        return nil
+      }
+      if snapshot.defeated > 0 {
+        advance()
+        return nil
+      }
+      if snapshot.isRetrying || snapshot.beat != .stranger || stepTime > 90 {
+        failures.append(
+          "companions did not dismantle the guard without a retry; "
+            + "stage \(String(describing: snapshot.guardStrategy?.phase)), "
+            + "core \(snapshot.guardStrategy?.reactorDamage ?? 0), "
+            + "activities \(snapshot.companionActivities)")
+        advance()
+        return nil
+      }
+      guard let strategy = snapshot.guardStrategy, let centre = snapshot.robotPosition,
+        let at = snapshot.positions[.miki]
+      else { return InputRules.Raw() }
+      for member in [PartyMember.laura, .tom] {
+        guard let activity = snapshot.companionActivities[member],
+          [.approaching, .attacking, .avoiding].contains(activity)
+        else { continue }
+        let label = "\(member.displayName) \(activity.rawValue) \(strategy.phase)"
+        if companionMarks.insert(label).inserted {
+          recordGuardMark(label, snapshot: snapshot)
+        }
+      }
+      if guardStageSeen != strategy.phase {
+        guardStageSeen = strategy.phase
+        recordGuardMark("companions: \(strategy.phase)", snapshot: snapshot)
+      }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      if strategy.phase == .sensor && snapshot.weapon.kind != .longRifle {
+        guardRelease = true
+        return InputRules.Raw(controllerSwap: true)
+      }
+      if !snapshot.locked {
+        guardRelease = true
+        return InputRules.Raw(controllerLock: true)
+      }
+      var raw = InputRules.Raw()
+      let radial = at - centre
+      let distance = simd_length(radial)
+      let committed = snapshot.robotPhase == .committed || snapshot.robotPhase == .burst
+      if !committed {
+        // Close enough that both side specialists remain inside their ordinary 8 m leash,
+        // while staying outside the solid hull. Front positioning provokes repeat openings.
+        let direction = snapshot.robotFacing ?? [0, 1]
+        let destination = centre + direction * 4.5
+        if simd_distance(at, destination) > 0.25 {
+          raw.stick = Movement.stick(
+            towards: destination - at, cameraOffset: snapshot.level.cameraOffset)
+        }
+      }
+      if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1, distance > 0.1 {
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let escape = movement.canTraverse(from: at, to: at + tangent * 3) ? tangent : -tangent
+        raw.stick = Movement.stick(
+          towards: escape, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+        return raw
+      }
+      if strategy.phase == .sensor, let point = snapshot.guardPoints.first {
+        raw.aimStick = Movement.stick(
+          towards: point.ground - at, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerFire = point.exposed
+      }
+      return raw
+    }
+
+    private mutating func recordGuardMark(_ label: String, snapshot: Snapshot) {
+      marks.append(
+        Summary.Mark(
+          name: label, seconds: Double(elapsed),
+          robotPhase: snapshot.robotPhase.map { String(describing: $0) },
+          robotShots: snapshot.robotShots,
+          guardPhase: snapshot.guardStrategy.map { String(describing: $0.phase) },
+          reactorDamage: snapshot.guardStrategy?.reactorDamage,
+          windowRemaining: snapshot.guardStrategy?.windowRemaining,
+          companionActivities: Dictionary(
+            uniqueKeysWithValues: snapshot.companionActivities.map {
+              ($0.key.rawValue, $0.value.rawValue)
+            })))
+      announce(label)
     }
 
     /// A bounded player script, not a simulation shortcut: no teleports, state writes or
@@ -765,10 +870,18 @@
     /// dismantle it with their own weapons.
     private static let weapons: [Step] =
       toTheStranger + [
+        .order(.hold),
         .switchLeader, .swap, .wait(seconds: 0.3), .fire(seconds: 2.5), .mark("Tom's dome"),
         .fire(seconds: 2), .expectHits(0), .swap, .wait(seconds: 0.3), .fire(seconds: 1),
-        .expectDefeated(0), .mark("armour stops the minigun"), .dismantleGuard,
+        .expectDefeated(0), .mark("armour stops the minigun"), .formation, .dismantleGuard,
         .expectDefeated(1), .mark("guard dismantled by the party"), .wait(seconds: 1),
+      ] + restartRun
+
+    /// Miki supplies only the sensor shot; her two companions move and fight for themselves.
+    private static let companions: [Step] =
+      toTheStranger + [
+        .companionFight, .expectDefeated(1), .expectParty([.miki, .tom, .laura]),
+        .mark("guard dismantled without switching"), .wait(seconds: 1),
       ] + restartRun
 
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
@@ -849,7 +962,7 @@
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("opening", opening), ("formations", formations), ("orders", orders), ("lock-on", lockOn),
-      ("weapons", weapons),
+      ("weapons", weapons), ("companions", companions),
     ]
 
     static func steps(for scenario: String) -> [Step]? {
