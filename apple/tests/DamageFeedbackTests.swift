@@ -17,12 +17,53 @@ struct DamageFeedbackTests {
     let combined = try #require(feedback.labels.first)
     #expect(feedback.labels.count == 1 && combined.id == original.id)
     #expect(combined.amount == 9 && abs(combined.age - 0.12) < 0.0001)
-    feedback.advance(dt: 0.06)
+    feedback.advance(dt: 0.17)
     feedback.receive(hit(amount: 5))
+    #expect(feedback.labels.count == 1 && feedback.labels[0].amount == 14)
+    #expect(abs(feedback.labels[0].age - 0.29) < 0.0001)
+    feedback.advance(dt: 0.02)
+    feedback.receive(hit(amount: 6))
     #expect(feedback.labels.count == 2)
-    #expect(feedback.labels.map(\.amount).reduce(0, +) == 14)
+    #expect(feedback.labels.map(\.amount).reduce(0, +) == 20)
     #expect(feedback.labels[0].age > DamageFeedback.rapidWindow)
     #expect(feedback.labels[1].age == 0)
+  }
+
+  @Test(arguments: [Weapon.Kind.minigun, .assaultRifle])
+  func aRapidBucketClosesAtItsBoundaryWithoutExtendingTheOldNumber(weapon: Weapon.Kind) {
+    var feedback = DamageFeedback()
+    feedback.receive(hit(amount: 2, weapon: weapon))
+    feedback.advance(dt: DamageFeedback.rapidWindow)
+    feedback.receive(hit(amount: 3, weapon: weapon))
+    #expect(feedback.labels.count == 2)
+    #expect(feedback.labels.map(\.amount) == [2, 3])
+    #expect(feedback.labels[0].age == DamageFeedback.rapidWindow)
+    #expect(feedback.labels[1].age == 0)
+  }
+
+  @Test
+  func anAssaultRifleStreamRetainsEveryAmountAndCategoryWithoutRenewingItsLifetime() throws {
+    var feedback = DamageFeedback()
+    feedback.receive(hit(amount: 5, attacker: .miki, weapon: .assaultRifle))
+    let original = try #require(feedback.labels.first).id
+    for frame in 1...6 {
+      feedback.advance(dt: 0.1)
+      feedback.receive(hit(amount: 5, attacker: .miki, weapon: .assaultRifle))
+      if frame == 1 {
+        feedback.receive(
+          hit(amount: 15, attacker: .miki, weapon: .assaultRifle, effectiveness: .weakpoint))
+      }
+    }
+    #expect(feedback.labels.filter { $0.effectiveness == .normal }.map(\.amount).reduce(0, +) == 35)
+    #expect(feedback.labels.filter { $0.effectiveness == .weakpoint }.map(\.amount) == [15])
+    #expect(feedback.labels.count <= 4)
+    let old = try #require(feedback.labels.first { $0.id == original })
+    #expect(abs(old.age - 0.6) < 0.0001 && old.amount == 15)
+    feedback.advance(dt: 0.21)
+    #expect(!feedback.labels.contains { $0.id == original })
+    #expect(!feedback.labels.isEmpty)
+    feedback.advance(dt: DamageFeedback.lifetime)
+    #expect(feedback.labels.isEmpty)
   }
 
   @Test
@@ -67,6 +108,53 @@ struct DamageFeedbackTests {
     #expect(feedback.labels.count <= DamageFeedback.maximumLabels)
     feedback.advance(dt: DamageFeedback.lifetime)
     #expect(feedback.labels.isEmpty)
+  }
+
+  @Test
+  func reducedMotionSlotsSeparateCategoriesAndBucketsWithoutRepackingLiveNumbers() throws {
+    var feedback = DamageFeedback()
+    feedback.receive(hit(amount: 3))
+    feedback.receive(hit(amount: 9, effectiveness: .weakpoint))
+    let first = try #require(feedback.labels.first)
+    let second = try #require(feedback.labels.last)
+    #expect(first.stackSlot == 0 && second.stackSlot == 1)
+    feedback.advance(dt: 0.1)
+    feedback.receive(hit(amount: 3))
+    #expect(feedback.labels[0].stackSlot == first.stackSlot && feedback.labels.count == 2)
+    feedback.advance(dt: 0.21)
+    feedback.receive(hit(amount: 3))
+    #expect(feedback.labels.map(\.stackSlot) == [0, 1, 2])
+    let live = try #require(feedback.labels.last)
+    feedback.advance(dt: 0.5)
+    #expect(feedback.labels.count == 1 && feedback.labels[0].id == live.id)
+    #expect(feedback.labels[0].stackSlot == 2)
+    feedback.receive(hit(amount: 9, effectiveness: .weakpoint))
+    #expect(feedback.labels.map(\.stackSlot) == [2, 0], "an expired place is reusable")
+    #expect(feedback.labels[0].stackSlot == live.stackSlot, "the surviving number never jumps")
+  }
+
+  @Test
+  func aFullReducedMotionStackReusesTheEvictedPlaceAndKeepsOtherNumbersStable() {
+    var feedback = DamageFeedback()
+    for _ in 0..<DamageFeedback.maximumLabels {
+      feedback.receive(hit(amount: 1, weapon: .longRifle))
+    }
+    let before = feedback.labels
+    #expect(before.map(\.stackSlot) == Array(0..<DamageFeedback.maximumLabels))
+    feedback.receive(hit(amount: 2, weapon: .longRifle))
+    #expect(feedback.labels.count == DamageFeedback.maximumLabels)
+    #expect(Array(feedback.labels.dropLast()) == Array(before.dropFirst()))
+    #expect(feedback.labels.last?.stackSlot == before.first?.stackSlot)
+    #expect(Set(feedback.labels.map(\.stackSlot)).count == DamageFeedback.maximumLabels)
+  }
+
+  @Test
+  func eachAttackerHasAnIndependentReducedMotionStack() {
+    var feedback = DamageFeedback()
+    feedback.receive(hit(amount: 3))
+    feedback.receive(hit(amount: 48, attacker: .miki, weapon: .longRifle))
+    feedback.receive(hit(amount: 45, attacker: .laura, weapon: .shotgun))
+    #expect(feedback.labels.map(\.stackSlot) == [0, 0, 0])
   }
 
   @Test

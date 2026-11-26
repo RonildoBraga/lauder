@@ -17,7 +17,7 @@ struct DamageNumbers: View {
             .position(
               x: CGFloat(point.x) * geometry.size.width + lane(for: label.attacker),
               y: CGFloat(point.y) * geometry.size.height - 20
-                - (reduceMotion ? 0 : CGFloat(label.progress) * 60)
+                - (reduceMotion ? CGFloat(label.stackSlot) * 24 : CGFloat(label.progress) * 60)
             )
             .opacity(Double(label.opacity))
         }

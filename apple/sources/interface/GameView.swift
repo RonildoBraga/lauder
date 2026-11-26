@@ -323,9 +323,13 @@ struct GameView: View {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
       }
       if let health = world.guardHealth {
-        HStack(spacing: 8) {
-          Text("Guard \(health)/\(GuardStrategy.maximumHealth)")
-            .font(.caption.weight(.semibold)).monospacedDigit()
+        VStack(alignment: .leading, spacing: 3) {
+          HStack {
+            Text("Guard")
+            Spacer(minLength: 4)
+            Text("\(health)/\(GuardStrategy.maximumHealth)").monospacedDigit()
+          }
+          .font(.caption.weight(.semibold))
           ProgressView(value: Double(health), total: Double(GuardStrategy.maximumHealth))
             .tint(HUDStyle.ink)
         }

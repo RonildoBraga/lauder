@@ -1,5 +1,6 @@
 #if DEBUG
   import Testing
+  import simd
 
   @testable import Lauder
 
@@ -127,6 +128,87 @@
         runner.summary?.failures.first == "cover settlement requires an active defended guard fight"
       )
       #expect(world.session.combatStance == .defend && world.session.leader == .miki)
+    }
+
+    @Test
+    func aRealCompanionReturnStillPassesAfterTheLeaderRollsAway() throws {
+      let template = GameWorld(level: TestRange.practice).playtestSnapshot
+      let start = defendObservation(template, leader: .zero, companion: [4, 0])
+      var runner = beginDefendCheck(start, name: "recall-before-roll-contract")
+      for companion: SIMD2<Float> in [[3, 0], [1.5, 0]] {
+        runner.tick(dt: 0.2)
+        let raw = runner.input(defendObservation(template, leader: .zero, companion: companion))
+        #expect(!raw.controllerFire && !raw.controllerSwitch && !raw.dpadUp)
+      }
+      runner.tick(dt: 0.2)
+      let roll = runner.input(
+        defendObservation(template, leader: .zero, companion: [1.5, 0], phase: .committed))
+      #expect(roll.controllerDodge && roll.stick != .zero)
+      #expect(!roll.controllerFire && !roll.controllerSwitch && !roll.dpadUp)
+      // The final live gap is now 4.5 m, exceeding the original 4 m despite the real return.
+      let afterRoll = defendObservation(template, leader: [-3, 0], companion: [1.5, 0])
+      runner.tick(dt: 0.2)
+      _ = runner.input(afterRoll)
+      runner.tick(dt: 0.3)
+      _ = runner.input(afterRoll)
+      let summary = try #require(runner.summary)
+      #expect(summary.passed && summary.failures.isEmpty)
+    }
+
+    @Test
+    func movingTheLeaderTowardsAStationaryCompanionDoesNotCountAsRecall() throws {
+      let template = GameWorld(level: TestRange.practice).playtestSnapshot
+      let start = defendObservation(template, leader: .zero, companion: [4, 0])
+      var runner = beginDefendCheck(start, name: "stationary-follower-recall-contract")
+      for leader: SIMD2<Float> in [[1, 0], [2.5, 0], [2.5, 0]] {
+        runner.tick(dt: 0.4)
+        _ = runner.input(defendObservation(template, leader: leader, companion: [4, 0]))
+      }
+      let summary = try #require(runner.summary)
+      #expect(!summary.passed)
+      #expect(summary.failures == ["Defend did not bring a distant companion toward the leader"])
+    }
+
+    @Test
+    func noCompanionApproachStillFailsTheDefendRecallCheck() throws {
+      let template = GameWorld(level: TestRange.practice).playtestSnapshot
+      let start = defendObservation(template, leader: .zero, companion: [4, 0])
+      var runner = beginDefendCheck(start, name: "missing-recall-contract")
+      for _ in 0..<3 {
+        runner.tick(dt: 0.4)
+        _ = runner.input(start)
+      }
+      let summary = try #require(runner.summary)
+      #expect(!summary.passed)
+      #expect(summary.failures == ["Defend did not bring a distant companion toward the leader"])
+    }
+
+    /// These are observed-state fixtures for the driver's measurement, not shortcuts used by
+    /// a rendered gameplay route. Native movement and roll execution have their own tests.
+    private func defendObservation(
+      _ template: PlaytestRunner.Snapshot, leader: SIMD2<Float>, companion: SIMD2<Float>,
+      phase: RobotGuard.Phase = .recovering
+    ) -> PlaytestRunner.Snapshot {
+      var result = PlaytestRunner.Snapshot(
+        level: template.level, leader: .miki, party: [.miki, .tom, .laura],
+        positions: [.miki: leader, .laura: companion, .tom: [0, 1.5]],
+        mode: .exploring, firedTriggers: 0, beat: .stranger, hitsTaken: 0, defeated: 0,
+        formation: .close, orders: [:], refusedOrders: 0, camera: template.camera,
+        weapon: template.weapon)
+      result.guardStrategy = GuardStrategy()
+      result.robotPhase = phase
+      result.robotPosition = [0, -4]
+      return result
+    }
+
+    private func beginDefendCheck(
+      _ start: PlaytestRunner.Snapshot, name: String
+    ) -> PlaytestRunner {
+      var runner = PlaytestRunner(steps: [.wait(seconds: 0), .defendGuard(seconds: 1)], name: name)
+      #expect(runner.input(start) == InputRules.Raw())
+      runner.tick(dt: 0.5)
+      #expect(runner.input(start) == InputRules.Raw())
+      return runner
     }
 
     @Test

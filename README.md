@@ -100,7 +100,7 @@ Manually maintained folders use lowercase names; Swift filenames use PascalCase.
 
 Open `apple/Lauder.xcodeproj` with the shared `Lauder` scheme. Use Simulator for daily iteration and `./scripts/check` before a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md).
 
-The focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md) are implemented in [PR #125](https://github.com/RonildoBraga/lauder/pull/125), with reproducible release tooling in [PR #126](https://github.com/RonildoBraga/lauder/pull/126). The assigned gameplay task is the bounded companion-autonomy revision above, followed by its checks and a review of whether cooperation makes the bridge loop more enjoyable. Other story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
+The focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md) are implemented in [PR #125](https://github.com/RonildoBraga/lauder/pull/125), with reproducible release tooling in [PR #126](https://github.com/RonildoBraga/lauder/pull/126). The assigned gameplay task is the bounded guard-damage revision above, followed by its checks and a review of whether ordinary attacks and optional weaknesses make the bridge fight more enjoyable. Other story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
 
 ## Licence
 

@@ -197,6 +197,9 @@
     private var defendBaseline: GuardStrategy?
     private var defendLoaded: [PartyMember: Int] = [:]
     private var defendDistances: [PartyMember: Float] = [:]
+    private var defendClosestDistances: [PartyMember: Float] = [:]
+    private var defendApproach: [PartyMember: Float] = [:]
+    private var defendPreviousPositions: [PartyMember: SIMD2<Float>] = [:]
     private var retaliationMember: PartyMember?
     private var retaliationPoint: SIMD2<Float>?
     private var retaliationDodged = false
@@ -815,7 +818,20 @@
           uniqueKeysWithValues: snapshot.positions.compactMap {
             $0.key == snapshot.leader ? nil : ($0.key, simd_distance($0.value, leader))
           })
+        defendClosestDistances = defendDistances
+        defendPreviousPositions = snapshot.positions
       }
+      for member in defendDistances.keys {
+        guard let position = snapshot.positions[member],
+          let previous = defendPreviousPositions[member]
+        else { continue }
+        let gap = simd_distance(position, leader)
+        defendClosestDistances[member] = min(defendClosestDistances[member] ?? gap, gap)
+        // Compare both follower positions against this frame's leader. A leader moving
+        // towards a stationary follower cannot supply the companion's return evidence.
+        defendApproach[member, default: 0] += max(0, simd_distance(previous, leader) - gap)
+      }
+      defendPreviousPositions = snapshot.positions
       let stopped =
         current.health == defendBaseline?.health
         && current.sensorDisabled == defendBaseline?.sensorDisabled
@@ -835,7 +851,12 @@
         let returned =
           distant.isEmpty
           || distant.contains { member, gap in
-            snapshot.positions[member].map { simd_distance($0, leader) < gap - 0.5 } == true
+            guard snapshot.positions[member] != nil,
+              defendApproach[member, default: 0] >= 0.5,
+              let closest = defendClosestDistances[member]
+            else { return false }
+            // The ordinary late roll can widen the final gap after a successful return.
+            return closest < gap - 0.5 || closest <= 2.6
           }
         if !returned {
           failures.append("Defend did not bring a distant companion toward the leader")
@@ -1209,6 +1230,9 @@
       defendBaseline = nil
       defendLoaded = [:]
       defendDistances = [:]
+      defendClosestDistances = [:]
+      defendApproach = [:]
+      defendPreviousPositions = [:]
       coverStableSince = nil
       coverStablePositions = [:]
       longestCoverHold = 0
