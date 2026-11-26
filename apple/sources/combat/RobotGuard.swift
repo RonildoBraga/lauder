@@ -125,7 +125,7 @@ struct RobotGuard {
     updateGunDirections()
   }
 
-  /// One player injury at most per committed burst of either pattern, including crossfire.
+  /// One party injury at most per committed burst of either pattern, including crossfire.
   mutating func acceptBurstHit() -> Bool {
     guard !burstHitAccepted, phase == .burst || phase == .recovering else { return false }
     burstHitAccepted = true
@@ -134,7 +134,7 @@ struct RobotGuard {
 
   mutating func step(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
-    party: [SIMD2<Float>]
+    party: [SIMD2<Float>], awareOfTarget: Bool = false
   ) -> Discharge? {
     guard dt.isFinite, dt > 0, target.x.isFinite, target.y.isFinite else { return nil }
     guard phase != .hidden, phase != .down, phase != .cleared else { return nil }
@@ -144,7 +144,9 @@ struct RobotGuard {
     let offset = target - position
     let distance = simd_length(offset)
     let inCone = distance < 0.001 || simd_dot(offset / distance, facing) >= cos(50 * .pi / 180)
-    let sees = armed && hasSight && distance <= Self.detectionRange && inCone
+    // An engaged guard can acknowledge a visible attacker on its flank. Actual line of
+    // sight, range, finite body turning and the complete warning still apply.
+    let sees = armed && hasSight && distance <= Self.detectionRange && (inCone || awareOfTarget)
     if sees { lastSeen = target }
     let wantsBrace = [.notice, .tracking, .committed, .burst].contains(phase)
     let braceTarget: Float = wantsBrace ? (strategicPatterns && pattern == .precision ? 0.6 : 1) : 0

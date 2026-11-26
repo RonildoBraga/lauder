@@ -6,6 +6,8 @@
 
 The [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). The [build 34 preview](prototype-plan.md#build-34-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The merged baseline, delivered preview and new branch remain distinguishable.
 
+[Guard retaliation](guard-retaliation.md) is implemented on `codex/guard-retaliation`, with source and Simulator verification in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The maintainer's build 34 command feedback does not establish phone behaviour for this new branch.
+
 ## Decision and platform
 
 Use Swift for rules and gameplay, RealityKit for the 3D world and SwiftUI for the interface ([ADR 0001](decisions/0001-engine.md)). The iPhone app targets iOS 27.0 or later in landscape with Xcode 27.2. The target is 60 fps on the baseline iPhone 13 Pro Max; a target is not a measured result.
@@ -26,6 +28,7 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | CompanionTactics | Local role, firing stance, threat avoidance and cover intentions for non-leaders in the engaged strategic guard fight | Pure values and geometry queries; no entities, orders, damage or weapon execution authority |
 | EncounterSimulation | Native weapon handling, targeting, actual rays, hostile timing, cues, recoil/hit/fall values and feedback events | Plain Swift, no RealityKit or sound/haptic playback |
 | RobotGuard | Bounded first-tower patrol, sight, finite turns, commitment, bursts and per-burst hit allowance | Value state advanced by EncounterSimulation; no entities |
+| GuardTargeting | Recent actual-attacker memory and stable member selection between strategic-guard cycles | Value state; EncounterSimulation supplies native attack evidence and real visibility/range, RobotGuard retains physical turning and commitment |
 | EncounterStage | Reusable hostile/weapon entities, robot joint presentation, target markers and shot effects | Presentation only; no damage or navigation authority |
 | GameControls / InputRules | Device sampling, touch state, command edges, source arbitration and neutral gates | Intents only; no second pause/dialogue policy |
 | Content | Bridge layout, words, encounters, interactions, models and sounds | Typed definitions and bundle resources |
@@ -97,6 +100,8 @@ The strategic branch replaces that guard's ordinary toughness with the [prototyp
 
 EncounterStage projects poses, tracers/flashes/impacts and reusable target markers. Feedback events select the retained native weapon/impact sounds and leader haptic cues. Sound/haptic playback follows lifecycle and the Vibration preference.
 
+In the retaliation branch, EncounterSimulation records accepted native discharges or sword contacts in a guard-owned `GuardTargeting` value. Selection changes only in patrol/search; member identity stays fixed through a warned cycle, and RobotGuard freezes its aim point at commitment. Quiet acquisition retains the leader's original cone; engaged flank retaliation still requires real sight/range, finite turning and full warning. On notice entry, one `guardTargeted` event uses the existing audio path. GameWorld exposes the active target for a passive named HUD cue; the UI neither selects targets nor schedules attacks. No second combat/session authority or generic threat service is added. The [contract](guard-retaliation.md) owns tuning and verification boundaries.
+
 ### Scenes
 
 An encounter that holds the party advances only its cues: on the bridge, the closing exchange. Movement, Fire and actions cannot interrupt its placement. Pause still works. A conversation suspends the remaining frame. These are bridge story sequences, not extra playable levels.
@@ -123,7 +128,7 @@ Tests cover bridge progression/retry, session authority and input priority/relea
 
 Portable contract checks compare scenario and resource declarations across Swift, Python and Blender. Offline TestFlight contract tests also run without credentials or network access. The versioned `apple/scripts/testflight` command owns release discovery, source-bound checks, signing/archive verification, upload and read-only processing/tester verification; its team/credentials and receipts/archives stay private. The same standard check runs in CI on the selected compatible Xcode image; the PR records the actual result.
 
-Eight DEBUG scripted routes use ordinary input in headless and rendered Simulator runs. See [verification](prototype-plan.md#verification-and-performance). Pointer-driven touch is not physical multi-touch, and Simulator controller enumeration does not prove live input forwarding. Physical behaviour, performance and enjoyment require separately recorded evidence.
+DEBUG scripted routes use ordinary input in headless and rendered Simulator runs; `./apple/scripts/playtest --list` gives the checked-out source's set. See [verification](prototype-plan.md#verification-and-performance). Pointer-driven touch is not physical multi-touch, and Simulator controller enumeration does not prove live input forwarding. Physical behaviour, performance and enjoyment require separately recorded evidence.
 
 ## Deliberately deferred
 

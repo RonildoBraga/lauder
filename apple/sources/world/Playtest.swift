@@ -50,6 +50,9 @@
       case companionPrerequisites
       case defendGuard(seconds: Float)
       case expectCombatStance(GameSession.CombatStance)
+      case provokeRetaliation
+      case leadWarnedMember
+      case finishRetaliationCycle
     }
 
     /// What the runner can see of the game each frame.
@@ -83,6 +86,9 @@
       var companionActivities: [PartyMember: CompanionTactics.Activity] = [:]
       var combatStance = GameSession.CombatStance.defend
       var partyWeapons: [PartyMember: EncounterSimulation.WeaponStatus] = [:]
+      var guardTarget: PartyMember? = nil
+      var robotCommittedPoint: SIMD2<Float>? = nil
+      var partyHits: [PartyMember: Int] = [:]
     }
 
     struct Frame {
@@ -105,6 +111,8 @@
         var windowRemaining: Float? = nil
         var companionActivities: [String: String]? = nil
         var combatStance: String? = nil
+        var guardTarget: String? = nil
+        var committedPoint: [Float]? = nil
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -128,6 +136,10 @@
       let overlapFraction: Double
       let withinSlotWhileMoving: Double
       let worstLeaderGap: Double
+      /// Highest observed encounter injury count, retained after victory, retry and Restart.
+      var peakPartyHits: [String: Int] = [:]
+      /// Rising retry transitions, rather than the number of frames spent fading/retrying.
+      var retryCount = 0
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -155,6 +167,12 @@
     private var defendBaseline: GuardStrategy?
     private var defendLoaded: [PartyMember: Int] = [:]
     private var defendDistances: [PartyMember: Float] = [:]
+    private var retaliationMember: PartyMember?
+    private var retaliationPoint: SIMD2<Float>?
+    private var retaliationDodged = false
+    private var peakPartyHits: [PartyMember: Int] = [:]
+    private var retryCount = 0
+    private var wasRetrying = false
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -200,6 +218,11 @@
     /// clears exactly as it does for a player.
     mutating func input(_ snapshot: Snapshot) -> InputRules.Raw {
       guard summary == nil else { return InputRules.Raw() }
+      for (member, hits) in snapshot.partyHits {
+        peakPartyHits[member] = max(peakPartyHits[member, default: 0], hits)
+      }
+      if snapshot.isRetrying && !wasRetrying { retryCount += 1 }
+      wasRetrying = snapshot.isRetrying
       if startedAt == nil { startedAt = Date() }
       guard elapsed >= 0.5 else { return InputRules.Raw() }
       let leader = snapshot.leader
@@ -224,7 +247,9 @@
               guardPhase: snapshot.guardStrategy.map { String(describing: $0.phase) },
               reactorDamage: snapshot.guardStrategy?.reactorDamage,
               windowRemaining: snapshot.guardStrategy?.windowRemaining,
-              combatStance: String(describing: snapshot.combatStance)))
+              combatStance: String(describing: snapshot.combatStance),
+              guardTarget: snapshot.guardTarget?.rawValue,
+              committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] }))
           announce(label)
           advance()
         case .act:
@@ -247,6 +272,26 @@
           if let raw = defendGuard(snapshot, seconds: seconds) { return raw }
         case .expectCombatStance(let stance):
           expect(snapshot.combatStance == stance, "combat stance was \(snapshot.combatStance)")
+        case .provokeRetaliation:
+          if let raw = provokeRetaliation(snapshot) { return raw }
+        case .leadWarnedMember:
+          guard let member = retaliationMember, stepTime < 3 else {
+            failures.append("no actual warned member was available for the control switch")
+            advance()
+            continue
+          }
+          if snapshot.leader == member {
+            advance()
+            continue
+          }
+          if guardRelease {
+            guardRelease = false
+            return InputRules.Raw()
+          }
+          guardRelease = true
+          return InputRules.Raw(controllerSwitch: true)
+        case .finishRetaliationCycle:
+          if let raw = finishRetaliationCycle(snapshot) { return raw }
         case .waitForRetry(let seconds):
           if snapshot.beat == .crossing && snapshot.robotPhase == .hidden && !snapshot.isRetrying {
             // Retry restores the content before its fade finishes. Once it has finished,
@@ -566,8 +611,114 @@
           companionActivities: Dictionary(
             uniqueKeysWithValues: snapshot.companionActivities.map {
               ($0.key.rawValue, $0.value.rawValue)
-            }), combatStance: String(describing: snapshot.combatStance)))
+            }), combatStance: String(describing: snapshot.combatStance),
+          guardTarget: snapshot.guardTarget?.rawValue,
+          committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] }))
       announce(label)
+    }
+
+    /// Tom supplies no Fire: real Miki/Laura attacks must provoke a later named warning.
+    private mutating func provokeRetaliation(_ snapshot: Snapshot) -> InputRules.Raw? {
+      guard snapshot.leader == .tom, snapshot.combatStance == .attack,
+        !snapshot.isRetrying, snapshot.defeated == 0, stepTime <= 60
+      else {
+        failures.append(
+          "no live companion retaliation warning within the player-controlled attempt")
+        advance()
+        return nil
+      }
+      if let member = snapshot.guardTarget, member != snapshot.leader,
+        snapshot.robotPhase == .notice || snapshot.robotPhase == .tracking
+      {
+        retaliationMember = member
+        recordGuardMark("Guard warns \(member.displayName)", snapshot: snapshot)
+        advance()
+        return nil
+      }
+      return retaliationFootwork(snapshot)
+    }
+
+    /// A switch and Defend cannot transfer an attack that has already named its target.
+    private mutating func finishRetaliationCycle(_ snapshot: Snapshot) -> InputRules.Raw? {
+      guard let member = retaliationMember, !snapshot.isRetrying, stepTime <= 20 else {
+        failures.append("the warned retaliation cycle did not complete safely")
+        advance()
+        return nil
+      }
+      let phases: [RobotGuard.Phase] = [.notice, .tracking, .committed, .burst, .recovering]
+      guard let phase = snapshot.robotPhase, phases.contains(phase), snapshot.guardTarget == member
+      else {
+        failures.append("the guard changed its warned member during the cycle")
+        advance()
+        return nil
+      }
+      if let point = snapshot.robotCommittedPoint {
+        if let previous = retaliationPoint, point != previous {
+          failures.append("the committed point followed the new leader or moving target")
+          advance()
+          return nil
+        }
+        if retaliationPoint == nil {
+          retaliationPoint = point
+          recordGuardMark("Retaliation committed to \(member.displayName)", snapshot: snapshot)
+        }
+      }
+      if phase == .recovering {
+        if retaliationPoint == nil || !retaliationDodged {
+          failures.append("the retaliation route missed the real commitment or escape input")
+        }
+        recordGuardMark("Retaliation recovered on the same target", snapshot: snapshot)
+        advance()
+        return nil
+      }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      if phase == .committed, !retaliationDodged,
+        let centre = snapshot.robotPosition, let at = snapshot.positions[snapshot.leader],
+        simd_distance(at, centre) > 0.1
+      {
+        let radial = at - centre
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let escape = movement.canTraverse(from: at, to: at + tangent * 3) ? tangent : -tangent
+        retaliationDodged = true
+        guardRelease = true
+        return InputRules.Raw(
+          stick: Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset),
+          controllerDodge: true)
+      }
+      return InputRules.Raw()
+    }
+
+    private mutating func retaliationFootwork(_ snapshot: Snapshot) -> InputRules.Raw {
+      guard let centre = snapshot.robotPosition, let at = snapshot.positions[snapshot.leader]
+      else { return InputRules.Raw() }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      var raw = InputRules.Raw()
+      let radial = at - centre
+      if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
+        simd_length(radial) > 0.1
+      {
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let escape = movement.canTraverse(from: at, to: at + tangent * 3) ? tangent : -tangent
+        raw.stick = Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+      } else if snapshot.robotPhase != .committed && snapshot.robotPhase != .burst {
+        let destination = centre + (snapshot.robotFacing ?? [0, 1]) * 4.5
+        if simd_distance(at, destination) > 0.25 {
+          raw.stick = Movement.stick(
+            towards: destination - at, cameraOffset: snapshot.level.cameraOffset)
+        }
+      }
+      return raw
     }
 
     /// Observe an actual cease-fire while returning companions remain subject to real
@@ -877,7 +1028,10 @@
         warningFrames: warningFrames,
         overlapFraction: Double(overlapFrames) / Double(max(1, simulationTimes.count)),
         withinSlotWhileMoving: Double(withinSlot) / Double(max(1, movingSamples)),
-        worstLeaderGap: Double(worstGap))
+        worstLeaderGap: Double(worstGap),
+        peakPartyHits: Dictionary(
+          uniqueKeysWithValues: peakPartyHits.map { ($0.key.rawValue, $0.value) }),
+        retryCount: retryCount)
       summary = result
       write(result)
     }
@@ -984,6 +1138,18 @@
         .mark("guard dismantled without switching"), .wait(seconds: 1),
       ] + restartRun
 
+    /// A real attacking follower earns the next warning. Switching to another member and
+    /// ordering Defend retains the named/committed target; Attack later resumes cooperation.
+    private static let retaliation: [Step] =
+      [
+        .mark("start"), .switchLeader, .walk([6.5, 66]), .walk([6.5, 10]),
+        .expectBeat(.stranger), .order(.attack), .mark("Attack permits native companion fire"),
+        .provokeRetaliation, .leadWarnedMember, .order(.defend), .expectCombatStance(.defend),
+        .mark("Defend after the named warning"), .finishRetaliationCycle,
+        .order(.attack), .expectCombatStance(.attack), .mark("Attack after retaliation"),
+        .dismantleGuard, .expectDefeated(1), .mark("retaliating guard dismantled"),
+      ] + restartRun
+
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
     /// the second tower.
     private static let pastTheGuard: [Step] =
@@ -1062,7 +1228,7 @@
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("opening", opening), ("formations", formations), ("orders", orders), ("lock-on", lockOn),
-      ("weapons", weapons), ("companions", companions),
+      ("weapons", weapons), ("companions", companions), ("retaliation", retaliation),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

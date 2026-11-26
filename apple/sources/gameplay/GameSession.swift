@@ -89,7 +89,7 @@ final class GameSession {
   /// Story policy is a checkpointable value; the session retains mode and shared progress.
   private var progress: BridgeProgress
   var beat: StoryBeat { progress.beat }
-  /// Hits each member has taken in the current encounter. On the bridge only the leader is hit.
+  /// Hits each member has taken in the current encounter, including companion crossfire.
   private var hits: [PartyMember: Int] = [:]
   /// Hostiles defeated in this run.
   private(set) var defeated: Set<String> = []

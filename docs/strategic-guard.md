@@ -3,6 +3,8 @@
 **Date:** 26 November 2026\
 **Status:** The manual-control prototype was delivered as internal TestFlight **0.1.0 (33)** from `f67bd2c` through [PR #167](https://github.com/RonildoBraga/lauder/pull/167), before merge. Its checks and generic phone feedback are recorded in the [prototype plan](prototype-plan.md#build-33-testflight-preview). [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator verification in its [plan section](prototype-plan.md#companion-autonomy--in-development); the [build 34 preview](prototype-plan.md#build-34-testflight-preview) is delivered, while physical acceptance and merge remain separate gates. Build 32 and the [original C encounter](encounters/bridge-spider-bot.md) describe the earlier baseline; the preview does not imply a merge.
 
+The maintainer confirmed build 34's basic Attack/Defend commands and authorised [guard retaliation](guard-retaliation.md) in [issue #171](https://github.com/RonildoBraga/lauder/issues/171). That branch has source and Simulator verification recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development), without a new delivery or phone acceptance; current damage, alternating patterns, timing and weakpoint requirements remain unchanged for the comparison.
+
 ## The gameplay question
 
 Can one readable encounter make the trio's different roles work together? The player dismantles the existing C guard with their ordinary weapons, directing a leader while companions contribute independently, using the tower for cover and choosing when to cross or retreat. Switching remains available for direct control. Exploration and salvage remain the game's main direction; the bridge still has one optional fight and the west-arch bypass.
@@ -33,6 +35,8 @@ Wrong weapons, closed armour and hits outside the required opening do not bypass
 - The west arch and authored safe exit remain a complete non-combat resolution. Withdrawal is available during an unfinished fight; crossing the safe exit clears it without recording a kill.
 
 Existing input and aim/lock rules serve the encounter. No additional ability bar or character-specific command is required. Component identity, attack timing and progress must remain readable at the existing camera framing and phone-sized pawn scale.
+
+The retaliation revision selects a visible recent attacker only between warned cycles, names that member with a HUD cue and one two-note warning, and preserves their identity through recovery. Commitment still freezes a point, so leader switching cannot redirect the burst. Quiet acquisition, real cover, Defend recall and the bypass remain intact. The [retaliation document](guard-retaliation.md) owns the detailed fairness and verification contract; no new enemy, cover geometry or general threat system is assigned.
 
 ## Companion autonomy — in development
 

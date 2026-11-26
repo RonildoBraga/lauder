@@ -95,5 +95,56 @@
       #expect(runner.summary?.failures.first == "companion fight requires an explicit Attack order")
       #expect(world.session.combatStance == .defend)
     }
+
+    @Test
+    func aRetaliationCaptureCannotInventAWarningAndTakeControl() {
+      let world = GameWorld(level: BrooklynBridge.level)
+      var runner = PlaytestRunner(steps: [.leadWarnedMember], name: "real-warning-contract")
+      for _ in 0..<90 where !runner.isFinished {
+        let raw = runner.input(world.playtestSnapshot)
+        #expect(!raw.controllerSwitch && !raw.controllerFire)
+        runner.tick(dt: 1 / 60)
+      }
+      #expect(runner.summary?.passed == false)
+      #expect(
+        runner.summary?.failures.first
+          == "no actual warned member was available for the control switch")
+      #expect(world.session.leader == .miki && world.guardTarget == nil)
+    }
+
+    @Test
+    func injuryEvidenceSurvivesClearedSnapshotsAndCountsRetryEdgesOnce() throws {
+      let world = GameWorld(level: BrooklynBridge.level)
+      var snapshot = world.playtestSnapshot
+      var runner = PlaytestRunner(steps: [.wait(seconds: 0)], name: "injury-evidence-contract")
+      let samples: [([PartyMember: Int], Bool)] = [
+        ([.miki: 1, .laura: 2, .tom: 0], false),
+        ([.miki: 3, .laura: 1, .tom: 1], true),
+        ([.miki: 0, .laura: 0, .tom: 2], true),
+        ([:], false),
+        ([.tom: 1], true),
+      ]
+      for (hits, retrying) in samples {
+        snapshot.partyHits = hits
+        snapshot.isRetrying = retrying
+        #expect(runner.input(snapshot) == InputRules.Raw(), "initial release input stays neutral")
+        runner.tick(dt: 0.1)
+      }
+      snapshot.partyHits = [:]
+      snapshot.isRetrying = false
+      for _ in 0..<10 where !runner.isFinished {
+        _ = runner.input(snapshot)
+        runner.tick(dt: 0.1)
+      }
+      let summary = try #require(runner.summary)
+      #expect(summary.passed)
+      #expect(summary.peakPartyHits == ["miki": 3, "laura": 2, "tom": 2])
+      #expect(summary.retryCount == 2)
+      snapshot.partyHits = [.miki: 99]
+      snapshot.isRetrying = true
+      _ = runner.input(snapshot)
+      #expect(runner.summary?.peakPartyHits == summary.peakPartyHits)
+      #expect(runner.summary?.retryCount == 2)
+    }
   }
 #endif

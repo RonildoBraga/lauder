@@ -173,6 +173,21 @@ def empty_click(rng):
     return finish(mix((first, 1.0), (second, 0.6), (ring, 0.3)), drive=1.2, peak=0.5)
 
 
+def guard_warning(rng):
+    """A short two-note acquisition warning, distinct from a shot or an impact."""
+    length = samples(0.36)
+    signal = [0.0] * length
+    for start, frequency, duration in ((0.0, 660, 0.11), (0.155, 990, 0.15)):
+        begin = samples(start)
+        for index in range(samples(duration)):
+            time = index / RATE
+            edge = min(1.0, time / 0.008, (duration - time) / 0.018)
+            note = math.sin(2 * math.pi * frequency * time)
+            overtone = 0.2 * math.sin(4 * math.pi * frequency * time)
+            signal[begin + index] = edge * (note + overtone)
+    return finish(signal, drive=1.0, peak=0.55)
+
+
 # Each file's name, as CombatSound names it in the app, and how it is made.
 SOUNDS = {
     "carbine": carbine,
@@ -182,6 +197,7 @@ SOUNDS = {
     "strike-body": strike_body,
     "strike-block": strike_block,
     "empty-click": empty_click,
+    "guard-warning": guard_warning,
 }
 
 

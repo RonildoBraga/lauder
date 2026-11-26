@@ -14,12 +14,14 @@ enum CombatEvent: Equatable, Sendable {
   case empty(at: SIMD2<Float>)
   /// A hostile's shot hit the leader.
   case leaderHit(at: SIMD2<Float>)
+  /// The guard began a new warned cycle against this member, once on entering notice.
+  case guardTargeted(PartyMember, at: SIMD2<Float>)
 
   /// Where it happened.
   var position: SIMD2<Float> {
     switch self {
     case .fired(_, let point, _), .struckBody(let point), .struckBlock(let point),
-      .empty(let point), .leaderHit(let point):
+      .empty(let point), .leaderHit(let point), .guardTargeted(_, let point):
       point
     }
   }

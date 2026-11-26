@@ -79,7 +79,7 @@ Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario 
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the step/result and small discs mark companion destinations. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The bridge is the only playable level. Its pause menu offers **Resume**, **Restart**, **Vibration** and, with a controller or keyboard, **Status panel**. Touch exposes Resume, Restart and Vibration directly and always shows the status panel. There is no level selector or weapon bench. Small test-only levels in `apple/tests/support` exercise collision and weapons; they are not app content. The current assignment extends the [strategic guard](docs/strategic-guard.md) with [bounded companion autonomy](docs/companion-autonomy.md); its implementation and verification status live in the [prototype plan](docs/prototype-plan.md#companion-autonomy--in-development).
+The bridge is the only playable level. Its pause menu offers **Resume**, **Restart**, **Vibration** and, with a controller or keyboard, **Status panel**. Touch exposes Resume, Restart and Vibration directly and always shows the status panel. There is no level selector or weapon bench. Small test-only levels in `apple/tests/support` exercise collision and weapons; they are not app content. The current assignment adds [bounded guard retaliation](docs/guard-retaliation.md) to the [commanded companions](docs/companion-autonomy.md); its implementation and verification status live in the [prototype plan](docs/prototype-plan.md#guard-retaliation--in-development).
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.
 
@@ -257,7 +257,7 @@ The supported path makes levels and models in Blender, exports each level's look
 
 ### Sounds
 
-The combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 310 KB in all, stored with Git LFS. After changing the script, run it from the repository root and commit the files it writes:
+The combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 343 KB in all, stored with Git LFS. The original `guard-warning.wav` is a short two-note acquisition cue, synthesised by the same script without voice recordings or third-party samples. After changing the script, run it from the repository root and commit the files it writes:
 
 ```sh
 python3 apple/scripts/make-sounds.py
