@@ -35,6 +35,11 @@ final class GameWorld {
   private(set) var threat: String?
   private(set) var guardTarget: PartyMember?
   private(set) var guardHint: String?
+  private(set) var guardHealth: Int?
+  private(set) var damageFeedback = DamageFeedback()
+  #if DEBUG
+    @ObservationIgnored private var damageTally = PlaytestRunner.DamageTally()
+  #endif
   private(set) var companionStatus = ""
   /// Whether the leader's weapon is drawn.
   private(set) var weaponDrawn = false
@@ -538,6 +543,7 @@ final class GameWorld {
   /// the fights as they began, with the weapon holstered, the squad's movement around the
   /// leader, and the camera settled behind them.
   private func resetPlay(around spot: SIMD2<Float>) {
+    clearDamageFeedback()
     fight.reset()
     stage.reset(fight)
     gaits = [:]
@@ -557,6 +563,7 @@ final class GameWorld {
     threat = nil
     guardTarget = nil
     guardHint = nil
+    guardHealth = nil
     companionStatus = ""
     companionIntents = [:]
     formationTargets = [:]
@@ -913,6 +920,10 @@ final class GameWorld {
         canFire: {
           self.fight.companionCanFire(member, from: $0, at: $1, weapon: $2, figures: current)
         },
+        canFireAtBody: {
+          self.fight.companionCanFireAtBody(
+            member, from: $0, at: guardState.id, weapon: $1, figures: current)
+        },
         isCovered: { self.fight.companionHasCover(at: $0, from: guardState.robot) },
         isThreatened: { self.fight.companionIsThreatened(at: $0, by: guardState.robot) },
         isSpaced: { point in
@@ -1227,6 +1238,7 @@ final class GameWorld {
     {
       observation = "Clear of the guard."
     }
+    if !damageFeedback.labels.isEmpty { damageFeedback.advance(dt: dt) }
     let figures = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.compactMap { member in
         bodies[member]?.isEnabled == true ? self.position(of: member).map { (member, $0) } : nil
@@ -1252,7 +1264,19 @@ final class GameWorld {
       showPose(member)
     }
     joltedMembers = jolted
-    combatEvents.append(contentsOf: fight.takeEvents())
+    let events = fight.takeEvents()
+    let damage = events.compactMap { event -> DamageHit? in
+      if case .damaged(let hit) = event { return hit }
+      return nil
+    }
+    for hit in damage {
+      damageFeedback.receive(hit)
+      #if DEBUG
+        damageTally.record(hit)
+      #endif
+    }
+    stage.showDamage(damage)
+    combatEvents.append(contentsOf: events)
     if combatEvents.count > Self.keptEvents {
       combatEvents.removeFirst(combatEvents.count - Self.keptEvents)
     }
@@ -1271,10 +1295,14 @@ final class GameWorld {
     if guardTarget != fight.guardTarget { guardTarget = fight.guardTarget }
     let guardHint = fight.guardHint
     if self.guardHint != guardHint { self.guardHint = guardHint }
+    if guardHealth != fight.guardHealth { guardHealth = fight.guardHealth }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if lockedHostile != fight.lock { lockedHostile = fight.lock }
     shieldDome.isEnabled = fight.shieldIsUp
-    if outcome.retry { retryElapsed = 0 }
+    if outcome.retry {
+      clearDamageFeedback()
+      retryElapsed = 0
+    }
   }
 
   /// A member who has not joined appears where they wait, turned towards the nearest hostile
@@ -1450,10 +1478,22 @@ final class GameWorld {
   }
 
   private func updateActivity() {
-    combatEvents.removeAll { if case .guardTargeted = $0 { true } else { false } }
+    clearDamageFeedback()
+    combatEvents.removeAll {
+      switch $0 {
+      case .guardTargeted, .damaged: true
+      default: false
+      }
+    }
     controls.setActive(isPresented && isApplicationActive)
     controls.requireNeutralInput()
     skipNextStep = true
+  }
+
+  private func clearDamageFeedback() {
+    if !damageFeedback.labels.isEmpty { damageFeedback.clear() }
+    stage.clearDamage()
+    combatEvents.removeAll { if case .damaged = $0 { true } else { false } }
   }
 
   private func updateCamera(deltaTime: Float) {
@@ -1532,7 +1572,8 @@ final class GameWorld {
         guardTarget: fight.guardTarget(for: "stranger"), robotCommittedPoint: robot?.committedPoint,
         partyHits: Dictionary(
           uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }),
-        companionTargets: companionTargets, coveredMembers: covered)
+        companionTargets: companionTargets, coveredMembers: covered,
+        damage: damageTally, damageLabelCount: damageFeedback.labels.count)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

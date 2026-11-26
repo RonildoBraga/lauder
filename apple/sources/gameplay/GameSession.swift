@@ -299,7 +299,12 @@ final class GameSession {
     return true
   }
 
-  /// A hit on a hostile; true when it takes the hostile down.
+  /// Remaining generic enemy health in the session's existing damage-unit ledger.
+  func remainingHealth(of hostile: String, toughness: Int) -> Int {
+    defeated.contains(hostile) ? 0 : max(0, toughness - (hitsDealt[hostile] ?? 0))
+  }
+
+  /// One damage unit on a hostile; true when it takes the hostile down.
   func hit(_ hostile: String, toughness: Int) -> Bool {
     guard mode == .exploring, !defeated.contains(hostile) else { return false }
     let dealt = (hitsDealt[hostile] ?? 0) + 1

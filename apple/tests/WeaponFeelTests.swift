@@ -302,7 +302,7 @@ struct WeaponFeelTests {
   func aHostileHitRocksAndOneDownedFallsOverAMoment() throws {
     // A shooter that takes two of the long rifle's heavy hits, ahead of Miki; the companions
     // hold where they stand.
-    let world = GameWorld(level: range(shooterAt: [0, -6], hits: 6))
+    let world = GameWorld(level: range(shooterAt: [0, -6], hits: Weapon.longRifle.damage * 2))
     #expect(world.session.holdAll())
     let visual = try #require(world.root.findEntity(named: "hostile.a")?.children.first)
     func upright() -> Float { visual.orientation.act([0, 1, 0]).y }

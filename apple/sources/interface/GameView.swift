@@ -6,6 +6,7 @@ import UIKit
 @MainActor
 struct GameView: View {
   @Environment(\.scenePhase) private var scenePhase
+  @State private var viewport: CGSize = .zero
   let world: GameWorld
 
   var body: some View {
@@ -28,6 +29,21 @@ struct GameView: View {
       }
       .realityViewCameraControls(.none)
       .ignoresSafeArea()
+      .onGeometryChange(for: CGSize.self) {
+        $0.size
+      } action: {
+        viewport = $0
+      }
+
+      if world.session.mode == .exploring, world.isActive, world.fade == 0,
+        viewport.width > 0, viewport.height > 0
+      {
+        DamageNumbers(
+          labels: world.damageFeedback.labels,
+          projection: world.projection(aspect: Float(viewport.width / viewport.height))
+        )
+        .ignoresSafeArea()
+      }
 
       HStack(alignment: .top, spacing: 8) {
         if world.showsPanel {
@@ -305,6 +321,17 @@ struct GameView: View {
       }
       if let threat = world.threat {
         Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
+      }
+      if let health = world.guardHealth {
+        HStack(spacing: 8) {
+          Text("Guard \(health)/\(GuardStrategy.maximumHealth)")
+            .font(.caption.weight(.semibold)).monospacedDigit()
+          ProgressView(value: Double(health), total: Double(GuardStrategy.maximumHealth))
+            .tint(HUDStyle.ink)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Guard health")
+        .accessibilityValue("\(health) of \(GuardStrategy.maximumHealth)")
       }
       if let hint = world.guardHint {
         Text(hint).font(.caption.weight(.semibold))

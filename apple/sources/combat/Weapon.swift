@@ -50,7 +50,7 @@ struct Weapon: Sendable {
   /// Shots in each burst, `burstGap` seconds apart; one for single shots.
   var burst = 1
   var burstGap: Float = 0
-  /// Hits each shot or swing deals.
+  /// Health damage each shot or swing deals, before an exposed weak-point bonus.
   var damage = 1
   /// How far its shots scatter when the player fires it (ADR 0008).
   var spread = Spread.none
@@ -66,31 +66,33 @@ struct Weapon: Sendable {
   /// shot lands where it is aimed; firing on the move or quickly scatters (ADR 0008).
   static let longRifle = Weapon(
     kind: .longRifle, range: 22, interval: 1, drawTime: 0.45, capacity: 5, reloadTime: 1.8,
-    damage: 3,
+    damage: 48,
     spread: Spread(
       rest: Spread.degrees(0.2), perShot: Spread.degrees(2.5), widest: Spread.degrees(6),
       recovery: Spread.degrees(2), moving: Spread.degrees(3), turning: Spread.degrees(3)))
   /// Miki's assault rifle: rapid fire while Fire is held, reaching middle range.
   static let assaultRifle = Weapon(
     kind: .assaultRifle, range: 12, interval: 0.1, drawTime: 0.3, capacity: 30, reloadTime: 1.6,
+    damage: 5,
     spread: Spread(
       rest: Spread.degrees(1.5), perShot: Spread.degrees(0.8), widest: Spread.degrees(9),
       recovery: Spread.degrees(4), moving: Spread.degrees(2), turning: Spread.degrees(2)))
-  /// Laura's shotgun: a slow, wide blast that counts as three hits, only at close range.
+  /// Laura's shotgun: one slow, scattered heavy hit, strongest at close range.
   static let shotgun = Weapon(
     kind: .shotgun, range: 8, interval: 0.9, drawTime: 0.45, capacity: 6, reloadTime: 2,
-    damage: 3,
+    damage: 45,
     spread: Spread(
       rest: Spread.degrees(5), perShot: Spread.degrees(2), widest: Spread.degrees(9),
       recovery: Spread.degrees(4), moving: Spread.degrees(2), turning: Spread.degrees(1)))
-  /// Laura's energy sword: a swing that strikes every hostile within reach in front of her for
-  /// three hits. While it is out, shots from in front of her glance off it (ADR 0021).
+  /// Laura's energy sword: a heavy swing that strikes every hostile within reach in front of
+  /// her. While it is out, shots from in front of her glance off it (ADR 0021).
   static let energySword = Weapon(
-    kind: .energySword, range: 1.6, interval: 0.55, drawTime: 0.25, damage: 3)
+    kind: .energySword, range: 1.6, interval: 0.55, drawTime: 0.25, damage: 30)
   /// Tom's minigun: it spins up for half a second, then fires very fast, with a wide scatter,
   /// and he walks slowly while it runs.
   static let minigun = Weapon(
     kind: .minigun, range: 14, interval: 0.06, drawTime: 0.6, capacity: 120, reloadTime: 3,
+    damage: 3,
     spread: Spread(
       rest: Spread.degrees(3), perShot: Spread.degrees(0.4), widest: Spread.degrees(10),
       recovery: Spread.degrees(5), moving: Spread.degrees(3), turning: Spread.degrees(3)),

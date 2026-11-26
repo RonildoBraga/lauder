@@ -60,4 +60,28 @@ struct CameraProjectionTests {
     #expect(abs((camera.eye + direction * entry).z - 1) < 0.0001)
     #expect(camera.entry(along: direction, minimum: [3, 0, -1], maximum: [4, 2, 1]) == nil)
   }
+
+  @Test
+  func elevatedImpactsProjectAtTheirActualHeightAndBackOntoTheSameViewingRay() throws {
+    let camera = Self.camera
+    let point: SIMD3<Float> = [-6, 2.5, -270]
+    let screen = try #require(camera.screen(ofWorld: point))
+    let ground = try #require(camera.screen(ofGround: [point.x, point.z]))
+    #expect(screen.y < ground.y - 0.01)
+    let ray = try #require(camera.direction(atScreen: screen))
+    #expect(simd_distance(simd_normalize(ray), simd_normalize(point - camera.eye)) < 0.0001)
+    let middle = try #require(camera.screen(ofWorld: camera.target))
+    #expect(simd_distance(middle, [0.5, 0.5]) < 0.0001)
+  }
+
+  @Test
+  func damageProjectionRejectsInvalidAndBehindCameraPointsWithoutPinningOffscreenHits() throws {
+    let camera = Self.camera
+    #expect(camera.screen(ofWorld: camera.eye + (camera.eye - camera.target)) == nil)
+    #expect(camera.screen(ofWorld: [.nan, 1, 2]) == nil)
+    let far = try #require(camera.screen(ofWorld: [100, 0, -270]))
+    #expect(far.x > 1, "the overlay hides an offscreen hit instead of pinning it over the controls")
+    let degenerate = CameraProjection(eye: .zero, target: .zero, fieldOfView: 42, aspect: 2)
+    #expect(degenerate.screen(ofWorld: [1, 1, 1]) == nil)
+  }
 }

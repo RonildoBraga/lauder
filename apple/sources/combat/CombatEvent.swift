@@ -16,6 +16,8 @@ enum CombatEvent: Equatable, Sendable {
   case leaderHit(at: SIMD2<Float>)
   /// The guard began a new warned cycle against this member, once on entering notice.
   case guardTargeted(PartyMember, at: SIMD2<Float>)
+  /// Enemy health actually changed, with the accepted amount and physical impact.
+  case damaged(DamageHit)
 
   /// Where it happened.
   var position: SIMD2<Float> {
@@ -23,6 +25,8 @@ enum CombatEvent: Equatable, Sendable {
     case .fired(_, let point, _), .struckBody(let point), .struckBlock(let point),
       .empty(let point), .leaderHit(let point), .guardTargeted(_, let point):
       point
+    case .damaged(let hit):
+      SIMD2(hit.position.x, hit.position.z)
     }
   }
 }

@@ -63,6 +63,14 @@ final class EncounterSimulation {
     return GuardWeakpoint.make(id: id, robot: robot, strategy: strategy)
   }
 
+  var guardHealth: Int? {
+    guard let id = encounter?.hostiles.first(where: { $0.strategicGuard })?.id,
+      let state = hostiles[id], state.isVisible, !state.isDown,
+      let robot = state.robot, !robot.isCleared
+    else { return nil }
+    return guardStrategies[id]?.health
+  }
+
   /// Persistent, short guidance alongside the current enemy warning. Switching never erases
   /// a component already broken; only Retry/Restart restores the machine.
   var guardHint: String? {
@@ -73,17 +81,16 @@ final class EncounterSimulation {
     switch strategy.phase {
     case .sensor:
       return robot.phase == .recovering
-        ? "1/3 · Miki: long rifle → front sensor. Open!"
-        : "1/3 · Miki: long rifle → front sensor after a volley."
+        ? "Bonus: long rifle → front sensor. Open!"
+        : "Bonus: long rifle → front sensor after a volley."
     case .coupling:
-      return "2/3 · Sensor disabled. Laura: sword → either side coupling."
+      return "Bonus: sword → either side coupling."
     case .reactor:
-      let left = GuardStrategy.reactorDamageRequired - strategy.reactorDamage
       return strategy.windowRemaining > 0
         ? String(
-          format: "3/3 · Tom: minigun → side core · %d rounds · %.1f s", left,
+          format: "Bonus: minigun → side core · %.1f s",
           strategy.windowRemaining)
-        : "3/3 · Coupling breached. Tom: side core opens after each volley."
+        : "Bonus: side core opens after each volley."
     case .complete:
       return nil
     }
@@ -342,6 +349,27 @@ final class EncounterSimulation {
     return trace.strike == .body(point.id)
   }
 
+  func companionCanFireAtBody(
+    _ member: PartyMember, from origin: SIMD2<Float>, at id: String,
+    weapon kind: Weapon.Kind, figures: [PartyMember: SIMD2<Float>]
+  ) -> Bool {
+    guard let weapon = Weapon.pair(for: member).first(where: { $0.kind == kind }),
+      kind.shoots, let state = hostiles[id], state.isTargetable, !state.isDown
+    else { return false }
+    let start = ballistics.point(origin)
+    let target = hostileTarget(id)
+    let delta = target.centre - start
+    guard simd_length(delta) <= weapon.range else { return false }
+    let friends = figures.filter { $0.key != member }.map {
+      Ballistics.Target(id: "ally.\($0.key.rawValue)", centre: ballistics.point($0.value))
+    }
+    let points = weakpoints(for: id)
+    let trace = ballistics.traceAcrossLevel(
+      from: start, direction: delta, targets: [target] + points.map(\.target) + friends)
+    guard case .body(let hitID) = trace.strike else { return false }
+    return hitID == id || points.contains { $0.id == hitID }
+  }
+
   func companionHasCover(at point: SIMD2<Float>, from robot: RobotGuard) -> Bool {
     (0..<2).allSatisfy {
       !ballistics.isClear(from: robot.muzzle(gun: $0), to: ballistics.point(point))
@@ -405,21 +433,34 @@ final class EncounterSimulation {
     }
     for member in session.companions where autonomousMembers.contains(member) {
       guard intents[member]?.fire == true, let origin = figures[member],
-        let facing = memberFacings[member], let look = intents[member]?.lookAt,
-        let point = weakpoints(for: guardState.id).min(by: {
-          simd_distance_squared($0.ground, look) < simd_distance_squared($1.ground, look)
-        })
+        let facing = memberFacings[member], let look = intents[member]?.lookAt
       else { continue }
       let weapon = weapon(of: member)
-      guard !guardBlocks(point.id, by: member, weapon: weapon),
-        companionCanFire(member, from: origin, at: point, weapon: weapon.kind, figures: figures)
-      else { continue }
+      let end: SIMD2<Float>
+      let height: Float
+      if intents[member]?.targetsBody == true {
+        guard
+          companionCanFireAtBody(
+            member, from: origin, at: guardState.id, weapon: weapon.kind, figures: figures)
+        else { continue }
+        end = guardState.robot.position
+        height = hostileTarget(guardState.id).centre.y
+      } else {
+        guard
+          let point = weakpoints(for: guardState.id).min(by: {
+            simd_distance_squared($0.ground, look) < simd_distance_squared($1.ground, look)
+          }),
+          companionCanFire(member, from: origin, at: point, weapon: weapon.kind, figures: figures)
+        else { continue }
+        end = point.ground
+        height = point.centre.y
+      }
       let motion = currentMotion[member] ?? (speed: 0, turning: 0)
       fireWeapon(
         by: member, from: origin, facing: facing, aiming: true,
-        path: ShotPath(start: origin, end: point.ground, strike: .body(guardState.id)),
+        path: ShotPath(start: origin, end: end, strike: .body(guardState.id)),
         motion: motion, fireHeld: true, inFight: true, allies: figures,
-        session: session, outcome: &outcome)
+        session: session, outcome: &outcome, targetHeight: height)
     }
   }
 
@@ -506,7 +547,7 @@ final class EncounterSimulation {
       case .stand(let member): outcome.stood.append(member)
       case .shot(let member, let id):
         guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
-        // This fight has no cinematic damage shortcut: only real component contacts count.
+        // This fight has no cinematic damage shortcut: only actual damaging contacts count.
         guard guardStrategies[id] == nil else { break }
         let path = ShotPath(start: from, end: state.position, strike: .body(id))
         shots.append(Shot(path: path, side: .party))
@@ -674,7 +715,8 @@ final class EncounterSimulation {
   private func fireWeapon(
     by member: PartyMember, from origin: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool,
     path: ShotPath?, motion: (speed: Float, turning: Float), fireHeld: Bool, inFight: Bool,
-    allies: [PartyMember: SIMD2<Float>], session: GameSession, outcome: inout Outcome
+    allies: [PartyMember: SIMD2<Float>], session: GameSession, outcome: inout Outcome,
+    targetHeight: Float? = nil
   ) {
     let weapon = weapon(of: member)
     let player = member == session.leader
@@ -703,11 +745,12 @@ final class EncounterSimulation {
     }
     handling[slot(of: member)]?.fired()
     if inFight { recordGuardAttack(by: member, from: origin) }
-    let trace = scattered(aimed, by: member, weapon: weapon, motion: motion, allies: allies)
+    let trace = scattered(
+      aimed, by: member, weapon: weapon, motion: motion, allies: allies, targetHeight: targetHeight)
     let path = trace.path
     let armoured: Bool
     if case .body(let id) = path.strike {
-      armoured = id.hasPrefix("ally.") || guardBlocks(id, by: member, weapon: weapon)
+      armoured = id.hasPrefix("ally.")
     } else {
       armoured = false
     }
@@ -725,7 +768,7 @@ final class EncounterSimulation {
       hit(
         id, by: member, weapon: weapon, from: origin,
         damage: weapon.damage(at: simd_distance(trace.start, trace.end)),
-        session: session, outcome: &outcome)
+        session: session, outcome: &outcome, impact: trace.end)
     }
   }
 
@@ -813,7 +856,8 @@ final class EncounterSimulation {
 
   private func scattered(
     _ path: ShotPath, by member: PartyMember, weapon: Weapon,
-    motion: (speed: Float, turning: Float), allies: [PartyMember: SIMD2<Float>] = [:]
+    motion: (speed: Float, turning: Float), allies: [PartyMember: SIMD2<Float>] = [:],
+    targetHeight: Float? = nil
   ) -> Ballistics.Trace {
     var scatter = scatters[member] ?? Scatter()
     var generator = random[member] ?? SeededRandom(seed: Self.seed)
@@ -829,7 +873,9 @@ final class EncounterSimulation {
     // Assistance supplies elevation to the visible component too. A manual ray still uses
     // the same collision query and cannot pass through the armour or a stone pier.
     let height: Float
-    if case .body(let id) = path.strike,
+    if let targetHeight, simd_length(offset) > 0.001 {
+      height = (targetHeight - start.y) / simd_length(offset)
+    } else if case .body(let id) = path.strike,
       let point = weakpoints(for: id).min(by: {
         simd_distance_squared($0.ground, path.end) < simd_distance_squared($1.ground, path.end)
       }), simd_length(offset) > 0.001
@@ -855,71 +901,65 @@ final class EncounterSimulation {
   private func hit(
     _ id: String, by member: PartyMember, weapon: Weapon, from shooter: SIMD2<Float>, damage: Int,
     session: GameSession,
-    outcome: inout Outcome
+    outcome: inout Outcome, impact: SIMD3<Float>? = nil
   ) {
-    if let point = guardStrategies.keys.flatMap({ weakpoints(for: $0) }).first(where: {
+    guard session.mode == .exploring, damage > 0 else { return }
+    let point = guardStrategies.keys.flatMap({ weakpoints(for: $0) }).first(where: {
       $0.id == id
-    }) {
-      strikeGuard(
-        point, by: member, weapon: weapon, from: shooter, session: session, outcome: &outcome)
+    })
+    let targetID = point?.hostileID ?? id
+    guard let state = hostiles[targetID], state.isTargetable, !state.isDown else { return }
+    let contact = impact ?? point?.centre ?? ballistics.point(state.position)
+    if var strategy = guardStrategies[targetID], let robot = state.robot {
+      guard
+        let result = strategy.accept(
+          weapon: weapon.kind, part: point?.part, damage: damage,
+          recovering: robot.phase == .recovering)
+      else { return }
+      guardStrategies[targetID] = strategy
+      aggressiveGuards.insert(targetID)
+      guardTargets[targetID]?.recordAttack(by: member)
+      events.append(
+        .damaged(
+          DamageHit(
+            target: targetID, attacker: member, weapon: weapon.kind, amount: result.amount,
+            position: contact, effectiveness: result.effectiveness,
+            brokeComponent: result.brokeComponent)))
+      if result.defeated {
+        session.defeat(targetID)
+        knockDown(targetID, from: shooter)
+        outcome.line = "The guard robot is down."
+      } else if result.brokeComponent {
+        outcome.line =
+          point?.part == .sensor
+          ? "Sensor disabled. Side coupling exposed."
+          : "Coupling breached. The core opens after each volley."
+      }
       return
     }
-    guard let state = hostiles[id], state.isTargetable else { return }
-    if guardStrategies[id] != nil {
-      aggressiveGuards.insert(id)
-      guardTargets[id]?.recordAttack(by: member)
-      outcome.line = "Armour deflected the hit. \(guardHint ?? "")"
-      return
+    let before = session.remainingHealth(of: targetID, toughness: state.spec.hits)
+    let applied = min(damage, before)
+    guard applied > 0 else { return }
+    var defeated = false
+    for _ in 0..<applied {
+      if session.hit(targetID, toughness: state.spec.hits) {
+        defeated = true
+        break
+      }
     }
-    for _ in 0..<damage where session.hit(id, toughness: state.spec.hits) {
-      knockDown(id, from: shooter)
+    events.append(
+      .damaged(
+        DamageHit(
+          target: targetID, attacker: member, weapon: weapon.kind, amount: applied,
+          position: contact, effectiveness: .normal, brokeComponent: false)))
+    if defeated {
+      knockDown(targetID, from: shooter)
       outcome.line = "\(state.spec.name) is down."
-      return
+    } else {
+      hostiles[targetID]?.flinch()
+      hostileJolts[targetID, default: BodyJolt()].push(
+        towards: state.position - shooter, by: BodyJolt.hit)
     }
-    hostiles[id]?.flinch()
-    hostileJolts[id, default: BodyJolt()].push(towards: state.position - shooter, by: BodyJolt.hit)
-  }
-
-  private func strikeGuard(
-    _ point: GuardWeakpoint, by member: PartyMember, weapon: Weapon, from shooter: SIMD2<Float>,
-    session: GameSession,
-    outcome: inout Outcome
-  ) {
-    let id = point.hostileID
-    guard let state = hostiles[id], state.isTargetable, let robot = state.robot else { return }
-    aggressiveGuards.insert(id)
-    guardTargets[id]?.recordAttack(by: member)
-    let result = guardStrategies[id]?.accept(
-      member: member, weapon: weapon.kind, part: point.part,
-      recovering: robot.phase == .recovering)
-    switch result {
-    case .defeated:
-      session.defeat(id)
-      knockDown(id, from: shooter)
-      outcome.line = "The guard robot is down."
-    case .progressed:
-      outcome.line =
-        point.part == .sensor
-        ? "Miki: Sensor out. Laura, breach a side coupling."
-        : "Laura: Coupling breached. Tom, the core opens when it cools."
-    case .damaged:
-      break
-    default:
-      outcome.line = "Protected component. \(guardHint ?? "")"
-    }
-  }
-
-  /// Armour has stone-like impact feedback while preserving the actual contact in the trace.
-  private func guardBlocks(_ id: String, by member: PartyMember, weapon: Weapon) -> Bool {
-    if guardStrategies[id] != nil { return true }
-    guard
-      let point = guardStrategies.keys.flatMap({ weakpoints(for: $0) }).first(where: { $0.id == id }
-      ),
-      var strategy = guardStrategies[point.hostileID], let robot = hostiles[point.hostileID]?.robot
-    else { return false }
-    return strategy.accept(
-      member: member, weapon: weapon.kind, part: point.part,
-      recovering: robot.phase == .recovering) == .blocked
   }
 
   private func knockDown(_ id: String, from shooter: SIMD2<Float>) {
@@ -1126,7 +1166,9 @@ final class EncounterSimulation {
     events.append(.fired(.energySword, at: origin, byLeader: member == session.leader))
     for target in targets {
       if guardStrategies[target.spec.id] != nil {
-        // A sword must reach an actual surface component, not any of the broad leg footprint.
+        // Prefer a real reached component, with a body contact as the ordinary-damage
+        // fallback. One swing can damage this enemy only once.
+        var contact: GuardWeakpoint?
         for point in weakpoints(for: target.spec.id) {
           let offset = point.ground - origin
           let distance = simd_length(offset)
@@ -1138,20 +1180,26 @@ final class EncounterSimulation {
             distance < 0.001 || simd_dot(offset / distance, facing) >= cos(Self.swingArc / 2),
             ballistics.isClear(from: ballistics.point(origin), to: point.centre)
           else { continue }
-          events.append(
-            guardBlocks(point.id, by: member, weapon: weapon)
-              ? .struckBlock(at: point.ground) : .struckBody(at: point.ground))
-          if inFight {
-            strikeGuard(
-              point, by: member, weapon: weapon, from: origin, session: session, outcome: &outcome)
-          }
+          contact = point
           break
         }
-        continue
+        if let point = contact {
+          events.append(.struckBody(at: point.ground))
+          if inFight {
+            hit(
+              point.id, by: member, weapon: weapon, from: origin, damage: weapon.damage,
+              session: session, outcome: &outcome, impact: point.centre)
+          }
+          continue
+        }
       }
       let offset = target.position - origin
       let distance = simd_length(offset)
-      guard distance <= reach + bodyRadius(target.spec.id),
+      let radius = target.robot == nil ? bodyRadius(target.spec.id) : RobotModelGeometry.bodyRadius
+      if target.robot != nil, distance < RobotModelGeometry.bodyRadius + PartyBody.radius {
+        continue
+      }
+      guard distance <= reach + radius,
         distance < 0.001 || simd_dot(offset / distance, facing) >= cos(Self.swingArc / 2),
         ballistics.isClear(from: ballistics.point(origin), to: ballistics.point(target.position))
       else { continue }

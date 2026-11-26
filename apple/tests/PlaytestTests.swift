@@ -130,11 +130,11 @@
     }
 
     @Test
-    func theManualGuardDriverPeeksOutFromRealCoverBeforeTryingToFire() throws {
+    func theGuardDriverOrdersAttackThenPeeksOutFromRealCoverBeforeTryingToFire() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
       walk(world, to: [3.64, 11.09])
-      let snapshot = world.playtestSnapshot
+      var snapshot = world.playtestSnapshot
       let at = try #require(snapshot.positions[.miki])
       let centre = try #require(snapshot.robotPosition)
       let point = try #require(snapshot.guardPoints.first)
@@ -144,16 +144,21 @@
           || !rays.isClear(from: rays.point(centre, above: 1.52), to: rays.point(at)))
       var runner = PlaytestRunner(steps: [.dismantleGuard], name: "manual-cover-peek-contract")
       var peeked = false
+      var orderedAttack = false
       for _ in 0..<90 where !runner.isFinished {
         let raw = runner.input(snapshot)
         #expect(!raw.controllerFire && !raw.controllerSwitch)
+        if raw.dpadUp {
+          orderedAttack = true
+          snapshot.combatStance = .attack
+        }
         if raw.stick != .zero && !raw.controllerDodge {
           peeked = true
           break
         }
         runner.tick(dt: 1 / 60)
       }
-      #expect(peeked, "real cover must cause ordinary repositioning, not a hidden firing/lock loop")
+      #expect(orderedAttack && peeked, "the ordinary command must precede the clear-lane approach")
       #expect(world.session.leader == .miki && !world.isRetrying)
       #expect(world.playtestSnapshot.guardStrategy?.sensorDisabled == false)
     }

@@ -28,6 +28,7 @@ struct CompanionTactics {
     var position: SIMD2<Float>? = nil
     var lookAt: SIMD2<Float>? = nil
     var weapon: Weapon.Kind? = nil
+    var targetsBody = false
     var fire = false
     var activity: Activity
   }
@@ -50,12 +51,14 @@ struct CompanionTactics {
   private var context: Context?
   private var goal: SIMD2<Float>?
   private var goalActivity = Activity.following
+  private var goalTargetsBody = false
   private var sincePlan = Float.infinity
 
   mutating func plan(
     input: Input, canStand: (SIMD2<Float>) -> Bool,
     canTraverse: (SIMD2<Float>, SIMD2<Float>) -> Bool,
     canFire: (SIMD2<Float>, GuardWeakpoint, Weapon.Kind) -> Bool,
+    canFireAtBody: (SIMD2<Float>, Weapon.Kind) -> Bool,
     isCovered: (SIMD2<Float>) -> Bool, isThreatened: (SIMD2<Float>) -> Bool,
     isSpaced: (SIMD2<Float>) -> Bool
   ) -> Intent {
@@ -88,6 +91,7 @@ struct CompanionTactics {
       phase: input.phase, stage: input.stage, threatened: threatened)
     if context != next {
       goal = nil
+      goalTargetsBody = false
       sincePlan = .infinity
     }
     context = next
@@ -169,6 +173,15 @@ struct CompanionTactics {
         intent.lookAt = point.ground
         intent.fire = true
         intent.activity = .attacking
+      } else {
+        let weapon = Self.ordinaryWeapon(for: input.member)
+        if canStand(input.position), canFireAtBody(input.position, weapon) {
+          intent.lookAt = input.guardPosition
+          intent.weapon = weapon
+          intent.targetsBody = true
+          intent.fire = true
+          intent.activity = .attacking
+        }
       }
       return intent
     }
@@ -188,6 +201,11 @@ struct CompanionTactics {
       intent.activity = .avoiding
       return intent
     }
+    if !points.contains(where: \.exposed) {
+      return ordinaryAttack(
+        input: input, available: available, safe: safe, canStand: canStand,
+        canFireAtBody: canFireAtBody, isCovered: isCovered, isSpaced: isSpaced)
+    }
     if let assignment, canStand(input.position), isSpaced(input.position),
       let point = points.first(where: {
         canFire(input.position, $0, assignment.weapon)
@@ -195,6 +213,7 @@ struct CompanionTactics {
     {
       // Already in a real firing stance: do not keep orbiting just to reach an ideal radius.
       goal = input.position
+      goalTargetsBody = false
       intent.position = input.position
       intent.lookAt = point.ground
       intent.fire = point.exposed
@@ -202,12 +221,18 @@ struct CompanionTactics {
       return intent
     }
     if sincePlan < Self.replanInterval, let goal, available(goal), safe(goal) {
+      if goalTargetsBody {
+        return ordinaryAttack(
+          input: input, available: available, safe: safe, canStand: canStand,
+          canFireAtBody: canFireAtBody, isCovered: isCovered, isSpaced: isSpaced)
+      }
       intent.position = goal
       intent.activity = goalActivity
       return intent
     }
     sincePlan = 0
     goal = nil
+    goalTargetsBody = false
     if let assignment, !points.isEmpty {
       var stances: [SIMD2<Float>] = []
       for point in points {
@@ -252,29 +277,92 @@ struct CompanionTactics {
         }
       }
       goalActivity = goal == nil ? .following : .approaching
-    } else {
-      // Non-specialists offer local support instead of firing pointlessly into closed armour.
-      let candidates = ([input.position, input.baseTarget] + Self.near(input.baseTarget)).filter {
-        simd_distance($0, input.position) <= Self.localRadius
-          && simd_distance($0, input.baseTarget) <= Self.localRadius
-          && available($0) && safe($0)
-      }
-      goal = candidates.filter(isCovered).min {
-        simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
-      }
-      if goal == nil, !isSpaced(input.position) || !isSpaced(input.baseTarget) {
-        goal =
-          candidates.contains(input.position)
-          ? input.position
-          : candidates.min {
-            simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
-          }
-      }
-      goalActivity = .waiting
+    }
+    if goal == nil {
+      return ordinaryAttack(
+        input: input, available: available, safe: safe, canStand: canStand,
+        canFireAtBody: canFireAtBody, isCovered: isCovered, isSpaced: isSpaced)
     }
     intent.position = goal
     intent.activity = goal == nil ? .following : goalActivity
     return intent
+  }
+
+  /// A specialist opportunity is preferred, but it never makes safe ordinary fire useless.
+  /// The native execution query retains responsibility for weapon range, cover and allies.
+  private mutating func ordinaryAttack(
+    input: Input, available: (SIMD2<Float>) -> Bool, safe: (SIMD2<Float>) -> Bool,
+    canStand: (SIMD2<Float>) -> Bool,
+    canFireAtBody: (SIMD2<Float>, Weapon.Kind) -> Bool,
+    isCovered: (SIMD2<Float>) -> Bool, isSpaced: (SIMD2<Float>) -> Bool
+  ) -> Intent {
+    goalTargetsBody = true
+    let weapon = Self.ordinaryWeapon(for: input.member)
+    if canStand(input.position), isSpaced(input.position),
+      canFireAtBody(input.position, weapon)
+    {
+      goal = input.position
+      goalActivity = .attacking
+      return Intent(
+        position: goal, lookAt: input.guardPosition, weapon: weapon, targetsBody: true,
+        fire: true, activity: .attacking)
+    }
+    if sincePlan < Self.replanInterval {
+      if let goal, available(goal), safe(goal) {
+        if canFireAtBody(goal, weapon) {
+          goalActivity = .approaching
+          return Intent(
+            position: goal, lookAt: input.guardPosition, weapon: weapon, targetsBody: true,
+            activity: .approaching)
+        }
+        if goalActivity == .waiting { return Intent(position: goal, activity: .waiting) }
+      } else if goal == nil, goalActivity == .waiting {
+        return Intent(activity: .following)
+      }
+    }
+    sincePlan = 0
+    let candidates =
+      ([input.position, input.baseTarget] + Self.near(input.position) + Self.near(input.baseTarget))
+      .filter {
+        simd_distance($0, input.position) <= Self.localRadius && available($0) && safe($0)
+      }
+    goal = candidates.filter { canFireAtBody($0, weapon) }.min {
+      simd_distance($0, input.position) - (isCovered($0) ? 1 : 0)
+        < simd_distance($1, input.position) - (isCovered($1) ? 1 : 0)
+    }
+    if let goal {
+      goalActivity = .approaching
+      return Intent(
+        position: goal, lookAt: input.guardPosition, weapon: weapon, targetsBody: true,
+        activity: .approaching)
+    }
+    // When no real firing lane is available, retain the existing nearby support behaviour.
+    let support = ([input.position, input.baseTarget] + Self.near(input.baseTarget)).filter {
+      simd_distance($0, input.position) <= Self.localRadius
+        && simd_distance($0, input.baseTarget) <= Self.localRadius
+        && available($0) && safe($0)
+    }
+    goal = support.filter(isCovered).min {
+      simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+    }
+    if goal == nil, !isSpaced(input.position) || !isSpaced(input.baseTarget) {
+      goal =
+        support.contains(input.position)
+        ? input.position
+        : support.min {
+          simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+        }
+    }
+    goalActivity = .waiting
+    return Intent(position: goal, activity: goal == nil ? .following : .waiting)
+  }
+
+  private static func ordinaryWeapon(for member: PartyMember) -> Weapon.Kind {
+    switch member {
+    case .miki: .longRifle
+    case .laura: .shotgun
+    case .tom: .minigun
+    }
   }
 
   private static func assignment(

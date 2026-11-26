@@ -15,10 +15,13 @@ struct SwordCoverTests {
   func aSwordRespectsTheActualCoverHeightAndPosition(
     coverPosition: SIMD3<Float>, coverSize: SIMD3<Float>, canStrike: Bool
   ) throws {
-    let leader = SIMD2<Float>(0, 2)
+    // The old 3.6 m centre gap reached only the broad leg/navigation envelope. Keep the
+    // authored cover in front of the actual body, and bring Laura into genuine sword reach.
+    let leader = SIMD2<Float>(0, 1)
     let guardPoint = SIMD2<Float>(0, -1.6)
     let guardSpec = Level.Hostile(
-      id: "guard", name: "Guard", hiddenAt: guardPoint, standAt: guardPoint, hits: 3,
+      id: "guard", name: "Guard", hiddenAt: guardPoint, standAt: guardPoint,
+      hits: Weapon.energySword.damage,
       attack: .robot, range: 12)
     let encounter = Level.Encounter(
       beat: .stranger, start: .area(PartyMotion.Box(minimum: [-10, -10], maximum: [10, 10])),
@@ -43,25 +46,33 @@ struct SwordCoverTests {
 
     var swings = 0
     var bodyImpacts = 0
-    for frame in 0..<120 {
+    var damage = 0
+    for frame in 0..<120 where swings == 0 {
       _ = fight.step(
         dt: 1 / 120, leader: leader, facing: [0, -1], aiming: true, fireHeld: true,
         firePressed: frame == 0, figures: [.laura: leader], session: session)
       for event in fight.takeEvents() {
         if case .fired(.energySword, _, _) = event { swings += 1 }
         if case .struckBody = event { bodyImpacts += 1 }
+        if case .damaged(let hit) = event {
+          #expect(hit.target == "guard" && hit.attacker == .laura && hit.effectiveness == .normal)
+          damage += hit.amount
+        }
       }
     }
     #expect(swings > 0, "cover does not silently cancel the swing itself")
     #expect(session.defeated.contains("guard") == canStrike)
     #expect((bodyImpacts > 0) == canStrike, "a blocked swing must not report a body impact")
+    #expect(damage == (canStrike ? Weapon.energySword.damage : 0))
+    let guardState = try #require(fight.hostiles["guard"])
+    let bodyGap = simd_distance(guardState.position, leader)
+    #expect(bodyGap > RobotModelGeometry.bodyRadius + PartyBody.radius)
+    #expect(
+      bodyGap < Weapon.energySword.range + RobotModelGeometry.bodyRadius,
+      "the actual body is in reach, independent of its broader navigation envelope")
     if !canStrike {
-      let guardState = try #require(fight.hostiles["guard"])
       #expect(guardState.isVisible && guardState.isTargetable && !guardState.isDown)
-      #expect(
-        simd_distance(guardState.position, leader)
-          < Weapon.energySword.range + RobotModelGeometry.navigationRadius,
-        "the wall, rather than distance, prevents the strike")
+      #expect(session.remainingHealth(of: "guard", toughness: guardSpec.hits) == guardSpec.hits)
     }
   }
 }
