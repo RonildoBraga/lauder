@@ -7,7 +7,7 @@
 
 **Opening revision, 26 November 2026:** The maintainer simplified the opening: **“I want to simplify the starting of the game so all the 3 companions will start together so no need to meet Tom and Laura later in the game”**. Asked what then happens to the scenes that introduced Tom and Laura, the maintainer chose **“Guard fight only”**. The three start together, the guard is the bridge's only fight, and the supply case's search, the knife attacker, Tom's intervention and Laura's rescue are gone. Why they travel together, and whether they were strangers, is now open.
 
-**Strategic guard assignment, 26 November 2026:** The maintainer authorised a [dismantling encounter](../strategic-guard.md) using Miki's long rifle, Laura's sword and Tom's minigun, with manual changes of leader. It is in development on its branch, locally checked but not a delivered or player-accepted story beat. It gives the opening a concrete act of cooperation without explaining the trio's histories; the west-arch bypass remains an alternative.
+**Strategic guard assignment, 26 November 2026:** The maintainer authorised a guard that requires all three characters and alternates its attacks, with manual changes of leader. The [prototype encounter](../strategic-guard.md) implements that direction using Miki's long rifle, Laura's sword and Tom's minigun. It is in development on its branch, locally checked but not a delivered or player-accepted story beat. It gives the opening a concrete act of cooperation without explaining the trio's histories; the west-arch bypass remains an alternative.
 
 ## Agreed direction
 

@@ -14,7 +14,7 @@ Later that day the maintainer started Miki, Tom and Laura together and kept the 
 
 ## Strategic guard — in development
 
-The maintainer authorised an encounter that rewards manually directing all three existing characters. [Strategic guard](strategic-guard.md) records its accepted rules: Miki's long rifle persistently disables the sensor, Laura's sword persistently breaches a side coupling, and Tom's minigun supplies 12 accepted reactor rounds across repeatable 4-second exposure windows opened by recovery. Ordinary armour damage and wrong-role weapons cannot skip those contributions. The guard alternates three precision rounds and a five-round fan cannon attack, with readable wind-ups and no exact red aim line. The west bypass stays open.
+The maintainer authorised an encounter that rewards manually directing all three existing characters. [Strategic guard](strategic-guard.md) records the branch's prototype rules: Miki's long rifle persistently disables the sensor, Laura's sword persistently breaches a side coupling, and Tom's minigun supplies 12 accepted reactor rounds across repeatable 4-second exposure windows opened by recovery. Ordinary armour damage and wrong-role weapons cannot skip those contributions. The guard alternates three precision rounds and a five-round fan cannon attack, with readable wind-ups and no exact red aim line. The west bypass stays open.
 
 L1 / LB, Q and touch Next still switch leader manually; followers follow or hold and do not attack automatically. Tom's dome drops on a leader switch. The branch also fixes sword strikes through solid cover and raises ground markers above baked tower shadows. Existing pawns, camera, scene, input authority and real shot geometry remain the basis of the experiment.
 

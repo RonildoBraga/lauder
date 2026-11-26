@@ -9,7 +9,9 @@ Can one readable encounter make changing leader worthwhile? The player dismantle
 
 This is an introduction to a machine's parts and attack cycle. It does not add a general tactical AI, new enemy family, autonomous companion attacks or signature-ability system.
 
-## Agreed dismantling sequence
+## Prototype dismantling sequence
+
+The maintainer assigned required contributions from all three characters, alternating enemy attacks and manual leader switching with persistent openings. The sequence, component positions, four-second window and 12-hit core below are this branch's initial implementation choices for playtesting, not settled balance or new story foundations.
 
 | Step | Player's contribution | Persistent result |
 |---|---|---|
