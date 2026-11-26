@@ -23,14 +23,19 @@ struct CombatTests {
     #expect(LineOfSight.isClear(from: [1.5, -3], to: [1.5, 3], obstacles: [box]))
   }
 
-  /// On the buried bridge only the towers give cover: the first tower's pier, between its two
-  /// arches, covers either side from the other.
+  /// The first tower's pier still separates its arches. The new approach cover shields the
+  /// entry, while stepping through the central lane gives a clear line again.
   @Test
   func theFirstTowersPierGivesCoverBothWays() {
     let obstacles = BrooklynBridge.level.obstacles
     let stranger = BrooklynBridge.stranger.standAt
-    // In the east arch, where the fight begins, each can see the other.
-    #expect(LineOfSight.isClear(from: [6.5, 15], to: stranger, obstacles: obstacles))
+    // The approach is now covered; sight must open through ordinary movement past it.
+    let entry: SIMD2<Float> = [6.5, 15]
+    let exposed: SIMD2<Float> = [6.5, 8]
+    #expect(!LineOfSight.isClear(from: entry, to: stranger, obstacles: obstacles))
+    #expect(!LineOfSight.isClear(from: stranger, to: entry, obstacles: obstacles))
+    #expect(LineOfSight.isClear(from: exposed, to: stranger, obstacles: obstacles))
+    #expect(LineOfSight.isClear(from: stranger, to: exposed, obstacles: obstacles))
     // In the west arch, the pier stands between them.
     #expect(!LineOfSight.isClear(from: [-4, 10], to: stranger, obstacles: obstacles))
     // Out beyond the tower, on the west side, nothing does.

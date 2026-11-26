@@ -1,10 +1,10 @@
 # Lauder — bridge-only prototype
 
-**Updated:** 26 November 2026
+**Updated:** 27 November 2026
 
 **Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The strategic guard was delivered as the [build 33 reviewed preview](#build-33-testflight-preview). [Bounded companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with validation below. The [build 35 retaliation preview](#build-35-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The player keeps direct control of the leader while companions may complete their own weakpoint contributions. Further scenes and mechanics require their own decision.
 
-The current comparison is [guard retaliation](guard-retaliation.md), delivered as the [build 35 preview](#build-35-testflight-preview), with source and Simulator checks below. Build 34's basic Attack/Defend feedback does not verify this new preview's phone behaviour.
+The current assignment is [bridge cover and companion spacing](bridge-cover-spacing.md), in development on `codex/bridge-cover-spacing` under [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The guard-retaliation comparison remains delivered as the [build 35 preview](#build-35-testflight-preview). The maintainer's generic **“Looks good”** feedback does not establish detailed phone controls, audibility or sustained performance.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
@@ -14,11 +14,19 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Bridge cover and spacing — in development
+
+On 27 November 2026 the maintainer said **“Looks good. Go ahead and improve the cover and companion spacing on the bridge.”** This explicitly assigns the bounded [cover/spacing comparison](bridge-cover-spacing.md), recorded in [issue #174](https://github.com/RonildoBraga/lauder/issues/174), without authorising a merge or another TestFlight delivery.
+
+Two simple approach shelters, `bridge-cover-west` and `bridge-cover-east`, accompany **1.2 m desired clearance between autonomous destinations**. The existing centre passage, east coupling approach and quiet west arch must remain usable. Reservations respect explicit Hold/Go anchors, the leader and other intended places; actual collision, rays, threat, weapon execution and the existing leash/recall bounds retain authority. Normal formations outside the fight, guard damage, alternating patterns, timings and weakpoint rules remain unchanged.
+
+**Verification pending:** record the tested source, full checks, actual cover/route geometry, reservation and order behaviour, and ordinary-input headless/rendered encounters. Include observed separation, injuries, retries, Defend cover/recall, switching, quiet bypass and reset. No runtime, phone-performance or new release result is claimed yet; build 35 remains the delivered baseline.
+
 ## Guard retaliation — in development
 
 The maintainer reported **“The Attack and Defend controls are working”**, then authorised the bounded recommendation with **“proceed”**. [Issue #171](https://github.com/RonildoBraga/lauder/issues/171) records that chat direction. The report confirms basic commands only; it is not every-input acceptance, sustained performance evidence or merge/release permission.
 
-On `codex/guard-retaliation`, the engaged guard chooses a visible recent native attacker between cycles, otherwise acquiring the leader under the existing rules. A named HUD warning and one two-note cue identify the threatened member. Target identity stays fixed through warning, commitment, burst and recovery; the committed point stays fixed after commitment. The [retaliation contract](guard-retaliation.md) owns selection, flank fairness and lifecycle details. Damage, patterns, existing timing and weakpoint requirements remain unchanged, as do explicit Attack/Defend, orders and the west bypass. Cover geometry is not assigned.
+On `codex/guard-retaliation`, the engaged guard chooses a visible recent native attacker between cycles, otherwise acquiring the leader under the existing rules. A named HUD warning and one two-note cue identify the threatened member. Target identity stays fixed through warning, commitment, burst and recovery; the committed point stays fixed after commitment. The [retaliation contract](guard-retaliation.md) owns selection, flank fairness and lifecycle details. Damage, patterns, existing timing and weakpoint requirements remain unchanged, as do explicit Attack/Defend, orders and the west bypass. That earlier comparison did not include cover edits; the 27 November cover/spacing assignment above is separate.
 
 ### Retaliation verification
 

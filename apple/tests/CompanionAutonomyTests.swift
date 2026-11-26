@@ -95,8 +95,9 @@ struct CompanionAutonomyTests {
       walk(world, to: [6.5, 10])
       attack(world)
       var runner = PlaytestRunner(steps: [.companionFight], name: "companion-contract")
-      var sawLauraAttack = false
-      var sawTomAttack = false
+      _ = world.takeCombatEvents()
+      var lauraSwings = 0
+      var tomRounds = 0
       let lauraStart = position(world, .laura)
       var lauraTravel: Float = 0
       for _ in 0..<(60 * 92) where !runner.isFinished {
@@ -110,8 +111,15 @@ struct CompanionAutonomyTests {
         update(world, raw: raw)
         let after = world.playtestSnapshot
         #expect(after.leader == .miki)
-        sawLauraAttack = sawLauraAttack || after.companionActivities[.laura] == .attacking
-        sawTomAttack = sawTomAttack || after.companionActivities[.tom] == .attacking
+        // One presented update can contain two native steps. Observe actual discharges,
+        // not a short-lived planning label that may already have advanced to the next role.
+        for event in world.takeCombatEvents() {
+          switch event {
+          case .fired(.energySword, _, false): lauraSwings += 1
+          case .fired(.minigun, _, false): tomRounds += 1
+          default: break
+          }
+        }
         lauraTravel = max(lauraTravel, simd_distance(position(world, .laura), lauraStart))
         runner.record(
           PlaytestRunner.Frame(
@@ -121,7 +129,9 @@ struct CompanionAutonomyTests {
       let summary = try #require(runner.summary)
       #expect(summary.passed, "\(summary.failures)")
       #expect(world.session.defeated == ["stranger"] && world.session.leader == .miki)
-      #expect(sawLauraAttack && sawTomAttack && lauraTravel > 1)
+      #expect(lauraSwings > 0)
+      #expect(tomRounds >= GuardStrategy.reactorDamageRequired)
+      #expect(lauraTravel > 1)
       #expect(world.playtestSnapshot.guardStrategy?.phase == .complete)
     }
 
@@ -133,8 +143,22 @@ struct CompanionAutonomyTests {
       update(world)
       try #require(world.session.leader == .tom)
       attack(world)
-      var sawMikiAttack = false
-      var sawLauraAttack = false
+      _ = world.takeCombatEvents()
+      var mikiRounds = 0
+      var lauraSwings = 0
+      func observeDischarges() {
+        // A presented update can contain two native steps, so a successful attack's
+        // planning label can already be gone. Discharges retain the actual weapon/authority.
+        for event in world.takeCombatEvents() {
+          guard case .fired(let weapon, _, let byLeader) = event else { continue }
+          #expect(!byLeader, "the player-controlled Tom must not supply either prerequisite")
+          switch weapon {
+          case .longRifle: mikiRounds += 1
+          case .energySword: lauraSwings += 1
+          default: break
+          }
+        }
+      }
       for destination: SIMD2<Float> in [[6.5, 30], [6.5, 10]] {
         for _ in 0..<60 * 60 {
           let offset = destination - position(world, .tom)
@@ -144,12 +168,9 @@ struct CompanionAutonomyTests {
             raw: InputRules.Raw(
               stick: Movement.stick(
                 towards: offset, cameraOffset: world.level.cameraOffset)))
+          observeDischarges()
           try #require(!world.isRetrying, "the ordinary approach retried")
           #expect(world.session.leader == .tom)
-          sawMikiAttack =
-            sawMikiAttack || world.playtestSnapshot.companionActivities[.miki] == .attacking
-          sawLauraAttack =
-            sawLauraAttack || world.playtestSnapshot.companionActivities[.laura] == .attacking
         }
         try #require(simd_distance(position(world, .tom), destination) < 0.2)
       }
@@ -157,8 +178,6 @@ struct CompanionAutonomyTests {
       var releaseDodge = false
       for frame in 0..<60 * 60 {
         let snapshot = world.playtestSnapshot
-        sawMikiAttack = sawMikiAttack || snapshot.companionActivities[.miki] == .attacking
-        sawLauraAttack = sawLauraAttack || snapshot.companionActivities[.laura] == .attacking
         if snapshot.guardStrategy?.couplingBreached == true { break }
         let centre = try #require(snapshot.robotPosition)
         let facing = try #require(snapshot.robotFacing)
@@ -187,6 +206,7 @@ struct CompanionAutonomyTests {
         // No player Fire, aim assistance, weapon swap or subsequent leader switch supplies
         // either prerequisite. These inputs only position/defend the player-controlled Tom.
         update(world, raw: raw)
+        observeDischarges()
         try #require(!world.isRetrying, "the autonomous prerequisite fight retried")
         #expect(world.session.leader == .tom)
       }
@@ -194,7 +214,7 @@ struct CompanionAutonomyTests {
       #expect(result.guardStrategy?.sensorDisabled == true)
       #expect(result.guardStrategy?.couplingBreached == true)
       #expect(result.guardStrategy?.phase == .reactor)
-      #expect(sawMikiAttack && sawLauraAttack)
+      #expect(mikiRounds > 0 && lauraSwings > 0)
       #expect(result.guardStrategy?.reactorDamage == 0 && world.session.defeated.isEmpty)
       #expect(result.weapon.kind == .minigun && result.weapon.loaded == Weapon.minigun.capacity)
     }

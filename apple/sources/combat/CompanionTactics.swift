@@ -35,6 +35,7 @@ struct CompanionTactics {
   static let leaderLeash: Float = 8
   static let localRadius: Float = 3
   static let replanInterval: Float = 0.3
+  static let minimumSpacing: Float = 1.2
 
   private struct Context: Equatable {
     let member: PartyMember
@@ -55,7 +56,8 @@ struct CompanionTactics {
     input: Input, canStand: (SIMD2<Float>) -> Bool,
     canTraverse: (SIMD2<Float>, SIMD2<Float>) -> Bool,
     canFire: (SIMD2<Float>, GuardWeakpoint, Weapon.Kind) -> Bool,
-    isCovered: (SIMD2<Float>) -> Bool, isThreatened: (SIMD2<Float>) -> Bool
+    isCovered: (SIMD2<Float>) -> Bool, isThreatened: (SIMD2<Float>) -> Bool,
+    isSpaced: (SIMD2<Float>) -> Bool
   ) -> Intent {
     let fallback: Activity
     switch input.order {
@@ -95,6 +97,9 @@ struct CompanionTactics {
       simd_distance(position, input.leaderPosition) <= Self.leaderLeash
         && canStand(position) && canTraverse(input.position, position)
     }
+    func available(_ position: SIMD2<Float>) -> Bool {
+      legal(position) && isSpaced(position)
+    }
     func safe(_ position: SIMD2<Float>) -> Bool {
       !isThreatened(position) || isCovered(position)
     }
@@ -110,21 +115,40 @@ struct CompanionTactics {
       func returning(_ point: SIMD2<Float>) -> Bool {
         let toLeader = simd_distance(point, input.leaderPosition)
         let toBase = simd_distance(point, input.baseTarget)
-        let nearFormation = toLeader <= 2.6 && toBase <= 1.5
+        // Nearby real shelter can sit behind a formation slot that faces the guard.
+        let nearFormation = toLeader <= 2.6 && (toBase <= 1.5 || isCovered(point))
         return simd_distance(point, input.position) <= Self.localRadius
-          && legal(point) && isCovered(point)
+          && available(point)
           && (nearFormation || toBase < fromBase - 0.25)
           && (fromLeader <= 2.6 ? toLeader <= 2.6 : toLeader < fromLeader - 0.25)
       }
-      if sincePlan >= Self.replanInterval || goal.map({ !returning($0) }) != false {
-        goal =
+      if sincePlan >= Self.replanInterval
+        || goal.map({
+          !returning($0) || !safe($0) || (goalActivity == .avoiding && !isCovered($0))
+        }) != false
+      {
+        let candidates =
           ([input.position, input.baseTarget] + Self.near(input.position)
-          + Self.near(input.baseTarget)).filter(returning).min {
+          + Self.near(input.baseTarget)).filter(returning)
+        goal =
+          candidates.filter(isCovered).min {
             simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
           }
+        goalActivity = .avoiding
+        if goal == nil, !isSpaced(input.position) || !isSpaced(input.baseTarget) {
+          // An occupied close-formation slot must not collapse the recall onto its owner.
+          // Without cover, settle at a nearby clear return point rather than orbiting.
+          goal =
+            returning(input.position) && safe(input.position)
+            ? input.position
+            : candidates.filter(safe).min {
+              simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+            }
+          goalActivity = .following
+        }
         sincePlan = 0
       }
-      return Intent(position: goal, activity: goal == nil ? .following : .avoiding)
+      return Intent(position: goal, activity: goal == nil ? .following : goalActivity)
     }
     let assignment = Self.assignment(member: input.member, stage: input.stage)
     let points = input.weakpoints.filter { $0.part == assignment?.part }
@@ -150,9 +174,9 @@ struct CompanionTactics {
     }
     if threatened {
       if goalActivity != .avoiding || sincePlan >= Self.replanInterval
-        || goal.map({ !legal($0) || !safe($0) }) != false
+        || goal.map({ !available($0) || !safe($0) }) != false
       {
-        goal = Self.near(input.position).filter { legal($0) && safe($0) }.min {
+        goal = Self.near(input.position).filter { available($0) && safe($0) }.min {
           let a = simd_distance($0, input.position) - (isCovered($0) ? 4 : 0)
           let b = simd_distance($1, input.position) - (isCovered($1) ? 4 : 0)
           return a < b
@@ -164,7 +188,7 @@ struct CompanionTactics {
       intent.activity = .avoiding
       return intent
     }
-    if let assignment, canStand(input.position),
+    if let assignment, canStand(input.position), isSpaced(input.position),
       let point = points.first(where: {
         canFire(input.position, $0, assignment.weapon)
       })
@@ -177,7 +201,7 @@ struct CompanionTactics {
       intent.activity = point.exposed ? .attacking : .waiting
       return intent
     }
-    if sincePlan < Self.replanInterval, let goal, legal(goal), safe(goal) {
+    if sincePlan < Self.replanInterval, let goal, available(goal), safe(goal) {
       intent.position = goal
       intent.activity = goalActivity
       return intent
@@ -187,12 +211,17 @@ struct CompanionTactics {
     if let assignment, !points.isEmpty {
       var stances: [SIMD2<Float>] = []
       for point in points {
+        if !isSpaced(input.position) {
+          stances += Self.near(input.position).filter {
+            available($0) && safe($0) && canFire($0, point, assignment.weapon)
+          }
+        }
         let outward = Self.direction(
           point.ground - input.guardPosition, fallback: input.guardFacing)
         for radius in assignment.radii {
           for angle: Float in [0, 0.35, -0.35, 0.7, -0.7] {
             let candidate = input.guardPosition + Self.rotated(outward, by: angle) * radius
-            if legal(candidate), safe(candidate), canFire(candidate, point, assignment.weapon) {
+            if available(candidate), safe(candidate), canFire(candidate, point, assignment.weapon) {
               stances.append(candidate)
             }
           }
@@ -216,7 +245,7 @@ struct CompanionTactics {
         goal = [Float(0.35), -0.35].map {
           input.guardPosition + Self.rotated(outward, by: $0) * radius
         }.filter {
-          simd_distance($0, input.position) <= Self.localRadius && legal($0) && safe($0)
+          simd_distance($0, input.position) <= Self.localRadius && available($0) && safe($0)
         }.min { first, second in
           (ideals.map { simd_distance($0, first) }.min() ?? .infinity)
             < (ideals.map { simd_distance($0, second) }.min() ?? .infinity)
@@ -225,11 +254,22 @@ struct CompanionTactics {
       goalActivity = goal == nil ? .following : .approaching
     } else {
       // Non-specialists offer local support instead of firing pointlessly into closed armour.
-      goal = ([input.position] + Self.near(input.baseTarget)).filter {
+      let candidates = ([input.position, input.baseTarget] + Self.near(input.baseTarget)).filter {
         simd_distance($0, input.position) <= Self.localRadius
           && simd_distance($0, input.baseTarget) <= Self.localRadius
-          && legal($0) && isCovered($0)
-      }.min { simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget) }
+          && available($0) && safe($0)
+      }
+      goal = candidates.filter(isCovered).min {
+        simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+      }
+      if goal == nil, !isSpaced(input.position) || !isSpaced(input.baseTarget) {
+        goal =
+          candidates.contains(input.position)
+          ? input.position
+          : candidates.min {
+            simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+          }
+      }
       goalActivity = .waiting
     }
     intent.position = goal

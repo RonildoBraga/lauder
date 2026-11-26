@@ -253,16 +253,49 @@ struct WeaponFeelTests {
   }
 
   @Test
-  func theStrangersHitOnTheLeaderIsFelt() {
+  func theStrangersHitOnTheLeaderIsFelt() throws {
     let world = GameWorld(level: BrooklynBridge.level)
-    walk(world, to: [6.5, 15])
+    // Keep the followers on their ordinary Hold order so this isolates the leader's hit
+    // feedback instead of permitting a companion to intercept the same native shot.
+    #expect(world.session.holdAll())
+    // The entry is sheltered by the new cover. Walk through the ordinary central lane to
+    // test an actual fresh hit in the open, rather than depending on the old bare approach.
+    let exposed: SIMD2<Float> = [6.5, 8]
+    walk(world, to: exposed)
+    #expect(simd_distance(position(world, .miki), exposed) < 0.3)
+    #expect(world.session.inEncounter && !world.isRetrying)
+    let rays = Ballistics(level: world.level)
+    #expect(
+      rays.isClear(
+        from: rays.point(BrooklynBridge.stranger.standAt, above: 1.52),
+        to: rays.point(position(world, .miki))))
+    // Cover can let the unaware guard turn away into its patrol before Miki steps out.
+    // Observe a real acquisition before measuring hit feedback; do not force its phase.
+    let acquired = run(world, upTo: 30) { world.playtestSnapshot.robotPhase == .tracking }
+    try #require(
+      acquired,
+      "No acquisition: phase \(String(describing: world.playtestSnapshot.robotPhase)), guard \(String(describing: world.playtestSnapshot.robotPosition)), leader \(position(world, .miki))"
+    )
+    #expect(world.guardTarget == .miki && !world.isRetrying)
+    _ = world.takeCombatEvents()
+    let shots = world.playtestSnapshot.robotShots
+    let hits = world.session.hitsTaken
     var events: [CombatEvent] = []
     let hit = run(world, upTo: 10) {
       events += world.takeCombatEvents()
       return events.contains { if case .leaderHit = $0 { true } else { false } }
     }
     #expect(hit)
-    #expect(events.contains { if case .fired(.rifle, _, false) = $0 { true } else { false } })
+    #expect(world.playtestSnapshot.robotShots > shots)
+    #expect(world.session.hitsTaken > hits)
+    #expect(
+      events.contains {
+        if case .fired(let kind, _, false) = $0 {
+          kind == .rifle || kind == .shotgun
+        } else {
+          false
+        }
+      })
   }
 
   @Test

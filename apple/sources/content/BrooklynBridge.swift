@@ -2,9 +2,9 @@ import simd
 
 /// The opening: a compressed, flat greybox of the Brooklyn Bridge (ADR 0004), buried in snow.
 /// Brooklyn is at +z and Manhattan at -z. The road and everything on it lie under a white plain
-/// level with the old deck, and only the two towers stand above it. The party keeps to the line
-/// of the buried road, inside an invisible edge at its width. The towers are the only cover, and
-/// the machine that guards the first tower is the only fight.
+/// level with the old deck. The party keeps to the line of the buried road, inside an invisible
+/// edge at its width. The towers and two small approach blocks provide cover, and the machine
+/// that guards the first tower is the only fight.
 ///
 /// Where everything stands, the decoration, the camera and the lights are in `layout`
 /// (BrooklynBridgeLayout.swift), which Blender exports (ADR 0002). This file adds the words: what

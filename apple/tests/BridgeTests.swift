@@ -156,12 +156,14 @@ struct BridgeTests {
   }
 
   /// The layout file that Blender exports (ADR 0002) holds only what the bridge uses, and its
-  /// boxes stand on the deck. Snow has buried the road and everything on it, so its only boxes
-  /// are the towers'.
+  /// boxes stand on the deck. Snow has buried the road; the six tower piers and the two authored
+  /// cover blocks are its only gameplay boxes.
   @Test
   func theLayoutFileHoldsWhatTheBridgeUses() {
     let layout = BrooklynBridge.layout
-    #expect(layout.boxes.allSatisfy { $0.name.contains("-tower-") }, "only the towers stand")
+    let coverNames: Set<String> = ["bridge-cover-west", "bridge-cover-east"]
+    #expect(layout.boxes.filter { $0.name.contains("-tower-") }.count == 6)
+    #expect(Set(layout.boxes.filter { !$0.name.contains("-tower-") }.map(\.name)) == coverNames)
     #expect(abs(layout.ground.position.y + layout.ground.size.y / 2) < 0.005)
     for box in layout.boxes {
       #expect(abs(box.position.y - box.size.y / 2) < 0.005, "\(box.name) stands on the deck")
@@ -181,8 +183,8 @@ struct BridgeTests {
 
   /// The bridge's look comes from its scene file, which Blender exports with the layout file from
   /// the level's Blender file (ADR 0002). The road and everything on it lie buried under a plain
-  /// of snow level with the old deck, so the ground has no look of its own and only the towers
-  /// stand above it: each box's look is a block that fills it. The decoration is in the scene
+  /// of snow level with the old deck, so the ground has no look of its own. Towers and the two
+  /// cover blocks stand above it: each box's look fills it. The decoration is in the scene
   /// file alone, and the camera takes the layout file's offset and field of view.
   @Test
   func theSceneFileShowsTheBridgeWhereItsBoxesStand() throws {
@@ -396,7 +398,7 @@ struct BridgeTests {
     let world = GameWorld(level: BrooklynBridge.level)
     let scene = try #require(world.root.findEntity(named: "brooklyn-bridge.scene"))
     let road = BrooklynBridge.level.bounds
-    #expect(BrooklynBridge.layout.boxes.count == 6, "decoration adds no gameplay boxes")
+    #expect(!BrooklynBridge.layout.boxes.contains { $0.name.hasPrefix("snow-drifts-") })
     func collides(_ entity: Entity) -> Bool {
       entity.components.has(CollisionComponent.self) || entity.children.contains(where: collides)
     }

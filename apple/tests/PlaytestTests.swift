@@ -113,6 +113,52 @@
     }
 
     @Test
+    func aCoverCheckCannotInventAnEngagedFightOrIssueItsOwnAttackOrder() {
+      let world = GameWorld(level: BrooklynBridge.level)
+      var runner = PlaytestRunner(
+        steps: [.settleDefendCover(seconds: 1, hold: 0.5)], name: "cover-context-contract")
+      for _ in 0..<90 where !runner.isFinished {
+        let raw = runner.input(world.playtestSnapshot)
+        #expect(raw == InputRules.Raw())
+        runner.tick(dt: 1 / 60)
+      }
+      #expect(runner.summary?.passed == false)
+      #expect(
+        runner.summary?.failures.first == "cover settlement requires an active defended guard fight"
+      )
+      #expect(world.session.combatStance == .defend && world.session.leader == .miki)
+    }
+
+    @Test
+    func theManualGuardDriverPeeksOutFromRealCoverBeforeTryingToFire() throws {
+      let world = GameWorld(level: BrooklynBridge.level)
+      walk(world, to: [6.5, 10])
+      walk(world, to: [3.64, 11.09])
+      let snapshot = world.playtestSnapshot
+      let at = try #require(snapshot.positions[.miki])
+      let centre = try #require(snapshot.robotPosition)
+      let point = try #require(snapshot.guardPoints.first)
+      let rays = Ballistics(level: snapshot.level)
+      try #require(
+        !rays.isClear(from: rays.point(at), to: point.centre)
+          || !rays.isClear(from: rays.point(centre, above: 1.52), to: rays.point(at)))
+      var runner = PlaytestRunner(steps: [.dismantleGuard], name: "manual-cover-peek-contract")
+      var peeked = false
+      for _ in 0..<90 where !runner.isFinished {
+        let raw = runner.input(snapshot)
+        #expect(!raw.controllerFire && !raw.controllerSwitch)
+        if raw.stick != .zero && !raw.controllerDodge {
+          peeked = true
+          break
+        }
+        runner.tick(dt: 1 / 60)
+      }
+      #expect(peeked, "real cover must cause ordinary repositioning, not a hidden firing/lock loop")
+      #expect(world.session.leader == .miki && !world.isRetrying)
+      #expect(world.playtestSnapshot.guardStrategy?.sensorDisabled == false)
+    }
+
+    @Test
     func injuryEvidenceSurvivesClearedSnapshotsAndCountsRetryEdgesOnce() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       var snapshot = world.playtestSnapshot
