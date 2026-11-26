@@ -66,6 +66,19 @@ struct GameView: View {
             .frostedPanel(cornerRadius: 8)
             .allowsHitTesting(false)
           }
+          if world.controls.touchControlsEnabled, !talking, !world.isPaused,
+            world.controls.status == .ready, world.session.combatStance == .defend,
+            let health = world.guardHealth, health > 0
+          {
+            Text("Hold open ground, slide ↖ for Attack · ↗ for Defend")
+              .font(.caption2.weight(.medium))
+              .multilineTextAlignment(.center)
+              .frame(maxWidth: 230)
+              .padding(.horizontal, 10)
+              .padding(.vertical, 6)
+              .frostedPanel(cornerRadius: 8)
+              .allowsHitTesting(false)
+          }
         }
         Spacer(minLength: 0)
         VStack(alignment: .trailing, spacing: 10) {
@@ -155,6 +168,7 @@ struct GameView: View {
           formationTitle: formationAction,
           orderNames: orderNames,
           vibrationTitle: vibrationTitle,
+          panelTitle: world.showsPanel ? "Status panel: On" : "Status panel: Off",
           mode: world.session.mode)
       }
     }

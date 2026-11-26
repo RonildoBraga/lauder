@@ -240,11 +240,15 @@ struct TouchInputTests {
       surface.update(
         actionTitle: "Look", nextLeaderName: "Tom", showsFire: true, swapTitle: "Assault rifle",
         showsFormation: true, formationTitle: "Formation", orderNames: ("Tom", "Laura"),
-        vibrationTitle: "Vibration: On", mode: mode, generation: 0)
+        vibrationTitle: "Vibration: On", panelTitle: "Status panel: On", mode: mode, generation: 0)
     }
     update(.exploring)
     let formation = try #require(surface.subviews.first { $0.accessibilityLabel == "Formation" })
-    #expect(formation.accessibilityCustomActions?.map(\.name) == ["Squad Attack", "Squad Defend"])
+    #expect(
+      formation.accessibilityCustomActions?.map(\.name) == [
+        "Squad Attack", "Squad Defend", "Send Tom ahead", "Send Laura ahead", "Send both ahead",
+        "Hold positions",
+      ])
     update(.paused)
     #expect(formation.accessibilityCustomActions == nil)
     update(.dialogue)

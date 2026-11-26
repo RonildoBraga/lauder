@@ -71,6 +71,12 @@
       case provokeRetaliation
       case leadWarnedMember
       case finishRetaliationCycle
+      /// Touch-only targeting and combat, without an unavailable manual aim stick.
+      case touchTarget
+      case touchPress(InputRules.Raw)
+      case touchFight
+      case expectPanel(Bool)
+      case expectTouchDamage
     }
 
     /// What the runner can see of the game each frame.
@@ -111,6 +117,7 @@
       var coveredMembers: Set<PartyMember> = []
       var damage = DamageTally()
       var damageLabelCount = 0
+      var showsPanel = true
     }
 
     struct Frame {
@@ -170,6 +177,7 @@
       var retryCount = 0
       var damage = DamageTally()
       var maximumDamageLabels = 0
+      var nonTouchInputFrames: Int? = nil
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -181,6 +189,7 @@
     static let lineSeconds: Float = 0.6
 
     let name: String
+    private var usesTouch: Bool { name == "touch-fight" }
     private let steps: [Step]
     private var index = 0
     private var stepTime: Float = 0
@@ -211,6 +220,7 @@
     private var wasRetrying = false
     private var observedDamage = DamageTally()
     private var maximumDamageLabels = 0
+    private var nonTouchInputFrames = 0
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -255,6 +265,18 @@
     /// The raw input for this frame. The first half second is neutral, so the release gate
     /// clears exactly as it does for a player.
     mutating func input(_ snapshot: Snapshot) -> InputRules.Raw {
+      let raw = nextInput(snapshot)
+      if usesTouch,
+        raw.hasControllerInput || raw.hasKeyboardInput || raw.stick != .zero
+          || raw.aimStick != .zero
+      {
+        if nonTouchInputFrames == 0 { failures.append("touch-fight emitted input outside touch") }
+        nonTouchInputFrames += 1
+      }
+      return raw
+    }
+
+    private mutating func nextInput(_ snapshot: Snapshot) -> InputRules.Raw {
       guard summary == nil else { return InputRules.Raw() }
       observedDamage = snapshot.damage
       maximumDamageLabels = max(maximumDamageLabels, snapshot.damageLabelCount)
@@ -272,6 +294,25 @@
         switch steps[index] {
         case .walk(let target):
           if let raw = steer(towards: target, from: leaderPosition, in: snapshot) { return raw }
+        case .touchPress(let raw):
+          return press(raw)
+        case .touchTarget:
+          guard let raw = targetTap(snapshot) else {
+            failures.append("the real guard was not on screen for a touch target tap")
+            advance()
+            continue
+          }
+          return press(raw)
+        case .touchFight:
+          if let raw = touchFight(snapshot) { return raw }
+        case .expectPanel(let shown):
+          expect(
+            snapshot.showsPanel == shown, "the status panel visibility was \(snapshot.showsPanel)")
+        case .expectTouchDamage:
+          expect(
+            snapshot.damage.byMember[PartyMember.miki.rawValue, default: 0] > 0
+              && snapshot.damage.hits > 0 && maximumDamageLabels > 0,
+            "touch Fire did not cause Miki damage with visible feedback")
         case .wait(let seconds):
           guard stepTime < seconds else {
             advance()
@@ -294,7 +335,8 @@
           announce(label)
           advance()
         case .act:
-          return press(InputRules.Raw(controllerAction: true))
+          return press(
+            usesTouch ? InputRules.Raw(touchAction: true) : InputRules.Raw(controllerAction: true))
         case .lock:
           return press(InputRules.Raw(controllerLock: true))
         case .swap:
@@ -569,8 +611,73 @@
         advance()
         return nil
       }
+      let stick = Movement.stick(towards: offset, cameraOffset: snapshot.level.cameraOffset)
+      return usesTouch
+        ? InputRules.Raw(touchStick: stick, touchIsTouching: true)
+        : InputRules.Raw(stick: stick)
+    }
+
+    /// A real body tap, projected into the same normalized screen coordinates as UIKit.
+    /// The test viewport is the baseline phone's 428 pt landscape height, not image pixels.
+    private func targetTap(_ snapshot: Snapshot) -> InputRules.Raw? {
+      guard let at = snapshot.robotPosition,
+        let screen = snapshot.camera.screen(ofWorld: [at.x, 0.9, at.y]),
+        (0...1).contains(screen.x), (0...1).contains(screen.y)
+      else { return nil }
       return InputRules.Raw(
-        stick: Movement.stick(towards: offset, cameraOffset: snapshot.level.cameraOffset))
+        touchTarget: .tap(
+          InputRules.TargetTap(
+            point: InputRules.ScreenPoint(x: screen.x, y: screen.y, aspect: snapshot.camera.aspect),
+            viewHeight: 428)))
+    }
+
+    /// This driver has no manual aim. It holds Fire with the native touch lock and lets the
+    /// explicitly ordered companions contribute, repositioning/rolling through touch movement.
+    private mutating func touchFight(_ snapshot: Snapshot) -> InputRules.Raw? {
+      if snapshot.defeated > 0 {
+        advance()
+        return nil
+      }
+      guard snapshot.combatStance == .attack, !snapshot.isRetrying,
+        snapshot.beat == .stranger, stepTime <= 90,
+        let centre = snapshot.robotPosition, let at = snapshot.positions[snapshot.leader]
+      else {
+        failures.append("touch-only combat failed to finish without a retry")
+        advance()
+        return nil
+      }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      if !snapshot.locked {
+        guardRelease = true
+        return targetTap(snapshot) ?? InputRules.Raw()
+      }
+      var raw = InputRules.Raw(touchFire: true)
+      let radial = at - centre
+      let committed = snapshot.robotPhase == .committed || snapshot.robotPhase == .burst
+      if !committed {
+        let destination = centre + (snapshot.robotFacing ?? [0, 1]) * 4.5
+        if simd_distance(at, destination) > 0.25 {
+          raw.touchStick = Movement.stick(
+            towards: destination - at, cameraOffset: snapshot.level.cameraOffset)
+          raw.touchIsTouching = true
+        }
+      }
+      if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
+        simd_length(radial) > 0.1
+      {
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let escape = movement.canTraverse(from: at, to: at + tangent * 3) ? tangent : -tangent
+        raw.touchStick = Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset)
+        raw.touchIsTouching = true
+        raw.touchDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+      }
+      return raw
     }
 
     private mutating func expect(_ holds: Bool, _ found: String) {
@@ -1277,7 +1384,8 @@
         worstLeaderGap: Double(worstGap),
         peakPartyHits: Dictionary(
           uniqueKeysWithValues: peakPartyHits.map { ($0.key.rawValue, $0.value) }),
-        retryCount: retryCount, damage: observedDamage, maximumDamageLabels: maximumDamageLabels)
+        retryCount: retryCount, damage: observedDamage, maximumDamageLabels: maximumDamageLabels,
+        nonTouchInputFrames: usesTouch ? nonTouchInputFrames : nil)
       summary = result
       write(result)
     }
@@ -1419,6 +1527,40 @@
         .mark("Guard defeated with normal and weak-point damage"),
       ] + restartRun
 
+    /// The phone's controls throughout: no controller buttons, keyboard or manual right stick.
+    private static let touchFightRoute: [Step] =
+      toTheStranger + [
+        .mark("Touch controls and order hint"),
+        .touchTarget, .expectLock(true), .mark("Guard selected by touch"),
+        .touchTarget, .expectLock(false), .touchTarget, .expectLock(true),
+        .touchPress(InputRules.Raw(touchSwap: true)),
+        .touchPress(InputRules.Raw(touchSwap: true)),
+        .touchPress(InputRules.Raw(touchSwitch: true)),
+        .touchPress(InputRules.Raw(touchSwitch: true)),
+        .touchPress(InputRules.Raw(touchSwitch: true)),
+        .touchOrder(.bothGo, at: [6.5, 13]),
+        .expectOrder(.tom, "going"), .expectOrder(.laura, "going"), .expectRefused(0),
+        .touchPress(InputRules.Raw(touchOrder: InputRules.TouchOrder(command: .hold, point: nil))),
+        .expectOrder(.tom, "holding"),
+        .touchPress(InputRules.Raw(touchFormation: true)),
+        .touchPress(
+          InputRules.Raw(touchOrder: InputRules.TouchOrder(command: .attack, point: nil))),
+        .expectCombatStance(.attack), .touchFight, .expectDefeated(1), .expectLock(false),
+        .expectTouchDamage,
+        .mark("Touch-only guard victory"),
+        .touchPress(
+          InputRules.Raw(touchOrder: InputRules.TouchOrder(command: .defend, point: nil))),
+        .expectCombatStance(.defend),
+        .touchPress(InputRules.Raw(touchPause: true)), .wait(seconds: 0.5),
+        .touchPress(InputRules.Raw(touchPanel: true)), .expectPanel(false),
+        .mark("Touch Pause with status hidden"),
+        .touchPress(InputRules.Raw(touchPanel: true)), .expectPanel(true),
+        .touchPress(InputRules.Raw(touchPause: true)), .wait(seconds: 0.3),
+        .touchPress(InputRules.Raw(touchPause: true)), .wait(seconds: 0.3),
+        .touchPress(InputRules.Raw(touchRestart: true)), .expectRestarted,
+        .mark("Touch Restart restores the party"), .wait(seconds: 1),
+      ]
+
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
     /// the second tower.
     private static let pastTheGuard: [Step] =
@@ -1500,6 +1642,7 @@
       ("weapons", weapons), ("companions", companions), ("retaliation", retaliation),
       ("cover-spacing", coverSpacing),
       ("damage-feedback", damageFeedback),
+      ("touch-fight", touchFightRoute),
     ]
 
     static func steps(for scenario: String) -> [Step]? {
