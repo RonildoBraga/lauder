@@ -14,6 +14,14 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Build 39 TestFlight preview
+
+The maintainer requested **“Go ahead and check CI and any review feedback on PR #197, then merge it and deploy the updated build to my phone using TestFlight.”** (chat, 27 November 2026; no public permalink). This authorises the reviewed locomotion merge and its internal TestFlight delivery, including necessary build metadata.
+
+Fresh discovery through Lauder’s release command checked its own bundle-ID record, builds and accepted/processing uploads, selected unused **0.1.0 (39)** and retained the existing tester/group baseline. PR #197 carries the unchanged `b6e0b83` gameplay, the build-number change and preparation documentation; no separate packaging PR is needed.
+
+**Preparation in progress:** the final package head still needs CI/review and merge. A fresh source-bound full check, signed archive/identity/dSYM verification, one API-authenticated upload, successful Apple processing, unchanged existing-tester access and exact testing-note readback follow before delivery is claimed. Exact merged archive source and completed proofs will be recorded here. Build 38 remains the delivered phone comparison; earlier source/Simulator results below do not establish build 39 availability or physical acceptance. No new tester invitation, uninstall, store-availability change or public App Store review is assigned.
+
 ## Leg-loss locomotion — in development
 
 After testing build 38, the maintainer said **“It worked”**, authorised merging PRs #193/#195, and requested **“When the robot lost a leg, its walking and spinning capabilitis needs to be compromised”** (chat, 27 November 2026; no public permalink). [Issue #196](https://github.com/RonildoBraga/lauder/issues/196) records this focused follow-up. The implementation retains the existing translation penalties, reduces physical body turns after each loss and slows the remaining feet’s steps. The [robot contract](robot-eye-legs-grenades.md#leg-loss-locomotion-follow-up) owns its starting tuning and preserved attack/geometry boundaries.
