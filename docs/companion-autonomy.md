@@ -1,7 +1,7 @@
 # Companion autonomy at the first tower
 
 **Date:** 27 November 2026\
-**Status:** The ordinary-attack extension for [shared guard health and damage feedback](damage-feedback.md) is implemented on `codex/guard-damage` under [issue #183](https://github.com/RonildoBraga/lauder/issues/183), based on [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`. Source/rendered verification passed on `533f012`, recorded in the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Earlier autonomy/Attack/Defend results remain recorded below and in the [earlier plan section](prototype-plan.md#companion-autonomy--in-development). Internal build 35 remains the delivered preview; those results do not validate this revision.
+**Status:** The ordinary-attack extension for [shared guard health and damage feedback](damage-feedback.md) is implemented on `codex/guard-damage` under [issue #183](https://github.com/RonildoBraga/lauder/issues/183), based on [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`. Source/rendered verification passed on `533f012`, recorded in the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Earlier autonomy/Attack/Defend results remain recorded below and in the [earlier plan section](prototype-plan.md#companion-autonomy--in-development). The ordinary-attack extension is now delivered in internal [build 36](prototype-plan.md#build-36-testflight-preview), through [PR #185](https://github.com/RonildoBraga/lauder/pull/185). Apple processing and existing-tester access are verified; earlier preview feedback does not establish this revision's phone behaviour, balance or performance.
 
 ## Maintainer direction
 
