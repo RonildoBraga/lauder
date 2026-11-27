@@ -43,8 +43,8 @@
       case expectBeat(StoryBeat)
       case expectDefeated(Int)
       case expectHits(Int)
-      /// Check the whole party while the witnessed guard fight is still live.
-      case expectUnhurtParty
+      /// Observe the leader evading and every companion surviving the live warned burst.
+      case expectDodgeSurvival
       case expectParty([PartyMember])
       case formation
       case expectFormation(GameSession.Formation)
@@ -212,6 +212,7 @@
         var companionTargets: [String: [Float]]? = nil
         var coveredMembers: [String]? = nil
         var longestCoverHoldSeconds: Float? = nil
+        var partyHits: [String: Int]? = nil
         var health: Int? = nil
         var damage: DamageTally? = nil
       }
@@ -406,6 +407,8 @@
               combatStance: String(describing: snapshot.combatStance),
               guardTarget: snapshot.guardTarget?.rawValue,
               committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] },
+              partyHits: Dictionary(
+                uniqueKeysWithValues: snapshot.partyHits.map { ($0.key.rawValue, $0.value) }),
               health: snapshot.guardStrategy?.health, damage: snapshot.damage))
           announce(label)
           advance()
@@ -686,12 +689,18 @@
           expect(
             snapshot.hitsTaken == count,
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
-        case .expectUnhurtParty:
+        case .expectDodgeSurvival:
           expect(
             snapshot.beat == .stranger && !snapshot.isRetrying && snapshot.defeated == 0
-              && (snapshot.guardStrategy?.health ?? 0) > 0 && !snapshot.party.isEmpty
-              && snapshot.party.allSatisfy { snapshot.partyHits[$0] == 0 },
-            "the live first burst injured a party member or lacked an active guard")
+              && (snapshot.guardStrategy?.health ?? 0) > 0
+              && snapshot.guardTarget == snapshot.leader && !snapshot.party.isEmpty
+              && snapshot.partyHits[snapshot.leader] == 0
+              && snapshot.party.allSatisfy { member in
+                guard let hits = snapshot.partyHits[member] else { return false }
+                return hits < GameSession.hitsAllowed
+              },
+            "the leader did not evade the live burst or a companion was incapacitated: \(snapshot.partyHits)"
+          )
         }
       }
       finish()
@@ -1841,12 +1850,13 @@
         .mark("start"), .walk([6.5, 66]), .walk([-6.5, 30]), .walk([-6.5, 15]),
         .expectBeat(.stranger), .waitForRobotPhase(.patrol, seconds: 3),
         .wait(seconds: 1.8), .mark("guard patrol"),
-        .walk([-6.5, 30]), .walk([6.5, 30]), .walk([6.5, 10]),
-        .waitForRobotPhase(.tracking, seconds: 30), .mark("guard tracking"),
+        // Stop inside attack range with a clear lane before the first warning completes.
+        .walk([-6.5, 30]), .walk([6.5, 30]), .walk([6.5, 13.5]),
+        .waitForRobotPhase(.tracking, seconds: 30), .expectDodgeSurvival, .mark("guard tracking"),
         .waitForRobotPhase(.committed, seconds: 3), .mark("guard committed"), .dodgeGuard,
         .waitForRobotPhase(.burst, seconds: 2), .mark("guard burst"),
         .waitForRobotPhase(.recovering, seconds: 2), .expectRobotShots(atLeast: 3),
-        .expectUnhurtParty, .mark("guard recovery"),
+        .expectDodgeSurvival, .mark("guard recovery"),
         .dismantleGuard, .expectDefeated(1), .mark("guard disabled"),
         .wait(seconds: 1),
       ] + restartRun

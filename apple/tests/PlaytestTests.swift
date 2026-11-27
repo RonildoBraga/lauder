@@ -72,6 +72,17 @@
       if name == "weapons" {
         #expect(summary.domeBlockedShots > 0)
       }
+      if name == "first-fight" {
+        let tracking = try #require(summary.marks.first { $0.name == "guard tracking" })
+        let recovery = try #require(summary.marks.first { $0.name == "guard recovery" })
+        #expect(tracking.robotShots == 0 && recovery.robotShots == 3)
+        #expect((recovery.health ?? 0) > 0 && recovery.guardTarget == PartyMember.miki.rawValue)
+        #expect(recovery.partyHits?[PartyMember.miki.rawValue] == 0)
+        for member in PartyMember.allCases {
+          let hits = try #require(recovery.partyHits?[member.rawValue])
+          #expect(hits < GameSession.hitsAllowed)
+        }
+      }
       if name == "opening" {
         #expect(arrivedSamples > 0 && summary.retryCount == 0)
         for name in ["all crawlers down", "both drones down"] {
