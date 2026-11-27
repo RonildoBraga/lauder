@@ -39,6 +39,7 @@ final class GameWorld {
   private(set) var damageFeedback = DamageFeedback()
   #if DEBUG
     @ObservationIgnored private var damageTally = PlaytestRunner.DamageTally()
+    @ObservationIgnored private var shieldStops = 0
   #endif
   private(set) var companionStatus = ""
   /// Whether the leader's weapon is drawn.
@@ -1412,6 +1413,20 @@ final class GameWorld {
     }
     joltedMembers = jolted
     let events = fight.takeEvents()
+    #if DEBUG
+      // Observe resolved fixed-step rounds before a slower rendered frame can skip them.
+      if fight.shieldIsUp, let tom = figures[.tom] {
+        shieldStops +=
+          fight.shots.filter { shot in
+            guard shot.side == .hostile, let trace = shot.trace, trace.strike == .scenery
+            else { return false }
+            let start = SIMD2(trace.start.x, trace.start.z)
+            let end = SIMD2(trace.end.x, trace.end.z)
+            return simd_distance(start, tom) > ShieldDome.radius
+              && abs(simd_distance(end, tom) - ShieldDome.radius) < 0.02
+          }.count
+      }
+    #endif
     let damage = events.compactMap { event -> DamageHit? in
       if case .damaged(let hit) = event { return hit }
       return nil
@@ -1673,7 +1688,7 @@ final class GameWorld {
       return PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
-        hitsTaken: session.hitsTaken,
+        hitsTaken: session.hitsTaken, hitsAllowed: GameSession.hitsAllowed,
         defeated: session.defeated.filter { fight.hostiles[$0]?.spec.isPack != true }.count,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
@@ -1692,6 +1707,7 @@ final class GameWorld {
         companionTargets: companionTargets, coveredMembers: covered,
         damage: damageTally, damageLabelCount: damageFeedback.labels.count, showsPanel: showsPanel,
         grenadeCooldown: fight.grenadeCooldown, grenadeInFlight: fight.grenade != nil,
+        shieldRaised: fight.shieldIsUp, shieldStops: shieldStops,
         dronesDown: session.defeated.filter { fight.hostiles[$0]?.drone != nil }.count,
         drones: fight.hostiles.values.compactMap { state in
           state.drone.map {
