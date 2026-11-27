@@ -304,7 +304,8 @@ struct TouchTargetTests {
     return Level(
       id: "touch-target-fixture", ground: .box("floor", at: [0, -0.15, 0], size: [100, 0.3, 100]),
       boxes: [], triggers: [], encounters: [encounter], party: [.miki],
-      spawns: [.miki: leader], heading: [0, -1], cameraOffset: BrooklynBridge.cameraOffset,
+      spawns: [.miki: leader, .tom: [-1, 9], .laura: [1, 9]], heading: [0, -1],
+      cameraOffset: BrooklynBridge.cameraOffset,
       fieldOfView: 22, opening: "Range", objective: "Test", lookAround: "Range",
       restartNote: "Restart")
   }
