@@ -651,6 +651,7 @@ final class EncounterSimulation {
           dt: dt, target: chosenPoint, hasSight: hasSight, obstacles: movementObstacles,
           party: Array(party.values), awareOfTarget: retaliation,
           speedMultiplier: guardStrategies[spec.id]?.speedMultiplier ?? 1,
+          turnMultiplier: guardStrategies[spec.id]?.turnMultiplier ?? 1,
           grounded: guardStrategies[spec.id]?.detachedLegs.count == GuardStrategy.legCount)
         {
           fireRobot(discharge, state: &state, party: targets, session: session, outcome: &outcome)

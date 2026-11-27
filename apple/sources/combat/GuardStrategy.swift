@@ -23,6 +23,8 @@ struct GuardStrategy: Equatable, Sendable {
   static let weakpointMultiplier = 3
   static let legCount = 4
   static let swordHitsToDetach = 3
+  /// A grounded hull can only make a slow emergency pivot, not resume a healthy spin.
+  static let groundedTurnMultiplier: Float = 0.1
   /// Preserve the guard's existing time between volleys; it no longer gates critical damage.
   static let recoveryDuration: Float = 4
 
@@ -32,6 +34,15 @@ struct GuardStrategy: Equatable, Sendable {
 
   var phase: Phase { health == 0 ? .complete : .active }
   var speedMultiplier: Float { max(0, 1 - Float(detachedLegs.count) * 0.25) }
+  var turnMultiplier: Float {
+    switch detachedLegs.count {
+    case 0: 1
+    case 1: 0.65
+    case 2: 0.4
+    case 3: 0.2
+    default: Self.groundedTurnMultiplier
+    }
+  }
 
   /// Every actual enemy contact deals health damage. Every weapon's eye hit is critical;
   /// three sword contacts on one intact leg detach it, without multiplying ordinary damage.

@@ -188,7 +188,9 @@ struct RobotGuardTests {
     robot.reveal()
     robot.engage()
     var patterns: Set<RobotGuard.Pattern> = []
-    for _ in 0..<120 * 18 {
+    // The grounded pivot is now only 0.08 rad/s: allow its physical turn and both full
+    // warned cycles rather than restoring the healthy turn speed to satisfy an old timeout.
+    for _ in 0..<120 * 30 {
       let shot = robot.step(
         dt: dt, target: [5, 5], hasSight: true, obstacles: [], party: [],
         awareOfTarget: true, speedMultiplier: 0, grounded: true)

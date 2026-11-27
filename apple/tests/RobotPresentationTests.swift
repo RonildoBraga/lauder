@@ -242,8 +242,15 @@ struct RobotPresentationTests {
 
   /// Reconstruct real endpoints independently: a clamped inverse solve must not silently move
   /// a foot whose desired anchor still claims to be planted.
-  @Test(arguments: [false, true])
-  func actualPatrolAndCombatKeepPlantedFeetReachable(combat: Bool) {
+  @Test(arguments: [false, true], [0, 1, 2, 3])
+  func actualPatrolAndCombatKeepSurvivingFeetPlantedAndReachable(combat: Bool, lost: Int) {
+    var strategy = GuardStrategy()
+    for leg in 0..<lost {
+      for _ in 0..<GuardStrategy.swordHitsToDetach {
+        _ = strategy.accept(weapon: .energySword, part: .leg(leg), damage: 1)
+      }
+    }
+    let missing = strategy.detachedLegs
     var guardBot = RobotGuard(home: .zero)
     guardBot.reveal()
     guardBot.engage()
@@ -252,23 +259,32 @@ struct RobotPresentationTests {
     var maxError: Float = 0
     var maxReach: Float = 0
     var maxDrift: Float = 0
+    var travelled: Float = 0
+    var turned: Float = 0
+    var movedFeet = false
     var oldWanted: [SIMD3<Float>] = []
     var oldActual: [SIMD3<Float>] = []
     for frame in 0..<7200 {
       let time = Float(frame) / 60
       let target: SIMD2<Float> = combat ? [8 * sin(time * 0.11), 8 * cos(time * 0.11)] : [0, 10]
+      let previousPosition = guardBot.position
+      let previousYaw = Movement.yaw(towards: guardBot.facing)
       _ = guardBot.step(
         dt: 1 / 60, target: target, hasSight: combat && Int(time) % 20 < 14,
-        obstacles: [], party: [])
+        obstacles: [], party: [], speedMultiplier: strategy.speedMultiplier,
+        turnMultiplier: strategy.turnMultiplier)
       let position = guardBot.position
       let yaw = Movement.yaw(towards: guardBot.facing)
+      travelled += simd_distance(previousPosition, position)
+      turned += abs((yaw - previousYaw).remainder(dividingBy: 2 * .pi))
       let turn = simd_quatf(angle: yaw, axis: [0, 1, 0])
-      let origin = SIMD3(position.x, -RobotModelGeometry.braceDepth * guardBot.brace, position.y)
+      let origin = SIMD3(position.x, -guardBot.bodyDrop, position.y)
       let poses = motion.advance(
-        position: position, facing: guardBot.facing, brace: guardBot.brace, dt: 1 / 60)
+        position: position, facing: guardBot.facing, brace: guardBot.brace,
+        detachedLegs: missing, bodyDrop: guardBot.bodyDrop, dt: 1 / 60)
       let wanted = motion.footPositions
-      var actual: [SIMD3<Float>] = []
-      for index in poses.indices {
+      var actual = [SIMD3<Float>](repeating: .zero, count: poses.count)
+      for index in poses.indices where !missing.contains(index) {
         let leg = RobotModelGeometry.legs[index]
         let pose = poses[index]
         let upper =
@@ -279,7 +295,7 @@ struct RobotPresentationTests {
           leg.hip + upper.act([0, 0, RobotModelGeometry.upperLength])
           + lower.act([0, 0, RobotModelGeometry.lowerLength])
         let endpoint = origin + turn.act([-source.x, source.z, source.y])
-        actual.append(endpoint)
+        actual[index] = endpoint
         maxError = max(maxError, simd_distance(endpoint, wanted[index]))
         let local = turn.inverse.act(wanted[index] - origin)
         maxReach = max(maxReach, simd_length(SIMD3(-local.x, local.z, local.y) - leg.hip))
@@ -289,6 +305,11 @@ struct RobotPresentationTests {
         {
           maxDrift = max(maxDrift, simd_distance(oldActual[index], endpoint))
         }
+        if oldWanted.count == wanted.count,
+          simd_distance(oldWanted[index], wanted[index]) > 0.00001
+        {
+          movedFeet = true
+        }
       }
       oldWanted = wanted
       oldActual = actual
@@ -296,5 +317,7 @@ struct RobotPresentationTests {
     #expect(maxReach < RobotModelGeometry.upperLength + RobotModelGeometry.lowerLength - 0.0001)
     #expect(maxError < 0.0001)
     #expect(maxDrift < 0.0001)
+    #expect(turned > 0.5 && movedFeet)
+    if !combat { #expect(travelled > 0.5) }
   }
 }
