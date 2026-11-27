@@ -73,6 +73,79 @@ struct CompanionTacticsTests {
     #expect(closedAgain.fire && closedAgain.targetsBody && closedAgain.activity == .attacking)
   }
 
+  @Test(arguments: [PartyMember.miki, .tom])
+  func aBlockedExposedEyeAllowsUsefulBodyFireBeforeAnotherCriticalPosition(member: PartyMember) {
+    var planner = CompanionTactics()
+    let start = SIMD2<Float>(0, -6)
+    let weapon: Weapon.Kind = member == .miki ? .longRifle : .minigun
+    // The eye still exists and other legal eye positions remain available. Ordinary fire
+    // cannot depend on an empty component list or on forbidding every alternative route.
+    for frame in 0..<120 {
+      let result = plan(
+        &planner, input(member: member, dt: frame % 20 == 0 ? 0.31 : 0.001),
+        canFire: { point, _, _ in point.x > 0.1 },
+        canFireAtBody: { point, kind in point == start && kind == weapon })
+      #expect(result.position == start && result.lookAt == .zero)
+      #expect(result.weapon == weapon && result.targetsBody && result.fire)
+    }
+    let critical = plan(
+      &planner, input(member: member, dt: 0.001), canFireAtBody: { _, _ in true })
+    #expect(critical.fire && !critical.targetsBody && critical.lookAt == [0, -1.45])
+  }
+
+  @Test(arguments: [PartyMember.miki, .tom])
+  func aNewBodyLaneCancelsACachedEyeApproachWithoutKeepingStaleFire(member: PartyMember) throws {
+    var planner = CompanionTactics()
+    let start = SIMD2<Float>(0, -6)
+    let seeking = plan(
+      &planner, input(member: member), canFire: { point, _, _ in point.x > 0.1 })
+    #expect(try #require(seeking.position) != start)
+    #expect(seeking.activity == .approaching && !seeking.fire)
+    let firing = plan(
+      &planner, input(member: member, dt: 0.001),
+      canFire: { point, _, _ in point.x > 0.1 },
+      canFireAtBody: { point, _ in point == start })
+    #expect(firing.position == start && firing.targetsBody && firing.fire)
+    let blocked = plan(
+      &planner, input(member: member, dt: 0.001),
+      canFire: { point, _, _ in point.x > 0.1 })
+    #expect(!blocked.fire)
+    let critical = plan(&planner, input(member: member, dt: 0.001))
+    #expect(critical.fire && !critical.targetsBody)
+  }
+
+  @Test(arguments: [PartyMember.miki, .tom])
+  func aClearBodyCannotOverrideThreatOrAnIllegalCurrentFiringPlace(member: PartyMember) {
+    let start = SIMD2<Float>(0, -6)
+    var threatened = CompanionTactics()
+    let avoiding = plan(
+      &threatened, input(member: member), canFire: { _, _, _ in false },
+      canFireAtBody: { _, _ in true }, isThreatened: { _ in true })
+    #expect(avoiding.activity == .avoiding && !avoiding.fire)
+    var crowded = CompanionTactics()
+    let spacing = plan(
+      &crowded, input(member: member), canFire: { point, _, _ in point.x > 0.1 },
+      canFireAtBody: { _, _ in true },
+      isSpaced: { simd_distance($0, start) >= CompanionTactics.minimumSpacing })
+    #expect(!spacing.fire && spacing.position != start)
+    var obstructed = CompanionTactics()
+    let illegal = plan(
+      &obstructed, input(member: member), canStand: { $0 != start },
+      canFire: { point, _, _ in point.x > 0.1 }, canFireAtBody: { _, _ in true })
+    #expect(!illegal.fire && illegal.position != start)
+  }
+
+  @Test
+  func lauraStillClosesForAnIntactLegInsteadOfChoosingAConvenientShotgunBodyHit() throws {
+    var planner = CompanionTactics()
+    let result = plan(
+      &planner, input(member: .laura, leader: .miki),
+      canFire: { point, _, _ in point.x > 0.1 }, canFireAtBody: { _, _ in true })
+    #expect(try #require(result.position) != [0, -6])
+    #expect(result.weapon == .energySword && !result.targetsBody && !result.fire)
+    #expect(result.activity == .approaching)
+  }
+
   @Test
   func blockedShotsDoNotInventDamageAndCandidatesRespectLeaderLeash() {
     var planner = CompanionTactics()
@@ -221,7 +294,8 @@ struct CompanionTacticsTests {
   func aHeldNonSpecialistCanFireOrdinarilyButGoAndDefendCannot() {
     var planner = CompanionTactics()
     let held = plan(
-      &planner, input(member: .tom, order: .holding([0, -6]), points: []),
+      &planner, input(member: .tom, order: .holding([0, -6])),
+      canFire: { _, _, _ in false },
       canFireAtBody: { _, _ in true },
       isSpaced: { _ in
         Issue.record("Spacing must not override a Hold anchor")

@@ -222,6 +222,16 @@ struct CompanionTactics {
       intent.activity = point.exposed ? .attacking : .waiting
       return intent
     }
+    if input.member == .miki || input.member == .tom,
+      canStand(input.position), isSpaced(input.position),
+      canFireAtBody(input.position, Self.ordinaryWeapon(for: input.member))
+    {
+      // Take a useful shot from this safe stance before retaining an old eye orbit.
+      // Laura keeps approaching her assigned leg.
+      return ordinaryAttack(
+        input: input, available: available, safe: safe, canStand: canStand,
+        canFireAtBody: canFireAtBody, isCovered: isCovered, isSpaced: isSpaced)
+    }
     if sincePlan < Self.replanInterval, let goal, available(goal), safe(goal) {
       if goalTargetsBody {
         return ordinaryAttack(
