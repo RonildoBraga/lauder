@@ -1,7 +1,7 @@
 # First-tower strategic guard
 
 **Date:** 27 November 2026\
-**Status:** The current [eye, legs and grenade revision](robot-eye-legs-grenades.md) is implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). This revision is unmerged and not delivered; builds 33–37 below are historical evidence rather than validation of these new mechanics.
+**Status:** The current [eye, legs and grenade revision](robot-eye-legs-grenades.md) is implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Internal [build 38](prototype-plan.md#build-38-testflight-preview) now delivers it before merge or physical acceptance; builds 33–37 below remain historical evidence rather than validation of these new mechanics.
 
 The earlier build 34 command feedback, build 35 retaliation and build 36 shared-health authorisation remain recorded in the [prototype plan](prototype-plan.md). After build 37, the maintainer requested critical eye hits, repeated Laura sword strikes that detach an individual leg and slow the robot, and grenades, choosing **“Tom only; manual throws”**. The [robot contract](robot-eye-legs-grenades.md) records that assignment and separates it from prototype tuning choices; it does not change the trio's biographies.
 
