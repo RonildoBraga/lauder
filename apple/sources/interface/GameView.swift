@@ -35,8 +35,21 @@ struct GameView: View {
             .layoutPriority(1)
         }
         Spacer(minLength: 0)
-        if let compass = world.compass, !world.isPaused {
-          compassChip(compass)
+        VStack(spacing: 6) {
+          if let compass = world.compass, !world.isPaused {
+            compassChip(compass)
+          }
+          if !world.showsPanel, let target = world.guardTarget, !world.isPaused {
+            Label(
+              "Guard targeting \(target.displayName)", systemImage: "exclamationmark.triangle.fill"
+            )
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(HUDStyle.threat)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frostedPanel(cornerRadius: 8)
+            .allowsHitTesting(false)
+          }
         }
         Spacer(minLength: 0)
         VStack(alignment: .trailing, spacing: 10) {
@@ -247,24 +260,39 @@ struct GameView: View {
   /// shows it again.
   private func status(talking: Bool) -> some View {
     VStack(alignment: .leading, spacing: 3) {
-      HStack(spacing: 6) {
+      HStack(alignment: .top, spacing: 10) {
         ForEach(world.session.party, id: \.self) { member in
           let leading = member == world.session.leader
-          Text(member.displayName)
-            .fontWeight(leading ? .semibold : .regular)
-            .underline(leading)
-          if world.session.inEncounter, leading {
-            // The placeholder hit rule: three hits, shown beside the name.
-            Text(hitPips(of: member)).foregroundStyle(HUDStyle.threat)
+          let targeted = member == world.guardTarget
+          VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 2) {
+              if targeted {
+                Image(systemName: "exclamationmark.triangle.fill")
+                  .accessibilityHidden(true)
+              }
+              Text(member.displayName)
+                .fontWeight(leading || targeted ? .semibold : .regular)
+                .underline(leading)
+            }
+            .foregroundStyle(targeted ? HUDStyle.threat : HUDStyle.ink)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+              targeted ? "\(member.displayName), guard target" : member.displayName)
+            if world.session.inEncounter, leading || targeted || world.session.hits(of: member) > 0
+            {
+              // The placeholder hit rule: three hits, shown below the name.
+              Text(hitPips(of: member)).foregroundStyle(HUDStyle.threat)
+            }
           }
-        }
-        if world.session.formationsAvailable {
-          // The squad's formation and what it is doing (ADR 0003, phases S2 and S3).
-          Text("· \(world.session.formation.name) · \(world.session.squadState)")
-            .foregroundStyle(HUDStyle.muted)
+          .fixedSize(horizontal: true, vertical: false)
         }
       }
       .font(.caption)
+      if world.session.formationsAvailable {
+        // Keep formation text out of the names' row, including when a companion is threatened.
+        Text("\(world.session.formation.name) · \(world.session.squadState)")
+          .font(.caption).foregroundStyle(HUDStyle.muted)
+      }
       Text(world.session.combatStance == .attack ? "Squad: Attack" : "Squad: Defend")
         .font(.caption.weight(.semibold))
       if world.objectiveIsFresh {

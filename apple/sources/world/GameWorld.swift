@@ -33,6 +33,7 @@ final class GameWorld {
   private(set) var diagnostic: String?
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
+  private(set) var guardTarget: PartyMember?
   private(set) var guardHint: String?
   private(set) var companionStatus = ""
   /// Whether the leader's weapon is drawn.
@@ -343,7 +344,13 @@ final class GameWorld {
   /// The frame plays them; tests read them.
   func takeCombatEvents() -> [CombatEvent] {
     defer { combatEvents.removeAll(keepingCapacity: true) }
-    return combatEvents
+    return combatEvents.filter { event in
+      guard case .guardTargeted(let member, _) = event else { return true }
+      // Several fixed steps may precede one presented frame. Do not announce a target
+      // whose attack ended, was bypassed, or was interrupted before feedback drained.
+      return guardTarget == member && session.mode == .exploring
+        && !controls.needsNeutralInput && !isRetrying
+    }
   }
 
   /// The frame's feedback context. Only the interface plays the events; headless simulation
@@ -548,6 +555,7 @@ final class GameWorld {
   /// Reset squad movement and the camera around `spot`, with the weapon holstered.
   private func resetSquad(around spot: SIMD2<Float>) {
     threat = nil
+    guardTarget = nil
     guardHint = nil
     companionStatus = ""
     companionIntents = [:]
@@ -1229,6 +1237,7 @@ final class GameWorld {
     if let (first, second) = outcome.face { faceEachOther(first, second) }
     let threat = fight.threat
     if self.threat != threat { self.threat = threat }
+    if guardTarget != fight.guardTarget { guardTarget = fight.guardTarget }
     let guardHint = fight.guardHint
     if self.guardHint != guardHint { self.guardHint = guardHint }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
@@ -1410,6 +1419,7 @@ final class GameWorld {
   }
 
   private func updateActivity() {
+    combatEvents.removeAll { if case .guardTargeted = $0 { true } else { false } }
     controls.setActive(isPresented && isApplicationActive)
     controls.requireNeutralInput()
     skipNextStep = true
@@ -1479,7 +1489,10 @@ final class GameWorld {
         companionActivities: companionIntents.mapValues(\.activity),
         combatStance: session.combatStance,
         partyWeapons: Dictionary(
-          uniqueKeysWithValues: session.party.map { ($0, fight.status(for: $0)) }))
+          uniqueKeysWithValues: session.party.map { ($0, fight.status(for: $0)) }),
+        guardTarget: fight.guardTarget(for: "stranger"), robotCommittedPoint: robot?.committedPoint,
+        partyHits: Dictionary(
+          uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }))
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

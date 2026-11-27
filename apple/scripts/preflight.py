@@ -20,6 +20,7 @@ ASSETS = (
     "apple/sources/content/sounds/carbine.wav",
     "apple/sources/content/sounds/close-scatter.wav",
     "apple/sources/content/sounds/empty-click.wav",
+    "apple/sources/content/sounds/guard-warning.wav",
     "apple/sources/content/sounds/light-burst.wav",
     "apple/sources/content/sounds/rifle.wav",
     "apple/sources/content/sounds/strike-block.wav",

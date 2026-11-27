@@ -11,6 +11,8 @@ The player always controls the leader. The other two may move and fight within t
 
 The maintainer then clarified: **“they should only attack and complet the steps if I press to attack”** and **“if I press to defend on the d pad then they should seek cover and try to go back to me”**. This replaces automatic engagement permission with an explicit standing squad stance. The player firing or the guard noticing the party does not authorise companion attacks.
 
+After build 34 the maintainer reported **“The Attack and Defend controls are working”**. This is basic command feedback, not every-input or sustained-performance acceptance. Their subsequent **“proceed”** authorises the [guard-retaliation comparison](guard-retaliation.md), recorded in [issue #171](https://github.com/RonildoBraga/lauder/issues/171), without changing the companion command contract. Its source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development); it has not been merged or delivered.
+
 ## Attack and Defend
 
 - Start in **Defend**. D-pad/arrow **Up** orders **Attack**; **Down** orders **Defend**. Left/right still position the individual companion. Keyboard **G/H** and the touch ground menu retain Both/Hold orders.
@@ -36,6 +38,8 @@ The ordinary role, weapon, exposure and physical-contact rules apply whichever c
 - **Ownership:** switching immediately returns the new leader to player authority; the old leader may resume bounded companion behaviour. Autonomous decisions never drive the player's current leader or replay an action after a control transition.
 - **Lifecycle:** Pause, dialogue, inactivity and release gates retain their authority. Retry and Restart reset transient combat intentions alongside the encounter.
 - **Defence:** use legal movement and cover. This task does not add automatic shield activation, signature abilities, healing, invulnerability or a general tactical AI framework. Tom's player-controlled dome retains its existing switch/drop rule.
+
+The next retaliation pass makes a real attacking companion eligible for the guard's next warned cycle. Defend revokes attacks and recalls companions, but does not erase recent attack evidence or cancel a cycle already warned against them. The named target, finite turning and fixed committed point are owned by the [retaliation contract](guard-retaliation.md), rather than by companion navigation.
 
 The aim is visible cooperation using the existing scene, weapons and simple signals. Exploration remains the main direction, and no new enemy, playable scene or art production is required.
 

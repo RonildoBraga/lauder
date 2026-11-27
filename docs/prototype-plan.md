@@ -4,6 +4,8 @@
 
 **Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The strategic guard was delivered as the [build 33 reviewed preview](#build-33-testflight-preview). [Bounded companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with validation below. The [build 34 preview](#build-34-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The player keeps direct control of the leader while companions may complete their own weakpoint contributions. Further scenes and mechanics require their own decision.
 
+The current assignment is [guard retaliation](guard-retaliation.md), implemented for review on `codex/guard-retaliation`, with source and Simulator checks below. Build 34's basic Attack/Defend feedback does not verify this new branch on the phone.
+
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
 On 25 November 2026 the maintainer replaced the party's figures with [pawns](visual-direction.md#characters-and-interface) and asked for a [dodge roll](decisions/0019-dodge-roll.md) to escape attacks, then said **“Start building”**. Their verification is recorded under [Pawns and dodge roll](#pawns-and-dodge-roll).
@@ -11,6 +13,30 @@ On 25 November 2026 the maintainer replaced the party's figures with [pawns](vis
 On 26 November 2026 the maintainer asked for three changes to the controls: one leader switch on L1 / LB that goes round the party, the status panel's toggle moved from Circle / B into the pause menu, and a [lock-on](decisions/0020-lock-on.md) on a press of the right stick. Their verification is recorded under [Controls pass](#controls-pass).
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
+
+## Guard retaliation — in development
+
+The maintainer reported **“The Attack and Defend controls are working”**, then authorised the bounded recommendation with **“proceed”**. [Issue #171](https://github.com/RonildoBraga/lauder/issues/171) records that chat direction. The report confirms basic commands only; it is not every-input acceptance, sustained performance evidence or merge/release permission.
+
+On `codex/guard-retaliation`, the engaged guard chooses a visible recent native attacker between cycles, otherwise acquiring the leader under the existing rules. A named HUD warning and one two-note cue identify the threatened member. Target identity stays fixed through warning, commitment, burst and recovery; the committed point stays fixed after commitment. The [retaliation contract](guard-retaliation.md) owns selection, flank fairness and lifecycle details. Damage, patterns, existing timing and weakpoint requirements remain unchanged, as do explicit Attack/Defend, orders and the west bypass. Cover geometry is not assigned.
+
+### Retaliation verification
+
+On 26 November 2026, the frozen application source passed `./scripts/check`: 13 declaration-contract tests, 31 release-contract tests, 52 Blender extension tests, eight generated sounds, strict Swift formatting, app build and hosted Swift Testing, including all ten headless gameplay routes. No Swift source warnings remained. Rule/native/world regressions cover actual discharges and sword contact rather than intentions, attack-memory expiry and deterministic ties, real visibility, quiet acquisition, target identity across switches and Defend, fixed committed rays, one warning per notice entry, Pause, bypass, Retry and Restart. Pending-warning tests reject cues after interruption or an ended burst while retaining real shot/impact history; Defend retains an already warned attack. Read-only implementation and feedback reviews found no remaining correctness blocker.
+
+Clean rendered iPhone 17 / iOS 27.0 Simulator runs on the same application source, through ordinary shared input:
+
+| Route | Duration | Peak hits: Miki / Laura / Tom | Retries | Frame p99 / max | Party update mean / p99 | Body overlap frames |
+|---|---:|---:|---:|---:|---:|---:|
+| `retaliation` | 54.2 s | 0 / 0 / 2 | 0 | 16.80 / 33.35 ms | 1.584 / 5.044 ms | 0.6% |
+| `companions` | 55.2 s | 1 / 0 / 0 | 0 | 16.84 / 200.29 ms | 1.500 / 5.183 ms | 1.2% |
+| `first-fight` | 80.4 s | 2 / 0 / 1 | 0 | 17.10 / 164.79 ms | 1.953 / 7.033 ms | 0.4% |
+
+All three passed with Restart and zero stuck-companion diagnostic frames. The Debug runner now retains each member's peak injury count and counts retry transitions, including across cleared injury snapshots at victory/Restart. These are observed injuries under the ordinary three-hit retry rule, not injected damage or immunity. Simulator timings, including the recorded long frames, do not establish phone performance.
+
+The new route keeps Tom under player control without Fire, allowing real Miki/Laura contributions to provoke retaliation. At 47.12 s the guard warned Laura; normal leader cycling, Defend and a real roll followed. Commitment at 49.04 s and recovery at 50.29 s both retained Laura and exactly `[4.7238855, 8.224512]` as the committed point. The five-round fan completed, then Attack resumed and native core fire dismantled the guard at 51.74 s. Tom's two hits show that Defend and switching do not cancel enemy fire or protect the rest of the party from crossfire. The independent `companions` route also retained the sensor/coupling/core sequence, cease-fire/recall and a later Laura-targeted cycle without taking control from Miki.
+
+Visual inspection caught and corrected wrapping of a threatened companion's name: the three short name/pip groups now occupy their own row, with formation text below. The corrected full-panel warning is readable in the recording. Waveform/resource/event tests establish the generated two-note cue and its cancellation boundaries, not actual audibility; Simulator video has no audio. Phone readability, physical controls, sustained performance, balance and enjoyment remain unverified for this branch. A short scripted fight supplies only a small number of retaliation cycles; evaluate the comparison before changing cover, damage or timings. Build 34 remains the latest delivered preview. No merge or new TestFlight upload occurred.
 
 ## Companion autonomy — in development
 
@@ -55,7 +81,7 @@ Rendered iPhone 17 / iOS 27.0 Simulator results, through ordinary shared input:
 
 All three rendered routes passed, including Restart. In `companions`, Miki stayed under player control and supplied only the sensor shot; Laura breached the coupling and Tom supplied 12 accepted core rounds. The captured stage changed from sensor through coupling and reactor to complete, without another player Fire or leader switch. The widest leader gaps were 3.46, 4.10 and 3.23 m respectively. Short body overlaps on the other routes remain visible in the measurements. The runs use the ordinary roll defence, with no added immunity or teleportation. Frame maxima were 33.34, 180.37 and 33.33 ms, so the first-fight run includes an isolated hitch despite its low p99.
 
-The new activity line is readable in the Simulator captures; the bottom controller-hint strip remains dense. These are Mac Simulator results, not sustained phone frame-pacing, controller/touch acceptance or a judgment of enjoyment. The AI remains limited to this guard, and the player must still supply the currently controlled character's role. Review and the next authorised phone/release checkpoint remain outstanding; build 33 remains the delivered version.
+The new activity line is readable in the Simulator captures; the bottom controller-hint strip remains dense. These are Mac Simulator results, not sustained phone frame-pacing, controller/touch acceptance or a judgment of enjoyment. The AI remains limited to this guard, and the player must still supply the currently controlled character's role. At that earlier checkpoint, review and the next authorised phone/release were outstanding and build 33 was the delivered version; the later build 34 record below supersedes that delivery status.
 
 ## Strategic guard — in development
 
@@ -97,7 +123,7 @@ On 26 November 2026 the maintainer explicitly requested delivery of the Attack/D
 - Verified Release archive identity/version/build, selected signing team, code signature and matching dSYM. Archive and upload used the existing API key with provisioning updates, not a saved-account login. Signing material, credentials and full receipts remain private.
 - Apple confirmed upload **COMPLETE**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, unexpired. Every intended existing internal group contains the build; group set and tester membership are unchanged. The en-AU test notes were written and read back exactly.
 
-The preview starts in Defend. D-pad Up permits companion attacks and weakpoint completion; Down stops their fire and recalls them via available cover. TestFlight availability is verified; phone download/installation, new physical D-pad/touch acceptance, sustained performance and enjoyment remain unverified. No uninstall, additional testers, pricing change or public App Store submission occurred. Build 33 remains a historical manual-control preview rather than the latest delivered build.
+The preview starts in Defend. D-pad Up permits companion attacks and weakpoint completion; Down stops their fire and recalls them via available cover. TestFlight availability is verified. The maintainer later reported **“The Attack and Defend controls are working”**: basic command feedback only, without an individual D-pad/touch checklist, sustained performance capture or balance judgement. No uninstall, additional testers, pricing change or public App Store submission occurred. Build 33 remains a historical manual-control preview rather than the latest delivered build; the new retaliation branch has not been delivered.
 
 ## Structural preparation
 
@@ -350,7 +376,7 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
-The preceding C first-tower prototype is implemented in the merged baseline, with its recorded source/Simulator checks. The strategic revision was delivered for phone testing in build 33; the maintainer has now authorised bounded companion autonomy above. Complete and review that revision, then assess whether cooperation makes the loop readable and enjoyable. Source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
+The preceding C first-tower prototype is implemented in the merged baseline, with its recorded source/Simulator checks. Build 34 delivered explicit companion commands, and the maintainer confirmed the basic commands work. The current assignment is the bounded retaliation comparison above: complete and review it before judging cover changes or broader combat expansion. Source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
 
 The broader squad combat direction, [The Quiet Yard](encounters/the-quiet-yard.md) and later narrative plans remain reference rather than assignments. The removed S4 experiments stay retired.
 

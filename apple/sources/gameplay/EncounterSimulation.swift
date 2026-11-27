@@ -40,8 +40,21 @@ final class EncounterSimulation {
   private(set) var hostiles: [String: HostileState] = [:]
   private(set) var guardStrategies: [String: GuardStrategy] = [:]
   private var aggressiveGuards: Set<String> = []
+  private var guardTargets: [String: GuardTargeting] = [:]
   private var autonomousMembers: Set<PartyMember> = []
   private var memberFacings: [PartyMember: SIMD2<Float>] = [:]
+
+  /// The selected member is stable throughout a warned cycle, including recovery.
+  func guardTarget(for id: String) -> PartyMember? { guardTargets[id]?.member }
+
+  /// Presentation names the threatened member only while a real attack is being warned/fired.
+  var guardTarget: PartyMember? {
+    guard let id = encounter?.hostiles.first(where: { $0.strategicGuard })?.id,
+      let robot = hostiles[id]?.robot,
+      [.notice, .tracking, .committed, .burst].contains(robot.phase)
+    else { return nil }
+    return guardTarget(for: id)
+  }
 
   func weakpoints(for id: String) -> [GuardWeakpoint] {
     guard let strategy = guardStrategies[id], let state = hostiles[id],
@@ -198,6 +211,7 @@ final class EncounterSimulation {
   func reset() {
     hostiles = specs.mapValues { HostileState(spec: $0) }
     aggressiveGuards = []
+    guardTargets = specs.filter { $0.value.strategicGuard }.mapValues { _ in GuardTargeting() }
     autonomousMembers = []
     memberFacings = [:]
     guardStrategies = specs.filter { $0.value.strategicGuard }.mapValues { _ in GuardStrategy() }
@@ -257,6 +271,7 @@ final class EncounterSimulation {
     else { return false }
     hostiles[id]?.clearGuard()
     aggressiveGuards.remove(id)
+    guardTargets[id]?.reset()
     enemyHandling[id]?.cancel()
     shots.removeAll(keepingCapacity: true)
     threat = nil
@@ -408,6 +423,19 @@ final class EncounterSimulation {
     }
   }
 
+  /// Only actual native discharges during an engaged nearby guard fight supply threat
+  /// evidence. Drawing, spinning up, an empty trigger or a planner intention does not.
+  private func recordGuardAttack(by member: PartyMember, from origin: SIMD2<Float>) {
+    guard let encounter else { return }
+    for spec in encounter.hostiles
+    where spec.strategicGuard && aggressiveGuards.contains(spec.id) {
+      guard let state = hostiles[spec.id], state.isVisible, !state.isDown, state.isTargetable,
+        simd_distance(origin, state.position) <= RobotGuard.detectionRange
+      else { continue }
+      guardTargets[spec.id]?.recordAttack(by: member)
+    }
+  }
+
   /// Cues, hostile attacks and leader fire share one fixed step. Visible figures also supply
   /// scripted shots, including Tom's intervention. Practice shots spend no shared ammunition.
   /// Hostile shots pass through `untouchable` members, such as a leader mid-roll, though
@@ -501,24 +529,70 @@ final class EncounterSimulation {
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
       if spec.attack == .robot {
-        let hasSight = ballistics.isClear(
+        let previousPhase = state.robot?.phase
+        var chosenMember: PartyMember? = session.leader
+        var chosenPoint = leader
+        var hasSight = ballistics.isClear(
           from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
+        var retaliation = false
+        if spec.strategicGuard, let robot = state.robot {
+          let eligible = Set(
+            party.compactMap { member, point -> PartyMember? in
+              simd_distance(point, state.position) <= RobotGuard.detectionRange
+                && ballistics.isClear(
+                  from: ballistics.point(state.position, above: 1.52),
+                  to: ballistics.point(point))
+                ? member : nil
+            })
+          var selection = guardTargets[spec.id] ?? GuardTargeting()
+          selection.advance(dt: dt)
+          let selected = selection.select(
+            leader: session.leader, phase: robot.phase,
+            engaged: aggressiveGuards.contains(spec.id), eligible: eligible)
+          guardTargets[spec.id] = selection
+          // A missing/occluded chosen member cannot redirect an unfinished warning to the
+          // new leader. The robot enters search, or finishes its already committed point.
+          chosenMember = selected
+          chosenPoint =
+            selected.flatMap { party[$0] }
+            ?? robot.committedPoint ?? state.position
+          hasSight = selected.map { eligible.contains($0) } ?? false
+          retaliation = selection.isRetaliation
+        }
         if let discharge = state.stepRobot(
-          dt: dt, target: leader, hasSight: hasSight, obstacles: movementObstacles,
-          party: Array(party.values))
+          dt: dt, target: chosenPoint, hasSight: hasSight, obstacles: movementObstacles,
+          party: Array(party.values), awareOfTarget: retaliation)
         {
           fireRobot(discharge, state: &state, party: targets, session: session, outcome: &outcome)
         }
         if let robot = state.robot {
+          if spec.strategicGuard, robot.phase == .notice, previousPhase != .notice,
+            let member = chosenMember, party[member] != nil
+          {
+            events.append(.guardTargeted(member, at: chosenPoint))
+          }
           if [.notice, .tracking, .committed, .burst, .recovering, .searching].contains(robot.phase)
           {
             aggressiveGuards.insert(spec.id)
           }
           guardStrategies[spec.id]?.advance(delta: dt, recovering: robot.phase == .recovering)
+          let targetName = chosenMember?.displayName ?? "Squad"
           switch robot.phase {
-          case .notice, .tracking: threatNow = "\(robot.pattern.name): bracing."
-          case .committed: threatNow = "\(robot.pattern.name) committed. Move or use cover."
-          case .burst: threatNow = "\(robot.pattern.name): firing."
+          case .notice, .tracking:
+            threatNow =
+              spec.strategicGuard
+              ? "\(targetName) targeted · \(robot.pattern.name): bracing."
+              : "\(robot.pattern.name): bracing."
+          case .committed:
+            threatNow =
+              spec.strategicGuard
+              ? "\(targetName) targeted · \(robot.pattern.name) committed. Move or use cover."
+              : "\(robot.pattern.name) committed. Move or use cover."
+          case .burst:
+            threatNow =
+              spec.strategicGuard
+              ? "\(targetName) targeted · \(robot.pattern.name): firing."
+              : "\(robot.pattern.name): firing."
           case .recovering: threatNow = "\(spec.name) is recovering."
           default: break
           }
@@ -628,6 +702,7 @@ final class EncounterSimulation {
       else { return }
     }
     handling[slot(of: member)]?.fired()
+    if inFight { recordGuardAttack(by: member, from: origin) }
     let trace = scattered(aimed, by: member, weapon: weapon, motion: motion, allies: allies)
     let path = trace.path
     let armoured: Bool
@@ -792,6 +867,7 @@ final class EncounterSimulation {
     guard let state = hostiles[id], state.isTargetable else { return }
     if guardStrategies[id] != nil {
       aggressiveGuards.insert(id)
+      guardTargets[id]?.recordAttack(by: member)
       outcome.line = "Armour deflected the hit. \(guardHint ?? "")"
       return
     }
@@ -812,6 +888,7 @@ final class EncounterSimulation {
     let id = point.hostileID
     guard let state = hostiles[id], state.isTargetable, let robot = state.robot else { return }
     aggressiveGuards.insert(id)
+    guardTargets[id]?.recordAttack(by: member)
     let result = guardStrategies[id]?.accept(
       member: member, weapon: weapon.kind, part: point.part,
       recovering: robot.phase == .recovering)
@@ -848,6 +925,7 @@ final class EncounterSimulation {
   private func knockDown(_ id: String, from shooter: SIMD2<Float>) {
     guard let state = hostiles[id] else { return }
     hostiles[id]?.knockDown()
+    guardTargets[id]?.reset()
     enemyHandling[id]?.cancel()
     if state.robot == nil {
       falls[id] = Fall(away: state.position - shooter, yaw: hostileYaws[id] ?? 0)

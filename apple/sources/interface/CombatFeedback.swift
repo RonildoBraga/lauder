@@ -64,6 +64,7 @@ enum CombatSound: String, CaseIterable, Sendable {
   case strikeBody = "strike-body"
   case strikeBlock = "strike-block"
   case emptyClick = "empty-click"
+  case guardWarning = "guard-warning"
 
   /// What an event sounds like: each weapon a shot, a strike on a body or a block, and an
   /// empty click. Until the paired weapons get sounds of their own, each borrows the nearest
@@ -83,6 +84,7 @@ enum CombatSound: String, CaseIterable, Sendable {
     case .struckBlock: .strikeBlock
     case .empty: .emptyClick
     case .leaderHit: nil
+    case .guardTargeted: .guardWarning
     }
   }
 
