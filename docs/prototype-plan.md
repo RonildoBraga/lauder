@@ -67,7 +67,12 @@ On 27 November 2026, after the delivery checkpoint above, the maintainer reporte
 
 While Codex worked on the guard's leg stagger (#199), the maintainer asked for **“a different enemy”** and chose **“Scout drones”** **“With the first guard”** (chat, 27 November 2026; no public permalink). [Issue #201](https://github.com/RonildoBraga/lauder/issues/201) records Claude's claim and the files it avoids while #199 is active. The [drone contract](scout-drones.md) holds the starting rules: two drones circle the guard at 3 m, take turns to warn for 1 s and dive along a committed line with a three-round burst that hurts at most once, pass low enough for the sword, and fall with the guard. The [scout-drone model](../blender/assets/scout-drone/README.md) is simple shapes in the guard's colours.
 
-**Checks:** pending; recorded here once run.
+**Checks, on `5f4f266`, iPhone 13 Pro Max Simulator with iOS 27.0:**
+- **Full check:** `./scripts/check` passed: contracts, release, Blender and sound checks, strict formatting, the build and every Swift test.
+- **Headless routes:** all fifteen pass, the fourteen guard-only routes and **drone-fight**.
+- **Rendered drone-fight:** It passed in 69.4 s, 23/23 steps, with no retry; Laura took one hit. Miki downed both drones 9.4 s after the guard noticed the party, and the squad then dismantled the guard. Frame time averaged 16.8 ms (p99 16.8 ms, one frame of 185 ms), and the party update 1.5 ms. An earlier run on the preceding source also passed, in 70.2 s.
+- **Rendered robot-parts:** on the preceding source it passed on the guard-only bridge (61.7 s, 35/35 steps), which shows the guard-only routes launch on the right level.
+- **Not checked:** these are Simulator results, not phone evidence. Controls, readability, audibility, balance, enjoyment and sustained phone performance are unchecked.
 
 ## Eye, legs and grenades — in development
 
