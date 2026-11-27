@@ -1,7 +1,7 @@
 # Scout drones at the first tower
 
 **Date:** 27 November 2026  
-**Status:** In development on `claude/scout-drones` under [issue #201](https://github.com/RonildoBraga/lauder/issues/201). It is unmerged; [TestFlight build 41](prototype-plan.md#build-41-testflight-preview) previews it for the existing testers. The [prototype plan](prototype-plan.md#scout-drones--in-development) records what has been checked.
+**Status:** Built under [issue #201](https://github.com/RonildoBraga/lauder/issues/201) and played on the phone in [TestFlight build 41](prototype-plan.md#build-41-testflight-preview), where the maintainer said “Feels right”. [PR #203](https://github.com/RonildoBraga/lauder/pull/203) merges it into `main`. The [prototype plan](prototype-plan.md#scout-drones--in-development) records what has been checked.
 
 ## The request
 
@@ -69,4 +69,4 @@ These are simple shapes, as [AGENTS.md](../AGENTS.md) asks.
 
 - **Simplifications:** the flight is a bounded prototype without physics, and the drone's body is a short cylinder rather than its mesh.
 - **What Simulator checks can't settle:** phone readability, audibility, balance, whether the fight is still enjoyable, and sustained frame rate.
-- **Merge:** merging needs the baseline-iPhone check that AGENTS.md asks of playable features, and that check needs its own go-ahead.
+- **Phone check:** the maintainer's “Feels right” on build 41 is general success on the phone. Frame pacing, sound and balance are still unmeasured there.

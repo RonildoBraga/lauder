@@ -158,7 +158,9 @@ After the checks above, the maintainer answered “Yes, upload it” to Claude's
 - **Apple:** at 05:57 UTC on 27 November 2026, Apple reported the build COMPLETE and VALID, internal only, in beta testing and unexpired. It is available to the existing internal testers, the internal group set and tester membership are unchanged, and the upload had no errors.
 - **What was not done:** no tester was invited, no TestFlight test notes were written, and nothing was submitted to the public App Store. The archive and its symbols are kept privately.
 - **The branch afterwards:** later commits change only documentation.
-- **Still unchecked:** the phone playtest of controls, readability, sound, balance and sustained performance.
+- **Phone check:** the maintainer played build 41 and answered “Feels right” to Claude's question “How do the drones play in build 41?” (Claude session, 27 November 2026; no public permalink).
+  - **What it shows:** general success on the phone, not a measured check of each control, sound, balance or sustained frame rate.
+  - **The merge:** it clears the baseline-iPhone gate that AGENTS.md sets for playable features. PR #203 merges under Claude's standing authorisation once its checks pass.
 
 ## Eye, legs and grenades — in development
 
