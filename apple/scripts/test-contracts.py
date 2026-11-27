@@ -2,6 +2,7 @@
 """Mutation checks for declarations that several project tools consume."""
 
 from pathlib import Path
+import json
 import shutil
 import sys
 import tempfile
@@ -81,6 +82,21 @@ class ContractTests(unittest.TestCase):
 
     def test_export_manifest_output_paths_must_match_the_exporter(self):
         self.change("blender/level-exports.json", "models/miki.usdz", "models/old-miki.usdz")
+        self.refuses("Export manifest output paths")
+
+    def test_model_acknowledgement_declaration_must_match_the_export_manifest(self):
+        self.change("blender/extensions/lauder_levels/common.py",
+                    "apple/sources/content/acknowledgements.txt",
+                    "apple/sources/content/other-acknowledgements.txt")
+        self.refuses("Export manifest output paths")
+
+    def test_model_acknowledgement_cannot_be_omitted_from_the_export_manifest(self):
+        path = self.root / "blender/level-exports.json"
+        records = json.loads(path.read_text())
+        acknowledgements = contracts.literal(
+            self.root, "blender/extensions/lauder_levels/common.py", "MODEL_ACKNOWLEDGEMENTS")
+        del records["models/spider-bot-heavy"]["wrote"][acknowledgements["spider-bot-heavy"]]
+        path.write_text(json.dumps(records))
         self.refuses("Export manifest output paths")
 
     def test_changed_swift_declaration_shape_fails_closed(self):

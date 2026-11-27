@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .common import (
     bpy, _collection, EXPORT_FORMAT, EXPORT_RECORD, file_fingerprint, LayoutError, LEVELS,
-    model_file, MODEL_METADATA, PREVIEW, SPAWNED, SPAWNED_SCENES, VISUAL,
+    model_file, MODEL_ACKNOWLEDGEMENTS, MODEL_METADATA, PREVIEW, SPAWNED, SPAWNED_SCENES, VISUAL,
 )
 from .layouts import emit_layout, layout_from_blender
 from .looks import visual_problems, what_collection_shows
@@ -18,7 +18,7 @@ from .models import check_model
 from .robot_geometry import emit_robot_geometry, ROBOT
 
 ROBOT_CREDIT = "blender/assets/spider-bot-heavy/CREDIT.txt"
-ROBOT_ACKNOWLEDGEMENTS = "apple/sources/content/acknowledgements.txt"
+ROBOT_ACKNOWLEDGEMENTS = MODEL_ACKNOWLEDGEMENTS[ROBOT]
 
 
 def _records(repository):
