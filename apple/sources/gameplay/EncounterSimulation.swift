@@ -202,8 +202,6 @@ final class EncounterSimulation {
   private let airspace: ScoutDrone.Airspace
   /// The member each warning drone watches, kept until its dive commits.
   private var droneTargets: [String: PartyMember] = [:]
-  /// Where that member stood in the latest step, which the dive will take if they stay.
-  private var droneWatchPoints: [String: SIMD2<Float>] = [:]
   /// Drones that have been hit, which attack before their guard has noticed the party.
   private var alertedDrones: Set<String> = []
 
@@ -225,7 +223,6 @@ final class EncounterSimulation {
     hostiles = specs.mapValues { HostileState(spec: $0) }
     aggressiveGuards = []
     droneTargets = [:]
-    droneWatchPoints = [:]
     alertedDrones = []
     guardTargets = specs.filter { $0.value.strategicGuard }.mapValues { _ in GuardTargeting() }
     autonomousMembers = []
@@ -293,7 +290,6 @@ final class EncounterSimulation {
     for spec in encounter?.hostiles ?? [] where spec.isDrone {
       hostiles[spec.id]?.clearDrone()
       droneTargets[spec.id] = nil
-      droneWatchPoints[spec.id] = nil
     }
     grenade = nil
     blasts.removeAll(keepingCapacity: true)
@@ -1145,7 +1141,6 @@ final class EncounterSimulation {
     guardTargets[id]?.reset()
     enemyHandling[id]?.cancel()
     droneTargets[id] = nil
-    droneWatchPoints[id] = nil
     // The robot settles in place, and a drone falls out of the air in its own flight.
     if state.robot == nil, state.drone == nil {
       falls[id] = Fall(away: state.position - shooter, yaw: hostileYaws[id] ?? 0)
@@ -1342,18 +1337,19 @@ final class EncounterSimulation {
       return simd_distance(point, drone.position) <= ScoutDrone.attackRange
         && ballistics.isClear(from: eye, to: ballistics.point(point))
     }
-    // A warning keeps its member; otherwise the drone watches the nearest member it sees.
-    var watched = drone.phase == .warning ? droneTargets[spec.id] : nil
-    if watched.map(sees) != true {
-      watched = PartyMember.allCases.filter(sees).min {
+    // A warning stays with the member it named (#207). Out of sight, the drone keeps their
+    // last-seen point; a different member is only ever targeted by a new, full warning.
+    let warned = drone.phase == .warning ? droneTargets[spec.id] : nil
+    let watched =
+      warned
+      ?? PartyMember.allCases.filter(sees).min {
         simd_distance(party[$0] ?? .zero, drone.position)
           < simd_distance(party[$1] ?? .zero, drone.position)
       }
-    }
     droneTargets[spec.id] = watched
-    droneWatchPoints[spec.id] = watched.flatMap { party[$0] }
+    let seen = watched.flatMap { sees($0) ? party[$0] : nil }
     let discharge = state.stepDrone(
-      dt: dt, centre: centre, target: watched.flatMap { party[$0] },
+      dt: dt, centre: centre, target: seen,
       mayAttack: engaged && !othersAttack && !guardBusy, airspace: airspace)
     if let discharge {
       fireDrone(discharge, state: &state, party: targets, session: session, outcome: &outcome)
@@ -1408,18 +1404,12 @@ final class EncounterSimulation {
     }
   }
 
-  /// Whether standing at `point` is in a drone's way: near where a warning drone's member
-  /// stands, or near the point a diving drone has committed to. Its rounds aim there.
+  /// Whether standing at `point` is in a drone's way: near where a warning drone last saw its
+  /// member, or near the point a diving drone has committed to. Its rounds aim there.
   func droneThreatens(_ point: SIMD2<Float>) -> Bool {
     hostiles.values.contains { state in
       guard let drone = state.drone, !state.isDown else { return false }
-      let aim: SIMD2<Float>? =
-        switch drone.phase {
-        case .warning: droneWatchPoints[state.spec.id]
-        case .diving: drone.committedPoint
-        default: nil
-        }
-      return aim.map { simd_distance($0, point) < ScoutDrone.danger } ?? false
+      return drone.aimPoint.map { simd_distance($0, point) < ScoutDrone.danger } ?? false
     }
   }
 
