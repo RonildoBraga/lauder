@@ -31,7 +31,7 @@ Later that day the maintainer started Miki, Tom and Laura together and kept the 
   - strict Swift formatting, the app build and Swift Testing.
   - **New tests** cover each sound's mapping, the spin-up heard once for each hold, and each change of the dome heard once.
   - A script measured each sound's length, loudness over time and pitch direction. None has been heard on a phone.
-- **Not verified:** how the sounds and vibrations feel on the phone, which [#163](https://github.com/RonildoBraga/lauder/issues/163) tracks.
+- **Not verified:** how the sounds and vibrations feel on the phone. This remains a physical prototype verification gate; source and Simulator checks do not establish audibility, haptic quality or phone acceptance. The historical build-32 checklist [#163](https://github.com/RonildoBraga/lauder/issues/163) has been retired.
 
 ## Guard damage and feedback — in development
 
