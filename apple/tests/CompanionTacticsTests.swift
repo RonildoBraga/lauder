@@ -59,18 +59,20 @@ struct CompanionTacticsTests {
     #expect(fallback.weapon == .shotgun && fallback.targetsBody && fallback.fire)
   }
 
+  /// Laura's legs only ever go, and the guard stays active once all four have: with just the
+  /// eye left, Miki's and Tom's part, she has no part of her own and takes ordinary shots.
   @Test
-  func withoutItsPartACompanionFiresOrdinarilyAndThePartRestoresTheSpecialistPreference() {
+  func onceTheLastLegIsGoneLauraTakesOrdinaryShotsFromWhereSheStands() {
     var planner = CompanionTactics()
-    let ordinary = plan(
-      &planner, input(points: []), canFireAtBody: { _, _ in true })
-    #expect(ordinary.position == [0, -6] && ordinary.targetsBody && ordinary.fire)
-    let opening = plan(
-      &planner, input(), canFireAtBody: { _, _ in true })
-    #expect(opening.fire && !opening.targetsBody && opening.activity == .attacking)
-    let goneAgain = plan(
-      &planner, input(points: []), canFireAtBody: { _, _ in true })
-    #expect(goneAgain.fire && goneAgain.targetsBody && goneAgain.activity == .attacking)
+    let leg = plan(
+      &planner, input(member: .laura, leader: .miki), canFireAtBody: { _, _ in true })
+    #expect(leg.fire && !leg.targetsBody && leg.weapon == .energySword)
+    #expect(leg.activity == .attacking)
+    let eyeOnly = plan(
+      &planner, input(member: .laura, leader: .miki, points: [weakpoint(.eye)]),
+      canFireAtBody: { _, _ in true })
+    #expect(eyeOnly.position == [0, -6] && eyeOnly.targetsBody && eyeOnly.fire)
+    #expect(eyeOnly.weapon == .shotgun && eyeOnly.activity == .attacking)
   }
 
   @Test(arguments: [PartyMember.miki, .tom])
