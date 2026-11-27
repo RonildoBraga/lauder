@@ -1,7 +1,7 @@
 # Crawler pack at the first tower
 
 **Date:** 27 November 2026  
-**Status:** In development on `claude/crawler-pack` under [issue #208](https://github.com/RonildoBraga/lauder/issues/208). It builds on the [scout drones](scout-drones.md), which merged in #203. The [prototype plan](prototype-plan.md#crawler-pack--in-development) records what has been checked.
+**Status:** Built under [issue #208](https://github.com/RonildoBraga/lauder/issues/208), on top of the [scout drones](scout-drones.md). TestFlight build 44 delivered it, and the maintainer answered “Feels right” after playing it. The [prototype plan](prototype-plan.md#crawler-pack--in-development) records what has been checked.
 
 ## The request
 

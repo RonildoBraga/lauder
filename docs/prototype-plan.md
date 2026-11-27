@@ -187,7 +187,9 @@ The maintainer answered “Yes, upload it” to Claude's question “Upload the 
 - **Apple:** at 08:30 UTC on 27 November 2026, Apple reported the build COMPLETE and VALID, internal only, in beta testing and unexpired. It is available to the existing internal testers, the internal group set and tester membership are unchanged, and the upload had no errors.
 - **What was not done:** no tester was invited, no TestFlight test notes were written, and nothing was submitted to the public App Store. The archive and its symbols are kept privately.
 - **The branch afterwards:** later commits change only documentation.
-- **Phone check:** pending. Merging PR #212 needs it.
+- **Phone check:** the maintainer played build 44 and answered “Feels right” to Claude's question “How do the crawlers play in build 44?” (Claude session, 27 November 2026; no public permalink).
+  - **What it shows:** general success on the phone, not a measured check of each control, sound, balance or sustained frame rate.
+  - **The merge:** it clears the baseline-iPhone gate that AGENTS.md sets for playable features. PR #212 merges under Claude's standing authorisation once its checks pass.
 
 ## Scout drones — in development
 
