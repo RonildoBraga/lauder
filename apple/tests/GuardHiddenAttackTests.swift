@@ -52,7 +52,8 @@ struct GuardHiddenAttackTests {
         firePressed: false, figures: figures, session: session,
         companionIntents: [
           .miki: .init(
-            lookAt: target, weapon: .longRifle, fire: eye != nil, activity: .attacking)
+            lookAt: target, engaged: true, weapon: .longRifle, fire: eye != nil,
+            activity: .attacking)
         ], facings: [.miki: simd_normalize(target - miki)])
       retried = retried || outcome.retry
       let events = fight.takeEvents()
