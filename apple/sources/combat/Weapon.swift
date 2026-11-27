@@ -133,6 +133,8 @@ struct ShieldDome: Sendable {
   /// Seconds after letting go before it starts to recharge, then seconds to refill from empty.
   static let rechargeDelay: Float = 1
   static let rechargeTime: Float = 6
+  /// Seconds of holding left when its sound warns that it is running down.
+  static let warning: Float = 1.5
 
   /// Seconds of holding left.
   private(set) var remaining = ShieldDome.duration

@@ -54,31 +54,50 @@ final class CombatFeedback {
   }
 }
 
-/// The fight's sounds (ADR 0008): WAV files that `apple/scripts/make-sounds.py` generates.
-/// Recordings can replace them under the same names.
+/// The fight's sounds (ADR 0008, ADR 0021): WAV files that `apple/scripts/make-sounds.py`
+/// generates. Recordings can replace them under the same names.
 enum CombatSound: String, CaseIterable, Sendable {
-  case carbine
-  case lightBurst = "light-burst"
-  case closeScatter = "close-scatter"
+  case longRifle = "long-rifle"
+  case assaultRifle = "assault-rifle"
+  case shotgun
+  case minigun
+  case minigunSpin = "minigun-spin"
+  case swordSwing = "sword-swing"
+  case domeUp = "dome-up"
+  case domeLow = "dome-low"
+  case domeDown = "dome-down"
+  case domeBreak = "dome-break"
+  case domeReady = "dome-ready"
   case rifle
   case strikeBody = "strike-body"
   case strikeBlock = "strike-block"
   case emptyClick = "empty-click"
   case guardWarning = "guard-warning"
 
-  /// What an event sounds like: each weapon a shot, a strike on a body or a block, and an
-  /// empty click. Until the paired weapons get sounds of their own, each borrows the nearest
-  /// existing shot (ADR 0021); a sword's swing is silent and its strikes are heard. A hit on the
-  /// leader is heard as the strike on her body.
+  /// What an event sounds like: each weapon its own shot or swing, the minigun's spin-up, each
+  /// change of Tom's dome, a strike on a body or a block, and an empty click. Holding the dome
+  /// up is heard through its changes, not as a shot. A hit on the leader is heard as the strike
+  /// on her body.
   static func of(_ event: CombatEvent) -> CombatSound? {
     switch event {
     case .fired(let kind, _, _):
       switch kind {
-      case .longRifle: .carbine
-      case .assaultRifle, .minigun: .lightBurst
-      case .shotgun: .closeScatter
+      case .longRifle: .longRifle
+      case .assaultRifle: .assaultRifle
+      case .shotgun: .shotgun
+      case .minigun: .minigun
+      case .energySword: .swordSwing
       case .rifle: .rifle
-      case .energySword, .shieldDome: nil
+      case .shieldDome: nil
+      }
+    case .spinUp: .minigunSpin
+    case .dome(let change, _):
+      switch change {
+      case .raised: .domeUp
+      case .fading: .domeLow
+      case .lowered: .domeDown
+      case .collapsed: .domeBreak
+      case .recharged: .domeReady
       }
     case .struckBody: .strikeBody
     case .struckBlock: .strikeBlock
@@ -183,7 +202,7 @@ final class CombatAudio: @unchecked Sendable {
       }
       buffers[sound] = buffer
     }
-    guard let format = buffers[.carbine]?.format else {
+    guard let format = buffers[.rifle]?.format else {
       unavailable = true
       return
     }
@@ -210,22 +229,38 @@ final class CombatAudio: @unchecked Sendable {
 /// The leader's vibrations (ADR 0008): one pattern for each cause, matched to its sound.
 enum HapticCue: CaseIterable, Sendable {
   /// A firm tap for each shot of Miki's long rifle.
-  case carbineShot
-  /// A light tick for each shot of a rapid-fire gun: the assault rifle or the minigun.
-  case lightBurstShot
+  case longRifleShot
+  /// A light tick for each round of her assault rifle.
+  case assaultRifleShot
   /// A heavier, longer pulse for Laura's shotgun blast.
-  case closeScatterShot
+  case shotgunShot
+  /// A soft swish for each swing of her sword.
+  case swordSwing
+  /// A low hum while Tom's minigun spins up.
+  case minigunSpin
+  /// A lighter tick for each of its many rounds.
+  case minigunShot
+  /// A swell as Tom's dome rises.
+  case domeUp
+  /// A jolt as it runs out while held.
+  case domeBreak
   /// A sharp, heavier jolt when a hostile's shot hits the leader.
   case leaderHit
   /// A light tick for Fire with no rounds.
   case emptyClick
 
-  /// What the leader feels of an event; nothing for a companion's or hostile's weapon.
+  /// What the leader feels of an event; nothing for a companion's or hostile's weapon. Only
+  /// the leader holds up the dome.
   static func of(_ event: CombatEvent) -> HapticCue? {
     switch event {
-    case .fired(.longRifle, _, true): .carbineShot
-    case .fired(.assaultRifle, _, true), .fired(.minigun, _, true): .lightBurstShot
-    case .fired(.shotgun, _, true): .closeScatterShot
+    case .fired(.longRifle, _, true): .longRifleShot
+    case .fired(.assaultRifle, _, true): .assaultRifleShot
+    case .fired(.shotgun, _, true): .shotgunShot
+    case .fired(.energySword, _, true): .swordSwing
+    case .spinUp(_, true): .minigunSpin
+    case .fired(.minigun, _, true): .minigunShot
+    case .dome(.raised, _): .domeUp
+    case .dome(.collapsed, _): .domeBreak
     case .leaderHit: .leaderHit
     case .empty: .emptyClick
     default: nil
@@ -254,9 +289,14 @@ enum HapticCue: CaseIterable, Sendable {
     }
     let events =
       switch self {
-      case .carbineShot: [tap(0.8, 0.65), rumble(0.35, 0.2, for: 0.05)]
-      case .lightBurstShot: [tap(0.45, 0.8)]
-      case .closeScatterShot: [tap(1, 0.5), rumble(0.65, 0.2, for: 0.09)]
+      case .longRifleShot: [tap(0.8, 0.65), rumble(0.35, 0.2, for: 0.05)]
+      case .assaultRifleShot: [tap(0.45, 0.8)]
+      case .shotgunShot: [tap(1, 0.5), rumble(0.65, 0.2, for: 0.09)]
+      case .swordSwing: [rumble(0.35, 0.55, for: 0.1)]
+      case .minigunSpin: [rumble(0.3, 0.1, for: TimeInterval(Weapon.minigun.spinUp))]
+      case .minigunShot: [tap(0.3, 0.85)]
+      case .domeUp: [rumble(0.4, 0.3, for: 0.25)]
+      case .domeBreak: [tap(0.9, 0.8), rumble(0.6, 0.3, for: 0.2)]
       case .leaderHit: [tap(1, 0.9), tap(0.6, 0.4, at: 0.06), rumble(0.5, 0.3, for: 0.12)]
       case .emptyClick: [tap(0.35, 1)]
       }
