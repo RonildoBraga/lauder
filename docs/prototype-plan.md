@@ -117,6 +117,10 @@ While Codex worked on the guard's leg stagger (#199), the maintainer asked for *
 - **After #202 landed:** `main` was merged in as `b60f4b8`, and the full check passed on it. Codex's review then found that downed and cleared drones stopped moving once the fight ended. In `c204fb6` they keep falling and circling. The full check passed on it too. The rendered drone-fight passed again on it: 66.9 s, 23/23 steps, no retry, and Laura took one hit. Frame time averaged 16.7 ms (p99 16.8 ms, worst 62.4 ms), and the party update 1.5 ms.
 - **Not checked:** these are Simulator results, not phone evidence. Controls, readability, audibility, balance, enjoyment and sustained phone performance are unchecked.
 
+### Build 41 TestFlight preview
+
+After the checks above, the maintainer answered “Yes, upload it” to Claude's question “Upload the drones to TestFlight for you to try?” (Claude session, 27 November 2026; no public permalink). That authorises this internal preview from the unmerged `claude/scout-drones` branch. It does not authorise a merge. Discovery found builds up to 40 used, so the preview is **0.1.0 (41)**. The branch commits that number, as the preview branches for builds 33–35 did. Archive, upload, Apple processing and availability to the existing testers are recorded here once confirmed.
+
 ## Eye, legs and grenades — in development
 
 The maintainer's build 37 playtest found ordinary hits dominant. They requested persistent eye criticals, repeated Laura sword contacts detaching individual legs and slowing the robot, and grenade throws. The task clarification selected **“Tom only; manual throws”** (chat, 27 November 2026; no public permalink). [Issue #192](https://github.com/RonildoBraga/lauder/issues/192) assigned the bounded revision based on `a44537e`; the [contract](robot-eye-legs-grenades.md) owns the rules and prototype tuning. That original implementation assignment did not authorise merge or release; the later authorisations and outcomes are recorded in the [build 38 record](#build-38-testflight-preview).
