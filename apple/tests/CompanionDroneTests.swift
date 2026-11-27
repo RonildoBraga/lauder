@@ -69,14 +69,32 @@ struct CompanionDroneTests {
       trial.frame(.init(dpadDown: true))
       trial.frame()
       let stopped = trial.droneHealth
-      for _ in 0..<120 {
+      var defendedDuringDive = false
+      var defendedFrames = 0
+      for _ in 0..<120 * 20 {
+        defendedDuringDive = defendedDuringDive || trial.hasEligibleDrone
+        if defendedDuringDive { defendedFrames += 1 }
+        let before = trial.world.playtestSnapshot.partyWeapons
         let events = trial.frame(trial.evadeGuard())
+        try #require(!trial.world.isRetrying)
         #expect(
           !events.contains {
-            if case .fired(let kind, _, false) = $0 { kind != .rifle } else { false }
+            if case .fired(let kind, _, false) = $0 {
+              // The guard's fan also reports shotgun fire; these belong to the followers.
+              [.longRifle, .assaultRifle, .minigun].contains(kind)
+            } else {
+              false
+            }
           })
+        for member in [PartyMember.miki, .tom] {
+          #expect(
+            try #require(trial.world.playtestSnapshot.partyWeapons[member]).loaded
+              >= #require(before[member]).loaded)
+        }
         #expect(!events.contains { if case .damaged = $0 { true } else { false } })
+        if defendedFrames >= 120 { break }
       }
+      #expect(defendedDuringDive, "Defend must be observed while a drone could be selected")
       #expect(trial.droneHealth == stopped)
       #expect(trial.world.session.combatStance == .defend && trial.world.session.leader == .laura)
     }
@@ -135,11 +153,14 @@ struct CompanionDroneTests {
       let destination = current + [0, 2]
       try #require(trial.world.session.send(.tom, to: destination))
       var observedGoing = false
+      var goingDuringDive = false
       for _ in 0..<120 {
         let order = trial.world.session.order(of: .tom)
+        let eligible = trial.hasEligibleDrone
         let events = trial.frame(trial.evadeGuard())
         if case .going = order {
           observedGoing = true
+          goingDuringDive = goingDuringDive || eligible
           #expect(trial.world.playtestSnapshot.companionActivities[.tom] == .ordered)
           #expect(
             !events.contains { if case .fired(.minigun, _, false) = $0 { true } else { false } })
@@ -147,6 +168,7 @@ struct CompanionDroneTests {
         if case .holding = trial.world.session.order(of: .tom) { break }
       }
       #expect(observedGoing && trial.world.session.leader == .laura)
+      #expect(goingDuringDive, "Go must be observed while a drone could be selected")
       trial.world.restart()
       #expect(trial.world.session.defeated.isEmpty && trial.world.session.combatStance == .defend)
       #expect(trial.droneHealth == ScoutDrone.health * Self.droneIDs.count)
@@ -158,6 +180,10 @@ struct CompanionDroneTests {
       let world = GameWorld(level: CompanionDroneTests.level())
       private var lastDodge: Float = -10
       private var elapsed: Float = 0
+
+      var hasEligibleDrone: Bool {
+        world.playtestSnapshot.drones.contains { $0.phase == .diving || $0.phase == .climbing }
+      }
 
       var droneHealth: Int {
         CompanionDroneTests.droneIDs.reduce(0) {

@@ -269,22 +269,9 @@ struct ScoutDrone {
   ) -> Bool {
     let delta = end - start
     return walls.contains { box in
-      let minimum = box.minimum - radius
-      let maximum = box.maximum + radius
-      var near: Float = 0
-      var far: Float = 1
-      for axis in 0..<2 {
-        if abs(delta[axis]) < 0.000001 {
-          if start[axis] < minimum[axis] || start[axis] > maximum[axis] { return false }
-        } else {
-          let first = (minimum[axis] - start[axis]) / delta[axis]
-          let second = (maximum[axis] - start[axis]) / delta[axis]
-          near = max(near, min(first, second))
-          far = min(far, max(first, second))
-          if near > far { return false }
-        }
-      }
-      return true
+      LineOfSight.entry(
+        from: start, along: delta,
+        minimum: box.minimum - radius, maximum: box.maximum + radius, limit: 1) != nil
     }
   }
 
