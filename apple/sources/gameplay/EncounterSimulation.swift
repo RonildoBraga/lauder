@@ -177,6 +177,8 @@ final class EncounterSimulation {
   private var spin: [PartyMember: Float] = [:]
   /// Tom's dome, which runs down while held and recharges otherwise.
   private(set) var shield = ShieldDome()
+  /// The dome as it stood after the last step, so each change is heard once.
+  private var heardDome = (up: false, remaining: ShieldDome.duration)
   /// The leader's facing in the current step, for which shots Laura's sword turns.
   private var leaderFacing = SIMD2<Float>(0, -1)
   private var aimOrigin = SIMD2<Float>.zero
@@ -247,6 +249,7 @@ final class EncounterSimulation {
       })
     spin = [:]
     shield = ShieldDome()
+    heardDome = (false, ShieldDome.duration)
     threat = nil
     weaponPoses = Dictionary(
       uniqueKeysWithValues: PartyMember.allCases.map {
@@ -389,7 +392,8 @@ final class EncounterSimulation {
   }
 
   private func prepareCompanions(
-    _ intents: [PartyMember: CompanionTactics.Intent], session: GameSession, dt: Float
+    _ intents: [PartyMember: CompanionTactics.Intent], figures: [PartyMember: SIMD2<Float>],
+    session: GameSession, dt: Float
   ) {
     let active =
       session.combatStance == .attack && session.inEncounter
@@ -416,9 +420,34 @@ final class EncounterSimulation {
       let weapon = weapon(of: member)
       let held = intents[member]?.fire == true
       if !held { handling[slot(of: member)]?.releaseTrigger() }
-      spin[member] =
-        held && weapon.spinUp > 0
-        ? min(weapon.spinUp, spin[member, default: 0] + dt) : 0
+      let spun = spin[member, default: 0]
+      spin[member] = held && weapon.spinUp > 0 ? min(weapon.spinUp, spun + dt) : 0
+      if spun == 0, spin[member, default: 0] > 0, let point = figures[member] {
+        events.append(.spinUp(at: point, byLeader: false))
+      }
+    }
+  }
+
+  /// Each change of Tom's dome since the last step, heard at `point`. Only Tom as leader raises
+  /// it, and a switch, a roll or a scene can drop it between steps; the recharge is heard only
+  /// while the dome is in his hands.
+  private func reportDome(at point: SIMD2<Float>, inHand: Bool) {
+    let before = heardDome
+    heardDome = (shield.isUp, shield.remaining)
+    if shield.isUp, !before.up {
+      events.append(.dome(.raised, at: point))
+    } else if !shield.isUp, before.up {
+      events.append(.dome(shield.remaining > 0 ? .lowered : .collapsed, at: point))
+    }
+    if shield.isUp, shield.remaining <= ShieldDome.warning,
+      before.remaining > ShieldDome.warning || !before.up
+    {
+      events.append(.dome(.fading, at: point))
+    }
+    if inHand, !shield.isUp, before.remaining < ShieldDome.duration,
+      shield.remaining >= ShieldDome.duration
+    {
+      events.append(.dome(.recharged, at: point))
     }
   }
 
@@ -511,12 +540,18 @@ final class EncounterSimulation {
     if firePressed || aiming { handling[slot(of: weaponLeader)]?.draw() }
     if !fireHeld { handling[slot(of: weaponLeader)]?.releaseTrigger() }
     // Tom's dome stays up while Fire is held with it in hand; otherwise it recharges.
-    shield.step(dt: dt, held: fireHeld && weaponLeader == .tom && leaderWeapon.kind == .shieldDome)
+    let domeInHand = weaponLeader == .tom && leaderWeapon.kind == .shieldDome
+    shield.step(dt: dt, held: fireHeld && domeInHand)
+    reportDome(at: weaponLeader == .tom ? leader : figures[.tom] ?? leader, inHand: domeInHand)
     // A rotary gun spins while Fire is held with it drawn, and fires once it is up to speed.
+    let leaderSpin = spin[weaponLeader, default: 0]
     spin[weaponLeader] =
       fireHeld && isDrawn && leaderWeapon.spinUp > 0
-      ? min(leaderWeapon.spinUp, spin[weaponLeader, default: 0] + dt) : 0
-    prepareCompanions(companionIntents, session: session, dt: dt)
+      ? min(leaderWeapon.spinUp, leaderSpin + dt) : 0
+    if leaderSpin == 0, spin[weaponLeader, default: 0] > 0 {
+      events.append(.spinUp(at: leader, byLeader: true))
+    }
+    prepareCompanions(companionIntents, figures: figures, session: session, dt: dt)
     for key in handling.keys { handling[key]?.advance(dt: dt) }
     for member in PartyMember.allCases {
       scatters[member, default: Scatter()].settle(dt: dt, spread: weapon(of: member).spread)

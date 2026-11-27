@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Generate Lauder's combat sounds (ADR 0008) as 16-bit mono WAV files, using only the standard
-library.
+"""Generate Lauder's combat sounds (ADR 0008, ADR 0021) as 16-bit mono WAV files, using only the
+standard library.
 
 Each sound is built from simple parts: filtered noise for a shot's crack and body, a falling tone
-for its boom, a quiet tail and an echo off the buildings. They stand in until recordings replace
-them under the same names. Run from the repository root:
+for its boom, a quiet tail and an echo off the buildings. Each of the six paired weapons has its
+own voice, with the minigun's spin-up and the shield dome's changes beside them. They stand in
+until recordings replace them under the same names. Run from the repository root:
 
     python3 apple/scripts/make-sounds.py            # write the files
     python3 apple/scripts/make-sounds.py --check    # confirm the committed files match
@@ -114,28 +115,132 @@ def gunshot(rng, seconds, crack, body, boom, tail, delay):
     return mix((shot, 1.0), (echo(shot, delay[0], delay[1], length), 1.0))
 
 
-def carbine(rng):
-    """Miki's precision carbine: a clean crack and a firm boom."""
+def bell(length, peak, width):
+    """A smooth swell and fade, highest at `peak` seconds, about `width` seconds either side."""
+    return [math.exp(-(((index / RATE) - peak) / width) ** 2) for index in range(length)]
+
+
+def shimmer(length, start_hz, end_hz, glide):
+    """Two slightly detuned tones gliding from `start_hz` to `end_hz` over `glide` seconds,
+    easing in: the sound of Tom's dome."""
+    out, first, second = [], 0.0, 0.0
+    for index in range(length):
+        progress = min(1.0, index / RATE / glide)
+        frequency = start_hz + (end_hz - start_hz) * (1 - (1 - progress) ** 2)
+        first += 2 * math.pi * frequency / RATE
+        second += 2 * math.pi * frequency * 1.007 / RATE
+        out.append(math.sin(first) + math.sin(second) + 0.3 * math.sin(2 * first))
+    return out
+
+
+def long_rifle(rng):
+    """Miki's long rifle: a hard crack, a deep boom and a long echo down the span."""
     shot = gunshot(
-        rng, 0.7, crack=(1800, 0.006), body=(2600, 0.035), boom=(110, 55, 0.05, 0.06, 0.7),
-        tail=(0.18, 0.22), delay=(0.11, 0.25))
-    return finish(shot, drive=1.6, peak=0.9)
+        rng, 1.1, crack=(2000, 0.005), body=(2400, 0.045), boom=(85, 40, 0.07, 0.11, 0.85),
+        tail=(0.32, 0.26), delay=(0.17, 0.32))
+    return finish(shot, drive=1.9, peak=0.95)
 
 
-def light_burst(rng):
-    """One round of Laura's light burst weapon: short, bright and lighter."""
+def assault_rifle(rng):
+    """One round of Miki's assault rifle: short and punchy, for ten rounds a second."""
     shot = gunshot(
-        rng, 0.45, crack=(2400, 0.004), body=(3600, 0.022), boom=(150, 80, 0.03, 0.035, 0.45),
-        tail=(0.11, 0.16), delay=(0.09, 0.18))
-    return finish(shot, drive=1.4, peak=0.75)
+        rng, 0.42, crack=(2200, 0.0035), body=(3200, 0.02), boom=(140, 70, 0.03, 0.035, 0.5),
+        tail=(0.09, 0.14), delay=(0.08, 0.16))
+    return finish(shot, drive=1.5, peak=0.78)
 
 
-def close_scatter(rng):
-    """Tom's close scatter weapon: a heavy, deep blast with a long tail."""
+def shotgun(rng):
+    """Laura's shotgun: a heavy, deep blast with the hiss of its spreading pellets."""
+    length = samples(1.0)
     shot = gunshot(
-        rng, 0.95, crack=(1100, 0.009), body=(1800, 0.06), boom=(80, 38, 0.08, 0.11, 0.95),
-        tail=(0.26, 0.3), delay=(0.13, 0.3))
-    return finish(shot, drive=2.0, peak=0.95)
+        rng, 1.0, crack=(1000, 0.01), body=(1600, 0.07), boom=(72, 34, 0.09, 0.12, 1.0),
+        tail=(0.3, 0.3), delay=(0.14, 0.3))
+    spray = shaped(
+        high_pass(low_pass(noise(rng, length), 6000), 2000), envelope(length, 0.05, 0.001, 0.004))
+    return finish(mix((shot, 1.0), (spray, 0.35)), drive=2.0, peak=0.95)
+
+
+def minigun(rng):
+    """One round of Tom's minigun: a tiny, buzzing shot that blurs into a roar at full rate."""
+    length = samples(0.16)
+    sharp = shaped(high_pass(noise(rng, length), 2600), envelope(length, 0.003, 0.0002))
+    blast = shaped(low_pass(noise(rng, length), 3800), envelope(length, 0.014, 0.0004))
+    low = shaped(tone(length, 180, 100, 0.02), envelope(length, 0.022))
+    return finish(mix((sharp, 1.0), (blast, 0.8), (low, 0.35)), drive=1.3, peak=0.6)
+
+
+def minigun_spin(rng):
+    """Tom's minigun spinning up: a motor whine rising over its half second, with the
+    barrels' rattle quickening under it."""
+    seconds = 0.5  # Weapon.minigun.spinUp
+    length = samples(seconds + 0.08)
+    whine, rattle, phase, turn = [], [], 0.0, 0.0
+    grit = high_pass(noise(rng, length), 1800)
+    for index in range(length):
+        progress = min(1.0, index / RATE / seconds)
+        phase += 2 * math.pi * (90 + 330 * progress ** 0.7) / RATE
+        whine.append(math.sin(phase) + 0.35 * math.sin(2 * phase) + 0.15 * math.sin(3 * phase))
+        turn += 2 * math.pi * (12 + 48 * progress) / RATE
+        rattle.append(grit[index] * (0.5 + 0.5 * math.sin(turn)) ** 4)
+    level = [min(1.0, index / samples(0.04)) * (0.6 + 0.4 * min(1.0, index / RATE / seconds))
+             for index in range(length)]
+    return finish(mix((shaped(whine, level), 0.8), (shaped(rattle, level), 0.5)), drive=1.2,
+                  peak=0.55)
+
+
+def sword_swing(rng):
+    """Laura's energy sword: a hum that bends up and down as the blade passes, inside a whoosh."""
+    length = samples(0.38)
+    whoosh = shaped(high_pass(low_pass(noise(rng, length), 2600), 450), bell(length, 0.12, 0.07))
+    hum, phase = [], 0.0
+    for index in range(length):
+        phase += 2 * math.pi * (150 + 45 * math.sin(math.pi * min(1.0, index / RATE / 0.3))) / RATE
+        hum.append(math.sin(phase) + 0.4 * math.sin(2 * phase) + 0.2 * math.sin(3.01 * phase))
+    return finish(mix((whoosh, 1.0), (shaped(hum, bell(length, 0.13, 0.11)), 0.55)), drive=1.2,
+                  peak=0.6)
+
+
+def dome_up(rng):
+    """Tom's dome rising: a bright shimmer sweeping up round him."""
+    length = samples(0.5)
+    sweep = shaped(shimmer(length, 220, 660, 0.3), envelope(length, 0.22, 0.05))
+    air = shaped(high_pass(low_pass(noise(rng, length), 5000), 1500), envelope(length, 0.08, 0.04))
+    return finish(mix((sweep, 1.0), (air, 0.25)), drive=1.1, peak=0.5)
+
+
+def dome_low(rng):
+    """The dome running down: its shimmer stutters three times."""
+    length = samples(0.42)
+    gate = low_pass([1.0 if (index // samples(0.07)) % 2 == 0 else 0.15 for index in range(length)],
+                    60)
+    stutter = shaped(shaped(shimmer(length, 520, 520, 1), gate), envelope(length, 0.25, 0.01))
+    return finish(stutter, drive=1.0, peak=0.42)
+
+
+def dome_down(rng):
+    """The dome let go, or dropped: its shimmer sinks away."""
+    length = samples(0.4)
+    return finish(shaped(shimmer(length, 600, 200, 0.3), envelope(length, 0.14, 0.01)), drive=1.0,
+                  peak=0.42)
+
+
+def dome_break(rng):
+    """The dome run out while held: it crackles and collapses, a falling tone over a thump."""
+    length = samples(0.6)
+    sparks = [value if rng.random() < 0.08 else value * 0.1
+              for value in high_pass(noise(rng, length), 2500)]
+    crackle = shaped(sparks, envelope(length, 0.12, 0.002))
+    fall = shaped(shimmer(length, 700, 120, 0.35), envelope(length, 0.2, 0.005))
+    thump = shaped(tone(length, 110, 55, 0.04), envelope(length, 0.06, 0.002, 0.02))
+    return finish(mix((crackle, 0.8), (fall, 0.8), (thump, 0.7)), drive=1.5, peak=0.7)
+
+
+def dome_ready(rng):
+    """The dome recharged in Tom's hands: one soft, high chime, unlike the guard's two notes."""
+    length = samples(0.45)
+    chime = mix((tone(length, 1320, 1320, 1), 1.0), (tone(length, 2640, 2640, 1), 0.25),
+                (tone(length, 3960, 3960, 1), 0.1))
+    return finish(shaped(chime, envelope(length, 0.12, 0.004)), drive=1.0, peak=0.35)
 
 
 def rifle(rng):
@@ -190,9 +295,17 @@ def guard_warning(rng):
 
 # Each file's name, as CombatSound names it in the app, and how it is made.
 SOUNDS = {
-    "carbine": carbine,
-    "light-burst": light_burst,
-    "close-scatter": close_scatter,
+    "long-rifle": long_rifle,
+    "assault-rifle": assault_rifle,
+    "shotgun": shotgun,
+    "minigun": minigun,
+    "minigun-spin": minigun_spin,
+    "sword-swing": sword_swing,
+    "dome-up": dome_up,
+    "dome-low": dome_low,
+    "dome-down": dome_down,
+    "dome-break": dome_break,
+    "dome-ready": dome_ready,
     "rifle": rifle,
     "strike-body": strike_body,
     "strike-block": strike_block,

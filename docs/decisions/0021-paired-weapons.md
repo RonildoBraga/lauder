@@ -57,8 +57,15 @@ This replaces the native weapons of [ADR 0010](0010-squad-weapons.md) and the [s
 - **Lock-on and aim:** the lock of [ADR 0020](0020-lock-on.md), the right stick and assisted aim work with every gun. The lock turns Laura towards her target for the sword.
 - **Presentation:**
   - Each weapon has its own simple shape. Laura's blade glows in her colour, and Tom's dome is see-through in his colour, so no colour joins the palette.
-  - Until the new weapons get sounds of their own, each borrows the nearest existing one. The long rifle uses the old carbine's shot, the assault rifle and the minigun the burst weapon's, and the shotgun the scatter weapon's. A swing is silent and its strikes are heard.
-  - Vibration and the DualSense trigger follow the same mapping, and the sword and the shield leave R2 slack.
+  - **Sounds** ([weapon sounds](../prototype-plan.md#weapon-sounds--in-development), [issue #162](https://github.com/RonildoBraga/lauder/issues/162)). In PR #158 each weapon borrowed the nearest existing sound and a swing was silent. Now each has its own generated sound:
+    - the long rifle, a hard crack and a long echo;
+    - the assault rifle, a short punchy round;
+    - the shotgun, a deep blast with the hiss of its pellets;
+    - the sword, a whoosh and a hum for each swing, while its strikes are heard as before;
+    - the minigun, a tiny buzzing round, after a rising whine as it spins up.
+  - **The dome's sounds:** it shimmers up, stutters when 1.5 s of holding are left, and sinks away when let go or dropped. It cracks when it runs out while held, and chimes once when it is full again in Tom's hands.
+  - **Vibration:** the leader feels each weapon: a firm tap for the long rifle, light ticks for the assault rifle and lighter ones for the minigun, a heavy pulse for the shotgun, a soft swish for a swing, a low hum through the spin-up, a swell as the dome rises, and a jolt when it runs out.
+  - **The DualSense trigger** keeps a profile for each gun. The sword and the shield leave R2 slack.
 
 ## Consequences
 
