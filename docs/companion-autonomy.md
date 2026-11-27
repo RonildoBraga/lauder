@@ -1,7 +1,9 @@
 # Companion autonomy at the first tower
 
 **Date:** 27 November 2026\
-**Status:** The current [eye/leg preferences](robot-eye-legs-grenades.md) are implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Internal [build 38](prototype-plan.md#build-38-testflight-preview) delivers this revision, and PRs #193/#195 are merged after basic build 38 phone success. The current [locomotion follow-up](prototype-plan.md#leg-loss-locomotion--in-development), under issue #196, is source/Simulator verified and merged in [PR #197](https://github.com/RonildoBraga/lauder/pull/197), with issue #196 closed. [Build 39](prototype-plan.md#build-39-testflight-preview) now delivers the locomotion; its physical acceptance remains unverified, and build 38 is the earlier comparison. Earlier Attack/Defend, ordinary-attack and retaliation checks remain historical evidence below; they do not validate this revision or establish its phone behaviour, balance or performance.
+**Status:** Existing explicit Attack/Defend, ordinary attacks and persistent eye/leg preferences are retained in delivered [build 40](prototype-plan.md#build-40-testflight-preview), frozen main/archive source `9b5ec53`, together with the leg-break stagger. Earlier source-specific checks remain historical evidence below. The body-shot fallback is a separate working revision and is not in that archive; physical acceptance, balance and sustained performance remain unverified.
+
+**Current assignment:** The maintainer assigned [companion body-shot fallback first](https://github.com/RonildoBraga/lauder/issues/200#issuecomment-7210709561), with Simulator tests and coordination with Claude. The [bounded follow-up](#body-shot-fallback-follow-up) is in development on `codex/companion-body-fallback`; the full source check, native fallback regressions and three rendered Simulator routes pass on `e764b30`, with no merge or upload claimed. [Build 40](prototype-plan.md#build-40-testflight-preview), source `9b5ec53`, remains delivered with the preceding leg-break stagger and no new fallback.
 
 ## Maintainer direction
 
@@ -46,6 +48,12 @@ The same physical-contact rules apply to player and companion hits. Every valid 
 The existing retaliation pass makes a real attacking companion eligible for the guard's next warned cycle. Defend revokes attacks and recalls companions, but does not erase recent attack evidence or cancel a cycle already warned against them. The named target, finite turning and fixed committed point are owned by the [retaliation contract](guard-retaliation.md), rather than by companion navigation.
 
 The aim is visible cooperation using the existing scene, weapons and simple signals. Exploration remains the main direction, and no new enemy, playable scene or art production is required.
+
+## Body-shot fallback follow-up
+
+Under explicit **Attack**, Miki and Tom first prefer a direct safe eye shot. When the real eye is exposed but cannot be hit from their current stance, a useful ordinary body shot there takes precedence over retaining or choosing an eye orbit. That stance must remain legal and spaced, and existing threat/cover checks keep priority. If neither direct shot is possible, the existing bounded movement planning remains available. Native sight, range, turning, draw/reload, minigun spin-up, cadence and real hit geometry still decide whether the intention fires and damages anything.
+
+This changes only Miki/Tom’s guard-shot preference: Laura keeps her intact-leg approach and ordinary fallback. Defend never permits attacks; Go/Hold, the leader leash, regroup/retreat, player authority, Pause/interruption and reset retain their existing rules. No automatic grenade or shield, drone behaviour, new input or new enemy is introduced. The [prototype record](prototype-plan.md#companion-body-shot-fallback--in-development) records passed source/native and rendered Simulator results on `e764b30`. Native regressions establish the blocked-eye/body-shot cause; the unchanged rendered routes exercise encounter regression rather than identifying why each hit occurred. Claude’s [drone integration](https://github.com/RonildoBraga/lauder/pull/203#issuecomment-7210709848) keeps its separate implementation boundary. The fallback is not part of delivered build 40.
 
 ## Verification gate
 

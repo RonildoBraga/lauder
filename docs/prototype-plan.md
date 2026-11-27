@@ -14,6 +14,26 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Companion body-shot fallback — in development
+
+The maintainer requested **“Go ahead with your recommendations, starting with the companion body-shot fallback. Coordinate with Claude to avoid overlapping work and test the changes in the simulator.”** (chat, 27 November 2026; [relayed assignment](https://github.com/RonildoBraga/lauder/issues/200#issuecomment-7210709561)). This first increment addresses issue #200 item 6 and its realistic-fallback regression coverage in item 4. It is based on documentation-only [PR #204](https://github.com/RonildoBraga/lauder/pull/204), source `7a9b8db`, whose runtime matches delivered main `9b5ec53`; PR #204 remains unmerged.
+
+The [companion contract](companion-autonomy.md#body-shot-fallback-follow-up) preserves a direct safe eye shot first, then allows Miki/Tom a useful body shot from their current legal, spaced stance before keeping or seeking an eye orbit. Native weapons, threat avoidance, orders and Laura’s leg pursuit remain unchanged. The [coordination boundary](https://github.com/RonildoBraga/lauder/pull/203#issuecomment-7210709848) reserves the guard-planner change and focused tests for this branch; Claude’s drone targeting/firing and post-plan override remain separate.
+
+**Verified source: `e764b305ba2ec8e1cc373188889436b37c6dc10c`.** The full `./scripts/check` passes: **13 declaration contracts, 31 offline release contracts, 52 Blender tests, seventeen sound fingerprints**, strict formatting, app build and hosted Swift Testing including **all fourteen headless routes** and the new native body-shot fixture. Native regressions retain the actual exposed eye and hull, block only the eye shot, and verify ordinary Miki/Tom damage through real geometry and weapon handling, including per-step damage accounting, draw/spin-up, cadence and ammunition. Actual wall and ally blockers produce zero shots. Direct-eye priority and safety/order/leader/lifecycle gates retain focused coverage.
+
+The unchanged rendered Simulator routes pass with **zero retries and zero party-stop diagnostics**:
+
+| Route | Completed steps | Duration | Peak injuries: Miki / Laura / Tom |
+|---|---:|---:|---:|
+| `companions` | 32/32 | 82.0 s | 0 / 0 / 1 |
+| `retaliation` | 29/29 | 59.6 s | 0 / 0 / 0 |
+| `touch-fight` | 52/52 | 57.5 s | 1 / 0 / 0 |
+
+The touch route records **zero non-touch input frames**. These routes use ordinary shared inputs and native combat, without immunity, teleportation or a changed driver; their summaries do not prove that a particular hit used the fallback. The targeted native regressions establish that cause. Independent production review found no finding. A scratch three-way text merge with Claude’s PR #203 head `e788229` retains both `Intent.drone` and the new planner branch; this is not a combined drone playtest.
+
+This increment is unmerged and unuploaded; [build 40](#build-40-testflight-preview) remains the latest delivered version and does not contain it. Phone controls, sustained performance and combat feel remain unverified for this change. Other enemy/companion ideas remain separate work.
+
 ## Build 40 TestFlight preview
 
 The maintainer requested **“Go ahead and check CI and any review feedback on PR #202, address anything outstanding, then merge PR #198 followed by PR #202 and deploy the updated build to my phone using TestFlight.”** (chat, 27 November 2026; no public permalink). This authorises the reviewed stagger release. The separate enemy/companion intelligence request remains research/design work, not additional gameplay in this build. Fresh Lauder-specific discovery checked its own bundle-ID record and accepted/processing uploads, selected unused **0.1.0 (40)** and retained the existing tester/group baseline.
