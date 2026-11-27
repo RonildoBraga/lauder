@@ -1550,14 +1550,19 @@ final class EncounterSimulation {
         }
         return crawlerTargets[other.id]
       })
-    // It keeps its member while it senses them; otherwise it goes for the nearest, preferring
+    // The named member stays with the fixed ram line through the wind-up and ram, even out
+    // of sight. Between attacks it keeps a sensed member or chooses the nearest, preferring
     // one no other crawler is already ramming.
-    var watched = crawlerTargets[spec.id].flatMap { sees($0) ? $0 : nil }
-    if watched == nil {
-      func cost(_ member: PartyMember) -> Float {
-        simd_distance(party[member] ?? .zero, crawler.position) + (claimed.contains(member) ? 4 : 0)
+    var watched = crawlerTargets[spec.id]
+    if !crawler.isAttacking {
+      watched = watched.flatMap { sees($0) ? $0 : nil }
+      if watched == nil {
+        func cost(_ member: PartyMember) -> Float {
+          simd_distance(party[member] ?? .zero, crawler.position)
+            + (claimed.contains(member) ? 4 : 0)
+        }
+        watched = PartyMember.allCases.filter(sees).min { cost($0) < cost($1) }
       }
-      watched = PartyMember.allCases.filter(sees).min { cost($0) < cost($1) }
     }
     crawlerTargets[spec.id] = watched
     let others = encounter.hostiles.compactMap { other -> SIMD2<Float>? in

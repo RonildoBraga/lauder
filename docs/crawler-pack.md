@@ -27,9 +27,9 @@ The guard fight is still the bridge's only fight. The numbers below are my start
 
 **Ram.** At **2.5 m** it attacks in these steps:
 1. It **winds up for 0.6 s**: it crouches and its sensor glows. The HUD names its target, and the guard's warning sound plays when the target is the leader. The HUD shows this warning over the guard's own status, such as its recovery, which is when crawlers attack. Only the guard's warned attack still comes first.
-2. Its ram line is **fixed when the wind-up starts**, so the whole wind-up is the moment to step aside or roll.
+2. Its ram line is **fixed when the wind-up starts**, so the whole wind-up is the moment to step aside or roll. Its named target stays with that line through the wind-up and ram, even when they leave and return to sight. After the ram it can choose another member, with a new full wind-up before ramming them.
 3. It rams **3 m** along that line at 9 m/s and stops at the first blocker in its way rather than sliding along it. A ram hurts at most one member, once: the first one ahead that its body runs into. Anyone beside or behind it as it sets off is left behind unhurt. Tom's raised dome shelters anyone inside it from a ram that set off outside, judged by where the ram began.
-4. It then recovers, stopped and exposed, for **1.2 s**, and waits until 2.5 s have passed since its wind-up before the next one.
+4. It then recovers, stopped and exposed, for **1.2 s**, and waits until 2.5 s have passed since its ram ended before the next wind-up; that interval includes recovery.
 
 **One attack at a time.** A crawler starts a wind-up only while the guard patrols, recovers or searches. It never starts one over the guard's own warning or burst, or during its leg-break stagger, the same rule as the drones'. Two crawlers never wind up on the same member at once.
 

@@ -48,7 +48,7 @@ struct Crawler {
   static let ramDistance: Float = 3
   static let ramSpeed: Float = 9
   static let recoverTime: Float = 1.2
-  /// Between one crawler's wind-ups, recovery included.
+  /// From the end of one ram to the next wind-up, recovery included.
   static let attackInterval: Float = 2.5
   /// A second crawler gets up a little after the first, and so on.
   static let slotDelay: Float = 0.5

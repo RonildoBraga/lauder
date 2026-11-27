@@ -341,6 +341,113 @@ struct CrawlerFightTests {
   }
 
   @Test
+  func aCommittedRamKeepsItsNamedMemberThroughSightLossAndReacquisition() throws {
+    // The tall wall really hides Miki; Laura remains visible off the fixed ram line. Only
+    // ordinary party positions change, with native health, timing and ram contact resolution.
+    let crawlerID = "crawler"
+    var figures: [PartyMember: SIMD2<Float>] = [
+      .miki: [0, 2], .laura: [-3, 1], .tom: [12, 12],
+    ]
+    let pack = Level.Hostile(
+      id: crawlerID, name: "Crawler", hiddenAt: .zero, standAt: .zero, hits: Crawler.health,
+      attack: .crawler(slot: 0))
+    let encounter = Level.Encounter(
+      beat: .stranger, start: .area(.init(minimum: [-20, -20], maximum: [20, 20])),
+      retryAt: [0, 9], hostiles: [pack],
+      cues: [(0, .reveal(crawlerID)), (0, .engage(crawlerID))])
+    let level = Level(
+      id: "crawler-target-sight",
+      ground: .box("floor", at: [0, -0.15, 0], size: [50, 0.3, 50]),
+      boxes: [.box("wall", at: [0, 2, 4], size: [6, 4, 0.5])],
+      triggers: [], encounters: [encounter], party: [.miki, .tom, .laura],
+      spawns: figures, heading: [0, -1], cameraOffset: BrooklynBridge.cameraOffset,
+      fieldOfView: 22, opening: "Range", objective: "Test", lookAround: "Range",
+      restartNote: "Restart")
+    let ballistics = Ballistics(level: level)
+    let session = GameSession(level: level)
+    let fight = EncounterSimulation(level: level)
+    try #require(session.beginEncounter(encounter.beat))
+    fight.begin(encounter)
+    func frame() throws -> Crawler {
+      let outcome = fight.step(
+        dt: 1 / 120, leader: try #require(figures[.miki]), facing: [0, -1], aiming: false,
+        fireHeld: false, firePressed: false, figures: figures, session: session)
+      #expect(!outcome.retry)
+      _ = fight.takeEvents()
+      return try #require(fight.hostiles[crawlerID]?.crawler)
+    }
+    var crawler = try frame()
+    for _ in 0..<120 * 4 where crawler.phase != .windingUp { crawler = try frame() }
+    try #require(crawler.phase == .windingUp)
+    try #require(fight.crawlerTarget(for: crawlerID) == .miki)
+    let start = try #require(crawler.ramStart)
+    let end = try #require(crawler.ramEnd)
+    var warningSeconds: Float = 0
+    var warningHidden = 0
+    var warningVisible = 0
+    var ramHidden = 0
+    var ramVisible = 0
+    for step in 0..<120 * 2 {
+      guard crawler.isAttacking else { break }
+      let hidden = (step / 6).isMultiple(of: 2)
+      figures[.miki] = hidden ? [0, 6] : [1.5, 2]
+      let miki = try #require(figures[.miki])
+      #expect(simd_distance(crawler.position, miki) < Crawler.leash)
+      #expect(
+        ballistics.isClear(
+          from: ballistics.point(crawler.position, above: 2),
+          to: ballistics.point(miki, above: 2)) == !hidden)
+      #expect(
+        ballistics.isClear(
+          from: ballistics.point(crawler.position, above: 2),
+          to: ballistics.point(try #require(figures[.laura]), above: 2)))
+      if crawler.phase == .windingUp {
+        warningSeconds += 1 / 120
+        if hidden { warningHidden += 1 } else { warningVisible += 1 }
+      } else {
+        if hidden { ramHidden += 1 } else { ramVisible += 1 }
+      }
+      crawler = try frame()
+      #expect(fight.crawlerTarget(for: crawlerID) == .miki)
+      if crawler.isAttacking {
+        #expect(crawler.ramStart == start && crawler.ramEnd == end)
+        if crawler.phase == .windingUp {
+          #expect(fight.threat?.contains("Miki") == true)
+          #expect(fight.threat?.contains("Laura") == false)
+        }
+      }
+    }
+    try #require(crawler.phase == .recovering)
+    #expect(warningHidden > 0 && warningVisible > 0 && ramHidden > 0 && ramVisible > 0)
+    #expect(warningSeconds >= Crawler.windUpTime - 1 / 120)
+    #expect(warningSeconds <= Crawler.windUpTime + 2 / 120)
+    #expect(simd_distance(crawler.position, end) < 0.01)
+    #expect(PartyMember.allCases.allSatisfy { session.hits(of: $0) == 0 })
+
+    // After that ram ends it may choose the visible Laura. A new line still gets a complete
+    // new wind-up, rather than borrowing the first target's warning or changing the old line.
+    figures[.miki] = [0, 6]
+    for _ in 0..<120 * 6 where crawler.phase != .windingUp { crawler = try frame() }
+    try #require(crawler.phase == .windingUp)
+    #expect(fight.crawlerTarget(for: crawlerID) == .laura)
+    let nextStart = try #require(crawler.ramStart)
+    let nextEnd = try #require(crawler.ramEnd)
+    #expect(nextStart != start && nextEnd != end)
+    #expect(
+      simd_dot(
+        simd_normalize(nextEnd - nextStart),
+        simd_normalize(try #require(figures[.laura]) - nextStart)) > 0.9999)
+    var freshWarning: Float = 0
+    for _ in 0..<120 * 2 where crawler.phase == .windingUp {
+      freshWarning += 1 / 120
+      crawler = try frame()
+      #expect(fight.crawlerTarget(for: crawlerID) == .laura)
+    }
+    #expect(crawler.phase == .ramming)
+    #expect(freshWarning >= Crawler.windUpTime - 1 / 120)
+  }
+
+  @Test
   func tomsDomeSheltersAMemberDeepInsideItFromARamThatSetOffOutside() throws {
     // Tom leads with his dome up. The crawler goes for Laura, nearer it and inside the dome,
     // setting off from outside the dome; it meets her well inside, where the step's own
