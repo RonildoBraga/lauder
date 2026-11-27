@@ -293,6 +293,22 @@ def guard_warning(rng):
     return finish(signal, drive=1.0, peak=0.55)
 
 
+def guard_leg_break(rng):
+    """A dry joint shearing, followed by a low clonk and a brief, uneven metallic ring.
+
+    No shot's boom or echo: one short mechanical event as the detached leg staggers the guard.
+    """
+    length = samples(0.42)
+    shear = shaped(high_pass(noise(rng, length), 1900), envelope(length, 0.009, 0.0004))
+    clonk = shaped(tone(length, 320, 95, 0.035), envelope(length, 0.045, 0.001, 0.012))
+    ring = mix((tone(length, 760, 760, 1), 1.0), (tone(length, 1230, 1230, 1), 0.45),
+               (tone(length, 1870, 1870, 1), 0.2))
+    ring = shaped(ring, envelope(length, 0.055, 0.002, 0.006))
+    strain = shaped(tone(length, 620, 180, 0.06), envelope(length, 0.07, 0.003, 0.018))
+    return finish(mix((shear, 1.0), (clonk, 0.85), (ring, 0.45), (strain, 0.18)),
+                  drive=1.35, peak=0.78)
+
+
 # Each file's name, as CombatSound names it in the app, and how it is made.
 SOUNDS = {
     "long-rifle": long_rifle,
@@ -311,6 +327,7 @@ SOUNDS = {
     "strike-block": strike_block,
     "empty-click": empty_click,
     "guard-warning": guard_warning,
+    "guard-leg-break": guard_leg_break,
 }
 
 

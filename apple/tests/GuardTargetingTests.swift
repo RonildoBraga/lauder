@@ -68,7 +68,7 @@ struct GuardTargetingTests {
     #expect(
       policy.select(leader: .miki, phase: .patrol, engaged: true, eligible: [.tom]) == .tom)
     for phase in [
-      RobotGuard.Phase.notice, .tracking, .committed, .burst, .recovering,
+      RobotGuard.Phase.notice, .tracking, .committed, .burst, .recovering, .staggered,
     ] {
       policy.recordAttack(by: .miki)
       policy.advance(dt: GuardTargeting.attackMemory)

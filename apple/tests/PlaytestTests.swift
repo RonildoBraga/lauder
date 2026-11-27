@@ -42,7 +42,15 @@
       #expect(summary.passed, "\(name): \(summary.failures)")
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
-
+      if name == "robot-parts" {
+        let opening = try #require(summary.legStagger)
+        #expect(opening.completed && opening.staggeredSamples >= 2)
+        #expect(opening.observedSeconds > 0 && opening.shotsDuringStagger == 0)
+        #expect(opening.firstShotSerial == opening.lastShotSerial)
+        let mark = try #require(summary.marks.first { $0.name == "leg-break stagger begins" })
+        #expect(mark.robotPhase == "staggered" && (mark.health ?? 0) > 0)
+        #expect((mark.legsLost ?? 0) > 0)
+      }
     }
 
     @Test
@@ -290,6 +298,78 @@
       _ = runner.input(snapshot)
       #expect(runner.summary?.peakPartyHits == summary.peakPartyHits)
       #expect(runner.summary?.retryCount == 2)
+    }
+
+    @Test
+    func aShotBeforeTheFirstStaggerSampleIsNotMiscountedAndAFreshWarningIsRecorded() throws {
+      let summary = try legStaggerObservation(shotsWhileStaggered: 4, breakPhase: .staggered)
+      let observed = try #require(summary.legStagger)
+      #expect(summary.passed && observed.completed)
+      #expect(observed.firstShotSerial == 4 && observed.lastShotSerial == 4)
+      #expect(observed.shotsDuringStagger == 0 && observed.staggeredSamples == 2)
+      #expect(observed.freshWarningObserved)
+      #expect(summary.marks.contains { $0.name == "fresh warning after leg-break stagger" })
+    }
+
+    @Test
+    func theRenderedRouteCannotPassAShotDuringContinuousStagger() throws {
+      let summary = try legStaggerObservation(shotsWhileStaggered: 5, breakPhase: .staggered)
+      #expect(!summary.passed)
+      #expect(summary.legStagger?.shotsDuringStagger == 1)
+      #expect(
+        summary.failures.contains(
+          "the guard fired during a continuously observed leg-break stagger"))
+    }
+
+    @Test
+    func aQuietOpeningDoesNotInventAFreshWarning() throws {
+      let summary = try legStaggerObservation(
+        shotsWhileStaggered: 4, breakPhase: .staggered, observesWarning: false)
+      #expect(summary.passed && summary.legStagger?.completed == true)
+      #expect(summary.legStagger?.freshWarningObserved == false)
+      #expect(!summary.marks.contains { $0.name == "fresh warning after leg-break stagger" })
+    }
+
+    @Test
+    func theRenderedRouteCannotPassANonlethalBreakWithoutStagger() throws {
+      let summary = try legStaggerObservation(shotsWhileStaggered: 4, breakPhase: .tracking)
+      #expect(!summary.passed)
+      #expect(summary.failures.contains("the first nonlethal leg break did not enter stagger"))
+    }
+
+    /// Observation fixtures check the recorder's failure contract, not native combat. The
+    /// scenario test above drives the unchanged robot-parts route through the actual world.
+    private func legStaggerObservation(
+      shotsWhileStaggered: Int, breakPhase: RobotGuard.Phase, observesWarning: Bool = true
+    ) throws -> PlaytestRunner.Summary {
+      var snapshot = GameWorld(level: BrooklynBridge.level).playtestSnapshot
+      snapshot.guardStrategy = GuardStrategy()
+      snapshot.robotPhase = .burst
+      snapshot.robotShots = 3
+      var runner = PlaytestRunner(steps: [.wait(seconds: 0)], name: "robot-parts")
+      _ = runner.input(snapshot)
+      var broken = GuardStrategy()
+      for _ in 0..<GuardStrategy.swordHitsToDetach {
+        _ = broken.accept(weapon: .energySword, part: .leg(0), damage: 30)
+      }
+      snapshot.guardStrategy = broken
+      snapshot.robotPhase = breakPhase
+      snapshot.robotShots = 4
+      runner.tick(dt: 0.1)
+      _ = runner.input(snapshot)
+      snapshot.robotShots = shotsWhileStaggered
+      runner.tick(dt: 0.1)
+      _ = runner.input(snapshot)
+      snapshot.robotPhase = .patrol
+      runner.tick(dt: 0.1)
+      _ = runner.input(snapshot)
+      snapshot.robotPhase = observesWarning ? .notice : .patrol
+      snapshot.guardTarget = observesWarning ? .miki : nil
+      runner.tick(dt: 0.1)
+      _ = runner.input(snapshot)
+      runner.tick(dt: 0.2)
+      _ = runner.input(snapshot)
+      return try #require(runner.summary)
     }
   }
 #endif
