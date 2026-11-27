@@ -26,9 +26,9 @@ The guard fight is still the bridge's only fight. The numbers below are my start
 - **Leash:** it turns back home if its member is more than 16 m from its place.
 
 **Ram.** At **2.5 m** it attacks in these steps:
-1. It **winds up for 0.6 s**: it crouches and its sensor glows. The HUD names its target, and the guard's warning sound plays when the target is the leader.
+1. It **winds up for 0.6 s**: it crouches and its sensor glows. The HUD names its target, and the guard's warning sound plays when the target is the leader. The HUD shows this warning over the guard's own status, such as its recovery, which is when crawlers attack. Only the guard's warned attack still comes first.
 2. Its ram line is **fixed when the wind-up starts**, so the whole wind-up is the moment to step aside or roll.
-3. It rams **3 m** along that line at 9 m/s and stops at the first blocker. A ram hurts at most one member, once: the first one ahead that its body runs into. Anyone beside or behind it as it sets off is left behind unhurt. Tom's raised dome shelters anyone inside it from a crawler that starts outside.
+3. It rams **3 m** along that line at 9 m/s and stops at the first blocker in its way rather than sliding along it. A ram hurts at most one member, once: the first one ahead that its body runs into. Anyone beside or behind it as it sets off is left behind unhurt. Tom's raised dome shelters anyone inside it from a ram that set off outside, judged by where the ram began.
 4. It then recovers, stopped and exposed, for **1.2 s**, and waits until 2.5 s have passed since its wind-up before the next one.
 
 **One attack at a time.** A crawler starts a wind-up only while the guard patrols, recovers or searches. It never starts one over the guard's own warning or burst, or during its leg-break stagger, the same rule as the drones'. Two crawlers never wind up on the same member at once.
@@ -75,6 +75,7 @@ These are simple shapes, as [AGENTS.md](../AGENTS.md) asks.
 ## Limits
 
 - **Simplifications:** the walking is a bounded prototype: it slides and turns aside rather than following planned paths. The crawler's body is a short cylinder rather than its mesh.
+- **Tom's dome:** a crawler winds up within 2.5 m of its target, and the dome reaches 2.6 m. So a crawler aimed at Tom himself always sets off inside his dome, and the dome never shelters him from it. The playtest should judge whether the dome should also stop rams that start inside it.
 - **Followers on Defend:** with the whole pack the fight lasts longer. On Defend, followers stay close to the leader and take more drone dives and guard bursts, which the agreed rule for those two attacks doesn't step them out of. Before the route switched to Attack, it failed when Laura took three such hits; the phone playtest should judge it.
 - **What Simulator checks can't settle:** phone readability, audibility, balance, whether the busier fight is still enjoyable, and sustained frame rate.
 - **Merge:** merging needs the baseline-iPhone check that AGENTS.md asks of playable features.

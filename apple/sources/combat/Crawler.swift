@@ -26,10 +26,12 @@ struct Crawler {
     case cleared
   }
 
-  /// The stretch a ram swept in one step, for the hit test.
+  /// The stretch a ram swept in one step, for the hit test, and where the whole ram set off,
+  /// for Tom's dome.
   struct Ram: Equatable, Sendable {
     let from: SIMD2<Float>
     let to: SIMD2<Float>
+    let origin: SIMD2<Float>
   }
 
   static let radius: Float = 0.38
@@ -217,18 +219,28 @@ struct Crawler {
       let offset = end - position
       let distance = simd_length(offset)
       let wanted = distance > 0.001 ? offset / distance * min(distance, Self.ramSpeed * dt) : .zero
-      var moved = motion.resolve(start: position, delta: wanted)
-      if let guardian {
-        moved = GuardCollision.resolve(
-          start: position, delta: moved - position, centre: guardian.centre,
-          radius: guardian.radius + Self.radius)
+      // A ram keeps to its line: it stops at the first blocker rather than sliding along it.
+      let start = position
+      func clear(_ point: SIMD2<Float>) -> Bool {
+        motion.canTraverse(from: start, to: point)
+          && guardian.map { simd_distance(point, $0.centre) >= $0.radius + Self.radius } ?? true
       }
-      let swept = Ram(from: position, to: moved)
-      let progress = simd_length(moved - position)
+      var reached: Float = 1
+      if !clear(start + wanted) {
+        var low: Float = 0
+        var high: Float = 1
+        for _ in 0..<8 {
+          let middle = (low + high) / 2
+          if clear(start + wanted * middle) { low = middle } else { high = middle }
+        }
+        reached = low
+      }
+      let moved = start + wanted * reached
+      let swept = Ram(from: start, to: moved, origin: ramStart ?? start)
       position = moved
-      isWalking = progress > 0.0001
+      isWalking = simd_length(moved - start) > 0.0001
       // It stops at the end of its line, or at the first blocker in the way.
-      if distance <= Self.ramSpeed * dt + 0.0001 || progress < simd_length(wanted) * 0.5 {
+      if distance <= Self.ramSpeed * dt + 0.0001 || reached < 1 {
         phase = .recovering
         timer = Self.recoverTime
         ramStart = nil

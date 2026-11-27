@@ -642,6 +642,10 @@ final class EncounterSimulation {
     let party = figures.filter { session.party.contains($0.key) }
     let targets = party.filter { !untouchable.contains($0.key) }
     var threatNow: String?
+    // A pack member's warning outranks the guard's status, such as its recovery, which is
+    // exactly when the pack attacks, but never the guard's own warned attack.
+    var packThreat: String?
+    var guardWarns = false
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
       if spec.attack == .robot {
@@ -702,6 +706,7 @@ final class EncounterSimulation {
             aggressiveGuards.insert(spec.id)
           }
           let targetName = chosenMember?.displayName ?? "Squad"
+          if [.notice, .tracking, .committed, .burst].contains(robot.phase) { guardWarns = true }
           switch robot.phase {
           case .notice, .tracking:
             threatNow =
@@ -730,14 +735,14 @@ final class EncounterSimulation {
       if spec.isDrone {
         stepDrone(
           spec, state: &state, in: encounter, party: party, targets: targets,
-          session: session, dt: dt, threat: &threatNow, outcome: &outcome)
+          session: session, dt: dt, threat: &packThreat, outcome: &outcome)
         hostiles[spec.id] = state
         continue
       }
       if spec.isCrawler {
         stepCrawler(
           spec, state: &state, in: encounter, party: party, targets: targets,
-          session: session, dt: dt, threat: &threatNow, outcome: &outcome)
+          session: session, dt: dt, threat: &packThreat, outcome: &outcome)
         hostiles[spec.id] = state
         continue
       }
@@ -777,6 +782,7 @@ final class EncounterSimulation {
       let direction = spec.attack == .shoot ? rifle.facing : leader - state.position
       faceHostile(spec.id, state, facing: state.position + direction)
     }
+    if let packThreat, !guardWarns { threatNow = packThreat }
     threat = threatNow
     if outcome.retry { return outcome }
     fireLeader(
@@ -1607,7 +1613,7 @@ final class EncounterSimulation {
       state.acceptRamHit()
     else { return }
     if shieldIsUp, let tom = party[.tom], simd_distance(struck.value, tom) <= ShieldDome.radius,
-      simd_distance(ram.from, tom) > ShieldDome.radius
+      simd_distance(ram.origin, tom) > ShieldDome.radius
     {
       events.append(.struckBlock(at: struck.value))
       return

@@ -193,6 +193,23 @@ struct CrawlerTests {
   }
 
   @Test
+  func aRamStopsAtTheFirstBlockerOnItsLineRatherThanSlidingAlongIt() throws {
+    // The line meets a wall's face at a slant; sliding along it would leave the line.
+    let wall = PartyMotion.Box(minimum: [-6, 2], maximum: [6, 3])
+    let motion = PartyMotion(radius: Crawler.radius, obstacles: [wall])
+    var crawler = Crawler(home: .zero)
+    crawler.reveal()
+    _ = run(&crawler, seconds: 4, target: [1.5, 1.8], motion: motion) { $0.phase == .windingUp }
+    let start = try #require(crawler.ramStart)
+    let end = try #require(crawler.ramEnd)
+    _ = run(&crawler, seconds: 2, target: [1.5, 1.8], motion: motion) { $0.phase == .recovering }
+    #expect(crawler.phase == .recovering)
+    #expect(Crawler.distance(from: crawler.position, toSegment: start, end) < 0.01)
+    #expect(crawler.position.y <= 2 - Crawler.radius + 0.01)
+    #expect(simd_distance(crawler.position, end) > 0.3, "the wall stopped it short of its end")
+  }
+
+  @Test
   func unusableStepsChangeNothing() {
     var crawler = Crawler(home: .zero)
     crawler.reveal()
@@ -321,6 +338,77 @@ struct CrawlerFightTests {
       if let lock = range.fight.lock { locked.insert(lock) }
     }
     #expect(locked == Set([Range.guardID] + Range.crawlers))
+  }
+
+  @Test
+  func tomsDomeSheltersAMemberDeepInsideItFromARamThatSetOffOutside() throws {
+    // Tom leads with his dome up. The crawler goes for Laura, nearer it and inside the dome,
+    // setting off from outside the dome; it meets her well inside, where the step's own
+    // start is inside too.
+    let figures: [PartyMember: SIMD2<Float>] = [.tom: [0, 6], .laura: [0, 5], .miki: [9, 13]]
+    let pack = Level.Hostile(
+      id: "crawler", name: "Crawler", hiddenAt: .zero, standAt: .zero, hits: Crawler.health,
+      attack: .crawler(slot: 0))
+    let encounter = Level.Encounter(
+      beat: .stranger, start: .area(.init(minimum: [-40, -40], maximum: [40, 40])),
+      retryAt: [0, 6], hostiles: [pack], cues: [(0, .reveal("crawler")), (0, .engage("crawler"))])
+    let level = Level(
+      id: "crawler-dome", ground: .box("floor", at: [0, -0.15, 0], size: [100, 0.3, 100]),
+      boxes: [], triggers: [], encounters: [encounter], party: [.miki, .tom, .laura],
+      spawns: figures, heading: [0, -1], cameraOffset: BrooklynBridge.cameraOffset,
+      fieldOfView: 22, opening: "Range", objective: "Test", lookAround: "Range",
+      restartNote: "Restart")
+    let session = GameSession(level: level)
+    session.cycleLeader()
+    try #require(session.leader == .tom)
+    let fight = EncounterSimulation(level: level)
+    try #require(session.beginEncounter(encounter.beat))
+    fight.begin(encounter)
+    fight.swapWeapon(for: .tom)
+    var origins: [SIMD2<Float>] = []
+    var blocked = 0
+    var previous = Crawler.Phase.hidden
+    for _ in 0..<(120 * 4) {
+      _ = fight.step(
+        dt: 1 / 120, leader: [0, 6], facing: [0, -1], aiming: true, fireHeld: true,
+        firePressed: false, figures: figures, session: session)
+      blocked +=
+        fight.takeEvents().filter { if case .struckBlock = $0 { true } else { false } }
+        .count
+      let crawler = try #require(fight.hostiles["crawler"]?.crawler)
+      if crawler.phase == .windingUp, previous != .windingUp, let start = crawler.ramStart {
+        origins.append(start)
+      }
+      previous = crawler.phase
+      if !origins.isEmpty, crawler.phase == .recovering { break }
+    }
+    let origin = try #require(origins.first, "the crawler never wound up")
+    #expect(fight.shieldIsUp)
+    #expect(simd_distance(origin, [0, 6]) > ShieldDome.radius, "it set off outside the dome")
+    #expect(blocked == 1)
+    #expect(session.hits(of: .laura) == 0 && session.hits(of: .tom) == 0)
+  }
+
+  @Test
+  func aWindUpOutranksTheGuardsRecoveryOnTheHUDButNotItsWarnedAttack() throws {
+    let range = try Range(party: [0, 8])
+    var seenDuringRecovery = false
+    for _ in 0..<(30 * 120) {
+      range.step()
+      let robot = try #require(range.fight.hostiles[Range.guardID]?.robot)
+      let crawling = Range.crawlers.contains {
+        range.fight.hostiles[$0]?.crawler.map { $0.phase == .windingUp || $0.phase == .ramming }
+          ?? false
+      }
+      let text = range.fight.threat ?? ""
+      if [.notice, .tracking, .committed, .burst].contains(robot.phase) {
+        #expect(!text.contains("winding up") && !text.contains("ramming"))
+      } else if robot.phase == .recovering, crawling {
+        seenDuringRecovery = true
+        #expect(text.contains("winding up") || text.contains("ramming"), "HUD said: \(text)")
+      }
+    }
+    #expect(seenDuringRecovery, "no crawler attacked during the guard's recovery")
   }
 
   /// A guard and three crawlers on an open range, with the party together at one point.
