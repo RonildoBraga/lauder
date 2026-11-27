@@ -72,7 +72,9 @@ Pause wins over simultaneous commands. A single Next command cycles Miki, Tom an
 
 Pause/resume, source changes, interruption and reconnection require neutral input. Every held key, button and finger counts, including a centred-stick contact. Source changes cancel touch captures using generation tokens; stale callbacks cannot write into a fresh source. Keep the touch surface mounted on Pause so release is observable. A quick tap is latched until a sample, then delivered once.
 
-Pause has **Resume**, **Restart**, **Vibration** and **Status panel**, opens on Resume and navigates on fresh up/down presses. Action confirms; Escape/Options/Menu resumes. Touch exposes Resume, Restart and Vibration directly and always shows the status panel. Restart takes effect without an extra confirmation. The pause view shows the bundle's actual version/build.
+Touch targeting shares the native lock and assisted-aim rules. A short tap selects an eligible projected body envelope, using its full height and navigation radius with a 30-point exterior allowance; it never fires or selects a part. Tapping the selected body releases it. An empty valid tap retains an on-screen or partly visible lock and releases an entirely off-screen lock; invalid taps or projection data do not release it. The held-order menu shares its drawn option rectangles with selection, retaining the original ground mark and the near-origin reset. Visible choices take priority over directional sectors outside that reset area; the [touch contract](touch-controls.md) records the remaining top-edge cancellation limit.
+
+Pause has **Resume**, **Restart**, **Vibration** and **Status panel**, opens on Resume and navigates on fresh up/down presses. Action confirms; Escape/Options/Menu resumes. Touch exposes all four choices directly; Status panel hides or shows the HUD on every input path. Release guidance remains visible when the panel is hidden. Restart takes effect without an extra confirmation. The pause view shows the bundle's actual version/build.
 
 ## Movement and presentation
 

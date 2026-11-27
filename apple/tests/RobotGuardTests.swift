@@ -122,6 +122,33 @@ struct RobotGuardTests {
   }
 
   @Test
+  func anOutOfRangeWarningDoesNotRepeatUntilATargetCanBeReached() throws {
+    var robot = readyRobot()
+    var notices = 0
+    for _ in 0..<120 * 30 {
+      let before = robot.phase
+      _ = robot.step(
+        dt: dt, target: robot.position + [0, 13], hasSight: true, obstacles: [], party: [])
+      if robot.phase == .notice, before != .notice { notices += 1 }
+    }
+    #expect(notices == 1, "14 m quiet detection still gives one complete initial warning")
+    #expect(robot.shotSerial == 0 && robot.committedPoint == nil)
+    _ = robot.step(
+      dt: dt, target: robot.position + [0, 8], hasSight: true, obstacles: [], party: [],
+      awareOfTarget: true)
+    try #require(robot.phase == .notice)
+    var elapsed: Float = 0
+    for _ in 0..<120 * 6 where robot.shotSerial == 0 {
+      _ = robot.step(
+        dt: dt, target: robot.position + [0, 8], hasSight: true, obstacles: [], party: [],
+        awareOfTarget: true)
+      elapsed += dt
+    }
+    #expect(robot.shotSerial == 1)
+    #expect(elapsed >= RobotGuard.noticeTime + RobotGuard.trackingTime + RobotGuard.commitTime - dt)
+  }
+
+  @Test
   func theMachineDoesNotAcquireBehindItsConeOrAcrossTheMap() {
     for target: SIMD2<Float> in [[0, -8], [0, 15]] {
       var robot = readyRobot()

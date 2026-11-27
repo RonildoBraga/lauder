@@ -24,7 +24,7 @@ struct TouchParityInputTests {
     var held = OrderPress(at: CGPoint(x: 100, y: 100), time: 0)
     let opened = held.open(at: OrderPress.holdTime)
     #expect(opened)
-    let tapped = held.end(at: CGPoint(x: 60, y: 100), time: 0.5)
+    let tapped = held.end(at: CGPoint(x: 40, y: 100), time: 0.5)
     #expect(!tapped && held.release == .left)
 
     var delayed = OrderPress(at: CGPoint(x: 100, y: 100), time: 0)

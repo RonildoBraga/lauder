@@ -132,10 +132,10 @@ struct TouchInputTests {
     (CGVector(dx: 40, dy: -60), .defend),
     (CGVector(dx: -98, dy: -62), .attack),
     (CGVector(dx: 98, dy: -62), .defend),
-    (CGVector(dx: -110, dy: -60), .left),
-    (CGVector(dx: 110, dy: -60), .right),
-    (CGVector(dx: -30, dy: -20), .attack),
-    (CGVector(dx: 30, dy: -20), .defend),
+    (CGVector(dx: -110, dy: -60), .attack),
+    (CGVector(dx: 110, dy: -60), .defend),
+    (CGVector(dx: -30, dy: -20), .both),
+    (CGVector(dx: 30, dy: -20), .both),
   ])
   func slidingChoosesTheItemInThatDirection(offset: CGVector, choice: OrderPress.Choice?) {
     var press = OrderPress(at: CGPoint(x: 200, y: 150), time: 0)
@@ -157,18 +157,18 @@ struct TouchInputTests {
   }
 
   @Test(arguments: [
-    (CGPoint(x: 200, y: 30), CGVector(dx: -40, dy: 0), OrderPress.Choice.left),
-    (CGPoint(x: 200, y: 30), CGVector(dx: 40, dy: 0), .right),
-    (CGPoint(x: 200, y: 280), CGVector(dx: -40, dy: 0), .left),
-    (CGPoint(x: 200, y: 280), CGVector(dx: 40, dy: 0), .right),
-    (CGPoint(x: 20, y: 150), CGVector(dx: 40, dy: 0), .right),
-    (CGPoint(x: 380, y: 150), CGVector(dx: -40, dy: 0), .left),
+    (CGPoint(x: 200, y: 30), CGVector(dx: -60, dy: 0), OrderPress.Choice.left),
+    (CGPoint(x: 200, y: 30), CGVector(dx: 60, dy: 0), .right),
+    (CGPoint(x: 200, y: 280), CGVector(dx: -60, dy: 0), .left),
+    (CGPoint(x: 200, y: 280), CGVector(dx: 60, dy: 0), .right),
+    (CGPoint(x: 20, y: 150), CGVector(dx: 60, dy: 0), .right),
+    (CGPoint(x: 380, y: 150), CGVector(dx: -60, dy: 0), .left),
   ])
-  func slidingSidewaysAtAMenuEdgeStillSelectsACompanion(
+  func anUnclampedMenuKeepsSidewaysTravelOutsideBothSelectingACompanion(
     start: CGPoint, offset: CGVector, expected: OrderPress.Choice
   ) {
-    // These origins clamp the 280 × 168 menu in a 400 × 300 view. The gesture is measured
-    // from the finger, so moving the menu's artwork never turns sideways travel into a stance.
+    // Without surface bounds, the menu remains centred on the finger. Actual clamping and
+    // visible-item releases are exercised by TouchOrderSurfaceTests.
     var press = OrderPress(at: start, time: 0)
     let opened = press.open(at: 1)
     #expect(opened)
@@ -178,17 +178,17 @@ struct TouchInputTests {
   }
 
   @Test(arguments: [CGFloat(0), 5, 15])
-  func anExtremeTopPressKeepsSidewaysAndReturnGesturesSafe(y: CGFloat) {
+  func anExtremeTopPressUsesVisibleItemsAndKeepsReturnAndCancellationSafe(y: CGFloat) {
     let start = CGPoint(x: 200, y: y)
     var press = OrderPress(at: start, time: 0)
-    let opened = press.open(at: 1)
+    let opened = press.open(at: 1, in: CGRect(x: 0, y: 0, width: 400, height: 300))
     #expect(opened)
-    // Every sample stays on the screen. These starts cannot provide enough upward travel
-    // for a stance or the cancel sector, so this test does not claim those gestures work.
-    press.move(to: CGPoint(x: 240, y: y))
-    #expect(press.release == .right)
-    press.move(to: CGPoint(x: 160, y: y))
-    #expect(press.release == .left)
+    // Clamping puts the visible stance items beside a very high finger. Those items win,
+    // while returning to the original finger or cancelling still clears the selection.
+    press.move(to: CGPoint(x: 260, y: y))
+    #expect(press.release == .defend)
+    press.move(to: CGPoint(x: 140, y: y))
+    #expect(press.release == .attack)
     press.move(to: CGPoint(x: 203, y: y))
     #expect(press.release == .both)
     press.move(to: CGPoint(x: 200, y: 0))

@@ -62,6 +62,7 @@ struct TouchControls: UIViewRepresentable {
     private let menu = OrderMenu()
     private var generation: Int?
     private var mode = GameSession.Mode.exploring
+    private var showsFire = false
     private var orderNames: (left: String, right: String)?
     /// The finger pressing the ground for the order menu, from its touch to its release.
     private var press: OrderPress?
@@ -120,8 +121,10 @@ struct TouchControls: UIViewRepresentable {
         (vibration, .vibration), (panel, .panel), (swap, .swap),
       ]
       for (zone, button) in buttons {
-        zone.changed = { [weak controls] _, isPressed, generation in
-          controls?.setTouchButton(button, isPressed: isPressed, generation: generation)
+        zone.changed = { [weak self] _, isPressed, generation in
+          guard let self else { return }
+          self.controls.setTouchButton(button, isPressed: isPressed, generation: generation)
+          if !isPressed { self.refreshWeaponVisibility() }
         }
       }
     }
@@ -134,6 +137,7 @@ struct TouchControls: UIViewRepresentable {
       vibrationTitle: String, panelTitle: String, mode: GameSession.Mode, generation: Int
     ) {
       self.mode = mode
+      self.showsFire = showsFire
       self.orderNames = orderNames
       if self.generation != generation {
         reset()
@@ -196,13 +200,11 @@ struct TouchControls: UIViewRepresentable {
       // so the release gate still sees that button let go.
       cycle.isHidden = nextLeaderName == nil && !cycle.isCaptured
       // Keep a held contact mounted until it lifts, including across mode changes.
-      fire.isHidden = (!showsFire || mode != .exploring) && !fire.isCaptured
       // Roll shows with Fire while exploring, so it never covers a conversation's lines, and
       // stays while a finger holds it. Swap sits above it on the same terms.
-      dodge.isHidden = (!showsFire || mode != .exploring) && !dodge.isCaptured
       swap.setTitle("Swap: \(swapTitle)")
       swap.accessibilityLabel = "Swap to \(swapTitle)"
-      swap.isHidden = (!showsFire || mode != .exploring) && !swap.isCaptured
+      refreshWeaponVisibility()
       // Formation appears with the second companion; a finger on it keeps it until it lifts.
       formation.isHidden = !showsFormation && !formation.isCaptured
       pause.setTitle(mode == .paused ? "Resume" : "Pause")
@@ -215,6 +217,12 @@ struct TouchControls: UIViewRepresentable {
       // released. The action zone stays bright: it continues a conversation or restarts.
       for zone in [stick, cycle, fire, dodge, swap, formation] {
         zone.alpha = mode == .exploring ? 1 : 0.55
+      }
+    }
+
+    private func refreshWeaponVisibility() {
+      for zone in [fire, dodge, swap] {
+        zone.isHidden = (!showsFire || mode != .exploring) && !zone.isCaptured
       }
     }
 
@@ -319,13 +327,11 @@ struct TouchControls: UIViewRepresentable {
       guard mode == .exploring, orderNames != nil, var press, press.began == began,
         pressGeneration == controls.touchGeneration
       else { return }
-      guard press.open(at: began + OrderPress.holdTime) else { return }
+      guard press.open(at: began + OrderPress.holdTime, in: bounds), let layout = press.menuLayout
+      else { return }
       self.press = press
-      let size = menu.bounds.size
       // Centre Both under the finger where possible, then keep all six choices on the screen.
-      menu.frame.origin = CGPoint(
-        x: min(max(press.start.x - size.width / 2, 0), bounds.width - size.width),
-        y: min(max(press.start.y - menu.choiceCentre.y, 0), bounds.height - size.height))
+      menu.frame = layout.frame
       menu.highlight(.both)
       menu.isHidden = false
       // The ground under the finger now is the point, even if the leader moves meanwhile.
@@ -410,21 +416,17 @@ private final class OrderMenu: UIView {
   private let hold = OrderMenu.item("Hold")
   private let attack = OrderMenu.item("↖ Attack")
   private let defend = OrderMenu.item("Defend ↗")
-  var choiceCentre: CGPoint { CGPoint(x: 140, y: 84) }
 
   init() {
-    super.init(frame: CGRect(x: 0, y: 0, width: 280, height: 168))
+    super.init(frame: CGRect(origin: .zero, size: OrderPress.MenuLayout.size))
     isUserInteractionEnabled = false
     accessibilityElementsHidden = true
-    for label in [both, left, right, hold, attack, defend] { addSubview(label) }
-    let width: CGFloat = 84
-    let height: CGFloat = 44
-    attack.frame = CGRect(x: 0, y: 0, width: width, height: height)
-    defend.frame = CGRect(x: 280 - width, y: 0, width: width, height: height)
-    both.frame = CGRect(x: 140 - width / 2, y: 62, width: width, height: height)
-    left.frame = CGRect(x: 0, y: 62, width: width, height: height)
-    right.frame = CGRect(x: 280 - width, y: 62, width: width, height: height)
-    hold.frame = CGRect(x: 140 - width / 2, y: 124, width: width, height: height)
+    for (label, choice) in zip(
+      [both, left, right, hold, attack, defend], OrderPress.MenuLayout.choices)
+    {
+      addSubview(label)
+      label.frame = OrderPress.MenuLayout.itemFrame(choice)
+    }
   }
 
   required init?(coder: NSCoder) { nil }

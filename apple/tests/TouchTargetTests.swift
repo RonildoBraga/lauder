@@ -88,6 +88,88 @@ struct TouchTargetTests {
     #expect(pick([0.5, 0.5], bodies: [.init(id: "bad", position: [.nan, 0])]) == nil)
     let badCamera = CameraProjection(eye: .zero, target: .zero, fieldOfView: 35, aspect: aspect)
     #expect(pick([0.5, 0.5], bodies: [body], camera: badCamera) == nil)
+    for radius: Float in [-1, .nan, .infinity] {
+      #expect(
+        Targeting.touched(
+          at: [0.5, 0.5], viewHeight: viewHeight, projection: camera(), candidates: [body],
+          height: { _ in PartyBody.height }, radius: { _ in radius }) == nil)
+    }
+  }
+
+  @Test(arguments: [Float(22), 15.4])
+  func theBridgeCameraPicksTheMovingLegEnvelopeWithThirtyPointsOutsideIt(lens: Float) throws {
+    let projection = CameraProjection(
+      eye: BrooklynBridge.cameraOffset, target: .zero, fieldOfView: lens, aspect: aspect)
+    let radius = RobotModelGeometry.navigationRadius
+    let height = RobotModelGeometry.halfHeight * 2
+    let body = Targeting.Candidate(id: "robot", position: .zero)
+    let leg = try #require(projection.screen(ofWorld: [radius, 0, 0]))
+    let centre = try bodyCentre(.zero, in: projection, height: height)
+    let width = viewHeight * aspect
+    try #require((leg.x - centre.x) * width > Targeting.touchRadius)
+    func touched(_ point: SIMD2<Float>) -> String? {
+      Targeting.touched(
+        at: point, viewHeight: viewHeight, projection: projection, candidates: [body],
+        height: { _ in height }, radius: { _ in radius })
+    }
+    #expect(touched(leg) == "robot", "the generated leg envelope extends beyond the centre snap")
+    // At this camera angle the near upper corner is the body's rightmost projected extent.
+    let edge = try #require(projection.screen(ofWorld: [radius, height, radius]))
+    #expect(touched(edge + [29.9 / width, 0]) == "robot")
+    #expect(touched(edge + [30.1 / width, 0]) == nil)
+  }
+
+  @Test
+  func emptyTapsReleaseOnlyAnEntirelyOffscreenLockAndInvalidTapsCannotReleaseIt() throws {
+    let (fight, _) = try nativeFight()
+    fight.selectLock(
+      from: leader, facing: [0, -1], up: [0, -1], right: [1, 0], advancing: false)
+    try #require(fight.lock == "front")
+    let partial = camera(over: [-18, 0])
+    let feet = try #require(partial.screen(ofGround: .zero))
+    try #require(feet.x > 1)
+    try #require(
+      Targeting.bodyIsOnScreen(
+        at: .zero, height: RobotModelGeometry.halfHeight * 2,
+        radius: RobotModelGeometry.navigationRadius, projection: partial))
+    fight.tapLock(at: [0.05, 0.05], viewHeight: viewHeight, projection: partial, from: leader)
+    #expect(fight.lock == "front", "a visible leg still makes this a visible-body lock")
+    let offscreen = camera(over: [-40, 0])
+    try #require(
+      !Targeting.bodyIsOnScreen(
+        at: .zero, height: RobotModelGeometry.halfHeight * 2,
+        radius: RobotModelGeometry.navigationRadius, projection: offscreen))
+    fight.tapLock(at: [.nan, 0.5], viewHeight: viewHeight, projection: offscreen, from: leader)
+    fight.tapLock(at: [0.5, 0.5], viewHeight: 0, projection: offscreen, from: leader)
+    fight.tapLock(
+      at: [0.5, 0.5], viewHeight: .greatestFiniteMagnitude, projection: offscreen, from: leader)
+    let invalid = CameraProjection(eye: .zero, target: .zero, fieldOfView: 35, aspect: aspect)
+    fight.tapLock(at: [0.5, 0.5], viewHeight: viewHeight, projection: invalid, from: leader)
+    #expect(fight.lock == "front")
+    fight.tapLock(at: [0.5, 0.5], viewHeight: viewHeight, projection: offscreen, from: leader)
+    #expect(fight.lock == nil)
+    #expect(fight.shots.isEmpty)
+    #expect(!fight.takeEvents().contains { if case .fired = $0 { true } else { false } })
+  }
+
+  @Test
+  func aTouchLockCannotMakeNativeFirePassThroughCover() throws {
+    let wall = Level.Box.box("wall", at: [0, 1.5, 4], size: [8, 3, 0.5])
+    let (fight, session) = try nativeFight(boxes: [wall])
+    let projection = camera()
+    let front = try bodyCentre(.zero, in: projection, height: RobotModelGeometry.halfHeight * 2)
+    fight.tapLock(at: front, viewHeight: viewHeight, projection: projection, from: leader)
+    try #require(fight.lock == "front")
+    var shots: [EncounterSimulation.Shot] = []
+    for frame in 0..<180 {
+      _ = fight.step(
+        dt: 1 / 120, leader: leader, facing: [0, -1], aiming: true, fireHeld: true,
+        firePressed: frame == 0, figures: [.miki: leader], session: session)
+      shots += fight.shots.filter { $0.actor == .miki }
+    }
+    #expect(!shots.isEmpty && shots.allSatisfy { $0.path.strike == .scenery })
+    #expect(session.remainingHealth(of: "front", toughness: 50) == 50)
+    #expect(session.defeated.isEmpty)
   }
 
   @Test
@@ -250,8 +332,8 @@ struct TouchTargetTests {
     return (feet + head) / 2
   }
 
-  private func nativeFight() throws -> (EncounterSimulation, GameSession) {
-    let level = range()
+  private func nativeFight(boxes: [Level.Box] = []) throws -> (EncounterSimulation, GameSession) {
+    let level = range(boxes: boxes)
     let fight = EncounterSimulation(level: level)
     let session = GameSession(level: level)
     let encounter = try #require(level.encounters.first)
@@ -283,7 +365,7 @@ struct TouchTargetTests {
     return .init(point: .init(x: centre.x, y: centre.y, aspect: aspect), viewHeight: viewHeight)
   }
 
-  private func range() -> Level {
+  private func range(boxes: [Level.Box] = []) -> Level {
     let points: [(String, SIMD2<Float>)] = [
       ("front", .zero), ("right", [6, 0]), ("hidden", [-6, 0]),
       ("unarmed", [0, -6]), ("far", [0, -23.5]),
@@ -303,7 +385,7 @@ struct TouchTargetTests {
       retryAt: leader, hostiles: robots, cues: cues)
     return Level(
       id: "touch-target-fixture", ground: .box("floor", at: [0, -0.15, 0], size: [100, 0.3, 100]),
-      boxes: [], triggers: [], encounters: [encounter], party: [.miki],
+      boxes: boxes, triggers: [], encounters: [encounter], party: [.miki],
       spawns: [.miki: leader, .tom: [-1, 9], .laura: [1, 9]], heading: [0, -1],
       cameraOffset: BrooklynBridge.cameraOffset,
       fieldOfView: 22, opening: "Range", objective: "Test", lookAround: "Range",

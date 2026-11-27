@@ -18,14 +18,14 @@ The initial omission of touch lock-on was the implementer's reading of that cont
   - R3 on PS5 or RS on Xbox, a press of the right stick, or O on a keyboard. On touch, a short tap near an eligible enemy selects it; Fire also exposes Target, Next target and Let go accessibility actions.
   - A lock press needs a fresh press while exploring. Dialogue and Pause consume it rather than queueing it.
   - A held press keeps the release gate closed, like every other button.
-- **What a lock can take:** a revealed, living hostile who is a target, as for Fire: the armed guard, or someone who has opened fire. They must be within 30 m of the leader. Touch selection additionally requires an on-screen projected body segment.
+- **What a lock can take:** a revealed, living hostile who is a target, as for Fire: the armed guard, or someone who has opened fire. They must be within 30 m of the leader. Touch selection additionally requires an on-screen projected body envelope.
 - **Pressing:**
   - Without a lock, a press locks on the hostile Fire would take: the nearest ahead and in sight, or else the nearest.
   - With a lock, a press moves it to the next hostile clockwise round the leader, as the screen shows them. With nobody else to take, the lock stays.
   - A press within 0.3 s of the last lets go instead. The first of those two presses still locks or moves on, for that moment.
 - **Touch selection:**
-  - Down and up in less than 0.35 s, with no more than 12 pt of drift including the release position. Holding still retains the ground-order menu; an empty-ground tap does nothing.
-  - At release, choose the nearest eligible enemy's visible projected feet-to-head segment within 30 screen points of the finger. The touch carries the view size, so the tolerance stays in points on different screens; entirely off-screen bodies cannot be picked. Equal distances use the stable enemy ID. It selects the enemy as a whole, not a weak point or companion.
+  - Down and up in less than 0.35 s, with no more than 12 pt of drift including the release position. Holding still retains the ground-order menu. An empty valid tap retains an on-screen or partly visible lock but releases one whose body envelope is entirely off-screen; moving off-screen alone, an invalid tap or invalid projection data does not release it.
+  - At release, choose the nearest eligible enemy's visible projected body envelope, using its full height and navigation radius with 30 screen points of exterior allowance. The touch carries the view size, so the tolerance stays in points on different screens; entirely off-screen bodies cannot be picked. Equal distances use the stable enemy ID. This body envelope is an approximation, not a mesh, weak-point or companion pick.
   - Tap another enemy to change the lock, or the selected enemy again to let go. A tap does not fire, and the controller's double-press timing does not turn a second touch selection into a different gesture.
   - The Target accessibility action keeps a valid current lock or acquires the native first target. Next target cycles deliberately without the controller double-press timer; Let go clears the lock. These actions do not fire.
   - Touch captures feed generation-checked one-shot requests through GameControls and InputRules. Pause, dialogue, source changes and the neutral-input gate consume or cancel requests; the UI does not call targeting directly.
@@ -35,7 +35,7 @@ The initial omission of touch lock-on was the implementer's reading of that cont
   - Out of reach or behind cover, the shot flies the way the leader faces, towards the locked hostile, and can strike the cover.
   - As before, nobody who is not yet a target is ever shot first.
   - A roll, or a scene that holds the party, stops the aim for its length but keeps the lock.
-- **Letting go:** a second controller/keyboard press within 0.3 s, tapping the selected enemy again, the Let go accessibility action, the hostile being down, cleared, hidden, no longer targetable or more than 30 m away, Restart or a retry. A leader switch and a change between controller and touch keep an otherwise valid lock; source changes still cancel captures and require neutral input.
+- **Letting go:** a second controller/keyboard press within 0.3 s, tapping the selected enemy again, an empty valid touch tap while its body is entirely off-screen, the Let go accessibility action, the hostile being down, cleared, hidden, no longer targetable or more than 30 m away, Restart or a retry. A leader switch and a change between controller and touch keep an otherwise valid lock; source changes still cancel captures and require neutral input.
 - **Presentation:**
   - A ring on the ground round the locked hostile, in the threats' red that the assisted target's disc and the refusal cross already use, so no colour joins the palette.
   - It is wider than that disc, so it circles it. Round the guard it also clears the legs.
@@ -53,4 +53,4 @@ The initial omission of touch lock-on was the implementer's reading of that cont
 
 Recorded in the prototype plan under [Controls pass](../prototype-plan.md#controls-pass).
 
-The [touch-parity follow-up](../prototype-plan.md#touch-parity--in-development) records the new tap, accessibility, authority and touch-only Simulator checks. Earlier controller-driven captures with the touch layout visible do not verify touch input. Simulator and source checks do not establish real touch, multi-touch, VoiceOver usability or phone acceptance. The [touch-control contract](../touch-controls.md) retains the order menu's extreme-top physical limitation.
+The [touch-parity follow-up](../prototype-plan.md#touch-parity--in-development) records the new tap, accessibility, authority and touch-only Simulator checks. Earlier controller-driven captures with the touch layout visible do not verify touch input. Simulator and source checks do not establish real touch, multi-touch, VoiceOver usability or phone acceptance. The [touch-control contract](../touch-controls.md) describes drawn-item selection and the remaining extreme-top cancellation limit.

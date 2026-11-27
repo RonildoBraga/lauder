@@ -4,6 +4,8 @@ An open-source, Apple-only survival exploration game about three travellers find
 
 ## Project status
 
+**TestFlight preview preparation, 27 November 2026:** the maintainer requested **“Send it to my phone for testing using the TestFlight”** (chat; no public permalink). The [build 37 preview](docs/prototype-plan.md#build-37-testflight-preview) combines the reviewed touch/squad corrections and weapon audio from PRs #187–#189, with the final review fixes, on `codex/testflight-controls-audio`. Checks, exact-tree review, signing and Apple processing must finish before availability is claimed. Build **36** remains delivered; `main` is unchanged.
+
 The **Brooklyn Bridge opening is the only playable scene**. On 22 November 2026 the maintainer asked to keep the bridge and remove all other scenes and their unused systems before reconsidering what makes the game enjoyable. The combat arena, salvage yard and Relay Run are removed, along with their menu entries, test weapons, elevation, tactical combat and salvage machinery. This is a smaller starting point for the next design discussion, not an assignment to rebuild those experiments.
 
 Miki, Tom and Laura cross the snowbound bridge together towards Manhattan, past the robot that guards the first tower, to the far end. The bridge keeps its movement, paired weapons, the first-tower guard fight, party switching, formations, orders, camera and controller/touch/keyboard inputs. Dialogue remains provisional. The [gameplay walkthrough](docs/gameplay-script.md) describes the current opening; the [prototype plan](docs/prototype-plan.md) records verification and the next gate.

@@ -14,6 +14,16 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Build 37 TestFlight preview
+
+The maintainer requested **“Send it to my phone for testing using the TestFlight”** (chat, 27 November 2026; no public permalink). This authorises an internal TestFlight preview of the latest reviewed changes, without merging the open stack into `main` or claiming physical acceptance. The release branch `codex/testflight-controls-audio` combines [PR #187](https://github.com/RonildoBraga/lauder/pull/187), [PR #188](https://github.com/RonildoBraga/lauder/pull/188) and [PR #189](https://github.com/RonildoBraga/lauder/pull/189). The source integration preserves their existing damage, squad authority, input release rules and native audio owners. Main remains unchanged.
+
+Fresh Lauder-specific Apple discovery checked accepted/processing uploads and builds, identified **37** as unused, and preserved the existing tester/group baseline. The intended version is **0.1.0 (37)**. Existing build 36 remains delivered until the new source passes its check/review/signing/upload and Apple processing/tester verification; an upload command alone is not delivery.
+
+The combined source also addresses the final reviews on #187/#188: drawn order-menu items and clamped selection share geometry; release rechecks dialogue action visibility; hidden-HUD neutral guidance remains visible; projected robot width participates in the 30 pt exterior tap tolerance; an empty tap can release a wholly off-screen lock; and repeated impossible-range warnings are bounded while preserving initial quiet detection. The short hint names the visible Attack/Defend menu labels. The input contract is corrected and backlog provenance is quoted. Each result still needs the new source-bound check and rendered verification before being claimed passed.
+
+**Preparation in progress:** final source review, all thirteen headless routes, sixteen generated sound fingerprints, representative rendered routes, signed archive/dSYM checks, exact-source hosted checks, upload and Apple availability verification follow. No new phone or sound-quality measurement is claimed. A moving guard temporarily occupying a previously valid Go point remains an un-reproduced review observation; the collision boundary remains authoritative, without a promise of permanently clear dynamic destinations.
+
 ## Touch parity — in development
 
 Under the maintainer's assignment to address Claude's GitHub findings, [issue #186](https://github.com/RonildoBraga/lauder/issues/186) adds the missing touch targeting and discoverability on top of the [review fixes](#claude-review-follow-ups--in-development). The maintainer chose **“Short order hint (recommended)”** (chat; no public permalink). A noninteractive hint appears during a fight while Defend is active: hold open ground and slide upper-left for Attack or upper-right for Defend.
@@ -24,7 +34,7 @@ A quick ground tap selects the nearest eligible on-screen enemy body within 30 s
 
 The fresh rendered `touch-fight` route passes in **63.8 s** with **zero non-touch input frames**, zero retries and zero party-stop diagnostics. Accepted Go/Hold, both weapon swaps, a full leader cycle, target acquisition/release, real Fire/roll movement, native victory, actual panel visibility and Restart pass through shared input/session rules. Applied damage totals exactly **1,500**: Miki **768**, Laura **315**, Tom **417**; normal **888**, weak-point **612**, **75** contacts, at most **seven** labels. Inspected stills show the short hint while Defend is active, the lock ring and the status panel hidden on Pause. Initial rapidly advancing capture marks skipped those UI states; the final Debug route deliberately holds them long enough to capture. This route injects touch fields rather than physical UIKit fingers. Unit tests cover capture classification, final endpoints, delayed menu tasks, generation cancellation and accessibility dispatch; they do not establish real multi-touch or VoiceOver usability.
 
-Brief existing body overlap remains (**1.77%** of recorded frames). Simulator pacing is not phone performance. Extreme-top holds still lack upward travel for stance/cancel gestures; physical controls, audibility, balance, sustained phone performance and acceptance remain unverified. [PR #188](https://github.com/RonildoBraga/lauder/pull/188) is reviewable and unmerged. The maintainer's later backlog instruction authorises issue retirement with factual limitations; closing implementation tracking does not merge or authorise a new upload. Build 36 remains delivered.
+Brief existing body overlap remains (**1.77%** of recorded frames). Simulator pacing is not phone performance. Extreme-top holds still lack upward travel for stance/cancel gestures; physical controls, audibility, balance, sustained phone performance and acceptance remain unverified. [PR #188](https://github.com/RonildoBraga/lauder/pull/188) is reviewable and unmerged. For backlog retirement, the maintainer instructed **“Please resolve and close all git issues and wherever what is stale or outdated we should close. Also me mindful Claude is also working to resolve and close all git issues so you guys need to divide and conquer.”** ([relayed decision](https://github.com/RonildoBraga/lauder/issues/165#issuecomment-7206268433)). That authorises issue retirement with factual limitations; closing implementation tracking does not merge or authorise a new upload. Build 36 remains delivered.
 
 ## Claude review follow-ups — in development
 
@@ -43,7 +53,7 @@ On 27 November 2026 the maintainer asked **“Also please address the Claude com
 [Issue #162](https://github.com/RonildoBraga/lauder/issues/162) gives the paired weapons their own sounds. In a Claude session on 27 November 2026, which has no public permalink, the maintainer said: “see if you can help and start resolving all the git issues”. The work is on `claude/weapon-sounds`, based on the build 36 source (`codex/testflight-guard-damage`, [PR #185](https://github.com/RonildoBraga/lauder/pull/185)).
 
 - **Sounds:** `apple/scripts/make-sounds.py` now generates sixteen sounds instead of eight.
-  - **Weapons:** each of the six paired weapons has its own: the long rifle, the assault rifle, the shotgun, the sword's swing and the minigun's round. The hostiles' rifle keeps its own.
+  - **Weapons:** the five damaging paired weapons each have a voice: long rifle, assault rifle, shotgun, sword swing and minigun round. The dome is the sixth paired weapon, with separate state cues below; the hostiles' rifle retains its own.
   - **Minigun:** it whines as it spins up.
   - **Tom's dome:** it has five: rising, running down with 1.5 s left, let go or dropped, run out, and recharged in his hands.
   - **Removed:** the old carbine, light-burst and close-scatter sounds, made for the weapons that [ADR 0021](decisions/0021-paired-weapons.md) replaced.
@@ -284,19 +294,21 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Look around, advance dialogue or confirm menu | Cross / A | Look, Continue, or Restart while paused | E |
 | Next leader, going round the party | L1 / LB | Next: name | Q |
 | Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
-| Permit companion attacks / cease fire and recall via cover | D-pad up / down | Hold on ground, slide upper-left Attack / upper-right Defend | Up / down arrows |
+| Permit companion attacks / cease fire and recall via cover | D-pad up / down | Hold on ground, then the drawn Attack / Defend choice | Up / down arrows |
 | Send left / right member ahead | D-pad left / right | Hold on ground, then a name | Left / right arrows |
 | Both go / both hold | No direct binding | Hold on ground, then Both / Hold | G / H |
 | Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
 | [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
-| [Lock the aim](decisions/0020-lock-on.md) on a hostile, or move it to the next; two quick presses let go | R3 / RS, a press of the right stick | None: Fire's assisted aim | O |
+| [Lock the aim](decisions/0020-lock-on.md) on a hostile, or move it to the next; two quick controller/keyboard presses let go | R3 / RS, a press of the right stick | Tap an enemy to select; tap it again to release; Fire accessibility actions target / next / let go | O |
 | Dodge roll: the leader tumbles 3 m the way they move, or face, while hostile shots pass through | Square / X | Roll | Space |
 | Pause / Resume | Options / Menu | Pause / Resume | Escape |
-| Choose Resume, Restart, Vibration or Status panel while paused | Stick or D-pad up/down, then Cross / A | Resume, Restart or Vibration | W/S or up/down, then E |
-| Hide/show status panel | Pause, then Status panel | Always shown | Pause, then Status panel |
+| Choose Resume, Restart, Vibration or Status panel while paused | Stick or D-pad up/down, then Cross / A | Resume, Restart, Vibration or Status panel | W/S or up/down, then E |
+| Hide/show status panel | Pause, then Status panel | Pause, then Status panel: On/Off | Pause, then Status panel |
 
 Touch is automatic without an extended controller. An attached controller is preferred unless **Use touch controls** is chosen; **Use controller** returns to it. Keyboard remains available. These sources share InputRules and session authority. Xbox uses the shared extended-gamepad path; hardware delivery remains unverified.
+
+Touch taps select the visible whole-body envelope, using full height and navigation radius with a 30-point exterior allowance. An empty valid tap retains an on-screen or partly visible lock and releases an entirely off-screen one; assisted aim remains available without a lock. The [touch contract](touch-controls.md) describes the short-tap/hold distinction, shared drawn order-menu choices and edge limitations. Release guidance stays visible when the status panel is hidden.
 
 Switching preserves positions and progress; held movement can continue on the new leader. Circle / B is unassigned. A weapon switch needs a fresh press, and each weapon keeps its magazine. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 

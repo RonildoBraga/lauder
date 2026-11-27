@@ -107,6 +107,39 @@ struct GuardRetaliationTests {
   }
 
   @Test
+  func aFiringLeaderAtThirteenMetresGetsNoRepeatedFalseWarnings() throws {
+    let trial = try Trial(
+      attack: false, figures: [.tom: [0, 13], .miki: [-8, 13], .laura: [8, 13]])
+    for _ in 0..<120 * 30 {
+      let robot = try #require(trial.robot)
+      // Follow the guard's bounded walking at its slow speed, remaining 13 m away. Fire
+      // outwards so real native discharges cannot finish the guard during this observation.
+      trial.figures[.tom] = robot.position + [0, 13]
+      trial.step(leaderFire: true, leaderFacing: [0, 1])
+    }
+    #expect(trial.partyShots.filter { $0.actor == .tom }.count > 100)
+    #expect(trial.warned == [.tom])
+    #expect(trial.robot?.shotSerial == 0 && !trial.retried)
+    var remaining: Float = 13
+    for _ in 0..<120 * 4 {
+      let robot = try #require(trial.robot)
+      remaining = max(8, remaining - (PartyBody.speed - RobotGuard.speed) / 120)
+      trial.figures[.tom] = robot.position + [0, remaining]
+      trial.step(leaderFire: true, leaderFacing: [0, 1])
+      if trial.warned.count == 2 { break }
+    }
+    try #require(trial.warned == [.tom, .tom] && trial.robot?.phase == .notice)
+    var elapsed: Float = 0
+    for _ in 0..<120 * 5 where trial.robot?.shotSerial == 0 {
+      trial.step(leaderFire: true, leaderFacing: [0, 1])
+      elapsed += 1 / 120
+    }
+    #expect(trial.robot?.shotSerial == 1)
+    #expect(
+      elapsed >= RobotGuard.noticeTime + RobotGuard.trackingTime + RobotGuard.commitTime - 0.02)
+  }
+
+  @Test
   func aWarnedCompanionMovingBeyondAttackRangeKeepsTheWarningThenReleasesAcquisition() throws {
     let trial = try Trial(figures: [.tom: [4, 7], .miki: [0, 11.9], .laura: [-6, 6]])
     try trial.awaitMikiWarning()
@@ -233,15 +266,18 @@ struct GuardRetaliationTests {
       throw FixtureFailure.missingWarning
     }
 
-    func step(companionFire: Bool = false, ordinaryCompanionFire: Bool = false) {
+    func step(
+      companionFire: Bool = false, ordinaryCompanionFire: Bool = false,
+      leaderFire: Bool = false, leaderFacing: SIMD2<Float> = [0, -1]
+    ) {
       let leader = figures[session.leader] ?? .zero
       let point = fight.weakpoints(for: "guard").first
       let target = ordinaryCompanionFire ? robot?.position ?? .zero : point?.ground ?? .zero
       let miki = figures[.miki] ?? .zero
       let direction = target - miki
       let outcome = fight.step(
-        dt: 1 / 120, leader: leader, facing: [0, -1], aiming: false,
-        fireHeld: false, firePressed: false, figures: figures, session: session,
+        dt: 1 / 120, leader: leader, facing: leaderFacing, aiming: leaderFire,
+        fireHeld: leaderFire, firePressed: false, figures: figures, session: session,
         companionIntents: [
           .miki: .init(
             lookAt: target, weapon: .longRifle,
