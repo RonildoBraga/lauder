@@ -20,7 +20,7 @@ struct TouchControls: UIViewRepresentable {
   /// "Formation", or "Follow" while anyone is going or holding, when it calls them back.
   let formationTitle: String
   /// The companions the order menu offers on its left and right, as the HUD orders them; nil
-  /// until orders are offered, and pressing the ground does nothing (ADR 0003, phase S3).
+  /// while orders are unavailable; quick ground taps can still target an enemy.
   let orderNames: (left: String, right: String)?
   /// The pause menu's Vibration choice as it stands, "Vibration: On" or "Vibration: Off", a
   /// button shown only while paused (ADR 0008).
@@ -382,7 +382,9 @@ struct TouchControls: UIViewRepresentable {
       return true
     }
 
-    private func targetTap(at point: CGPoint) -> InputRules.TargetTap? {
+    /// RealityView fills the window, while this surface can be inset by its safe area. Keep
+    /// taps in that rendered viewport's coordinates and points; an unmounted view has none.
+    func targetTap(at point: CGPoint) -> InputRules.TargetTap? {
       guard let position = screenPoint(point), let window else { return nil }
       return .init(point: position, viewHeight: Float(window.bounds.height))
     }

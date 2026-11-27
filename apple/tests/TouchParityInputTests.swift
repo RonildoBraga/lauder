@@ -193,6 +193,37 @@ struct TouchParityInputTests {
 
 @MainActor
 struct TouchParitySurfaceTests {
+  @Test(arguments: [CGSize(width: 926, height: 428), CGSize(width: 874, height: 402)])
+  func anInsetMountedSurfaceUsesTheFullWindowViewportForTargetTaps(size: CGSize) throws {
+    let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+    // Keep this isolated window hidden: the fixture must not replace the app's key window.
+    defer { withExtendedLifetime(window) {} }
+    let container = UIView(
+      frame: CGRect(x: 12, y: 7, width: size.width - 24, height: size.height - 14))
+    window.addSubview(container)
+    let surface = TouchControls.Surface(controls: GameControls())
+    surface.frame = CGRect(x: 35, y: 13, width: size.width - 94, height: size.height - 50)
+    container.addSubview(surface)
+    // The nested inset puts the surface at window (47,20). A finger over the rendered
+    // viewport's (30%,60%) point must retain those coordinates rather than its local fractions.
+    let localPoint = CGPoint(x: size.width * 0.3 - 47, y: size.height * 0.6 - 20)
+    let tap = try #require(surface.targetTap(at: localPoint))
+    #expect(abs(tap.point.x - 0.3) < 0.00001)
+    #expect(abs(tap.point.y - 0.6) < 0.00001)
+    #expect(abs(tap.point.aspect - Float(size.width / size.height)) < 0.00001)
+    #expect(tap.viewHeight == Float(window.bounds.height))
+    #expect(tap.viewHeight != Float(surface.bounds.height))
+    #expect(window.isHidden, "the fixture does not take over the active window")
+  }
+
+  @Test
+  func anUnmountedSurfaceDoesNotInventATargetViewportFromItsOwnBounds() {
+    let surface = TouchControls.Surface(controls: GameControls())
+    surface.frame = CGRect(x: 47, y: 0, width: 832, height: 407)
+    #expect(surface.window == nil)
+    #expect(surface.targetTap(at: CGPoint(x: 400, y: 200)) == nil)
+  }
+
   @Test
   func groundTapsAreOfferedWithoutOrdersOnlyDuringPlay() {
     let controls = GameControls()
