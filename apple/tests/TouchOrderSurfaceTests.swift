@@ -12,7 +12,8 @@ struct TouchOrderGeometryTests {
   func everyDrawnItemSelectsItselfOutsideTheOriginalFingerReset(start: CGPoint) throws {
     let bounds = CGRect(x: 0, y: 0, width: 400, height: 300)
     var opened = OrderPress(at: start, time: 0)
-    #expect(opened.open(at: 1, in: bounds))
+    let didOpen = opened.open(at: 1, in: bounds)
+    #expect(didOpen)
     let layout = try #require(opened.menuLayout)
     #expect(bounds.contains(layout.frame))
     for choice in OrderPress.MenuLayout.choices {
@@ -38,7 +39,8 @@ struct TouchOrderGeometryTests {
   func theReviewedAttackPointAndDrawnBothUseTheirVisibleItems() {
     let start = CGPoint(x: 200, y: 150)
     var press = OrderPress(at: start, time: 0)
-    #expect(press.open(at: 1, in: CGRect(x: 0, y: 0, width: 400, height: 300)))
+    let didOpen = press.open(at: 1, in: CGRect(x: 0, y: 0, width: 400, height: 300))
+    #expect(didOpen)
     press.move(to: CGPoint(x: 90, y: 90))
     #expect(press.release == .attack, "offset (-110,-60) is inside drawn Attack")
     press.move(to: CGPoint(x: 170, y: 130))

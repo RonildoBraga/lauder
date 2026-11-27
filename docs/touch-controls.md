@@ -20,7 +20,7 @@ The [review follow-up](prototype-plan.md#claude-review-follow-ups--in-developmen
 
 The squad starts in Defend and the HUD names the current stance. Fire controls only the selected leader; it never grants companions permission to attack. After an explicit Attack order they may use their native roles against the guard. Defend stops companion attacks, cancels existing position orders and recalls them toward the leader using nearby legal cover. The stance persists across leader changes, while Retry/Restart returns to Defend. Position orders given afterward remain non-firing unless Attack is selected.
 
-The maintainer chose a short contextual hint for finding squad orders. With touch ready, a revealed living guard and the squad in Defend, it explains holding the ground and the Attack/Defend diagonals; Pause and dialogue hide it. Gameplay buttons retain their positions.
+The maintainer chose a short contextual hint for finding squad orders. With touch ready, a revealed living guard and the squad in Defend, it explains holding the ground and the visible Attack/Defend choices; Pause and dialogue hide it. Gameplay buttons retain their positions.
 
 Pause keeps Resume at the top right, Look reads Restart and Vibration switches On/Off. **Status panel: On/Off** beside Vibration also lets touch hide or show the HUD. When the panel is hidden, release guidance appears separately while input still needs to be released. There is no scene selector, test-weapon choice, Signature or separate Regroup action. Controller/keyboard equivalents are in the [input contract](prototype-plan.md#input-and-interaction-contract).
 
