@@ -545,9 +545,11 @@ final class EncounterSimulation {
     guard session.mode == .exploring, dt.isFinite, dt > 0 else { return outcome }
     blasts.removeAll(keepingCapacity: true)
     grenadeCooldown = max(0, grenadeCooldown - dt)
-    if grenadePressed {
-      throwGrenade(from: leader, facing: facing, aiming: aiming, by: session.leader)
-    }
+    let throwing =
+      grenadePressed
+      && throwGrenade(from: leader, facing: facing, aiming: aiming, by: session.leader)
+    let firing = fireHeld && !throwing
+    let pressed = firePressed && !throwing
     advanceGrenade(dt: dt, session: session, outcome: &outcome)
     lockPressAge = lockPressAge.map { $0 + dt }
     // A hostile downed, cleared or left behind in this step is no longer locked for the next.
@@ -566,16 +568,16 @@ final class EncounterSimulation {
     memberFacings = facings
     memberFacings[session.leader] = facing
     aimOrigin = leader
-    if firePressed || aiming { handling[slot(of: weaponLeader)]?.draw() }
-    if !fireHeld { handling[slot(of: weaponLeader)]?.releaseTrigger() }
+    if pressed || aiming { handling[slot(of: weaponLeader)]?.draw() }
+    if !firing { handling[slot(of: weaponLeader)]?.releaseTrigger() }
     // Tom's dome stays up while Fire is held with it in hand; otherwise it recharges.
     let domeInHand = weaponLeader == .tom && leaderWeapon.kind == .shieldDome
-    shield.step(dt: dt, held: fireHeld && domeInHand)
+    shield.step(dt: dt, held: firing && domeInHand)
     reportDome(at: weaponLeader == .tom ? leader : figures[.tom] ?? leader, inHand: domeInHand)
     // A rotary gun spins while Fire is held with it drawn, and fires once it is up to speed.
     let leaderSpin = spin[weaponLeader, default: 0]
     spin[weaponLeader] =
-      fireHeld && isDrawn && leaderWeapon.spinUp > 0
+      firing && isDrawn && leaderWeapon.spinUp > 0
       ? min(leaderWeapon.spinUp, leaderSpin + dt) : 0
     if leaderSpin == 0, spin[weaponLeader, default: 0] > 0 {
       events.append(.spinUp(at: leader, byLeader: true))
@@ -587,7 +589,7 @@ final class EncounterSimulation {
       weaponPoses[member]?.step(
         dt: dt,
         aiming: member == weaponLeader
-          ? isDrawn && (aiming || fireHeld) : autonomousMembers.contains(member))
+          ? isDrawn && (aiming || firing) : autonomousMembers.contains(member))
     }
     let motion = shooterMotion(of: weaponLeader, at: leader, facing: facing, dt: dt)
     for member in autonomousMembers {
@@ -598,7 +600,7 @@ final class EncounterSimulation {
     guard let encounter else {
       settleDrones(dt: dt)
       fireLeader(
-        leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: fireHeld,
+        leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: firing,
         inFight: false, session: session, outcome: &outcome)
       updateTarget(leader: leader, aiming: aiming, facing: facing)
       return outcome
@@ -761,7 +763,7 @@ final class EncounterSimulation {
     threat = threatNow
     if outcome.retry { return outcome }
     fireLeader(
-      leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: fireHeld,
+      leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: firing,
       inFight: true, session: session, outcome: &outcome)
     fireCompanions(companionIntents, figures: party, session: session, outcome: &outcome)
     if !director.isPlaying, encounter.hostiles.allSatisfy({ session.defeated.contains($0.id) }) {
@@ -1009,10 +1011,16 @@ final class EncounterSimulation {
     return result
   }
 
+  /// The shared recharge/projectile eligibility for the controlled member. The world adds its
+  /// spatial roll gate before queuing a request; actual launch checks these same rules again.
+  func canThrowGrenade(by member: PartyMember) -> Bool {
+    member == .tom && !holdsParty && grenade == nil && grenadeCooldown == 0
+  }
+
   private func throwGrenade(
     from origin: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool, by member: PartyMember
-  ) {
-    guard member == .tom, !holdsParty, grenade == nil, grenadeCooldown == 0 else { return }
+  ) -> Bool {
+    guard canThrowGrenade(by: member) else { return false }
     let destination: SIMD2<Float>
     if let lock, let state = hostiles[lock], state.isTargetable, !state.isDown {
       destination = state.position
@@ -1032,10 +1040,11 @@ final class EncounterSimulation {
       destination = origin + facing * Grenade.maximumRange
     }
     guard let thrown = Grenade(from: ballistics.point(origin), toward: destination, by: member)
-    else { return }
+    else { return false }
     grenade = thrown
     grenadeCooldown = Grenade.cooldown
     recordGuardAttack(by: member, from: origin)
+    return true
   }
 
   private func advanceGrenade(dt: Float, session: GameSession, outcome: inout Outcome) {
