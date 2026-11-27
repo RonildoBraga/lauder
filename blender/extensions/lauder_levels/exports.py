@@ -1,19 +1,24 @@
 """Exporting: writing a level's or a model's files for the game from Blender, and the record of what
 each export was made from, which ./scripts/check holds them to."""
 
+import hashlib
 import json
 import shutil
 import tempfile
+import zipfile
 from pathlib import Path
 
 from .common import (
     bpy, _collection, EXPORT_FORMAT, EXPORT_RECORD, file_fingerprint, LayoutError, LEVELS,
-    model_file, MODEL_METADATA, PREVIEW, SPAWNED, SPAWNED_SCENES, VISUAL,
+    model_file, MODEL_ACKNOWLEDGEMENTS, MODEL_METADATA, PREVIEW, SPAWNED, SPAWNED_SCENES, VISUAL,
 )
 from .layouts import emit_layout, layout_from_blender
 from .looks import visual_problems, what_collection_shows
 from .models import check_model
 from .robot_geometry import emit_robot_geometry, ROBOT
+
+ROBOT_CREDIT = "blender/assets/spider-bot-heavy/CREDIT.txt"
+ROBOT_ACKNOWLEDGEMENTS = MODEL_ACKNOWLEDGEMENTS[ROBOT]
 
 
 def _records(repository):
@@ -24,9 +29,9 @@ def _records(repository):
         return {}  # Unreadable: every level counts as stale, and the next export rewrites it.
 
 
-def _stale(repository, key, title, source, outputs, what):
+def _stale(repository, key, title, sources, outputs, what):
     """Why the export recorded under `key` no longer matches what it was made from, or None. It
-    must have been made from `source` and have written `outputs`; `what` names what to change."""
+    must have been made from `sources` and have written `outputs`; `what` names what to change."""
     root = Path(repository)
     start = title[0].upper() + title[1:]
     record = _records(repository).get(key)
@@ -35,7 +40,7 @@ def _stale(repository, key, title, source, outputs, what):
     if record.get("format") != EXPORT_FORMAT:
         return f"{start} was exported by an earlier version of the Lauder extension."
     made_from, wrote = record.get("made from", {}), record.get("wrote", {})
-    if source not in made_from or set(outputs) - set(wrote):
+    if set(sources) - set(made_from) or set(outputs) - set(wrote):
         return f"{EXPORT_RECORD} does not say how {title} was exported."
     for name, fingerprint in made_from.items():
         if not (root / name).exists():
@@ -54,7 +59,7 @@ def _stale(repository, key, title, source, outputs, what):
 def stale_exports(repository, key="brooklyn-bridge"):
     """Why the level's exports no longer match what they were made from, or None when they do."""
     level = LEVELS[key]
-    return _stale(repository, key, level.title, level.blend, (level.layout, level.scene),
+    return _stale(repository, key, level.title, (level.blend,), (level.layout, level.scene),
                   "the level")
 
 
@@ -72,8 +77,50 @@ def stale_model_export(repository, name):
     """Why the scene file of a model that the game creates (SPAWNED) no longer matches its files,
     or None when it does."""
     outputs = (spawned_scene(name),) + ((MODEL_METADATA[name],) if name in MODEL_METADATA else ())
-    return _stale(repository, _model_key(name), f"the {name} model", model_file(name),
+    sources = (model_file(name),)
+    if name == ROBOT:
+        sources += (ROBOT_CREDIT,)
+        outputs += (ROBOT_ACKNOWLEDGEMENTS,)
+    return _stale(repository, _model_key(name), f"the {name} model", sources,
                   outputs, "the model")
+
+
+def robot_credit(repository):
+    """The canonical notice and the fingerprint of the same bytes used by both exports."""
+    path = Path(repository) / ROBOT_CREDIT
+    if not path.is_file():
+        raise LayoutError(f"{ROBOT_CREDIT} is missing.")
+    data = path.read_bytes()
+    credit = data.decode("utf-8").strip()
+    if not credit:
+        raise LayoutError(f"{ROBOT_CREDIT} must contain the model's attribution.")
+    return credit, hashlib.sha256(data).hexdigest()
+
+
+def _embed_robot_credit(path, credit):
+    """Change only layer metadata in a temporary Blender export, retaining its packaged assets."""
+    from pxr import Sdf, UsdUtils
+
+    with tempfile.TemporaryDirectory() as folder:
+        scratch = Path(folder)
+        with zipfile.ZipFile(path) as package:
+            names = package.namelist()
+        if not names or any(Path(name).is_absolute() or ".." in Path(name).parts for name in names):
+            raise LayoutError("The robot USDZ contains an invalid archive path.")
+        if not UsdUtils.ExtractUsdzPackage(str(path), str(scratch / "unpacked")):
+            raise LayoutError("The robot USDZ could not be unpacked for its credit.")
+        layer = Sdf.Layer.FindOrOpen(str(scratch / "unpacked" / names[0]))
+        if layer is None:
+            raise LayoutError("The robot USDZ has no readable root layer.")
+        layer.documentation = layer.documentation + "\n\n" + credit
+        metadata = dict(layer.customLayerData)
+        metadata["lauderAssetCredit"] = credit
+        layer.customLayerData = metadata
+        packaged = scratch / "credited.usdz"
+        if not layer.Save() or not UsdUtils.CreateNewUsdzPackage(
+                Sdf.AssetPath(layer.identifier), str(packaged)):
+            raise LayoutError("The robot USDZ credit could not be saved.")
+        shutil.copyfile(packaged, path)
 
 
 def record_exports(repository, key, made_from, wrote):
@@ -274,6 +321,8 @@ def export_model(repository, name, made_from=None):
     if name == ROBOT:
         generator = "blender/extensions/lauder_levels/robot_geometry.py"
         made_from[generator] = file_fingerprint(root / generator)
+        credit, credit_fingerprint = robot_credit(repository)
+        made_from[ROBOT_CREDIT] = credit_fingerprint
     metadata = emit_robot_geometry() if name == ROBOT else None
     options = dict(SCENE_EXPORT)
     if name == ROBOT:
@@ -290,11 +339,16 @@ def export_model(repository, name, made_from=None):
     with tempfile.TemporaryDirectory() as folder:
         exported = Path(folder) / target.name
         bpy.ops.wm.usd_export(filepath=str(exported), **options)
+        if name == ROBOT:
+            _embed_robot_credit(exported, credit)
         shutil.copyfile(exported, target)
     wrote = {spawned_scene(name): file_fingerprint(target)}
     if metadata is not None:
         path = root / MODEL_METADATA[name]
         path.write_text(metadata)
         wrote[MODEL_METADATA[name]] = file_fingerprint(path)
+        acknowledgement = root / ROBOT_ACKNOWLEDGEMENTS
+        acknowledgement.write_text(credit + "\n", encoding="utf-8")
+        wrote[ROBOT_ACKNOWLEDGEMENTS] = file_fingerprint(acknowledgement)
     record_exports(repository, _model_key(name), made_from, wrote)
     return target
