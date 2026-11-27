@@ -20,11 +20,13 @@ struct TouchControls: UIViewRepresentable {
   /// "Formation", or "Follow" while anyone is going or holding, when it calls them back.
   let formationTitle: String
   /// The companions the order menu offers on its left and right, as the HUD orders them; nil
-  /// until orders are offered, and pressing the ground does nothing (ADR 0003, phase S3).
+  /// while orders are unavailable; quick ground taps can still target an enemy.
   let orderNames: (left: String, right: String)?
   /// The pause menu's Vibration choice as it stands, "Vibration: On" or "Vibration: Off", a
   /// button shown only while paused (ADR 0008).
   let vibrationTitle: String
+  /// The pause menu's current status-panel choice.
+  let panelTitle: String
   let mode: GameSession.Mode
 
   func makeUIView(context: Context) -> Surface {
@@ -38,7 +40,7 @@ struct TouchControls: UIViewRepresentable {
       actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
       swapTitle: swapTitle, showsFormation: showsFormation,
       formationTitle: formationTitle, orderNames: orderNames,
-      vibrationTitle: vibrationTitle, mode: mode, generation: generation)
+      vibrationTitle: vibrationTitle, panelTitle: panelTitle, mode: mode, generation: generation)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -56,6 +58,7 @@ struct TouchControls: UIViewRepresentable {
     private let swap = TouchZone()
     private let formation = TouchZone(title: "Formation")
     private let vibration = TouchZone()
+    private let panel = TouchZone()
     private let menu = OrderMenu()
     private var generation: Int?
     private var mode = GameSession.Mode.exploring
@@ -75,19 +78,20 @@ struct TouchControls: UIViewRepresentable {
       backgroundColor = .clear
       isMultipleTouchEnabled = true
       for zone in [
-        stick, action, cycle, pause, fire, dodge, swap, formation, vibration,
+        stick, action, cycle, pause, fire, dodge, swap, formation, vibration, panel,
       ] {
         addSubview(zone)
       }
       menu.isHidden = true
       addSubview(menu)
       fire.accessibilityLabel = "Fire"
-      fire.accessibilityHint = "Draws the weapon, then fires at the marked target while held."
+      fire.accessibilityHint = "Fires while held. Tap an enemy to target it."
       dodge.accessibilityHint =
         "Rolls a short way in the direction you move. Shots pass through you while you roll."
       formation.accessibilityHint =
         "Changes formation or calls everyone back. Hold the ground for squad orders, including Attack and Defend."
       vibration.accessibilityHint = "Turns vibration off, or on again."
+      panel.accessibilityHint = "Shows or hides the status panel."
       swap.accessibilityHint = "Brings the leader's other weapon into hand."
       stick.accessibilityLabel = "Move"
       stick.accessibilityHint = "Drag to move the active character. Lift your finger to stop."
@@ -113,7 +117,7 @@ struct TouchControls: UIViewRepresentable {
       }
       let buttons: [(TouchZone, TouchInput.Button)] = [
         (cycle, .cycle), (pause, .pause), (fire, .fire), (dodge, .dodge), (formation, .formation),
-        (vibration, .vibration), (swap, .swap),
+        (vibration, .vibration), (panel, .panel), (swap, .swap),
       ]
       for (zone, button) in buttons {
         zone.changed = { [weak controls] _, isPressed, generation in
@@ -127,7 +131,7 @@ struct TouchControls: UIViewRepresentable {
     func update(
       actionTitle: String, nextLeaderName: String?, showsFire: Bool, swapTitle: String,
       showsFormation: Bool, formationTitle: String, orderNames: (left: String, right: String)?,
-      vibrationTitle: String, mode: GameSession.Mode, generation: Int
+      vibrationTitle: String, panelTitle: String, mode: GameSession.Mode, generation: Int
     ) {
       self.mode = mode
       self.orderNames = orderNames
@@ -135,14 +139,41 @@ struct TouchControls: UIViewRepresentable {
         reset()
       }
       formation.setTitle(formationTitle)
-      formation.accessibilityCustomActions =
-        mode == .exploring && orderNames != nil
-        ? [
+      if mode == .exploring, let orderNames {
+        formation.accessibilityCustomActions = [
           UIAccessibilityCustomAction(name: "Squad Attack") { [weak self] _ in
-            self?.sendStance(.attack) ?? false
+            self?.sendOrder(.attack, generation: generation) ?? false
           },
           UIAccessibilityCustomAction(name: "Squad Defend") { [weak self] _ in
-            self?.sendStance(.defend) ?? false
+            self?.sendOrder(.defend, generation: generation) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Send \(orderNames.left) ahead") {
+            [weak self] _ in self?.sendOrder(.leftGoes, generation: generation) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Send \(orderNames.right) ahead") {
+            [weak self] _ in self?.sendOrder(.rightGoes, generation: generation) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Send both ahead") { [weak self] _ in
+            self?.sendOrder(.bothGo, generation: generation) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Hold positions") { [weak self] _ in
+            self?.sendOrder(.hold, generation: generation) ?? false
+          },
+        ]
+      } else {
+        formation.accessibilityCustomActions = nil
+      }
+      fire.accessibilityCustomActions =
+        mode == .exploring && showsFire
+        ? [
+          UIAccessibilityCustomAction(name: "Target") { [weak self] _ in
+            self?.sendTarget(.acquire, generation: generation) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Next target") { [weak self] _ in
+            self?.sendTarget(.next, generation: generation) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Let go") { [weak self] _ in
+            self?.sendTarget(.release, generation: generation) ?? false
           },
         ] : nil
       if let orderNames {
@@ -150,7 +181,9 @@ struct TouchControls: UIViewRepresentable {
       }
       // Pause, a conversation or Restart closes the menu, and a source change resets it; either
       // way its finger must still lift.
-      if mode != .exploring || orderNames == nil, press?.isCancelled == false {
+      if mode != .exploring || (orderNames == nil && press?.isOpen == true),
+        press?.isCancelled == false
+      {
         press?.cancel()
         closeMenu()
       }
@@ -162,8 +195,8 @@ struct TouchControls: UIViewRepresentable {
       // Alone, there is nobody to switch to. A finger already on Next keeps it until it lifts,
       // so the release gate still sees that button let go.
       cycle.isHidden = nextLeaderName == nil && !cycle.isCaptured
-      // Fire shows for every leader, and stays while a finger holds it.
-      fire.isHidden = !showsFire && !fire.isCaptured
+      // Keep a held contact mounted until it lifts, including across mode changes.
+      fire.isHidden = (!showsFire || mode != .exploring) && !fire.isCaptured
       // Roll shows with Fire while exploring, so it never covers a conversation's lines, and
       // stays while a finger holds it. Swap sits above it on the same terms.
       dodge.isHidden = (!showsFire || mode != .exploring) && !dodge.isCaptured
@@ -176,6 +209,8 @@ struct TouchControls: UIViewRepresentable {
       // Vibration appears beside Resume while paused; held fingers remain captured.
       vibration.setTitle(vibrationTitle)
       vibration.isHidden = mode != .paused && !vibration.isCaptured
+      panel.setTitle(panelTitle)
+      panel.isHidden = mode != .paused && !panel.isCaptured
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
       for zone in [stick, cycle, fire, dodge, swap, formation] {
@@ -187,7 +222,7 @@ struct TouchControls: UIViewRepresentable {
       let generation = controls.touchGeneration
       self.generation = generation
       for zone in [
-        stick, action, cycle, pause, fire, dodge, swap, formation, vibration,
+        stick, action, cycle, pause, fire, dodge, swap, formation, vibration, panel,
       ] {
         zone.reset(generation: generation)
       }
@@ -219,40 +254,44 @@ struct TouchControls: UIViewRepresentable {
       // Beside Resume, shown only while paused.
       vibration.frame = CGRect(
         x: pause.frame.minX - 12 - 150, y: inset, width: 150, height: 44)
+      panel.frame = CGRect(x: vibration.frame.minX - 12 - 150, y: inset, width: 150, height: 44)
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
       let hit = super.hitTest(point, with: event)
       guard hit === self || hit === menu else { return hit }
-      // Open ground takes the order press while orders are offered, apart from the corner where
-      // Pause and the SwiftUI "Use controller" button sit. Otherwise touches pass through.
+      // Open ground takes target taps even before the squad offers orders, apart from the
+      // corner where Pause and the SwiftUI "Use controller" button sit.
       let corner = CGRect(
         x: bounds.width - 200, y: 0, width: 200, height: pause.frame.maxY + 76)
       let takesPress =
-        orderNames != nil && mode == .exploring && press == nil && !corner.contains(point)
+        mode == .exploring && press == nil && !corner.contains(point)
       return takesPress ? self : nil
     }
 
     // MARK: - The order press (ADR 0003, phase S3)
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-      guard press == nil, let touch = touches.first, let generation else { return }
+      guard mode == .exploring, press == nil, let touch = touches.first, let generation,
+        generation == controls.touchGeneration
+      else { return }
       press = OrderPress(at: touch.location(in: self), time: touch.timestamp)
       pressTouch = ObjectIdentifier(touch)
       pressGeneration = generation
       controls.setTouchButton(.ground, isPressed: true, generation: generation)
-      let began = touch.timestamp
-      pressTimer = Task { [weak self] in
-        try? await Task.sleep(for: .seconds(OrderPress.holdTime))
-        guard !Task.isCancelled else { return }
-        self?.openMenu(since: began)
+      if orderNames != nil {
+        let began = touch.timestamp
+        pressTimer = Task { [weak self] in
+          try? await Task.sleep(for: .seconds(OrderPress.holdTime))
+          guard !Task.isCancelled else { return }
+          self?.openMenu(since: began)
+        }
       }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
       guard let touch = pressing(touches) else { return }
-      let centre = press?.isOpen == true ? menu.convert(menu.choiceCentre, to: self) : nil
-      press?.move(to: touch.location(in: self), menuCentre: centre)
+      press?.move(to: touch.location(in: self))
       if press?.isOpen == true {
         menu.highlight(press?.choice)
       } else if press?.isCancelled == true {
@@ -261,8 +300,10 @@ struct TouchControls: UIViewRepresentable {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-      guard pressing(touches) != nil else { return }
-      endPress(sending: true)
+      guard let touch = pressing(touches) else { return }
+      let point = touch.location(in: self)
+      let tapped = press?.end(at: point, time: touch.timestamp) == true
+      endPress(sending: true, tapAt: tapped ? point : nil)
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -275,7 +316,9 @@ struct TouchControls: UIViewRepresentable {
     }
 
     private func openMenu(since began: TimeInterval) {
-      guard var press, press.began == began else { return }
+      guard mode == .exploring, orderNames != nil, var press, press.began == began,
+        pressGeneration == controls.touchGeneration
+      else { return }
       guard press.open(at: began + OrderPress.holdTime) else { return }
       self.press = press
       let size = menu.bounds.size
@@ -293,10 +336,12 @@ struct TouchControls: UIViewRepresentable {
 
     /// The finger lifted, or the press stopped: send the menu's choice when asked, at the point
     /// where the finger came down, and release the ground.
-    private func endPress(sending: Bool) {
+    private func endPress(sending: Bool, tapAt point: CGPoint? = nil) {
       pressTimer?.cancel()
       pressTimer = nil
-      if sending, let press, let choice = press.release {
+      if sending, let point, let target = targetTap(at: point) {
+        controls.setTouchTarget(.tap(target), generation: pressGeneration)
+      } else if sending, let press, let choice = press.release {
         let stance = choice == .attack || choice == .defend
         let point = stance ? nil : screenPoint(press.start)
         if stance || point != nil {
@@ -318,13 +363,30 @@ struct TouchControls: UIViewRepresentable {
       menu.highlight(nil)
     }
 
-    /// VoiceOver exposes the same non-spatial choices on the existing Formation control.
-    private func sendStance(_ command: GameSession.Command) -> Bool {
-      guard mode == .exploring, orderNames != nil else { return false }
-      let generation = controls.touchGeneration
+    /// VoiceOver uses the same orders; a nil terrain point means ahead of the leader.
+    private func sendOrder(_ command: GameSession.Command, generation: Int) -> Bool {
+      guard mode == .exploring, orderNames != nil, self.generation == generation,
+        generation == controls.touchGeneration
+      else { return false }
       endPress(sending: false)
       controls.setTouchOrder(.init(command: command, point: nil), generation: generation)
       return true
+    }
+
+    private func sendTarget(_ command: InputRules.TargetCommand, generation: Int) -> Bool {
+      guard mode == .exploring, self.generation == generation,
+        generation == controls.touchGeneration
+      else { return false }
+      endPress(sending: false)
+      controls.setTouchTarget(command, generation: generation)
+      return true
+    }
+
+    /// RealityView fills the window, while this surface can be inset by its safe area. Keep
+    /// taps in that rendered viewport's coordinates and points; an unmounted view has none.
+    func targetTap(at point: CGPoint) -> InputRules.TargetTap? {
+      guard let position = screenPoint(point), let window else { return nil }
+      return .init(point: position, viewHeight: Float(window.bounds.height))
     }
 
     /// A point in this view as a share of the whole window, which the game's view fills.

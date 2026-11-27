@@ -13,12 +13,17 @@
       // Use the app's world and ordinary input rules, including Pause and Restart.
       let game = Game()
       var runner = try #require(PlaytestRunner(scenario: name))
+      if name == "touch-fight" { game.world.controls.useTouchControls() }
       var frames = 0
       while !runner.isFinished {
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
         let world = game.world
         let raw = runner.input(world.playtestSnapshot)
+        if name == "touch-fight" {
+          try #require(!raw.hasControllerInput && !raw.hasKeyboardInput)
+          try #require(raw.stick == .zero && raw.aimStick == .zero)
+        }
         // The same input rules, release gate and mode handling as the rendered run, without
         // hardware or a scene subscription.
         let mode = world.session.mode

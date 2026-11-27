@@ -93,6 +93,63 @@ struct GuardRetaliationTests {
   }
 
   @Test
+  func aContinuouslyFiringCompanionBeyondAttackRangeCannotPinTheGuardAwayFromTheLeader() throws {
+    let trial = try Trial(figures: [.tom: [4, 7], .miki: [0, 13.5], .laura: [-6, 6]])
+    for _ in 0..<120 * 14 { trial.step(ordinaryCompanionFire: true) }
+    let robot = try #require(trial.robot)
+    let strategy = try #require(trial.fight.guardStrategies["guard"])
+    let miki = try #require(trial.figures[.miki])
+    #expect(trial.partyShots.filter { $0.actor == .miki }.count >= 8)
+    #expect(strategy.health < GuardStrategy.maximumHealth)
+    #expect(simd_distance(miki, robot.position) > RobotGuard.attackRange)
+    #expect(trial.warned.count >= 2 && trial.warned.allSatisfy { $0 == .tom })
+    #expect(robot.shotSerial >= 8 && !trial.retried)
+  }
+
+  @Test
+  func aWarnedCompanionMovingBeyondAttackRangeKeepsTheWarningThenReleasesAcquisition() throws {
+    let trial = try Trial(figures: [.tom: [4, 7], .miki: [0, 11.9], .laura: [-6, 6]])
+    try trial.awaitMikiWarning()
+    let warned = try #require(trial.robot)
+    let shotsBefore = warned.shotSerial
+    var elapsed: Float = 0
+    var trackedOutsideRange = false
+    for _ in 0..<120 * 6 {
+      let before = try #require(trial.robot)
+      if let point = trial.figures[.miki],
+        simd_distance(point, before.position) < 13
+      {
+        trial.figures[.miki] = point + [0, PartyBody.speed / 120]
+      }
+      trial.step(ordinaryCompanionFire: true)
+      elapsed += 1 / 120
+      let current = try #require(trial.robot)
+      let position = try #require(trial.figures[.miki])
+      if current.phase == .searching { break }
+      #expect(trial.fight.guardTarget(for: "guard") == .miki)
+      #expect(current.shotSerial == shotsBefore && current.committedPoint == nil)
+      if current.phase == .tracking,
+        simd_distance(position, current.position) > RobotGuard.attackRange
+      {
+        trackedOutsideRange = true
+      }
+    }
+    let searching = try #require(trial.robot)
+    #expect(trackedOutsideRange && searching.phase == .searching)
+    #expect(elapsed >= RobotGuard.noticeTime + warned.pattern.trackingTime - 0.02)
+    #expect(searching.shotSerial == shotsBefore && searching.committedPoint == nil)
+    // Continuous native fire outside range cannot immediately win the next acquisition.
+    trial.step(ordinaryCompanionFire: true)
+    #expect(trial.robot?.phase == .notice)
+    #expect(trial.fight.guardTarget(for: "guard") == .tom && trial.warned.last == .tom)
+    for _ in 0..<120 * 8 {
+      trial.step(ordinaryCompanionFire: true)
+      if let count = trial.robot?.shotSerial, count > shotsBefore { break }
+    }
+    #expect(try #require(trial.robot).shotSerial > shotsBefore && !trial.retried)
+  }
+
+  @Test
   func pauseFreezesTheWarningAndBypassOrRetryClearsItsTargetMemory() throws {
     let trial = try Trial()
     try trial.awaitMikiWarning()
@@ -176,10 +233,10 @@ struct GuardRetaliationTests {
       throw FixtureFailure.missingWarning
     }
 
-    func step(companionFire: Bool = false) {
+    func step(companionFire: Bool = false, ordinaryCompanionFire: Bool = false) {
       let leader = figures[session.leader] ?? .zero
       let point = fight.weakpoints(for: "guard").first
-      let target = point?.ground ?? .zero
+      let target = ordinaryCompanionFire ? robot?.position ?? .zero : point?.ground ?? .zero
       let miki = figures[.miki] ?? .zero
       let direction = target - miki
       let outcome = fight.step(
@@ -188,7 +245,9 @@ struct GuardRetaliationTests {
         companionIntents: [
           .miki: .init(
             lookAt: target, weapon: .longRifle,
-            fire: companionFire && point?.part == .sensor && point?.exposed == true,
+            targetsBody: ordinaryCompanionFire,
+            fire: ordinaryCompanionFire
+              || (companionFire && point?.part == .sensor && point?.exposed == true),
             activity: .attacking)
         ], facings: [.miki: simd_length(direction) > 0.001 ? simd_normalize(direction) : [0, -1]])
       retried = retried || outcome.retry

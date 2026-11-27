@@ -1,7 +1,9 @@
 # Guard retaliation
 
-**Date:** 26 November 2026\
+**Date:** 27 November 2026\
 **Status:** Delivered as internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) from `8a9908a` on `codex/testflight-guard-retaliation`, with the same app code as reviewed `251ee09`. Source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The preview PRs remain unmerged; phone gameplay acceptance is pending.
+
+The [review follow-up](prototype-plan.md#claude-review-follow-ups--in-development) corrects the out-of-range tracking stall; its new source checks are separate from those delivered preview results.
 
 ## Direction and comparison
 
@@ -11,10 +13,10 @@ The question is whether the existing guard responding to attacking companions gi
 
 ## One target for one warned cycle
 
-- **Select between cycles:** only patrol/search may choose a new member. Once engaged, prefer the freshest actual native attacker who is visible through real line of sight and within detection range; otherwise retain the leader as the acquisition candidate. Attack intentions, a stance command and changing leader are not attack evidence. The initial attack-memory tuning is **8 seconds of simulation time**.
+- **Select between cycles:** only patrol/search may choose a new member. Once engaged, prefer the freshest actual native attacker who is visible through real line of sight and within the existing **12 m attack range**; otherwise retain the leader as the acquisition candidate. Attack intentions, a stance command and changing leader are not attack evidence. The initial attack-memory tuning is **8 seconds of simulation time**.
 - **Keep the quiet approach:** before engagement the original leader-only sight cone applies. Exposing a companion or ordering Attack cannot wake the guard on its own or close the west bypass.
 - **Acknowledge a flank fairly:** after engagement a visible recent attacker may be noticed outside that cone. The body must still turn at its finite rate, complete notice/tracking and align within **5°** before committing. This is not an immediate sideways shot.
-- **Freeze identity:** the selected member stays fixed through notice, tracking, commitment, burst and recovery, including a leader switch. Before commitment the guard follows that member's actual visible position; losing sight returns it to searching rather than substituting someone else during the warning.
+- **Freeze identity:** the selected member stays fixed through notice, tracking, commitment, burst and recovery, including a leader switch. Before commitment the guard follows that member's actual visible position; losing sight returns it to searching rather than substituting someone else during the warning. If a still-visible target moves beyond attack range, the existing tracking warning completes before returning to searching for a fresh acquisition. Quiet detection and fixed-target sight still reach **14 m**.
 - **Freeze the shot point:** after commitment, the existing aim point remains fixed for the burst. Movement and switching do not make committed fire home in. Real barrel geometry, cover, spread, dodge and the existing one-injury-per-burst rule still decide the result.
 
 The initial memory length and alignment threshold are prototype values, not settled balance. This remains a small guard-specific value, not a shared threat/aggro framework.

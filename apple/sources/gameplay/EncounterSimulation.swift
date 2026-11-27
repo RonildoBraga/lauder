@@ -612,13 +612,20 @@ final class EncounterSimulation {
           from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
         var retaliation = false
         if spec.strategicGuard, let robot = state.robot {
-          let eligible = Set(
+          let visible = Set(
             party.compactMap { member, point -> PartyMember? in
               simd_distance(point, state.position) <= RobotGuard.detectionRange
                 && ballistics.isClear(
                   from: ballistics.point(state.position, above: 1.52),
                   to: ballistics.point(point))
                 ? member : nil
+            })
+          // Retaliation must be able to reach commitment. Keep the wider sight set for
+          // quiet detection and the fixed target's complete pre-commit warning.
+          let eligible = Set(
+            visible.filter { member in
+              party[member].map { simd_distance($0, state.position) <= RobotGuard.attackRange }
+                ?? false
             })
           var selection = guardTargets[spec.id] ?? GuardTargeting()
           selection.advance(dt: dt)
@@ -632,7 +639,7 @@ final class EncounterSimulation {
           chosenPoint =
             selected.flatMap { party[$0] }
             ?? robot.committedPoint ?? state.position
-          hasSight = selected.map { eligible.contains($0) } ?? false
+          hasSight = selected.map { visible.contains($0) } ?? false
           retaliation = selection.isRetaliation
         }
         if let discharge = state.stepRobot(
@@ -1324,7 +1331,19 @@ final class EncounterSimulation {
       releaseLock()
       return
     }
+    selectLock(from: leader, facing: facing, up: up, right: right, advancing: true)
     lockPressAge = 0
+  }
+
+  /// Explicit accessibility commands acquire or cycle without the controller's quick-second
+  /// press gesture. Acquire keeps a valid current lock; Next advances it deliberately.
+  func selectLock(
+    from leader: SIMD2<Float>, facing: SIMD2<Float>, up: SIMD2<Float>, right: SIMD2<Float>,
+    advancing: Bool
+  ) {
+    keepLock(from: leader)
+    lockPressAge = nil
+    guard advancing || lock == nil else { return }
     let candidates = lockable(from: leader)
     if let current = lock,
       let next = Targeting.nextLock(
@@ -1339,7 +1358,26 @@ final class EncounterSimulation {
     }
   }
 
-  /// Lets go of the lock, as a quick second press or the touch controls taking over do.
+  /// A tap chooses one native lock candidate by its projected body, rather than a component.
+  /// Empty ground cannot clear a valid lock; tapping the selected hostile deliberately does.
+  func tapLock(
+    at point: SIMD2<Float>, viewHeight: Float, projection: CameraProjection,
+    from leader: SIMD2<Float>
+  ) {
+    keepLock(from: leader)
+    guard
+      let selected = Targeting.touched(
+        at: point, viewHeight: viewHeight, projection: projection,
+        candidates: lockable(from: leader),
+        height: {
+          self.hostiles[$0]?.robot == nil ? PartyBody.height : RobotModelGeometry.halfHeight * 2
+        })
+    else { return }
+    lockPressAge = nil
+    lock = selected == lock ? nil : selected
+  }
+
+  /// Lets go of the lock, as a quick second controller press or an explicit touch command does.
   func releaseLock() {
     lock = nil
     lockPressAge = nil

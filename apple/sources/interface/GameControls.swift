@@ -25,8 +25,7 @@ final class GameControls {
   private(set) var formationButtonName = "Formation"
   /// The button that makes the leader dodge-roll.
   private(set) var dodgeButtonName = "Roll"
-  /// The press that locks the aim on a hostile, such as R3; touch has none, and Fire's
-  /// assisted aim picks for it (ADR 0020).
+  /// The press that locks the aim on a hostile, such as R3, or a touch on the enemy.
   private(set) var lockButtonName: String?
   /// The button that brings the leader's other weapon into hand (ADR 0021).
   private(set) var swapButtonName = "Swap"
@@ -119,6 +118,11 @@ final class GameControls {
     touchInput.setOrder(order, generation: generation)
   }
 
+  func setTouchTarget(_ target: InputRules.TargetCommand, generation: Int) {
+    guard isActive, touchControlsEnabled else { return }
+    touchInput.setTarget(target, generation: generation)
+  }
+
   private func cancelTouches() {
     touchInput.cancel()
     touchGeneration = touchInput.generation
@@ -166,12 +170,13 @@ final class GameControls {
       touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
       touchRestart: touch.touchRestart,
       touchVibration: touch.touchVibration,
+      touchPanel: touch.touchPanel,
       touchFire: touch.touchFire,
       touchFormation: touch.touchFormation,
       touchDodge: touch.touchDodge,
       touchSwap: touch.touchSwap,
       touchGround: touch.touchGround,
-      touchMark: touch.touchMark, touchOrder: touch.touchOrder
+      touchMark: touch.touchMark, touchOrder: touch.touchOrder, touchTarget: touch.touchTarget
     )
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
@@ -274,7 +279,7 @@ final class GameControls {
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
-      aim: nil, formation: "Formation", dodge: "Roll", lock: nil, swap: "Swap")
+      aim: nil, formation: "Formation", dodge: "Roll", lock: "Tap enemy", swap: "Swap")
   }
 
   private func showSource(

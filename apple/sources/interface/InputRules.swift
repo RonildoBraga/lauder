@@ -9,6 +9,17 @@ enum InputRules {
     let aspect: Float
   }
 
+  /// A tap's screen location and screen height in points, for a device-independent pick radius.
+  struct TargetTap: Equatable, Sendable {
+    let point: ScreenPoint
+    let viewHeight: Float
+  }
+
+  enum TargetCommand: Equatable, Sendable {
+    case tap(TargetTap)
+    case acquire, next, release
+  }
+
   /// A squad order from the touch menu, sent once when its finger lifts (ADR 0003, phase S3).
   struct TouchOrder: Equatable, Sendable {
     let command: GameSession.Command
@@ -78,6 +89,8 @@ enum InputRules {
     var touchRestart = false
     /// The touch layout's Vibration button, shown only while paused (ADR 0008).
     var touchVibration = false
+    /// The touch pause menu's status-panel toggle.
+    var touchPanel = false
     var touchFire = false
     var touchFormation = false
     /// The touch layout's Roll button.
@@ -91,6 +104,8 @@ enum InputRules {
     var touchMark: ScreenPoint?
     /// An order the touch menu sent since the last sample.
     var touchOrder: TouchOrder?
+    /// A one-shot tap or accessible targeting action, sent since the last sample.
+    var touchTarget: TargetCommand?
 
     var hasMovementKey: Bool { left || right || up || down }
     var hasArrowKey: Bool { arrowUp || arrowDown || arrowLeft || arrowRight }
@@ -131,6 +146,7 @@ enum InputRules {
     var swapWasPressed = false
     var bothGoWasPressed = false
     var holdWasPressed = false
+    var panelWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -159,6 +175,8 @@ enum InputRules {
     var markPoint: ScreenPoint?
     /// A fresh press of the touch Vibration button while paused (ADR 0008).
     var vibrationPressed = false
+    /// A fresh touch status-panel press, accepted only while paused.
+    var panelPressed = false
     /// Where the right stick, or I, K, J and L, aims while exploring, in the stick's terms: up
     /// and right on the screen. Nil inside the dead zone (ADR 0007).
     var aim: SIMD2<Float>?
@@ -170,6 +188,8 @@ enum InputRules {
     /// A fresh press of the weapon switch while exploring: the leader's other weapon comes
     /// into hand (ADR 0021).
     var swapPressed = false
+    /// A fresh touch targeting event while exploring; it does not fire the weapon.
+    var targetCommand: TargetCommand?
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -183,6 +203,7 @@ enum InputRules {
     let cycle = raw.keyboardSwitch || raw.controllerSwitch || raw.touchSwitch
     let restart = raw.touchRestart
     let vibration = raw.touchVibration
+    let panel = raw.touchPanel
     let fire = raw.keyboardFire || raw.controllerFire || raw.touchFire
     let formation = raw.keyboardFormation || raw.controllerFormation || raw.touchFormation
     let dodge = raw.keyboardDodge || raw.controllerDodge || raw.touchDodge
@@ -221,6 +242,7 @@ enum InputRules {
     next.swapWasPressed = swap
     next.bothGoWasPressed = raw.keyboardBothGo
     next.holdWasPressed = raw.keyboardHold
+    next.panelWasPressed = panel
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
       next.needsNeutralInput =
@@ -232,7 +254,8 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || raw.hasDpad || raw.touchGround || vibration || dodge || lock || swap
+        || raw.hasDpad || raw.touchGround || vibration || panel || dodge || lock || swap
+        || raw.touchTarget != nil
       return (.neutral, next)
     }
     let pauseEdge = pause && !state.pauseWasPressed
@@ -252,7 +275,8 @@ enum InputRules {
           movement: .zero, actionPressed: actionEdge, pausePressed: false, switchPressed: false,
           menuMove: direction != state.menuDirection ? direction : 0,
           restartPressed: restart && !state.restartWasPressed,
-          vibrationPressed: vibration && !state.vibrationWasPressed), next
+          vibrationPressed: vibration && !state.vibrationWasPressed,
+          panelPressed: panel && !state.panelWasPressed), next
       )
     case .dialogue:
       // Action shows the next line; movement, switch, formation, lock, weapon and order presses
@@ -290,6 +314,7 @@ enum InputRules {
       }
       // A switch or a squad command in the same sample discards the leader's action and roll.
       let commanded = switchEdge || formationEdge || command != nil
+      let lockEdge = lock && !state.lockWasPressed
       return (
         Input(
           movement: movement,
@@ -304,8 +329,9 @@ enum InputRules {
           markPoint: raw.touchMark,
           aim: aim,
           dodgePressed: dodge && !state.dodgeWasPressed && !commanded,
-          lockPressed: lock && !state.lockWasPressed,
-          swapPressed: swap && !state.swapWasPressed
+          lockPressed: lockEdge,
+          swapPressed: swap && !state.swapWasPressed,
+          targetCommand: commanded || lockEdge ? nil : raw.touchTarget
         ), next
       )
     }

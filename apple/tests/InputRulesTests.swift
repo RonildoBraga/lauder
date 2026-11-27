@@ -315,6 +315,8 @@ struct InputRulesTests {
     InputRules.Raw(arrowLeft: true),
     InputRules.Raw(touchGround: true),
     InputRules.Raw(touchVibration: true),
+    InputRules.Raw(touchPanel: true),
+    InputRules.Raw(touchTarget: .acquire),
     InputRules.Raw(controllerLock: true),
     InputRules.Raw(keyboardLock: true),
     InputRules.Raw(controllerSwap: true),

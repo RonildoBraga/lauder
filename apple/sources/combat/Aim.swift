@@ -124,6 +124,61 @@ enum Targeting {
 
   /// Within this angle of the shooter's facing, a hostile counts as ahead.
   static let aheadAngle: Float = 75 * .pi / 180
+  /// Distance from a projected body, in screen points, rather than world units or pixels.
+  static let touchRadius: Float = 30
+
+  /// The nearest on-screen body to a tap. Projection and body heights come from the world;
+  /// this value-only query neither changes the lock nor decides whether a shot is allowed.
+  static func touched(
+    at point: SIMD2<Float>, viewHeight: Float, projection: CameraProjection,
+    candidates: [Candidate], height: (String) -> Float
+  ) -> String? {
+    let scale = SIMD2(projection.aspect * viewHeight, viewHeight)
+    guard point.x.isFinite, point.y.isFinite,
+      (0...1).contains(point.x), (0...1).contains(point.y),
+      scale.x.isFinite, scale.y.isFinite, scale.x > 0, scale.y > 0
+    else { return nil }
+    return candidates.compactMap { candidate -> (id: String, distance: Float)? in
+      let height = height(candidate.id)
+      guard height.isFinite, height > 0,
+        let feet = projection.screen(ofGround: candidate.position),
+        let head = projection.screen(
+          ofWorld: [candidate.position.x, height, candidate.position.y]),
+        let segment = visibleSegment(from: feet, to: head)
+      else { return nil }
+      let start = segment.0 * scale
+      let along = (segment.1 - segment.0) * scale
+      let offset = point * scale - start
+      let length = simd_length_squared(along)
+      let fraction = length > 0 ? min(1, max(0, simd_dot(offset, along) / length)) : 0
+      let distance = simd_length_squared(offset - along * fraction)
+      guard distance.isFinite, distance <= touchRadius * touchRadius else { return nil }
+      return (candidate.id, distance)
+    }.min {
+      $0.distance == $1.distance ? $0.id < $1.id : $0.distance < $1.distance
+    }?.id
+  }
+
+  /// Clip to the viewport, so a nearby but entirely off-screen body is not a tap target.
+  private static func visibleSegment(
+    from start: SIMD2<Float>, to end: SIMD2<Float>
+  ) -> (SIMD2<Float>, SIMD2<Float>)? {
+    let delta = end - start
+    var first: Float = 0
+    var last: Float = 1
+    for axis in 0..<2 {
+      if abs(delta[axis]) < 0.000001 {
+        guard (0...1).contains(start[axis]) else { return nil }
+      } else {
+        let low = -start[axis] / delta[axis]
+        let high = (1 - start[axis]) / delta[axis]
+        first = max(first, min(low, high))
+        last = min(last, max(low, high))
+        guard first <= last else { return nil }
+      }
+    }
+    return (start + delta * first, start + delta * last)
+  }
 
   static func target(
     from position: SIMD2<Float>, facing: SIMD2<Float>, candidates: [Candidate], range: Float,
