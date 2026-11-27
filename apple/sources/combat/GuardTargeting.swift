@@ -32,7 +32,7 @@ struct GuardTargeting {
     switch phase {
     case .hidden, .down, .cleared:
       reset()
-    case .notice, .tracking, .committed, .burst, .recovering:
+    case .notice, .tracking, .committed, .burst, .recovering, .staggered:
       break
     case .patrol, .searching:
       // Quiet acquisition remains leader-only. Merely exposing a companion or ordering

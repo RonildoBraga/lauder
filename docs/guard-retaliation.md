@@ -1,15 +1,17 @@
 # Guard retaliation
 
 **Date:** 27 November 2026\
-**Status:** Delivered as internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview) from `8a9908a` on `codex/testflight-guard-retaliation`, with the same app code as reviewed `251ee09`. Source and Simulator verification are recorded in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The preview PRs remain unmerged; phone gameplay acceptance is pending.
+**Status:** The earlier internal [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview), source `8a9908a` with app code matching reviewed `251ee09`, records the original retaliation comparison below. That stack subsequently merged into main and its targeting is retained in [build 39](prototype-plan.md#build-39-testflight-preview). The current [leg-break stagger](robot-eye-legs-grenades.md#leg-break-stagger-follow-up), under [issue #199](https://github.com/RonildoBraga/lauder/issues/199), is a separate working implementation with passed final local source and rendered checks, unmerged and unuploaded. Build 39’s basic phone success does not establish its behaviour or measured performance.
 
 The [review follow-up](prototype-plan.md#claude-review-follow-ups--in-development) corrects the out-of-range tracking stall; its new source checks are separate from those delivered preview results.
 
 ## Direction and comparison
 
+The following direction and comparison preserve the original retaliation assignment; later damage/locomotion changes and issue #199 keep their own source records.
+
 After build 34 the maintainer reported **“The Attack and Defend controls are working”**, then said **“proceed”** to a bounded retaliation proposal. [Issue #171](https://github.com/RonildoBraga/lauder/issues/171) records this relayed chat direction. The report confirms the basic commands, not every physical input path or sustained performance. That implementation assignment did not authorise a merge, release or cover/level changes. After reviewing the Simulator preview, the maintainer separately replied **“proceed”** to publishing the reviewed version for a short TestFlight comparison. [PR #173](https://github.com/RonildoBraga/lauder/pull/173) records the resulting internal preview. On 27 November the maintainer separately assigned [cover and companion spacing](bridge-cover-spacing.md); that pass keeps this guard's damage, patterns, timings and weakpoint sequence unchanged, with merge still unassigned.
 
-The question is whether the existing guard responding to attacking companions gives Attack and Defend useful consequences. Keep the current damage, three-round precision/five-round fan patterns, warning/recovery timings and [dismantling rules](strategic-guard.md#prototype-dismantling-sequence). Compare this change before tuning cover placement or expanding the encounter.
+The question is whether the existing guard responding to attacking companions gives Attack and Defend useful consequences. Keep the current damage, three-round precision/five-round fan patterns, warning/recovery timings and [dismantling rules](strategic-guard.md#earlier-mandatory-prototype). Compare this change before tuning cover placement or expanding the encounter.
 
 ## One target for one warned cycle
 
@@ -18,6 +20,8 @@ The question is whether the existing guard responding to attacking companions gi
 - **Acknowledge a flank fairly:** after engagement a visible recent attacker may be noticed outside that cone. The body must still turn at its finite rate, complete notice/tracking and align within **5°** before committing. This is not an immediate sideways shot.
 - **Freeze identity:** the selected member stays fixed through notice, tracking, commitment, burst and recovery, including a leader switch. Before commitment the guard follows that member's actual visible position; losing sight returns it to searching rather than substituting someone else during the warning. If a still-visible target moves beyond attack range, the existing tracking warning completes before returning to searching for a fresh acquisition. Quiet detection and fixed-target sight still reach **14 m**.
 - **Freeze the shot point:** after commitment, the existing aim point remains fixed for the burst. Movement and switching do not make committed fire home in. Real barrel geometry, cover, spread, dodge and the existing one-injury-per-burst rule still decide the result.
+
+The new [leg-break stagger](robot-eye-legs-grenades.md#leg-break-stagger-follow-up) is an explicit interruption exception: an actual newly detached nonlethal leg cancels unresolved rounds and requires a fresh complete warning, while preserving the interrupted volley’s full recovery or an existing recovery’s remainder. Stagger time consumes that recovery; its completion retains the usual pattern change and bounded reposition. Already resolved injuries remain real. Ordinary hits, a leader switch and Defend still cannot cancel a warned burst. Final local source and rendered checks pass for this exception on `4e114bb`, as tracked in the [verification record](prototype-plan.md#leg-break-stagger--in-development) under [issue #199](https://github.com/RonildoBraga/lauder/issues/199); it is not part of build 39.
 
 The initial memory length and alignment threshold are prototype values, not settled balance. This remains a small guard-specific value, not a shared threat/aggro framework.
 

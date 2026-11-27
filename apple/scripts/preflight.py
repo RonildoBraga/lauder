@@ -24,6 +24,7 @@ ASSETS = (
     "apple/sources/content/sounds/dome-ready.wav",
     "apple/sources/content/sounds/dome-up.wav",
     "apple/sources/content/sounds/empty-click.wav",
+    "apple/sources/content/sounds/guard-leg-break.wav",
     "apple/sources/content/sounds/guard-warning.wav",
     "apple/sources/content/sounds/long-rifle.wav",
     "apple/sources/content/sounds/minigun-spin.wav",

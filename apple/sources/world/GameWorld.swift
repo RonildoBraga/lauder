@@ -150,6 +150,9 @@ final class GameWorld {
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
+  /// Source cancellation invalidates an undrained leg cue even if neutral input clears before
+  /// the next frame. Ordinary completed shots and impacts remain event history.
+  @ObservationIgnored private var legBreakGeneration = 0
   @ObservationIgnored private var firePressPending = false
   /// Where the current encounter's retry places the leader.
   @ObservationIgnored private var retrySpot: SIMD2<Float>?
@@ -352,11 +355,18 @@ final class GameWorld {
   func takeCombatEvents() -> [CombatEvent] {
     defer { combatEvents.removeAll(keepingCapacity: true) }
     return combatEvents.filter { event in
-      guard case .guardTargeted(let member, _) = event else { return true }
-      // Several fixed steps may precede one presented frame. Do not announce a target
-      // whose attack ended, was bypassed, or was interrupted before feedback drained.
-      return guardTarget == member && session.mode == .exploring
-        && !controls.needsNeutralInput && !isRetrying
+      switch event {
+      case .guardTargeted(let member, _):
+        // Several fixed steps may precede one presented frame. Do not announce a target
+        // whose attack ended, was bypassed, or was interrupted before feedback drained.
+        return guardTarget == member && session.mode == .exploring
+          && !controls.needsNeutralInput && !isRetrying
+      case .guardLegBroken:
+        return legBreakGeneration == controls.touchGeneration && session.mode == .exploring
+          && !controls.needsNeutralInput && !isRetrying
+      default:
+        return true
+      }
     }
   }
 
@@ -497,6 +507,9 @@ final class GameWorld {
 
   private func togglePause() {
     session.togglePause()
+    if session.mode == .paused {
+      combatEvents.removeAll { if case .guardLegBroken = $0 { true } else { false } }
+    }
     controls.requireNeutralInput()
   }
 
@@ -1313,6 +1326,10 @@ final class GameWorld {
       #endif
     }
     stage.showDamage(damage)
+    if legBreakGeneration != controls.touchGeneration {
+      combatEvents.removeAll { if case .guardLegBroken = $0 { true } else { false } }
+      legBreakGeneration = controls.touchGeneration
+    }
     combatEvents.append(contentsOf: events)
     if combatEvents.count > Self.keptEvents {
       combatEvents.removeFirst(combatEvents.count - Self.keptEvents)
@@ -1518,7 +1535,7 @@ final class GameWorld {
     clearDamageFeedback()
     combatEvents.removeAll {
       switch $0 {
-      case .guardTargeted, .damaged: true
+      case .guardTargeted, .guardLegBroken, .damaged: true
       default: false
       }
     }
@@ -1530,7 +1547,12 @@ final class GameWorld {
   private func clearDamageFeedback() {
     if !damageFeedback.labels.isEmpty { damageFeedback.clear() }
     stage.clearDamage()
-    combatEvents.removeAll { if case .damaged = $0 { true } else { false } }
+    combatEvents.removeAll {
+      switch $0 {
+      case .damaged, .guardLegBroken: true
+      default: false
+      }
+    }
   }
 
   private func updateCamera(deltaTime: Float) {

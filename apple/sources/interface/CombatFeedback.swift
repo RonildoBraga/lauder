@@ -73,6 +73,7 @@ enum CombatSound: String, CaseIterable, Sendable {
   case strikeBlock = "strike-block"
   case emptyClick = "empty-click"
   case guardWarning = "guard-warning"
+  case guardLegBreak = "guard-leg-break"
 
   /// What an event sounds like: each weapon its own shot or swing, the minigun's spin-up, each
   /// change of Tom's dome, a strike on a body or a block, and an empty click. Holding the dome
@@ -104,6 +105,7 @@ enum CombatSound: String, CaseIterable, Sendable {
     case .empty: .emptyClick
     case .leaderHit: nil
     case .guardTargeted: .guardWarning
+    case .guardLegBroken: .guardLegBreak
     case .damaged: nil
     }
   }
