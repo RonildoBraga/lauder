@@ -45,7 +45,7 @@ enum CombatEvent: Equatable, Sendable {
   var position: SIMD2<Float> {
     switch self {
     case .fired(_, let point, _), .spinUp(let point, _), .dome(_, let point),
-      .struckBody(let point), .struckBlock(let point), .empty(let point), .leaderHit(let point),
+      .struckBody(let point), .struckBlock(let point), .leaderHit(let point),
       .guardTargeted(_, let point), .guardLegBroken(let point), .droneWarning(let point),
       .crawlerWarning(let point):
       point
