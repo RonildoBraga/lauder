@@ -325,6 +325,7 @@ struct RobotGuard {
   }
 
   private mutating func turn(towards target: SIMD2<Float>, dt: Float, multiplier: Float) {
+    guard multiplier > 0 else { return }
     let offset = target - position
     guard simd_length_squared(offset) > 0.000001 else { return }
     let yaw = Movement.turn(
