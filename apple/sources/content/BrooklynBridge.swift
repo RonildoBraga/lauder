@@ -32,8 +32,7 @@ enum BrooklynBridge {
   /// It warns, commits its aim and fires a short burst, with the tower's stone as real cover.
   static let stranger = Level.Hostile(
     id: "stranger", name: "The guard robot", hiddenAt: layout.marker(named: "stranger.stand"),
-    standAt: layout.marker(named: "stranger.stand"), hits: 6, attack: .robot, strategicGuard: true,
-    windUp: 1, recovery: 1.8, range: 12)
+    standAt: layout.marker(named: "stranger.stand"), hits: 6, attack: .robot, strategicGuard: true)
 
   /// Two scout drones keep watch with the guard (issue #201). They circle it above sword reach
   /// and, once its fight is engaged, dive at the party one at a time. They fall when it falls.

@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import re
+import selectors
 import shutil
 import signal
 import subprocess
@@ -73,27 +74,57 @@ def boot(device):
         raise SystemExit("The simulator did not finish booting.")
 
 
-def start_recording(device, video):
+def start_recording(device, video, *, timeout=15):
     recorder = subprocess.Popen(
         ["xcrun", "simctl", "io", device, "recordVideo", "--codec=h264", "--force", str(video)],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    deadline = time.time() + 15
-    while time.time() < deadline:
-        line = recorder.stdout.readline()
-        if "Recording started" in line:
-            return recorder
-        if recorder.poll() is not None:
-            break
-    recorder.send_signal(signal.SIGINT)
-    raise SystemExit("Screen recording did not start.")
-
-
-def stop_recording(recorder):
-    recorder.send_signal(signal.SIGINT)
+    started = False
     try:
-        recorder.wait(timeout=30)
-    except subprocess.TimeoutExpired:
-        recorder.kill()
+        descriptor = recorder.stdout.fileno()
+        os.set_blocking(descriptor, False)
+        deadline = time.monotonic() + timeout
+        marker = b"Recording started"
+        pending = b""
+        with selectors.DefaultSelector() as ready:
+            ready.register(descriptor, selectors.EVENT_READ)
+            while (remaining := deadline - time.monotonic()) > 0:
+                if not ready.select(remaining) or time.monotonic() >= deadline:
+                    break
+                try:
+                    # TextIO.readline() can wait for a newline beyond the deadline.
+                    chunk = os.read(descriptor, 4096)
+                except BlockingIOError:
+                    continue
+                if not chunk:
+                    break
+                pending += chunk
+                if marker in pending:
+                    if recorder.poll() is None:
+                        started = True
+                        return recorder
+                    break
+                # Keep only the prefix that could continue in the next read, not a log buffer.
+                pending = pending[-(len(marker) - 1):]
+        raise SystemExit("Screen recording did not start.")
+    finally:
+        if not started:
+            stop_recording(recorder, timeout=1)
+
+
+def stop_recording(recorder, *, timeout=30):
+    try:
+        if recorder.poll() is None:
+            try:
+                recorder.send_signal(signal.SIGINT)
+            except ProcessLookupError:
+                pass
+        try:
+            recorder.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            recorder.kill()
+            recorder.wait(timeout=5)
+    finally:
+        recorder.stdout.close()
 
 
 def documents(device):

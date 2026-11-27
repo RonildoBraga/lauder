@@ -10,7 +10,6 @@ from pathlib import Path
 import plistlib
 import re
 import subprocess
-import sys
 import tempfile
 import time
 import urllib.error
