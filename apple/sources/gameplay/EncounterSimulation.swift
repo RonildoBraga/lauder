@@ -48,6 +48,8 @@ final class EncounterSimulation {
   func guardTarget(for id: String) -> PartyMember? { guardTargets[id]?.member }
   /// The member a warning scout drone watches (issue #201).
   func droneTarget(for id: String) -> PartyMember? { droneTargets[id] }
+  /// The member a pack crawler is going for (issue #208).
+  func crawlerTarget(for id: String) -> PartyMember? { crawlerTargets[id] }
 
   /// Presentation names the threatened member only while a real attack is being warned/fired.
   var guardTarget: PartyMember? {
@@ -202,12 +204,17 @@ final class EncounterSimulation {
   private let airspace: ScoutDrone.Airspace
   /// The member each warning drone watches, kept until its dive commits.
   private var droneTargets: [String: PartyMember] = [:]
-  /// Drones that have been hit, which attack before their guard has noticed the party.
-  private var alertedDrones: Set<String> = []
+  /// Pack members that have been hit, which attack before their guard has noticed the party.
+  private var alertedPack: Set<String> = []
+  /// The member each crawler is going for.
+  private var crawlerTargets: [String: PartyMember] = [:]
+  /// The level's blockers at a crawler's radius, for its walking and its rams (issue #208).
+  private let crawlerMotion: PartyMotion
 
   init(level: Level) {
     ballistics = Ballistics(level: level)
     airspace = ScoutDrone.Airspace(level: level)
+    crawlerMotion = PartyMotion(radius: Crawler.radius, obstacles: level.obstacles)
     startingLeader = level.party[0]
     weaponLeader = level.party[0]
     blockers = Aim.blockers(level.boxes, above: Self.aimHeight)
@@ -223,7 +230,8 @@ final class EncounterSimulation {
     hostiles = specs.mapValues { HostileState(spec: $0) }
     aggressiveGuards = []
     droneTargets = [:]
-    alertedDrones = []
+    alertedPack = []
+    crawlerTargets = [:]
     guardTargets = specs.filter { $0.value.strategicGuard }.mapValues { _ in GuardTargeting() }
     autonomousMembers = []
     memberFacings = [:]
@@ -287,9 +295,11 @@ final class EncounterSimulation {
       !robot.isDown, !robot.isCleared
     else { return false }
     hostiles[id]?.clearGuard()
-    for spec in encounter?.hostiles ?? [] where spec.isDrone {
+    for spec in encounter?.hostiles ?? [] where spec.isPack {
       hostiles[spec.id]?.clearDrone()
+      hostiles[spec.id]?.clearCrawler()
       droneTargets[spec.id] = nil
+      crawlerTargets[spec.id] = nil
     }
     grenade = nil
     blasts.removeAll(keepingCapacity: true)
@@ -481,7 +491,7 @@ final class EncounterSimulation {
       let end: SIMD2<Float>
       let height: Float
       var struck = guardState.id
-      if let id = intents[member]?.drone {
+      if let id = intents[member]?.drone ?? intents[member]?.crawler {
         guard
           companionCanFireAtBody(
             member, from: origin, at: id, weapon: weapon.kind, figures: figures)
@@ -598,7 +608,7 @@ final class EncounterSimulation {
       }
     }
     guard let encounter else {
-      settleDrones(dt: dt)
+      settlePack(dt: dt)
       fireLeader(
         leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: firing,
         inFight: false, session: session, outcome: &outcome)
@@ -634,6 +644,10 @@ final class EncounterSimulation {
     let party = figures.filter { session.party.contains($0.key) }
     let targets = party.filter { !untouchable.contains($0.key) }
     var threatNow: String?
+    // A pack member's warning outranks the guard's status, such as its recovery, which is
+    // exactly when the pack attacks, but never the guard's own warned attack.
+    var packThreat: String?
+    var guardWarns = false
     for spec in encounter.hostiles {
       guard var state = hostiles[spec.id] else { continue }
       if spec.attack == .robot {
@@ -694,6 +708,7 @@ final class EncounterSimulation {
             aggressiveGuards.insert(spec.id)
           }
           let targetName = chosenMember?.displayName ?? "Squad"
+          if [.notice, .tracking, .committed, .burst].contains(robot.phase) { guardWarns = true }
           switch robot.phase {
           case .notice, .tracking:
             threatNow =
@@ -722,7 +737,14 @@ final class EncounterSimulation {
       if spec.isDrone {
         stepDrone(
           spec, state: &state, in: encounter, party: party, targets: targets,
-          session: session, dt: dt, threat: &threatNow, outcome: &outcome)
+          session: session, dt: dt, threat: &packThreat, outcome: &outcome)
+        hostiles[spec.id] = state
+        continue
+      }
+      if spec.isCrawler {
+        stepCrawler(
+          spec, state: &state, in: encounter, party: party, targets: targets,
+          session: session, dt: dt, threat: &packThreat, outcome: &outcome)
         hostiles[spec.id] = state
         continue
       }
@@ -760,6 +782,7 @@ final class EncounterSimulation {
       hostiles[spec.id] = state
       faceHostile(spec.id, state, facing: state.position + rifle.facing)
     }
+    if let packThreat, !guardWarns { threatNow = packThreat }
     threat = threatNow
     if outcome.retry { return outcome }
     fireLeader(
@@ -914,6 +937,7 @@ final class EncounterSimulation {
       }
       : points.filter { $0.part == .eye }
     if let drone = hostiles[id]?.drone { return drone.centre }
+    if let crawler = hostiles[id]?.crawler { return crawler.centre }
     return preferred.min {
       simd_distance_squared($0.ground, origin) < simd_distance_squared($1.ground, origin)
     }?.centre ?? ballistics.point(hostilePoint(id))
@@ -994,6 +1018,11 @@ final class EncounterSimulation {
     {
       // Assistance raises the round to a drone it has chosen; a manual ray stays level.
       height = (drone.height - start.y) / simd_length(offset)
+    } else if case .body(let id) = path.strike, hostiles[id]?.crawler != nil,
+      simd_length(offset) > 0.001
+    {
+      // And lowers it to a crawler on the snow.
+      height = (Crawler.centreHeight - start.y) / simd_length(offset)
     } else {
       height = 0
     }
@@ -1102,9 +1131,11 @@ final class EncounterSimulation {
       if result.defeated {
         session.defeat(targetID)
         knockDown(targetID, from: shooter)
+        let dropped = dropPack(session: session, from: shooter)
         outcome.line =
-          dropDrones(session: session, from: shooter)
-          ? "The guard robot is down, and its drones fall with it." : "The guard robot is down."
+          dropped.isEmpty
+          ? "The guard robot is down."
+          : "The guard robot is down, and its \(dropped.joined(separator: " and ")) go down with it."
       } else if result.brokeComponent {
         var staggered = state
         if staggered.staggerRobot() {
@@ -1131,7 +1162,7 @@ final class EncounterSimulation {
         DamageHit(
           target: targetID, attacker: member, weapon: weapon, amount: applied,
           position: contact, effectiveness: .normal, brokeComponent: false)))
-    if state.drone != nil { alertDrone(targetID, by: member) }
+    if state.drone != nil || state.crawler != nil { alertPack(targetID, by: member) }
     if defeated {
       knockDown(targetID, from: shooter)
       outcome.line = "\(state.spec.name) is down."
@@ -1148,8 +1179,9 @@ final class EncounterSimulation {
     guardTargets[id]?.reset()
     enemyHandling[id]?.cancel()
     droneTargets[id] = nil
-    // The robot settles in place, and a drone falls out of the air in its own flight.
-    if state.robot == nil, state.drone == nil {
+    crawlerTargets[id] = nil
+    // The robot settles in place; a drone falls and a crawler collapses in their own motion.
+    if state.robot == nil, state.drone == nil, state.crawler == nil {
       falls[id] = Fall(away: state.position - shooter, yaw: hostileYaws[id] ?? 0)
     }
     hostileJolts[id] = nil
@@ -1180,7 +1212,7 @@ final class EncounterSimulation {
       // Circling drones would sway the camera; it leans towards the ground's hostiles.
       let nearest = hostiles.values.filter({
         current.contains($0.spec.id) && $0.isVisible && !$0.isDown && $0.robot?.isCleared != true
-          && $0.drone == nil
+          && $0.drone == nil && $0.crawler == nil
       }).min(by: {
         simd_distance_squared($0.position, leader) < simd_distance_squared($1.position, leader)
       })
@@ -1221,9 +1253,13 @@ final class EncounterSimulation {
       capturePose(id)
       return
     }
-    // A drone's presentation reads its own flight, fall included.
+    // A drone's and a crawler's presentations read their own motion, falls included.
     if let drone = state.drone {
       hostileYaws[id] = Movement.yaw(towards: drone.facing)
+      return
+    }
+    if let crawler = state.crawler {
+      hostileYaws[id] = Movement.yaw(towards: crawler.facing)
       return
     }
     if state.isDown {
@@ -1251,6 +1287,10 @@ final class EncounterSimulation {
       return Ballistics.Target(
         id: id, centre: drone.centre, halfHeight: ScoutDrone.halfHeight,
         radius: ScoutDrone.radius)
+    }
+    if let crawler = hostiles[id]?.crawler {
+      return Ballistics.Target(
+        id: id, centre: crawler.centre, halfHeight: Crawler.halfHeight, radius: Crawler.radius)
     }
     return Ballistics.Target(id: id, centre: ballistics.point(hostilePoint(id)))
   }
@@ -1327,7 +1367,7 @@ final class EncounterSimulation {
     let guardian = encounter.hostiles.first(where: \.strategicGuard)
     let centre = guardian.flatMap { hostiles[$0.id]?.position } ?? drone.home
     let engaged =
-      alertedDrones.contains(spec.id)
+      alertedPack.contains(spec.id)
       || guardian.map { aggressiveGuards.contains($0.id) } ?? true
     let othersAttack = encounter.hostiles.contains {
       $0.id != spec.id && hostiles[$0.id]?.drone?.isAttacking == true
@@ -1421,37 +1461,44 @@ final class EncounterSimulation {
   }
 
   /// Once their fight is over, a downed drone still falls to the snow and one cleared by the
-  /// quiet exit keeps circling its guard, harmless: neither can attack again.
-  private func settleDrones(dt: Float) {
+  /// quiet exit keeps circling its guard; a downed crawler collapses and a cleared one walks
+  /// back to its place and folds. None can attack again.
+  private func settlePack(dt: Float) {
     let guardian = specs.values.first(where: \.strategicGuard).flatMap { hostiles[$0.id] }
     for id in hostiles.keys.sorted() {
-      guard var state = hostiles[id], let drone = state.drone,
-        drone.phase == .down || drone.phase == .cleared
-      else { continue }
-      _ = state.stepDrone(
-        dt: dt, centre: guardian?.position ?? drone.home, target: nil, mayAttack: false,
-        airspace: airspace)
-      hostiles[id] = state
+      guard var state = hostiles[id] else { continue }
+      if let drone = state.drone, drone.phase == .down || drone.phase == .cleared {
+        _ = state.stepDrone(
+          dt: dt, centre: guardian?.position ?? drone.home, target: nil, mayAttack: false,
+          airspace: airspace)
+        hostiles[id] = state
+      } else if let crawler = state.crawler, crawler.phase == .down || crawler.phase == .cleared {
+        _ = state.stepCrawler(
+          dt: dt, target: nil, engaged: false, mayWindUp: false, motion: crawlerMotion,
+          guardian: nil, others: [])
+        hostiles[id] = state
+      }
     }
   }
 
-  /// When their guard goes down, its drones fall with it, so the fight still ends with it.
-  /// True when any was still flying.
-  private func dropDrones(session: GameSession, from shooter: SIMD2<Float>) -> Bool {
-    guard let encounter else { return false }
-    var dropped = false
-    for spec in encounter.hostiles where spec.isDrone {
+  /// When their guard goes down, its drones and crawlers go down with it, so the fight still
+  /// ends with it. Names the kinds that were still active, for the line.
+  private func dropPack(session: GameSession, from shooter: SIMD2<Float>) -> [String] {
+    guard let encounter else { return [] }
+    var kinds: [String] = []
+    for spec in encounter.hostiles where spec.isPack {
       guard let state = hostiles[spec.id], !state.isDown else { continue }
       session.defeat(spec.id)
       knockDown(spec.id, from: shooter)
-      dropped = true
+      let kind = spec.isDrone ? "drones" : "crawlers"
+      if !kinds.contains(kind) { kinds.append(kind) }
     }
-    return dropped
+    return kinds.sorted()
   }
 
-  /// A hit on a drone wakes it, and its guard, as a hit on the guard would.
-  private func alertDrone(_ id: String, by member: PartyMember) {
-    alertedDrones.insert(id)
+  /// A hit on a drone or crawler wakes it, and its guard, as a hit on the guard would.
+  private func alertPack(_ id: String, by member: PartyMember) {
+    alertedPack.insert(id)
     guard let guardian = encounter?.hostiles.first(where: \.strategicGuard) else { return }
     aggressiveGuards.insert(guardian.id)
     guardTargets[guardian.id]?.recordAttack(by: member)
@@ -1475,6 +1522,181 @@ final class EncounterSimulation {
         })
       else { return nil }
       return (spec.id, drone.position, kind)
+    }.min {
+      simd_distance($0.position, origin) < simd_distance($1.position, origin)
+    }
+  }
+
+  // MARK: - Pack crawlers (issue #208)
+
+  /// A pack crawler gets up once its guard's fight is engaged or it is hit, walks up to a
+  /// member it senses and rams them, never over the guard's own attacks and never two on one
+  /// member at once (docs/crawler-pack.md).
+  private func stepCrawler(
+    _ spec: Level.Hostile, state: inout HostileState, in encounter: Level.Encounter,
+    party: [PartyMember: SIMD2<Float>], targets: [PartyMember: SIMD2<Float>],
+    session: GameSession, dt: Float, threat: inout String?, outcome: inout Outcome
+  ) {
+    guard let crawler = state.crawler else { return }
+    let guardian = encounter.hostiles.first(where: \.strategicGuard)
+    let guardState = guardian.flatMap { hostiles[$0.id] }
+    let engaged =
+      alertedPack.contains(spec.id)
+      || guardian.map { aggressiveGuards.contains($0.id) } ?? true
+    let guardBusy =
+      guardState?.robot.map { ![.patrol, .recovering, .searching].contains($0.phase) } ?? false
+    // It senses over the low cover; only stone hides a member from it.
+    let senses = ballistics.point(crawler.position, above: 2)
+    func sees(_ member: PartyMember) -> Bool {
+      guard let point = party[member] else { return false }
+      return simd_distance(point, crawler.position) <= Crawler.leash
+        && ballistics.isClear(from: senses, to: ballistics.point(point, above: 2))
+    }
+    let claimed = Set(
+      encounter.hostiles.compactMap { other -> PartyMember? in
+        guard other.id != spec.id, hostiles[other.id]?.crawler?.isAttacking == true else {
+          return nil
+        }
+        return crawlerTargets[other.id]
+      })
+    // The named member stays with the fixed ram line through the wind-up and ram, even out
+    // of sight. Between attacks it keeps a sensed member or chooses the nearest, preferring
+    // one no other crawler is already ramming.
+    var watched = crawlerTargets[spec.id]
+    if !crawler.isAttacking {
+      watched = watched.flatMap { sees($0) ? $0 : nil }
+      if watched == nil {
+        func cost(_ member: PartyMember) -> Float {
+          simd_distance(party[member] ?? .zero, crawler.position)
+            + (claimed.contains(member) ? 4 : 0)
+        }
+        watched = PartyMember.allCases.filter(sees).min { cost($0) < cost($1) }
+      }
+    }
+    crawlerTargets[spec.id] = watched
+    let others = encounter.hostiles.compactMap { other -> SIMD2<Float>? in
+      guard other.id != spec.id, let pack = hostiles[other.id]?.crawler, !pack.isDown else {
+        return nil
+      }
+      return pack.position
+    }
+    let hull = guardState.flatMap { guardState -> (centre: SIMD2<Float>, radius: Float)? in
+      guard let robot = guardState.robot, guardState.isVisible, !guardState.isDown,
+        !robot.isCleared
+      else { return nil }
+      return (guardState.position, RobotModelGeometry.bodyRadius)
+    }
+    let before = crawler.phase
+    if let ram = state.stepCrawler(
+      dt: dt, target: watched.flatMap { party[$0] }, engaged: engaged,
+      mayWindUp: engaged && !guardBusy && !(watched.map(claimed.contains) ?? false),
+      motion: crawlerMotion, guardian: hull, others: others)
+    {
+      resolveRam(ram, state: &state, party: targets, session: session, outcome: &outcome)
+    }
+    guard let now = state.crawler else { return }
+    // Only a wind-up on the leader is heard: the light shows every one.
+    if now.phase == .windingUp, before != .windingUp, watched == session.leader {
+      events.append(.crawlerWarning(at: now.position))
+    }
+    switch now.phase {
+    case .windingUp:
+      threat =
+        threat ?? "\(spec.name) winding up on \(watched?.displayName ?? "the squad"). Step aside."
+    case .ramming:
+      threat = threat ?? "\(spec.name) ramming. Step aside."
+    default:
+      break
+    }
+  }
+
+  /// A ram's sweep in this step hits the first member in its way, once per ram. Tom's raised
+  /// dome shelters whoever is inside it from a crawler that started outside.
+  private func resolveRam(
+    _ ram: Crawler.Ram, state: inout HostileState, party: [PartyMember: SIMD2<Float>],
+    session: GameSession, outcome: inout Outcome
+  ) {
+    guard
+      let struck = party.filter({ Crawler.runsInto($0.value, along: ram) }).min(by: {
+        simd_distance($0.value, ram.from) < simd_distance($1.value, ram.from)
+          || simd_distance($0.value, ram.from) == simd_distance($1.value, ram.from)
+            && $0.key.rawValue < $1.key.rawValue
+      }),
+      state.acceptRamHit()
+    else { return }
+    if shieldIsUp, let tom = party[.tom], simd_distance(struck.value, tom) <= ShieldDome.radius,
+      simd_distance(ram.origin, tom) > ShieldDome.radius
+    {
+      events.append(.struckBlock(at: struck.value))
+      return
+    }
+    let direction = ram.to - ram.from
+    if simd_length(direction) > 0.0001 {
+      jolts[struck.key, default: BodyJolt()].push(
+        towards: simd_normalize(direction), by: BodyJolt.hit)
+    }
+    events.append(.struckBody(at: struck.value))
+    if struck.key == session.leader { events.append(.leaderHit(at: struck.value)) }
+    if session.takeHit(struck.key) { outcome.retry = true }
+  }
+
+  /// Whether standing at `point` is in a crawler's way: near the fixed line of one winding up
+  /// or ramming.
+  func crawlerThreatens(_ point: SIMD2<Float>, margin: Float = 0.25) -> Bool {
+    hostiles.values.contains {
+      !$0.isDown && $0.crawler?.threatens(point, margin: margin) == true
+    }
+  }
+
+  /// Whether walking straight from `start` to `end` passes through a crawler's ram line.
+  func crawlerThreatens(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Bool {
+    let steps = max(1, Int((simd_distance(start, end) / 0.25).rounded(.up)))
+    return (0...steps).contains {
+      crawlerThreatens(start + (end - start) * (Float($0) / Float(steps)))
+    }
+  }
+
+  /// Where a companion at `point` steps aside to from every crawler's ram line, among places
+  /// `isFree` allows (issue #208). It stays put if it is already clear, and keeps an earlier
+  /// choice that is still clear so it doesn't waver. Otherwise it takes the nearest place well
+  /// clear, so that it is still moving briskly as it leaves the line.
+  func crawlerAside(
+    from point: SIMD2<Float>, keeping earlier: SIMD2<Float>? = nil,
+    isFree: (SIMD2<Float>) -> Bool
+  ) -> SIMD2<Float>? {
+    for kept in [point] + (earlier.map { [$0] } ?? [])
+    where !crawlerThreatens(kept, margin: 0.45) && isFree(kept) {
+      return kept
+    }
+    let rings: [Float] = [1.25, 1.75, 2.5, 3]
+    let around = rings.flatMap { radius in
+      (0..<12).map { index in
+        let angle = Float(index) * .pi / 6
+        return point + SIMD2(cos(angle), sin(angle)) * radius
+      }
+    }
+    return around.first { !crawlerThreatens($0, margin: 0.75) && isFree($0) }
+  }
+
+  /// A crawler a companion under Attack can shoot now: the nearest that is winding up,
+  /// ramming, recovering or within 6 m, with a clear line from one of the companion's guns,
+  /// the gun in hand first.
+  func companionCrawler(
+    for member: PartyMember, from origin: SIMD2<Float>, figures: [PartyMember: SIMD2<Float>]
+  ) -> (id: String, position: SIMD2<Float>, weapon: Weapon.Kind)? {
+    guard let encounter else { return nil }
+    let kinds = [weapon(of: member).kind, otherWeapon(of: member).kind].filter(\.shoots)
+    return encounter.hostiles.compactMap {
+      spec -> (id: String, position: SIMD2<Float>, weapon: Weapon.Kind)? in
+      guard spec.isCrawler, let state = hostiles[spec.id], let crawler = state.crawler,
+        state.isVisible, !state.isDown, state.isTargetable, crawler.phase != .folded,
+        crawler.isAttacking || crawler.phase == .recovering
+          || simd_distance(crawler.position, origin) <= 6,
+        let kind = kinds.first(where: {
+          companionCanFireAtBody(member, from: origin, at: spec.id, weapon: $0, figures: figures)
+        })
+      else { return nil }
+      return (spec.id, crawler.position, kind)
     }.min {
       simd_distance($0.position, origin) < simd_distance($1.position, origin)
     }
@@ -1586,6 +1808,7 @@ final class EncounterSimulation {
   /// How far a hostile's body reaches from its centre: the robot's legs, or a person.
   private func bodyRadius(_ id: String) -> Float {
     if hostiles[id]?.drone != nil { return ScoutDrone.radius }
+    if hostiles[id]?.crawler != nil { return Crawler.radius }
     return hostiles[id]?.robot != nil ? RobotModelGeometry.navigationRadius : Aim.bodyRadius
   }
 
@@ -1724,11 +1947,13 @@ final class EncounterSimulation {
   /// from its shadow to its body, so a tap on either takes it.
   private func touchHeight(of id: String) -> Float {
     if let drone = hostiles[id]?.drone { return drone.height + ScoutDrone.halfHeight + 0.2 }
+    if hostiles[id]?.crawler != nil { return Crawler.centreHeight + Crawler.halfHeight + 0.2 }
     return hostiles[id]?.robot == nil ? PartyBody.height : RobotModelGeometry.halfHeight * 2
   }
 
   private func touchRadius(of id: String) -> Float {
     if hostiles[id]?.drone != nil { return ScoutDrone.radius + 0.15 }
+    if hostiles[id]?.crawler != nil { return Crawler.radius + 0.2 }
     return hostiles[id]?.robot == nil ? Aim.bodyRadius : RobotModelGeometry.navigationRadius
   }
 

@@ -136,6 +136,11 @@ struct SceneStyle {
     figure("scout-drone")
   }
 
+  /// A pack crawler (issue #208), from the `crawler` model, which CrawlerPresentation walks.
+  func crawler() -> Entity {
+    figure("crawler")
+  }
+
   /// A weapon, with its origin at the grip and its barrel ahead along -z. The simple shapes
   /// differ in length and weight; the same profile locates its visual and shot muzzle. Laura's
   /// blade glows in her colour, and Tom's shield is a small emitter on his arm (ADR 0021).

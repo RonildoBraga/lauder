@@ -2,7 +2,7 @@
 
 **Updated:** 27 November 2026
 
-**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The latest [build 43 preview](#build-43-combined-testflight-preview), frozen main/archive source `a71a9f9`, combines the scout drones, fixed warning targets and companion body-shot fallback. PR #203 is merged; issues #201/#207 are closed. Source/Simulator and release evidence retain their exact sources below. Combined physical controls/touch, audio, balance and sustained performance remain unverified; the separate #208/#209 quality work is not in this archive.
+**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The latest [build 43 preview](#build-43-combined-testflight-preview), frozen main/archive source `a71a9f9`, combines the scout drones, fixed warning targets and companion body-shot fallback. Claude's later [build 44 preview](#build-44-testflight-preview), from the crawler branch for PR #212, adds the crawler pack. PR #203 is merged; issues #201/#207 are closed. Source/Simulator and release evidence retain their exact sources below. Combined physical controls/touch, audio, balance and sustained performance remain unverified; the separate #208/#209 quality work is not in this archive.
 
 The [leg-break stagger](#leg-break-stagger--in-development), under closed [issue #199](https://github.com/RonildoBraga/lauder/issues/199), is merged in [PR #202](https://github.com/RonildoBraga/lauder/pull/202) and delivered in [build 40](#build-40-testflight-preview). Its original full local check and three final rendered encounters passed on `4e114bb`; the release reran source-bound checks on frozen main `9b5ec53` and verified the packaged Simulator routes separately. The preceding locomotion, ordinary damage, cover/spacing and retaliation checks retain their actual sources below. Generic phone feedback for build 39 and earlier previews does not establish controls, audibility, combat feel or sustained performance for build 40.
 
@@ -166,6 +166,36 @@ Choose **TestFlight → Lauder → Update**; the pause screen identifies **0.1.0
 ### Subsequent merge and phone feedback
 
 On 27 November 2026, after the delivery checkpoint above, the maintainer reported **“It worked”** and authorised **“merge PR #193 and the TestFlight release PR #195, then update the git issues”** (chat; no public permalink). PR #193 merged as **`8ae7e1723337d776a7a857c532700ea8b55fd008`**, whose tree matches checked feature head `a5fa434`. After the dependency merge, ancestry-only commit `265f2df` preserved PR #195’s delivered tree while retargeting it to main. [Check 134](https://github.com/RonildoBraga/lauder/actions/runs/45931744507) passed on that exact head at **2026-11-27 03:22:28 UTC**; fresh review-thread and finding checks found no outstanding finding. PR #195 then merged as **`35945ff7fa5a66c3610d2418a463f6dd68bca9c2`**. Main now contains build 38’s app sources; no additional upload occurred. This is basic phone feedback, not exhaustive controls or measured performance. The separate [locomotion follow-up](#leg-loss-locomotion--in-development) is not in the delivered archive. The original delivery proof and its pre-merge checkpoint above remain unchanged.
+
+## Crawler pack — in development
+
+The maintainer asked for another new enemy, “Once it's merged, create another new enemy but check the git issues and comments to coordinate things with Codex”, then said “start building the crawlers now” (chat, 27 November 2026; no public permalink). Asked which enemy and where, they chose **“Crawler pack”** **“With the first guard”**.
+- **The claim:** [issue #208](https://github.com/RonildoBraga/lauder/issues/208) records Claude's claim and the files it avoids.
+- **The rules:** the [crawler contract](crawler-pack.md) holds the starting rules. Three crawlers get up once the guard's fight is engaged. Each walks round blockers to a member and winds up for 0.6 s, its line fixed from the start. It rams 3 m, hurting at most once, then recovers, exposed. Crawlers never wind up over the guard's attacks or two on one member, and they go down with the guard.
+- **The model:** the [crawler model](../blender/assets/crawler/README.md) is simple shapes in the guard's colours.
+- **The branch:** it is cut from the drones work at Codex's `c6e6cb8`. That work merged into main as #203 (`a71a9f9`, with the same tree).
+
+**Checks, iPhone 13 Pro Max Simulator with iOS 27.0:**
+- **Full check, `27e2723`:** `./scripts/check` passed. That covers contracts, release contracts, the Blender tests, the 17 sounds, formatting, the build and the whole Swift Testing suite.
+- **`91d368e`, the drone and crawler warning fix:** the warning lifecycle, pack, crawler and drone suites pass, 28 tests in all. The new lifecycle test fails without the fix.
+- **Rendered routes, `91d368e`:** **crawler-fight** passed 27/27 steps in 65.4 s, and **drone-fight** passed 23/23 in 70.7 s.
+- **Frame time:** 16.7 ms mean and 16.8 ms p99 in the Simulator. That isn't phone performance.
+- **Not checked:** phone readability, audibility, balance and sustained frame rate. Merging needs the baseline-iPhone check.
+
+**After Codex's review**, `60b9878` fixes the three findings on PR #212: the dome's ram origin, rams sliding along walls, and pack warnings hidden by the guard's recovery text. The whole Swift suite passes, 590 tests, and each new test fails without its fix.
+
+### Build 44 TestFlight preview
+
+The maintainer answered “Yes, upload it” to Claude's question “Upload the crawlers to TestFlight as build 44 for a phone check?” (Claude session, 27 November 2026; no public permalink). That authorises this internal preview from the unmerged `claude/crawler-pack` branch. It does not authorise a merge. Discovery found builds up to 43 used, so the preview is **0.1.0 (44)**, committed on the branch in `d700791`.
+
+**Delivered.**
+- **Archive:** `apple/scripts/testflight archive --reviewed-preview` archived `claude/crawler-pack` at `d700791`. Before archiving, its own full `./scripts/check` passed on the frozen source. It then verified the signed archive, and the API-key upload succeeded once.
+- **Apple:** at 08:30 UTC on 27 November 2026, Apple reported the build COMPLETE and VALID, internal only, in beta testing and unexpired. It is available to the existing internal testers, the internal group set and tester membership are unchanged, and the upload had no errors.
+- **What was not done:** no tester was invited, no TestFlight test notes were written, and nothing was submitted to the public App Store. The archive and its symbols are kept privately.
+- **The branch afterwards:** later commits change only documentation.
+- **Phone check:** the maintainer played build 44 and answered “Feels right” to Claude's question “How do the crawlers play in build 44?” (Claude session, 27 November 2026; no public permalink).
+  - **What it shows:** general success on the phone, not a measured check of each control, sound, balance or sustained frame rate.
+  - **The merge:** it clears the baseline-iPhone gate that AGENTS.md sets for playable features. PR #212 merges under Claude's standing authorisation once its checks pass.
 
 ## Scout drones — in development
 

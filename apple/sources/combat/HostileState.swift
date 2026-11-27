@@ -33,6 +33,8 @@ struct HostileState {
   private(set) var robot: RobotGuard?
   /// A scout drone's own flight, which EncounterSimulation steps (issue #201).
   private(set) var drone: ScoutDrone?
+  /// A pack crawler's own movement, which EncounterSimulation steps (issue #208).
+  private(set) var crawler: Crawler?
   private var hasFired = false
   private var engaged = false
   private var flinched: Float = 0
@@ -49,13 +51,18 @@ struct HostileState {
       self.drone = drone
       position = drone.position
     }
+    if case .crawler(let slot) = spec.attack {
+      crawler = Crawler(home: spec.standAt, slot: slot)
+      position = spec.standAt
+    }
   }
 
   var isVisible: Bool { phase != .hidden }
   var isDown: Bool { phase == .down }
   /// Before the stranger opens fire, the party does not know that he is hostile.
   var isTargetable: Bool {
-    robot.map(\.isTargetable) ?? drone.map(\.isTargetable) ?? (!isDown && hasFired)
+    robot.map(\.isTargetable) ?? drone.map(\.isTargetable) ?? crawler.map(\.isTargetable)
+      ?? (!isDown && hasFired)
   }
 
   mutating func reveal() {
@@ -67,6 +74,11 @@ struct HostileState {
     }
     if drone != nil {
       drone?.reveal()
+      phase = .waiting
+      return
+    }
+    if crawler != nil {
+      crawler?.reveal()
       phase = .waiting
       return
     }
@@ -84,13 +96,15 @@ struct HostileState {
       drone?.engage()
       return
     }
+    // A crawler gets up when its fight is engaged, which EncounterSimulation decides.
+    if crawler != nil { return }
     if phase == .waiting { phase = attacking }
   }
 
   private var attacking: Phase {
     switch spec.attack {
     case .shoot: .aiming(remaining: spec.windUp)
-    case .robot, .drone: .waiting
+    case .robot, .drone, .crawler: .waiting
     }
   }
 
@@ -98,12 +112,29 @@ struct HostileState {
     phase = .down
     robot?.knockDown()
     drone?.knockDown()
+    crawler?.knockDown()
   }
 
   /// The quiet exit leaves a drone circling, harmless, for the rest of the run.
   mutating func clearDrone() { drone?.clear() }
 
   mutating func acceptDroneBurstHit() -> Bool { drone?.acceptBurstHit() ?? false }
+
+  /// The quiet exit sends a crawler back to its place, folded and harmless, for the run.
+  mutating func clearCrawler() { crawler?.clear() }
+
+  mutating func acceptRamHit() -> Bool { crawler?.acceptRamHit() ?? false }
+
+  mutating func stepCrawler(
+    dt: Float, target: SIMD2<Float>?, engaged: Bool, mayWindUp: Bool, motion: PartyMotion,
+    guardian: (centre: SIMD2<Float>, radius: Float)?, others: [SIMD2<Float>]
+  ) -> Crawler.Ram? {
+    let ram = crawler?.step(
+      dt: dt, target: target, engaged: engaged, mayWindUp: mayWindUp, motion: motion,
+      guardian: guardian, others: others)
+    if let crawler { position = crawler.position }
+    return ram
+  }
 
   mutating func stepDrone(
     dt: Float, centre: SIMD2<Float>, target: SIMD2<Float>?, mayAttack: Bool,

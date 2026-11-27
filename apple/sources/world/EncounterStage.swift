@@ -14,6 +14,7 @@ final class EncounterStage {
   private var hostileWeaponProps: [String: Entity] = [:]
   private var robots: [String: RobotPresentation] = [:]
   private var drones: [String: DronePresentation] = [:]
+  private var crawlers: [String: CrawlerPresentation] = [:]
   private var componentMarkers: [String: [ModelEntity]] = [:]
   private enum ComponentLook: Equatable { case damaged, nearBreak }
   private var componentLooks: [String: [ComponentLook?]] = [:]
@@ -71,12 +72,17 @@ final class EncounterStage {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
       let visual =
-        spec.attack == .robot ? style.robot() : spec.isDrone ? style.drone() : style.hostile()
+        spec.attack == .robot
+        ? style.robot()
+        : spec.isDrone ? style.drone() : spec.isCrawler ? style.crawler() : style.hostile()
       if spec.attack == .robot {
         robots[spec.id] = RobotPresentation(visual: visual, debrisParent: container)
       }
       if spec.isDrone {
         drones[spec.id] = DronePresentation(id: spec.id, visual: visual, shadowParent: container)
+      }
+      if spec.isCrawler {
+        crawlers[spec.id] = CrawlerPresentation(id: spec.id, visual: visual)
       }
       if spec.attack == .shoot {
         let weapon = style.weapon(for: .rifle)
@@ -183,6 +189,8 @@ final class EncounterStage {
           bodyDrop: robot.bodyDrop, dt: dt)
       } else if let presentation = drones[id], let drone = state.drone {
         presentation.update(drone, visible: state.isVisible, dt: dt)
+      } else if let presentation = crawlers[id], let crawler = state.crawler {
+        presentation.update(crawler, visible: state.isVisible, dt: dt)
       } else if let visual = visuals[id], let pose = fight.hostilePoses[id] {
         visual.orientation = pose.orientation
         visual.position = pose.position

@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 #: game creates and its combat sounds (ADR 0008).
 ASSETS = (
     "apple/sources/content/BrooklynBridge.usdz",
+    "apple/sources/content/models/crawler.usdz",
     "apple/sources/content/models/hostile.usdz",
     "apple/sources/content/models/laura.usdz",
     "apple/sources/content/models/miki.usdz",

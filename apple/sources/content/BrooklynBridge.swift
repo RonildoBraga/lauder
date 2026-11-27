@@ -43,20 +43,29 @@ enum BrooklynBridge {
       attack: .drone(orbit: Float(index) * .pi, slot: index))
   }
 
+  /// Three crawlers from the guard's pack wait folded behind and beside it (issue #208). Once
+  /// its fight is engaged they walk up to the party and ram, and they go down when it does.
+  static let crawlers = [SIMD2<Float>(-2.6, -1.4), [2.6, -1.4], [0, -3]].enumerated().map {
+    index, offset in
+    Level.Hostile(
+      id: "crawler.\(index + 1)", name: "Crawler", hiddenAt: stranger.standAt + offset,
+      standAt: stranger.standAt + offset, hits: Crawler.health, attack: .crawler(slot: index))
+  }
+
   /// The first fight, as the party walks through the first tower. A retry starts just outside
   /// its area, in the east arch.
   static let strangerEncounter = Level.Encounter(
     beat: .stranger, start: .area(layout.area(named: "stranger")),
-    retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger] + drones,
+    retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger] + drones + crawlers,
     cues: strangerCues, safeExit: layout.area(named: "robot.exit"))
 
-  /// The guard and its drones appear and engage together; the lines teach both.
+  /// The guard and its pack appear and engage together; the lines teach all three.
   private static var strangerCues: [(at: Float, cue: Level.Cue)] {
     var cues: [(at: Float, cue: Level.Cue)] = [
       (0, .reveal(stranger.id)), (0, .engage(stranger.id)),
     ]
-    for drone in drones {
-      cues += [(0, .reveal(drone.id)), (0, .engage(drone.id))]
+    for member in drones + crawlers {
+      cues += [(0, .reveal(member.id)), (0, .engage(member.id))]
     }
     cues += [
       (
@@ -64,29 +73,42 @@ enum BrooklynBridge {
         .say(speaker: "Miki", line: "Armoured. Aim for its red eye. Laura, those legs can break.")
       ),
       (3.6, .say(speaker: "Tom", line: droneLine)),
+      (6.6, .say(speaker: "Laura", line: crawlerLine)),
     ]
     return cues
   }
 
   /// Tom's line that teaches the drones.
   static let droneLine = "Drones up top. Shoot them as they dive."
+  /// Laura's line that teaches the crawlers.
+  static let crawlerLine = "Crawlers too. Move when they crouch."
 
   #if DEBUG
-    /// The bridge with its guard alone at the first tower: the drones, their cues and Tom's
-    /// line about them are left out. Tests and playtest routes of the guard's own contract
-    /// use it; the shipped level, and the drone-fight route, keep the drones (issue #201).
-    static var guardOnly: Level {
+    /// The bridge with its guard alone at the first tower: the drones, the crawlers, their cues
+    /// and the lines about them are left out. Tests and playtest routes of the guard's own
+    /// contract use it; the shipped level keeps the whole pack (issues #201 and #208).
+    static var guardOnly: Level { variant(drones: false, crawlers: false) }
+
+    /// The guard with its drones but no crawlers, for the drone routes and tests written
+    /// before the crawlers joined.
+    static var guardAndDrones: Level { variant(drones: true, crawlers: false) }
+
+    private static func variant(drones keepDrones: Bool, crawlers keepCrawlers: Bool) -> Level {
       var level = Self.level
       level.encounters = level.encounters.map { encounter in
-        let drones = Set(encounter.hostiles.filter(\.isDrone).map(\.id))
-        guard !drones.isEmpty else { return encounter }
+        let left = Set(
+          encounter.hostiles.filter {
+            ($0.isDrone && !keepDrones) || ($0.isCrawler && !keepCrawlers)
+          }.map(\.id))
+        guard !left.isEmpty else { return encounter }
+        let lines = (keepDrones ? [] : [droneLine]) + (keepCrawlers ? [] : [crawlerLine])
         return Level.Encounter(
           beat: encounter.beat, start: encounter.start, retryAt: encounter.retryAt,
-          hostiles: encounter.hostiles.filter { !drones.contains($0.id) },
+          hostiles: encounter.hostiles.filter { !left.contains($0.id) },
           cues: encounter.cues.filter { timed in
             switch timed.cue {
-            case .reveal(let id), .engage(let id): !drones.contains(id)
-            case .say(_, let line): line != droneLine
+            case .reveal(let id), .engage(let id): !left.contains(id)
+            case .say(_, let line): !lines.contains(line)
             default: true
             }
           }, holdsParty: encounter.holdsParty, focus: encounter.focus,
