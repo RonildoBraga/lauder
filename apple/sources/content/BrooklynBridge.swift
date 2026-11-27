@@ -35,19 +35,67 @@ enum BrooklynBridge {
     standAt: layout.marker(named: "stranger.stand"), hits: 6, attack: .robot, strategicGuard: true,
     windUp: 1, recovery: 1.8, range: 12)
 
+  /// Two scout drones keep watch with the guard (issue #201). They circle it above sword reach
+  /// and, once its fight is engaged, dive at the party one at a time. They fall when it falls.
+  static let drones = (0..<2).map { index in
+    Level.Hostile(
+      id: "drone.\(index + 1)", name: "Scout drone", hiddenAt: stranger.standAt,
+      standAt: stranger.standAt, hits: ScoutDrone.health,
+      attack: .drone(orbit: Float(index) * .pi, slot: index))
+  }
+
   /// The first fight, as the party walks through the first tower. A retry starts just outside
   /// its area, in the east arch.
   static let strangerEncounter = Level.Encounter(
     beat: .stranger, start: .area(layout.area(named: "stranger")),
-    retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger],
-    cues: [
-      (0, .reveal(stranger.id)),
-      (0, .engage(stranger.id)),
+    retryAt: layout.marker(named: "stranger.retry"), hostiles: [stranger] + drones,
+    cues: strangerCues, safeExit: layout.area(named: "robot.exit"))
+
+  /// The guard and its drones appear and engage together; the lines teach both.
+  private static var strangerCues: [(at: Float, cue: Level.Cue)] {
+    var cues: [(at: Float, cue: Level.Cue)] = [
+      (0, .reveal(stranger.id)), (0, .engage(stranger.id)),
+    ]
+    for drone in drones {
+      cues += [(0, .reveal(drone.id)), (0, .engage(drone.id))]
+    }
+    cues += [
       (
         0.6,
         .say(speaker: "Miki", line: "Armoured. Aim for its red eye. Laura, those legs can break.")
       ),
-    ], safeExit: layout.area(named: "robot.exit"))
+      (3.6, .say(speaker: "Tom", line: droneLine)),
+    ]
+    return cues
+  }
+
+  /// Tom's line that teaches the drones.
+  static let droneLine = "Drones up top. Shoot them as they dive."
+
+  #if DEBUG
+    /// The bridge with its guard alone at the first tower: the drones, their cues and Tom's
+    /// line about them are left out. Tests and playtest routes of the guard's own contract
+    /// use it; the shipped level, and the drone-fight route, keep the drones (issue #201).
+    static var guardOnly: Level {
+      var level = Self.level
+      level.encounters = level.encounters.map { encounter in
+        let drones = Set(encounter.hostiles.filter(\.isDrone).map(\.id))
+        guard !drones.isEmpty else { return encounter }
+        return Level.Encounter(
+          beat: encounter.beat, start: encounter.start, retryAt: encounter.retryAt,
+          hostiles: encounter.hostiles.filter { !drones.contains($0.id) },
+          cues: encounter.cues.filter { timed in
+            switch timed.cue {
+            case .reveal(let id), .engage(let id): !drones.contains(id)
+            case .say(_, let line): line != droneLine
+            default: true
+            }
+          }, holdsParty: encounter.holdsParty, focus: encounter.focus,
+          gathersParty: encounter.gathersParty, safeExit: encounter.safeExit)
+      }
+      return level
+    }
+  #endif
 
   /// The end of the opening (M4): the three reach the Manhattan end together, the party stops,
   /// and a short exchange closes the slice. It waits until all three are there, so companions

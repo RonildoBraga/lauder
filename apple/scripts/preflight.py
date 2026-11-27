@@ -15,6 +15,7 @@ ASSETS = (
     "apple/sources/content/models/hostile.usdz",
     "apple/sources/content/models/laura.usdz",
     "apple/sources/content/models/miki.usdz",
+    "apple/sources/content/models/scout-drone.usdz",
     "apple/sources/content/models/spider-bot-heavy.usdz",
     "apple/sources/content/models/tom.usdz",
     "apple/sources/content/sounds/assault-rifle.wav",

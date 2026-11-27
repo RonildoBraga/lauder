@@ -33,6 +33,8 @@ struct HostileState {
   }
   private(set) var position: SIMD2<Float>
   private(set) var robot: RobotGuard?
+  /// A scout drone's own flight, which EncounterSimulation steps (issue #201).
+  private(set) var drone: ScoutDrone?
   private var hasFired = false
   private var engaged = false
   private var flinched: Float = 0
@@ -44,17 +46,29 @@ struct HostileState {
       robot = RobotGuard(home: spec.standAt, strategicPatterns: spec.strategicGuard)
       position = spec.standAt
     }
+    if case .drone(let orbit, let slot) = spec.attack {
+      let drone = ScoutDrone(home: spec.standAt, orbit: orbit, slot: slot)
+      self.drone = drone
+      position = drone.position
+    }
   }
 
   var isVisible: Bool { phase != .hidden }
   var isDown: Bool { phase == .down }
   /// Before the stranger opens fire, the party does not know that he is hostile.
-  var isTargetable: Bool { robot.map(\.isTargetable) ?? (!isDown && hasFired) }
+  var isTargetable: Bool {
+    robot.map(\.isTargetable) ?? drone.map(\.isTargetable) ?? (!isDown && hasFired)
+  }
 
   mutating func reveal() {
     guard phase == .hidden else { return }
     if robot != nil {
       robot?.reveal()
+      phase = .waiting
+      return
+    }
+    if drone != nil {
+      drone?.reveal()
       phase = .waiting
       return
     }
@@ -68,13 +82,17 @@ struct HostileState {
       robot?.engage()
       return
     }
+    if drone != nil {
+      drone?.engage()
+      return
+    }
     if phase == .waiting { phase = attacking }
   }
 
   private var attacking: Phase {
     switch spec.attack {
     case .shoot: .aiming(remaining: spec.windUp)
-    case .robot: .waiting
+    case .robot, .drone: .waiting
     case .charge: .charging
     }
   }
@@ -82,6 +100,22 @@ struct HostileState {
   mutating func knockDown() {
     phase = .down
     robot?.knockDown()
+    drone?.knockDown()
+  }
+
+  /// The quiet exit leaves a drone circling, harmless, for the rest of the run.
+  mutating func clearDrone() { drone?.clear() }
+
+  mutating func acceptDroneBurstHit() -> Bool { drone?.acceptBurstHit() ?? false }
+
+  mutating func stepDrone(
+    dt: Float, centre: SIMD2<Float>, target: SIMD2<Float>?, mayAttack: Bool,
+    airspace: ScoutDrone.Airspace
+  ) -> ScoutDrone.Discharge? {
+    let shot = drone?.step(
+      dt: dt, centre: centre, target: target, mayAttack: mayAttack, airspace: airspace)
+    if let drone { position = drone.position }
+    return shot
   }
 
   mutating func clearGuard() {

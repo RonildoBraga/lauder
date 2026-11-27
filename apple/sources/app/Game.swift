@@ -8,12 +8,14 @@ final class Game {
   let world: GameWorld
 
   init() {
-    world = GameWorld(level: BrooklynBridge.level)
     #if DEBUG
-      // A scripted Simulator playtest, requested with `-LauderPlaytest <scenario>`.
-      if let scenario = UserDefaults.standard.string(forKey: "LauderPlaytest") {
-        world.startPlaytest(scenario)
-      }
+      // A scripted Simulator playtest, requested with `-LauderPlaytest <scenario>`, plays the
+      // level its route was written for (PlaytestRunner.level(for:)).
+      let scenario = UserDefaults.standard.string(forKey: "LauderPlaytest")
+      world = GameWorld(level: PlaytestRunner.level(for: scenario))
+      if let scenario { world.startPlaytest(scenario) }
+    #else
+      world = GameWorld(level: BrooklynBridge.level)
     #endif
   }
 }

@@ -254,7 +254,8 @@ struct WeaponFeelTests {
 
   @Test
   func theStrangersHitOnTheLeaderIsFelt() throws {
-    let world = GameWorld(level: BrooklynBridge.level)
+    // The guard's own contract; its scout drones have their own tests (issue #201).
+    let world = GameWorld(level: BrooklynBridge.guardOnly)
     // Keep the followers on their ordinary Hold order so this isolates the leader's hit
     // feedback instead of permitting a companion to intercept the same native shot.
     #expect(world.session.holdAll())

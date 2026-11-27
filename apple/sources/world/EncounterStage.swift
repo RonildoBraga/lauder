@@ -13,6 +13,7 @@ final class EncounterStage {
   private var visuals: [String: Entity] = [:]
   private var hostileWeaponProps: [String: Entity] = [:]
   private var robots: [String: RobotPresentation] = [:]
+  private var drones: [String: DronePresentation] = [:]
   private var componentMarkers: [String: [ModelEntity]] = [:]
   private enum ComponentLook: Equatable { case damaged, nearBreak }
   private var componentLooks: [String: [ComponentLook?]] = [:]
@@ -69,9 +70,13 @@ final class EncounterStage {
     for spec in level.encounters.flatMap(\.hostiles) {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
-      let visual = spec.attack == .robot ? style.robot() : style.hostile()
+      let visual =
+        spec.attack == .robot ? style.robot() : spec.isDrone ? style.drone() : style.hostile()
       if spec.attack == .robot {
         robots[spec.id] = RobotPresentation(visual: visual, debrisParent: container)
+      }
+      if spec.isDrone {
+        drones[spec.id] = DronePresentation(id: spec.id, visual: visual, shadowParent: container)
       }
       if spec.attack == .shoot {
         let weapon = style.weapon(for: .rifle)
@@ -166,7 +171,9 @@ final class EncounterStage {
       }
       if let body = bodies[id] {
         body.isEnabled = state.isVisible
-        body.position = [state.position.x, PartyBody.height / 2, state.position.y]
+        body.position =
+          state.drone.map(DronePresentation.bodyPosition)
+          ?? [state.position.x, PartyBody.height / 2, state.position.y]
       }
       if let presentation = robots[id], let robot = state.robot {
         presentation.update(
@@ -174,6 +181,8 @@ final class EncounterStage {
           gunDirections: robot.gunDirections, gunRecoil: robot.gunRecoil,
           down: state.isDown, detachedLegs: fight.guardStrategies[id]?.detachedLegs ?? [],
           bodyDrop: robot.bodyDrop, dt: dt)
+      } else if let presentation = drones[id], let drone = state.drone {
+        presentation.update(drone, visible: state.isVisible, dt: dt)
       } else if let visual = visuals[id], let pose = fight.hostilePoses[id] {
         visual.orientation = pose.orientation
         visual.position = pose.position

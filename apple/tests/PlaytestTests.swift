@@ -10,15 +10,15 @@
   struct PlaytestTests {
     @Test(arguments: PlaytestRunner.scenarioNames)
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
-      // Use the app's world and ordinary input rules, including Pause and Restart.
-      let game = Game()
+      // Use the app's world and ordinary input rules, including Pause and Restart, on the
+      // level the route was written for, as the rendered run's launch argument chooses.
+      let world = GameWorld(level: PlaytestRunner.level(for: name))
       var runner = try #require(PlaytestRunner(scenario: name))
-      if name == "touch-fight" { game.world.controls.useTouchControls() }
+      if name == "touch-fight" { world.controls.useTouchControls() }
       var frames = 0
       while !runner.isFinished {
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
-        let world = game.world
         let raw = runner.input(world.playtestSnapshot)
         if name == "touch-fight" {
           try #require(!raw.hasControllerInput && !raw.hasKeyboardInput)
@@ -29,7 +29,7 @@
         let mode = world.session.mode
         world.update(
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
-        let after = game.world
+        let after = world
         runner.record(
           PlaytestRunner.Frame(
             dt: dt, leader: after.session.leader, positions: after.playtestSnapshot.positions,

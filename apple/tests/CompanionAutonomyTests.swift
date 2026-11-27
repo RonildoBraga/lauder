@@ -38,7 +38,8 @@ struct CompanionAutonomyTests {
 
     @Test
     func defendRecallsAnAttackingSquadWithoutSpendingAIRoundsOrTakingPlayerControl() throws {
-      let world = GameWorld(level: BrooklynBridge.level)
+      // The guard's own contract; its scout drones have their own tests (issue #201).
+      let world = GameWorld(level: BrooklynBridge.guardOnly)
       walk(world, to: [6.5, 10])
       attack(world)
       var preparation = PlaytestRunner(steps: [.companionPrerequisites], name: "defend-preparation")
@@ -92,7 +93,8 @@ struct CompanionAutonomyTests {
 
     @Test
     func mikiCanKeepLeadingWhileBothCompanionsContributeNativeDamage() throws {
-      let world = GameWorld(level: BrooklynBridge.level)
+      // The guard's own contract; its scout drones have their own tests (issue #201).
+      let world = GameWorld(level: BrooklynBridge.guardOnly)
       walk(world, to: [6.5, 10])
       attack(world)
       var runner = PlaytestRunner(steps: [.companionFight], name: "companion-contract")
@@ -137,7 +139,8 @@ struct CompanionAutonomyTests {
 
     @Test
     func autonomousMikiAndLauraCanDealDamageWhileTomKeepsPlayerControl() throws {
-      let world = GameWorld(level: BrooklynBridge.level)
+      // The guard's own contract; its scout drones have their own tests (issue #201).
+      let world = GameWorld(level: BrooklynBridge.guardOnly)
       update(world)
       update(world, raw: InputRules.Raw(controllerSwitch: true))
       update(world)

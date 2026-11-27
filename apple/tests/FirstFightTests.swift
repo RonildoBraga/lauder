@@ -80,7 +80,8 @@ struct FirstFightTests {
 
   @Test
   func theGuardCanBeDisabledWithoutAnAuthoredHumanWarningShot() {
-    let world = GameWorld(level: BrooklynBridge.level)
+    // The guard's own contract; its scout drones have their own tests (issue #201).
+    let world = GameWorld(level: BrooklynBridge.guardOnly)
     walk(world, to: [6.5, 10])
     #expect(dismantleGuard(world))
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
@@ -142,7 +143,8 @@ struct FirstFightTests {
 
   @Test
   func threeBurstMistakesRetryFromTheExistingCheckpoint() throws {
-    let world = GameWorld(level: BrooklynBridge.level)
+    // The guard's own contract; its scout drones have their own tests (issue #201).
+    let world = GameWorld(level: BrooklynBridge.guardOnly)
     let entities = count(world.root)
     walk(world, to: [6.5, 10])
     #expect(run(world, upTo: 60) { world.isRetrying })
@@ -161,7 +163,8 @@ struct FirstFightTests {
 
   @Test
   func theCameraFollowsTheGuardThenSettlesAfterResolution() throws {
-    let world = GameWorld(level: BrooklynBridge.level)
+    // The guard's own contract; its scout drones have their own tests (issue #201).
+    let world = GameWorld(level: BrooklynBridge.guardOnly)
     let camera = try #require(world.root.findEntity(named: "camera"))
     let offset = BrooklynBridge.cameraOffset
     let lean = {

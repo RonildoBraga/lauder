@@ -933,7 +933,7 @@ final class GameWorld {
       let base = formationTargets[member] ?? position
       reserved[member] = nil
       let occupied = Array(reserved.values)
-      let intent = policy.plan(
+      var intent = policy.plan(
         input: CompanionTactics.Input(
           member: member, leader: session.leader, position: position, leaderPosition: leader,
           baseTarget: base, order: session.order(of: member),
@@ -952,13 +952,27 @@ final class GameWorld {
             member, from: $0, at: guardState.id, weapon: $1, figures: current)
         },
         isCovered: { self.fight.companionHasCover(at: $0, from: guardState.robot) },
-        isThreatened: { self.fight.companionIsThreatened(at: $0, by: guardState.robot) },
+        isThreatened: {
+          self.fight.companionIsThreatened(at: $0, by: guardState.robot)
+            || self.fight.droneThreatens($0)
+        },
         isSpaced: { point in
           simd_distance(point, leader) >= CompanionTactics.minimumSpacing
             && occupied.allSatisfy {
               simd_distance(point, $0) >= CompanionTactics.minimumSpacing
             }
         })
+      // A scout drone on its dive takes a companion's fire ahead of the guard while its plan
+      // engages. Movement, orders and seeking safety keep the plan's own (issue #201).
+      if session.combatStance == .attack, intent.lookAt != nil, intent.activity != .avoiding,
+        let drone = fight.companionDrone(for: member, from: position, figures: current)
+      {
+        intent.lookAt = drone.position
+        intent.weapon = drone.weapon
+        intent.drone = drone.id
+        intent.fire = true
+        intent.activity = .attacking
+      }
       tactics[member] = policy
       next[member] = intent
       reserved[member] = Self.point(of: session.order(of: member)) ?? intent.position ?? base
@@ -1594,7 +1608,8 @@ final class GameWorld {
       return PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
-        hitsTaken: session.hitsTaken, defeated: session.defeated.count,
+        hitsTaken: session.hitsTaken,
+        defeated: session.defeated.filter { fight.hostiles[$0]?.drone == nil }.count,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader),
@@ -1611,7 +1626,15 @@ final class GameWorld {
           uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }),
         companionTargets: companionTargets, coveredMembers: covered,
         damage: damageTally, damageLabelCount: damageFeedback.labels.count, showsPanel: showsPanel,
-        grenadeCooldown: fight.grenadeCooldown, grenadeInFlight: fight.grenade != nil)
+        grenadeCooldown: fight.grenadeCooldown, grenadeInFlight: fight.grenade != nil,
+        dronesDown: session.defeated.filter { fight.hostiles[$0]?.drone != nil }.count,
+        drones: fight.hostiles.values.compactMap { state in
+          state.drone.map {
+            PlaytestRunner.Snapshot.Drone(
+              id: state.spec.id, position: $0.position, phase: $0.phase,
+              watching: fight.droneTarget(for: state.spec.id), committedPoint: $0.committedPoint)
+          }
+        }.sorted { $0.id < $1.id })
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
