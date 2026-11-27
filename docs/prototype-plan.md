@@ -31,7 +31,7 @@ Later that day the maintainer started Miki, Tom and Laura together and kept the 
   - strict Swift formatting, the app build and Swift Testing.
   - **New tests** cover each sound's mapping, the spin-up heard once for each hold, and each change of the dome heard once.
   - A script measured each sound's length, loudness over time and pitch direction. None has been heard on a phone.
-- **Not verified:** how the sounds and vibrations feel on the phone, which [#163](https://github.com/RonildoBraga/lauder/issues/163) tracks.
+- **Not verified:** nobody has heard the sounds or felt the vibrations on a phone. That waits for the next agreed phone check, listed under [deferred phone and playtest checks](#deferred-phone-and-playtest-checks).
 
 ## Guard damage and feedback — in development
 
@@ -469,6 +469,7 @@ The target remains 60 fps on the baseline iPhone 13 Pro Max. Simulator measureme
 - Verify the retained bridge's current controller/touch controls, release gates, Pause, interruption recovery and camera on a physical phone at the next agreed checkpoint.
 - Measure representative Release frame pacing and sustained performance before making baseline-device claims.
 - Check on the phone that the pawns read at their real size and that the walk and the dodge roll feel right. Include the touch Roll button pressed while a finger holds the stick, and Square / X on a controller.
+- Listen on the phone to each weapon's sound, the minigun's spin-up and the dome's sounds, and feel their vibrations ([weapon sounds](#weapon-sounds--in-development)).
 - Ask what is enjoyable and what should change before adding another scene or complex mechanic. TestFlight availability supplies no answer to that question.
 
 ### Historical delivery
