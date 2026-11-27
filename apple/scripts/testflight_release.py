@@ -94,14 +94,35 @@ def identity():
     return version, number
 
 
-def source():
-    require(git("branch", "--show-current") == "main", "Archive/upload the integrated main branch.")
+def preview_branch_name(value):
+    require(type(value) is str and bool(value) and value != "main",
+            "A reviewed preview requires a valid named non-main branch.")
+    try:
+        git("check-ref-format", "--branch", value)
+    except (subprocess.CalledProcessError, ValueError):
+        raise ReleaseError("A reviewed preview requires a valid named non-main branch.") from None
+    return value
+
+
+def source(preview_branch=None):
+    branch = git("branch", "--show-current")
+    if preview_branch is None:
+        require(branch == "main", "Archive/upload the integrated main branch.")
+    else:
+        require(branch == preview_branch_name(preview_branch),
+                "Preview source must remain on its original named branch.")
     require(not git("status", "--porcelain", "--untracked-files=all"), "Archive/upload requires a clean source checkout.")
-    return {"sourceCommit": git("rev-parse", "HEAD"), "sourceTree": git("rev-parse", "HEAD^{tree}")}
+    result = {"sourceCommit": git("rev-parse", "HEAD"), "sourceTree": git("rev-parse", "HEAD^{tree}")}
+    if preview_branch is not None:
+        result["previewBranch"] = preview_branch
+    return result
 
 
 def frozen(expected):
-    require(source() == {key: expected[key] for key in ("sourceCommit", "sourceTree")},
+    preview = preview_branch_name(expected["previewBranch"]) if "previewBranch" in expected else None
+    keys = ("sourceCommit", "sourceTree") + (("previewBranch",) if preview is not None else ())
+    actual = source(preview) if preview is not None else source()
+    require(actual == {key: expected[key] for key in keys},
             "Source changed after validation; preserve the archive and validate the intended source.")
 
 
@@ -287,8 +308,15 @@ def logged(args, path):
 
 def verify_receipt(folder, expected):
     receipt = read(folder, "checks.json")
+    preview = "previewBranch" in expected
+    require(("previewBranch" in receipt) == preview,
+            "Check receipt does not match the archive preview context.")
+    if preview:
+        preview_branch_name(expected["previewBranch"])
+        preview_branch_name(receipt["previewBranch"])
+    keys = ("sourceCommit", "sourceTree") + (("previewBranch",) if preview else ())
     require(receipt.get("passed") is True and all(receipt.get(key) == expected[key]
-            for key in ("sourceCommit", "sourceTree")), "Check receipt does not match the archive source.")
+            for key in keys), "Check receipt does not match the archive source.")
     path = folder / "check.log"
     require(path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == receipt.get("logSHA256"),
             "Check log is missing or changed since successful validation.")
@@ -380,17 +408,19 @@ def exclusive(folder, name):
         lock.unlink(missing_ok=True)
 
 
-def archive(api, folder, reviewed):
+def archive(api, folder, reviewed, reviewed_preview=False):
+    require(type(reviewed_preview) is bool, "Reviewed-preview selection must be a boolean.")
     with exclusive(folder, "archive-in-progress"):
-        return _archive(api, folder, reviewed)
+        return _archive(api, folder, reviewed, reviewed_preview)
 
 
-def _archive(api, folder, reviewed):
+def _archive(api, folder, reviewed, reviewed_preview=False):
+    require(type(reviewed_preview) is bool, "Reviewed-preview selection must be a boolean.")
     require(re.fullmatch(r"[a-fA-F0-9]{7,40}", reviewed or ""), "Supply --reviewed-commit from the completed review.")
-    initial = source()
+    initial = source(git("branch", "--show-current")) if reviewed_preview else source()
     reviewed_commit = git("rev-parse", "--verify", reviewed + "^{commit}")
     require(git("rev-parse", reviewed_commit + "^{tree}") == initial["sourceTree"],
-            "Integrated main must match the reviewed source tree.")
+            "Archive source must match the reviewed source tree.")
     require(not (folder / "manifest.json").exists(), "A manifest already exists; preserve this delivery and run status.")
     discovery = read(folder, "discovery.json")
     version, number = identity()
@@ -574,19 +604,24 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("discover", "archive", "upload", "status", "wait"))
     parser.add_argument("--output", type=Path, required=True, help="private delivery directory under .local/")
-    parser.add_argument("--reviewed-commit", help="completed-review commit; archive verifies its tree against clean main")
+    parser.add_argument("--reviewed-commit",
+                        help="completed-review commit; exact tree on clean main or an explicit reviewed-preview branch")
+    parser.add_argument("--reviewed-preview", action="store_true",
+                        help="archive an explicitly authorised reviewed preview from a clean named non-main branch")
     parser.add_argument("--timeout", type=int, default=600, help="wait seconds (1–3600; default 600)")
     args = parser.parse_args(argv)
     os.umask(0o077)
     folder = None
     try:
+        require(not args.reviewed_preview or args.command == "archive",
+                "--reviewed-preview is supported only for archive; upload uses its recorded manifest.")
         require(1 <= args.timeout <= 3600, "Wait timeout must be between 1 and 3600 seconds.")
         folder = delivery_directory(args.output, args.command)
         api = AppleAPI()
         if args.command == "discover":
             discover(api, folder)
         elif args.command == "archive":
-            archive(api, folder, args.reviewed_commit)
+            archive(api, folder, args.reviewed_commit, args.reviewed_preview)
         elif args.command == "upload":
             upload(api, folder)
         else:
