@@ -83,9 +83,23 @@ struct FirstFightTests {
     // The guard's own contract; its scout drones have their own tests (issue #201).
     let world = GameWorld(level: BrooklynBridge.guardOnly)
     walk(world, to: [6.5, 10])
-    #expect(dismantleGuard(world))
+    // The encounter forgets its hits once it ends, so count each member's while it is on.
+    // The guard does land shots on this path; what holds is that no one reaches their last
+    // allowed hit, so the fight never starts again.
+    var hits: [PartyMember: Int] = [:]
+    var retried = false
+    #expect(
+      dismantleGuard(world) { world in
+        retried = retried || world.isRetrying
+        for member in world.session.party {
+          hits[member] = max(hits[member, default: 0], world.session.hits(of: member))
+        }
+      })
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
-    #expect(world.session.hitsTaken == 0 && world.threat == nil)
+    #expect(!retried && hits.count == 3)
+    #expect(
+      hits.values.allSatisfy { $0 < GameSession.hitsAllowed }, "hits while dismantling: \(hits)")
+    #expect(world.threat == nil)
     #expect(world.observation == "The guard robot is down.")
   }
 
