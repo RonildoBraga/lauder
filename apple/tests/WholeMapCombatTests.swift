@@ -170,7 +170,7 @@ struct WholeMapCombatTests {
     firstMiss: Bool = false
   ) -> Level.Hostile {
     Level.Hostile(
-      id: id, name: id, hiddenAt: point, standAt: point, hits: hits,
+      id: id, name: id, hiddenAt: point, standAt: point, hits: hits, attack: .shoot,
       windUp: windUp, recovery: recovery, range: 10,
       firstShotMisses: firstMiss)
   }

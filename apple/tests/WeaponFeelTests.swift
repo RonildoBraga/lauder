@@ -87,7 +87,7 @@ struct WeaponFeelTests {
   @Test
   func aHitDuringAWindUpDelaysTheShotUpToALimit() throws {
     let spec = Level.Hostile(
-      id: "rifle-fixture", name: "Rifle", hiddenAt: .zero, standAt: .zero, hits: 2,
+      id: "rifle-fixture", name: "Rifle", hiddenAt: .zero, standAt: .zero, hits: 2, attack: .shoot,
       windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true)
     var state = HostileState(spec: spec)
     state.reveal()
@@ -344,7 +344,6 @@ struct WeaponFeelTests {
     #expect(CombatSound.of(.fired(.rifle, at: point, byLeader: false)) == .rifle)
     #expect(CombatSound.of(.struckBody(at: point)) == .strikeBody)
     #expect(CombatSound.of(.struckBlock(at: point)) == .strikeBlock)
-    #expect(CombatSound.of(.empty(at: point)) == .emptyClick)
     #expect(CombatSound.of(.leaderHit(at: point)) == nil)
     #expect(HapticCue.of(.fired(.longRifle, at: point, byLeader: true)) == .longRifleShot)
     #expect(HapticCue.of(.fired(.assaultRifle, at: point, byLeader: true)) == .assaultRifleShot)
@@ -361,7 +360,6 @@ struct WeaponFeelTests {
     #expect(HapticCue.of(.spinUp(at: point, byLeader: false)) == nil)
     #expect(HapticCue.of(.fired(.rifle, at: point, byLeader: false)) == nil)
     #expect(HapticCue.of(.leaderHit(at: point)) == .leaderHit)
-    #expect(HapticCue.of(.empty(at: point)) == .emptyClick)
     #expect(HapticCue.of(.struckBody(at: point)) == nil)
     for cue in HapticCue.allCases { #expect((try? cue.pattern()) != nil) }
   }
@@ -416,7 +414,8 @@ struct WeaponFeelTests {
   /// A test-only flat range with one native shooter; no companion auto-fire.
   private func range(shooterAt point: SIMD2<Float>, hits: Int, boxes: [Level.Box] = []) -> Level {
     let shooter = Level.Hostile(
-      id: "a", name: "Shooter A", hiddenAt: point, standAt: point, hits: hits, windUp: 1.5,
+      id: "a", name: "Shooter A", hiddenAt: point, standAt: point, hits: hits, attack: .shoot,
+      windUp: 1.5,
       recovery: 1.4, range: 14)
     let fight = Level.Encounter(
       beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -15], maximum: [15, 15])),

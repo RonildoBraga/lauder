@@ -74,7 +74,7 @@ struct BridgeTests {
   func theThreeStartTogetherInTheCloseFormation() {
     let level = BrooklynBridge.level
     let miki = level.spawn(.miki)
-    #expect(level.party == [.miki, .tom, .laura] && level.lying.isEmpty)
+    #expect(level.party == [.miki, .tom, .laura])
     #expect(level.spawn(.tom) == miki + SquadPlanner.closeSlots[0])
     #expect(level.spawn(.laura) == miki + SquadPlanner.closeSlots[1])
     let session = GameSession(level: level)

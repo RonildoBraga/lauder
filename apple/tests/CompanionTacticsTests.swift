@@ -60,17 +60,17 @@ struct CompanionTacticsTests {
   }
 
   @Test
-  func closedPartsAllowOrdinaryFireAndExposedPartsRestoreTheSpecialistPreference() {
+  func withoutItsPartACompanionFiresOrdinarilyAndThePartRestoresTheSpecialistPreference() {
     var planner = CompanionTactics()
     let ordinary = plan(
-      &planner, input(exposed: false), canFireAtBody: { _, _ in true })
+      &planner, input(points: []), canFireAtBody: { _, _ in true })
     #expect(ordinary.position == [0, -6] && ordinary.targetsBody && ordinary.fire)
     let opening = plan(
-      &planner, input(exposed: true), canFireAtBody: { _, _ in true })
+      &planner, input(), canFireAtBody: { _, _ in true })
     #expect(opening.fire && !opening.targetsBody && opening.activity == .attacking)
-    let closedAgain = plan(
-      &planner, input(exposed: false), canFireAtBody: { _, _ in true })
-    #expect(closedAgain.fire && closedAgain.targetsBody && closedAgain.activity == .attacking)
+    let goneAgain = plan(
+      &planner, input(points: []), canFireAtBody: { _, _ in true })
+    #expect(goneAgain.fire && goneAgain.targetsBody && goneAgain.activity == .attacking)
   }
 
   @Test(arguments: [PartyMember.miki, .tom])
@@ -593,7 +593,7 @@ struct CompanionTacticsTests {
     baseTarget: SIMD2<Float>? = nil, order: GameSession.Order = .following,
     stance: GameSession.CombatStance = .attack, active: Bool = true,
     phase: RobotGuard.Phase = .recovering, stage: GuardStrategy.Phase = .active,
-    exposed: Bool = true, points: [GuardWeakpoint]? = nil, dt: Float = 1 / 60
+    points: [GuardWeakpoint]? = nil, dt: Float = 1 / 60
   ) -> CompanionTactics.Input {
     let part: GuardStrategy.Part = member == .laura ? .leg(0) : .eye
     return .init(
@@ -601,15 +601,15 @@ struct CompanionTacticsTests {
       baseTarget: baseTarget ?? position, order: order, stance: stance, active: active,
       guardPosition: .zero,
       guardFacing: [0, -1], phase: phase, stage: stage,
-      weakpoints: points ?? [weakpoint(part, exposed: exposed)], dt: dt)
+      weakpoints: points ?? [weakpoint(part)], dt: dt)
   }
 
-  private func weakpoint(
-    _ part: GuardStrategy.Part, ground: SIMD2<Float> = [0, -1.45], exposed: Bool = true
-  ) -> GuardWeakpoint {
+  private func weakpoint(_ part: GuardStrategy.Part, ground: SIMD2<Float> = [0, -1.45])
+    -> GuardWeakpoint
+  {
     .init(
       id: "guard.\(part)", hostileID: "guard", part: part,
-      centre: [ground.x, 1.5, ground.y], radius: 0.4, exposed: exposed)
+      centre: [ground.x, 1.5, ground.y], radius: 0.4)
   }
 
   private func plan(

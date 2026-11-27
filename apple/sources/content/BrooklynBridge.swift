@@ -111,8 +111,8 @@ enum BrooklynBridge {
             case .say(_, let line): !lines.contains(line)
             default: true
             }
-          }, holdsParty: encounter.holdsParty, focus: encounter.focus,
-          gathersParty: encounter.gathersParty, safeExit: encounter.safeExit)
+          }, holdsParty: encounter.holdsParty, gathersParty: encounter.gathersParty,
+          safeExit: encounter.safeExit)
       }
       return level
     }

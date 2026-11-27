@@ -28,8 +28,6 @@ enum CombatEvent: Equatable, Sendable {
   case struckBody(at: SIMD2<Float>)
   /// A shot struck a block.
   case struckBlock(at: SIMD2<Float>)
-  /// The leader pressed Fire with no rounds left.
-  case empty(at: SIMD2<Float>)
   /// A hostile's shot hit the leader.
   case leaderHit(at: SIMD2<Float>)
   /// The guard began a new warned cycle against this member, once on entering notice.
@@ -47,7 +45,7 @@ enum CombatEvent: Equatable, Sendable {
   var position: SIMD2<Float> {
     switch self {
     case .fired(_, let point, _), .spinUp(let point, _), .dome(_, let point),
-      .struckBody(let point), .struckBlock(let point), .empty(let point), .leaderHit(let point),
+      .struckBody(let point), .struckBlock(let point), .leaderHit(let point),
       .guardTargeted(_, let point), .guardLegBroken(let point), .droneWarning(let point),
       .crawlerWarning(let point):
       point

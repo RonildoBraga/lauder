@@ -180,7 +180,7 @@ struct SquadWeaponTests {
     ]
   ) -> Level {
     let hostile = Level.Hostile(
-      id: "target", name: "Target", hiddenAt: target, standAt: target, hits: hits,
+      id: "target", name: "Target", hiddenAt: target, standAt: target, hits: hits, attack: .shoot,
       windUp: 0.01, recovery: 60, range: 14)
     let encounter = Level.Encounter(
       beat: .stranger, start: .area(PartyMotion.Box(minimum: [-15, -15], maximum: [15, 15])),

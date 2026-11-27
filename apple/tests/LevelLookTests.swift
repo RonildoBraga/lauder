@@ -101,7 +101,8 @@ struct LevelLookTests {
         retryAt: nil,
         hostiles: [
           Level.Hostile(
-            id: "shooter", name: "Shooter", hiddenAt: [0, -4], standAt: [0, -4], hits: 3)
+            id: "shooter", name: "Shooter", hiddenAt: [0, -4], standAt: [0, -4], hits: 3,
+            attack: .shoot)
         ], cues: [])
     ]
     let shooterWorld = GameWorld(level: range)

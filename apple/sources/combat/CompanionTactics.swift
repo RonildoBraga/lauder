@@ -172,9 +172,7 @@ struct CompanionTactics {
     if case .holding = input.order {
       goal = nil
       if let assignment, canStand(input.position),
-        let point = points.first(where: {
-          $0.exposed && canFire(input.position, $0, assignment.weapon)
-        })
+        let point = points.first(where: { canFire(input.position, $0, assignment.weapon) })
       {
         intent.lookAt = point.ground
         intent.fire = true
@@ -207,7 +205,7 @@ struct CompanionTactics {
       intent.activity = .avoiding
       return intent
     }
-    if !points.contains(where: \.exposed) {
+    if points.isEmpty {
       return ordinaryAttack(
         input: input, available: available, safe: safe, canStand: canStand,
         canFireAtBody: canFireAtBody, isCovered: isCovered, isSpaced: isSpaced)
@@ -222,8 +220,8 @@ struct CompanionTactics {
       goalTargetsBody = false
       intent.position = input.position
       intent.lookAt = point.ground
-      intent.fire = point.exposed
-      intent.activity = point.exposed ? .attacking : .waiting
+      intent.fire = true
+      intent.activity = .attacking
       return intent
     }
     if input.member == .miki || input.member == .tom,

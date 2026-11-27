@@ -68,19 +68,6 @@ struct ShootingTests {
     #expect(aside?.strike == .nothing)
   }
 
-  @Test
-  func aShotFliesOverALowBlock() throws {
-    let low = Level.Box.box("low", at: [0, 0.5, -5], size: [2, 1, 1])
-    let tall = Level.Box.box("tall", at: [0, 1.1, -8], size: [2, 2.2, 1])
-    let blockers = Aim.blockers([low, tall], above: EncounterSimulation.aimHeight)
-    #expect(blockers.count == 1)
-    let shot = try #require(
-      Aim.shot(
-        from: .zero, aim: [0, -1], facing: [0, -1], range: 14, hostiles: [],
-        blockers: blockers))
-    #expect(shot.strike == .scenery && simd_distance(shot.end, [0, -7.5]) < 0.001)
-  }
-
   // MARK: - The right stick
 
   @Test

@@ -279,7 +279,7 @@ struct GuardRetaliationTests {
             lookAt: target, weapon: .longRifle,
             targetsBody: ordinaryCompanionFire,
             fire: ordinaryCompanionFire
-              || (companionFire && point?.part == .eye && point?.exposed == true),
+              || (companionFire && point?.part == .eye),
             activity: .attacking)
         ], facings: [.miki: simd_length(direction) > 0.001 ? simd_normalize(direction) : [0, -1]])
       retried = retried || outcome.retry

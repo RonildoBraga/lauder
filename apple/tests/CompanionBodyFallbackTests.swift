@@ -60,8 +60,7 @@ struct CompanionBodyFallbackTests {
     member: PartyMember, blocker: Blocker
   ) throws {
     let trial = try Trial(member: member, blocker: blocker)
-    let eye = try #require(trial.eye)
-    #expect(eye.exposed)
+    _ = try #require(trial.eye)
     #expect(!trial.bodyIsClear)
     let loaded = trial.fight.status(for: member).loaded
     let health = trial.strategy.health
@@ -131,7 +130,6 @@ struct CompanionBodyFallbackTests {
 
     func requireRearBodyLane() throws {
       let point = try #require(eye)
-      try #require(point.exposed)
       try #require(
         !fight.companionCanFire(
           member, from: origin, at: point, weapon: weapon.kind, figures: figures))

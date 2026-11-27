@@ -8,7 +8,6 @@ struct GuardWeakpoint {
   let part: GuardStrategy.Part
   let centre: SIMD3<Float>
   let radius: Float
-  let exposed: Bool
 
   var ground: SIMD2<Float> { [centre.x, centre.z] }
   var target: Ballistics.Target {
@@ -26,8 +25,7 @@ struct GuardWeakpoint {
     {
       let centre = base + rotation.act(offset)
       return Self(
-        id: "\(id).\(suffix)", hostileID: id, part: part, centre: centre,
-        radius: radius, exposed: true)
+        id: "\(id).\(suffix)", hostileID: id, part: part, centre: centre, radius: radius)
     }
     // The red sensor's actual exported centre; the previous marker sat well in front of it.
     var points = [point(.eye, suffix: "eye", offset: [0, 1.53, -0.7045], radius: 0.2)]
