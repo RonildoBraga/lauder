@@ -81,4 +81,4 @@ The retained Close, Spread and Column formations and move/hold/follow orders tes
 
 [The Quiet Yard](encounters/the-quiet-yard.md) and the story bible's later Relay House screenplay remain unimplemented narrative proposals. The Quiet Yard offers optional filter seals, a safe detour, a covered patrol gap, combat and retreat. It is retained to discuss the trio's roles and emotional purpose, not as an additional playable scene.
 
-Next, review and evaluate the implemented retaliation comparison within the strategic guard loop. Wider weapon tuning, cover changes, signature abilities and further places follow the result. The [prototype plan](prototype-plan.md#combat-design-review-gate) records this gate.
+The maintainer has now assigned the bounded [bridge cover and spacing pass](bridge-cover-spacing.md): two simple approach shelters and distinct intended companion places, preserving the existing weapons, guard values and quiet bypass. Source and Simulator results remain pending in the [prototype plan](prototype-plan.md#bridge-cover-and-spacing--in-development). Wider weapon tuning, signature abilities and further places remain separate decisions.

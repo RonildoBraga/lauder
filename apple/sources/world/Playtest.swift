@@ -36,6 +36,8 @@
       /// Observe the real simulation state, bounded so a broken guard fails the route.
       case waitForRobotPhase(RobotGuard.Phase, seconds: Float)
       case expectRobotShots(atLeast: Int)
+      /// Dodge the observed commitment through the ordinary roll input.
+      case dodgeGuard
       /// A press of the right stick, which locks the aim on a hostile (ADR 0020).
       case lock
       /// Whether a lock holds.
@@ -49,6 +51,8 @@
       case companionFight
       case companionPrerequisites
       case defendGuard(seconds: Float)
+      /// Observe both actual followers settling into separate real cover after Defend.
+      case settleDefendCover(seconds: Float, hold: Float)
       case expectCombatStance(GameSession.CombatStance)
       case provokeRetaliation
       case leadWarnedMember
@@ -89,6 +93,8 @@
       var guardTarget: PartyMember? = nil
       var robotCommittedPoint: SIMD2<Float>? = nil
       var partyHits: [PartyMember: Int] = [:]
+      var companionTargets: [PartyMember: SIMD2<Float>] = [:]
+      var coveredMembers: Set<PartyMember> = []
     }
 
     struct Frame {
@@ -113,6 +119,10 @@
         var combatStance: String? = nil
         var guardTarget: String? = nil
         var committedPoint: [Float]? = nil
+        var partyPositions: [String: [Float]]? = nil
+        var companionTargets: [String: [Float]]? = nil
+        var coveredMembers: [String]? = nil
+        var longestCoverHoldSeconds: Float? = nil
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -170,6 +180,9 @@
     private var retaliationMember: PartyMember?
     private var retaliationPoint: SIMD2<Float>?
     private var retaliationDodged = false
+    private var coverStableSince: Float?
+    private var coverStablePositions: [PartyMember: SIMD2<Float>] = [:]
+    private var longestCoverHold: Float = 0
     private var peakPartyHits: [PartyMember: Int] = [:]
     private var retryCount = 0
     private var wasRetrying = false
@@ -270,6 +283,8 @@
           if let raw = companionFight(snapshot) { return raw }
         case .defendGuard(let seconds):
           if let raw = defendGuard(snapshot, seconds: seconds) { return raw }
+        case .settleDefendCover(let seconds, let hold):
+          if let raw = settleDefendCover(snapshot, seconds: seconds, hold: hold) { return raw }
         case .expectCombatStance(let stance):
           expect(snapshot.combatStance == stance, "combat stance was \(snapshot.combatStance)")
         case .provokeRetaliation:
@@ -390,6 +405,24 @@
           expect(
             snapshot.robotShots >= count,
             "the guard fired \(snapshot.robotShots) shot(s), fewer than \(count)")
+        case .dodgeGuard:
+          guard let centre = snapshot.robotPosition,
+            simd_distance(leaderPosition, centre) > 0.1
+          else {
+            failures.append("no guard was available for the ordinary dodge")
+            advance()
+            continue
+          }
+          let radial = leaderPosition - centre
+          let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+          let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+          let escape =
+            movement.canTraverse(from: leaderPosition, to: leaderPosition + tangent * 3)
+            ? tangent : -tangent
+          return press(
+            InputRules.Raw(
+              stick: Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset),
+              controllerDodge: true))
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -599,7 +632,9 @@
       return raw
     }
 
-    private mutating func recordGuardMark(_ label: String, snapshot: Snapshot) {
+    private mutating func recordGuardMark(
+      _ label: String, snapshot: Snapshot, longestCoverHoldSeconds: Float? = nil
+    ) {
       marks.append(
         Summary.Mark(
           name: label, seconds: Double(elapsed),
@@ -613,7 +648,17 @@
               ($0.key.rawValue, $0.value.rawValue)
             }), combatStance: String(describing: snapshot.combatStance),
           guardTarget: snapshot.guardTarget?.rawValue,
-          committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] }))
+          committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] },
+          partyPositions: Dictionary(
+            uniqueKeysWithValues: snapshot.positions.map {
+              ($0.key.rawValue, [$0.value.x, $0.value.y])
+            }),
+          companionTargets: Dictionary(
+            uniqueKeysWithValues: snapshot.companionTargets.map {
+              ($0.key.rawValue, [$0.value.x, $0.value.y])
+            }),
+          coveredMembers: snapshot.coveredMembers.map(\.rawValue).sorted(),
+          longestCoverHoldSeconds: longestCoverHoldSeconds))
       announce(label)
     }
 
@@ -786,6 +831,118 @@
       return raw
     }
 
+    /// Cover destinations alone cannot pass: both actual bodies must arrive, remain behind
+    /// the real two-barrel cover query and keep useful clearance for a continuous interval.
+    private mutating func settleDefendCover(
+      _ snapshot: Snapshot, seconds: Float, hold: Float
+    ) -> InputRules.Raw? {
+      guard snapshot.mode == .exploring, snapshot.combatStance == .defend,
+        snapshot.orders.isEmpty, snapshot.beat == .stranger, !snapshot.isRetrying,
+        snapshot.defeated == 0, snapshot.robotPosition != nil,
+        let phase = snapshot.robotPhase, ![.hidden, .down, .cleared].contains(phase),
+        let strategy = snapshot.guardStrategy, let leader = snapshot.positions[snapshot.leader],
+        seconds.isFinite, seconds > 0, hold.isFinite, hold >= 0.5, hold <= seconds
+      else {
+        failures.append("cover settlement requires an active defended guard fight")
+        advance()
+        return nil
+      }
+      if defendBaseline == nil {
+        defendBaseline = strategy
+        defendLoaded = snapshot.partyWeapons.mapValues(\.loaded)
+      }
+      let progressed =
+        strategy.sensorDisabled != defendBaseline?.sensorDisabled
+        || strategy.couplingBreached != defendBaseline?.couplingBreached
+        || strategy.reactorDamage != defendBaseline?.reactorDamage
+      let spent = snapshot.partyWeapons.contains { member, weapon in
+        member != snapshot.leader && weapon.loaded < (defendLoaded[member] ?? weapon.loaded)
+      }
+      if progressed || spent || snapshot.companionActivities.values.contains(.attacking) {
+        failures.append("a companion attacked while settling behind cover")
+        advance()
+        return nil
+      }
+      defendLoaded = snapshot.partyWeapons.mapValues(\.loaded)
+      let followers = snapshot.party.filter { $0 != snapshot.leader }
+      let staging = SIMD2<Float>(6.5, 10)
+      let atStaging = simd_distance(leader, staging) <= 0.25
+      let settled =
+        atStaging && followers.count == 2
+        && followers.allSatisfy { member in
+          guard let body = snapshot.positions[member],
+            let target = snapshot.companionTargets[member]
+          else { return false }
+          return snapshot.coveredMembers.contains(member)
+            && simd_distance(body, target) <= 0.35
+            && simd_distance(body, leader) >= 1.2 && simd_distance(body, leader) <= 2.6
+            && followers.filter { $0 != member }.allSatisfy { other in
+              guard let otherBody = snapshot.positions[other],
+                let otherTarget = snapshot.companionTargets[other]
+              else { return false }
+              return simd_distance(body, otherBody) >= 1.2
+                && simd_distance(target, otherTarget) >= 1.2
+            }
+        }
+      if settled {
+        let moved = followers.contains { member in
+          guard let first = coverStablePositions[member], let body = snapshot.positions[member]
+          else { return true }
+          return simd_distance(first, body) > 0.25
+        }
+        if coverStableSince == nil || moved {
+          coverStableSince = stepTime
+          coverStablePositions = snapshot.positions
+        }
+        let held = stepTime - (coverStableSince ?? stepTime)
+        longestCoverHold = max(longestCoverHold, held)
+        if held >= hold {
+          recordGuardMark(
+            "Defend settled in separate cover", snapshot: snapshot,
+            longestCoverHoldSeconds: longestCoverHold)
+          advance()
+          return nil
+        }
+      } else {
+        coverStableSince = nil
+        coverStablePositions = [:]
+      }
+      if stepTime > seconds {
+        recordGuardMark(
+          "Defend cover settlement failed", snapshot: snapshot,
+          longestCoverHoldSeconds: longestCoverHold)
+        failures.append("both companions did not settle in separate covered positions")
+        advance()
+        return nil
+      }
+      // The player's ordinary roll is still available during recall. No planner or damage
+      // state is changed to protect the leader while observing the real companions.
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      if phase != .committed && phase != .burst, !atStaging {
+        return InputRules.Raw(
+          stick: Movement.stick(
+            towards: staging - leader, cameraOffset: snapshot.level.cameraOffset))
+      }
+      if phase == .committed, elapsed - lastGuardDodge > 1,
+        let centre = snapshot.robotPosition, simd_distance(leader, centre) > 0.1
+      {
+        let radial = leader - centre
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let escape =
+          movement.canTraverse(from: leader, to: leader + tangent * 3) ? tangent : -tangent
+        lastGuardDodge = elapsed
+        guardRelease = true
+        return InputRules.Raw(
+          stick: Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset),
+          controllerDodge: true)
+      }
+      return InputRules.Raw()
+    }
+
     /// A bounded player script, not a simulation shortcut: no teleports, state writes or
     /// damage immunity. It observes the same component markers that the player sees.
     private mutating func dismantleGuard(_ snapshot: Snapshot) -> InputRules.Raw? {
@@ -865,14 +1022,11 @@
           simd_distance($0.ground, at) < simd_distance($1.ground, at)
         })
       else { return InputRules.Raw() }
-      if !snapshot.locked {
-        guardRelease = true
-        return InputRules.Raw(controllerLock: true)
-      }
       let delta = point.ground - at
       var raw = InputRules.Raw()
       let radial = at - centre
       let distance = simd_length(radial)
+      var needsPeek = false
       if strategy.phase == .coupling || strategy.phase == .reactor {
         // Approach the nearest side around the full leg footprint, rather than steering
         // straight through it. Both component sides are equivalent, so no fixed flank wins.
@@ -903,10 +1057,30 @@
           raw.stick = Movement.stick(
             towards: approach, cameraOffset: snapshot.level.cameraOffset)
         }
-      } else if distance > 11 || distance < 5 {
-        let away = distance > 0.1 ? radial / distance : snapshot.robotFacing ?? [0, 1]
-        raw.stick = Movement.stick(
-          towards: centre + away * 8 - at, cameraOffset: snapshot.level.cameraOffset)
+      } else {
+        let ballistics = Ballistics(level: snapshot.level)
+        let clearShot = ballistics.isClear(from: ballistics.point(at), to: point.centre)
+        let visibleBody = ballistics.isClear(
+          from: ballistics.point(centre, above: 1.52), to: ballistics.point(at))
+        needsPeek = !clearShot || !visibleBody
+        if needsPeek {
+          // The new rear cover can hide a rolled leader at a perfectly valid rifle range.
+          // Peek through the authored central lane using ordinary input, rather than keep
+          // firing into a barrier or waiting forever for an unseen guard to recover.
+          let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+          let front = SIMD2<Float>(6.5, 8)
+          let rear = SIMD2<Float>(6.5, 10.6)
+          let destination = movement.canTraverse(from: at, to: front) ? front : rear
+          if movement.canTraverse(from: at, to: destination), simd_distance(at, destination) > 0.15
+          {
+            raw.stick = Movement.stick(
+              towards: destination - at, cameraOffset: snapshot.level.cameraOffset)
+          }
+        } else if distance > 11 || distance < 5 {
+          let away = distance > 0.1 ? radial / distance : snapshot.robotFacing ?? [0, 1]
+          raw.stick = Movement.stick(
+            towards: centre + away * 8 - at, cameraOffset: snapshot.level.cameraOffset)
+        }
       }
       // A committed volley does not home in. A real roll crosses its old line; its ordinary
       // cooldown and vulnerability rules still apply. Sensor fire waits for visible recovery.
@@ -920,6 +1094,11 @@
         lastGuardDodge = elapsed
         guardRelease = true
         return raw
+      }
+      if needsPeek { return raw }
+      if !snapshot.locked {
+        guardRelease = true
+        return InputRules.Raw(controllerLock: true)
       }
       if simd_length(delta) > 0.001 {
         raw.aimStick = Movement.stick(
@@ -990,6 +1169,9 @@
       defendBaseline = nil
       defendLoaded = [:]
       defendDistances = [:]
+      coverStableSince = nil
+      coverStablePositions = [:]
+      longestCoverHold = 0
     }
 
     /// Append the mark to marks.log as it happens, so `apple/scripts/playtest` can take a
@@ -1087,7 +1269,7 @@
         .wait(seconds: 1.8), .mark("guard patrol"),
         .walk([-6.5, 30]), .walk([6.5, 30]), .walk([6.5, 10]),
         .waitForRobotPhase(.tracking, seconds: 30), .mark("guard tracking"),
-        .waitForRobotPhase(.committed, seconds: 3), .mark("guard committed"),
+        .waitForRobotPhase(.committed, seconds: 3), .mark("guard committed"), .dodgeGuard,
         .waitForRobotPhase(.burst, seconds: 2), .mark("guard burst"),
         .waitForRobotPhase(.recovering, seconds: 2), .expectRobotShots(atLeast: 3),
         .mark("guard recovery"),
@@ -1148,6 +1330,20 @@
         .mark("Defend after the named warning"), .finishRetaliationCycle,
         .order(.attack), .expectCombatStance(.attack), .mark("Attack after retaliation"),
         .dismantleGuard, .expectDefeated(1), .mark("retaliating guard dismantled"),
+      ] + restartRun
+
+    /// Native Attack contributions precede a real withdrawal. The distinct cover must hold
+    /// at the actual bodies, survive Pause/Resume, then allow Attack to finish the guard.
+    private static let coverSpacing: [Step] =
+      toTheStranger + [
+        .order(.attack), .expectCombatStance(.attack), .companionPrerequisites,
+        .order(.hold), .order(.defend), .expectCombatStance(.defend),
+        .walk([6.5, 10]), .mark("Defend returns to rear cover"),
+        .settleDefendCover(seconds: 14, hold: 1),
+        .pause, .wait(seconds: 0.5), .mark("Paused in separate cover"), .pause,
+        .settleDefendCover(seconds: 6, hold: 0.5), .mark("Separate cover after Resume"),
+        .order(.attack), .expectCombatStance(.attack), .companionFight,
+        .expectDefeated(1), .mark("Guard dismantled after covered withdrawal"),
       ] + restartRun
 
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
@@ -1229,6 +1425,7 @@
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
       ("opening", opening), ("formations", formations), ("orders", orders), ("lock-on", lockOn),
       ("weapons", weapons), ("companions", companions), ("retaliation", retaliation),
+      ("cover-spacing", coverSpacing),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

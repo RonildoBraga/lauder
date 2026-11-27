@@ -14,6 +14,8 @@ extension BrooklynBridge {
       .box("manhattan-tower-pier", at: [0, 23.5, -470.3], size: [5.3, 47, 18]),
       .box("manhattan-tower-west", at: [-17.225, 23.5, -470.3], size: [8.55, 47, 18]),
       .box("manhattan-tower-east", at: [17.225, 23.5, -470.3], size: [8.55, 47, 18]),
+      .box("bridge-cover-west", at: [4.5, 0.825, 9.2], size: [1.8, 1.65, 1.4]),
+      .box("bridge-cover-east", at: [8.7, 0.825, 9.2], size: [2.4, 1.65, 1.4]),
     ],
     areas: [
       .area("buried-road", from: [-12.95, 66], to: [12.95, 72]),

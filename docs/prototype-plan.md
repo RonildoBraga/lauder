@@ -1,10 +1,10 @@
 # Lauder — bridge-only prototype
 
-**Updated:** 26 November 2026
+**Updated:** 27 November 2026
 
 **Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The strategic guard was delivered as the [build 33 reviewed preview](#build-33-testflight-preview). [Bounded companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with validation below. The [build 35 retaliation preview](#build-35-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The player keeps direct control of the leader while companions may complete their own weakpoint contributions. Further scenes and mechanics require their own decision.
 
-The current comparison is [guard retaliation](guard-retaliation.md), delivered as the [build 35 preview](#build-35-testflight-preview), with source and Simulator checks below. Build 34's basic Attack/Defend feedback does not verify this new preview's phone behaviour.
+The current assignment is [bridge cover and companion spacing](bridge-cover-spacing.md), implemented and source/Simulator verified in [PR #175](https://github.com/RonildoBraga/lauder/pull/175), on `codex/bridge-cover-spacing` under [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The guard-retaliation comparison remains delivered as the [build 35 preview](#build-35-testflight-preview). The maintainer's generic **“Looks good”** feedback does not establish detailed phone controls, audibility or sustained performance.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
@@ -14,11 +14,36 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Bridge cover and spacing — in development
+
+On 27 November 2026 the maintainer said **“Looks good. Go ahead and improve the cover and companion spacing on the bridge.”** This explicitly assigns the bounded [cover/spacing comparison](bridge-cover-spacing.md), recorded in [issue #174](https://github.com/RonildoBraga/lauder/issues/174), without authorising a merge or another TestFlight delivery.
+
+Two simple approach shelters, `bridge-cover-west` and `bridge-cover-east`, accompany **1.2 m desired clearance between autonomous destinations**. The existing centre passage, east coupling approach and quiet west arch must remain usable. Reservations respect explicit Hold/Go anchors, the leader and other intended places; actual collision, rays, threat, weapon execution and the existing leash/recall bounds retain authority. Normal formations outside the fight, guard damage, alternating patterns, timings and weakpoint rules remain unchanged.
+
+### Cover and spacing verification
+
+On 27 November 2026, source **`60428d3`** passed `./scripts/check`: 13 declaration-contract tests, 31 offline release-contract tests, 52 Blender extension tests, eight generated sounds, strict Swift formatting, the app build and hosted Swift Testing, including all **eleven headless gameplay routes**. No Swift source warnings remained. Read-only source and documentation reviews found no outstanding blocker after replacing repeated tactical path construction with connected-region admission; the existing motor retains sole ownership of cached routes. Subsequent documentation records these results without changing application source, assets, tests or tooling.
+
+Geometry tests verify separate roomy rear places, both real gun origins blocked at samples throughout native patrol/turning/bracing/precision/fan/recovery poses, traversable centre/east/quiet-west lanes and clearance around the guard's whole movement envelope. Visual bounds match the authored boxes. Planner/native regressions cover shared reservations, immediate occupied-goal invalidation, crowded firing steps, stable uncovered fallback, nearby shelter behind a forward-facing formation, progressive distant recall, explicit Go/Hold, switching, lifecycle, native role weapons and reset. Older fight drivers now peek through a real clear lane and roll on an observed commitment; hit/discharge tests observe actual native events rather than a transient activity label. No phase, damage or weapon state is injected into the ordinary-input routes.
+
+Clean rendered iPhone 17 / iOS 27.0 Simulator runs on the same source:
+
+| Route | Duration | Peak hits: Miki / Laura / Tom | Retries | Frame p99 / max | Party update mean / p99 | Body overlap frames |
+|---|---:|---:|---:|---:|---:|---:|
+| `cover-spacing` | 63.1 s | 0 / 0 / 1 | 0 | 16.75 / 33.37 ms | 1.264 / 4.088 ms | 1.9% |
+| `companions` | 63.9 s | 0 / 1 / 1 | 0 | 17.05 / 216.50 ms | 1.363 / 4.751 ms | 2.7% |
+| `first-fight` | 81.1 s | 1 / 0 / 1 | 0 | 16.76 / 220.08 ms | 1.385 / 5.581 ms | 0.0% |
+| `retaliation` | 55.0 s | 0 / 0 / 0 | 0 | 16.80 / 230.74 ms | 1.297 / 3.903 ms | 0.7% |
+
+All four passed through ordinary shared input, including native dismantling and Restart, with zero stuck-companion diagnostic frames. In `cover-spacing`, both followers arrived at their actual destinations by 52.90 s: Tom `[4.953, 10.346]` and Laura `[8.322, 10.422]`, with Miki `[6.439, 9.834]`. Their **3.37 m** separation and respective **1.57 / 1.97 m** leader distances satisfied the selected spacing/nearby-recall bounds. The real two-muzzle cover query stayed true for both bodies during a continuous **1.00 s** settled interval, and another **0.52 s** after Pause/Resume. Companion ammo/progress stayed unchanged throughout Defend. A later Attack completed the real core contribution while Miki remained player-controlled. Tom's earlier hit remained recorded; the route does not depend on immunity.
+
+Visual inspection of the recordings confirms two independently occupied shelters and an open central lane. The headless opening/order routes retain quiet bypass, formations, hard orders, switching and reset. The cover route's continuous settled intervals are bounded observations, not a claim of permanent safety or spacing. Body overlap still occurred briefly during movement, reaching 2.7% of frames in one run, and three recordings include isolated long frames above 200 ms. Simulator timings do not establish sustained phone performance. Physical controls, warning audibility, phone readability, balance and enjoyment remain unverified for this change. [PR #175](https://github.com/RonildoBraga/lauder/pull/175) is the review handoff; build 35 remains delivered, with no merge or new upload in this assignment.
+
 ## Guard retaliation — in development
 
 The maintainer reported **“The Attack and Defend controls are working”**, then authorised the bounded recommendation with **“proceed”**. [Issue #171](https://github.com/RonildoBraga/lauder/issues/171) records that chat direction. The report confirms basic commands only; it is not every-input acceptance, sustained performance evidence or merge/release permission.
 
-On `codex/guard-retaliation`, the engaged guard chooses a visible recent native attacker between cycles, otherwise acquiring the leader under the existing rules. A named HUD warning and one two-note cue identify the threatened member. Target identity stays fixed through warning, commitment, burst and recovery; the committed point stays fixed after commitment. The [retaliation contract](guard-retaliation.md) owns selection, flank fairness and lifecycle details. Damage, patterns, existing timing and weakpoint requirements remain unchanged, as do explicit Attack/Defend, orders and the west bypass. Cover geometry is not assigned.
+On `codex/guard-retaliation`, the engaged guard chooses a visible recent native attacker between cycles, otherwise acquiring the leader under the existing rules. A named HUD warning and one two-note cue identify the threatened member. Target identity stays fixed through warning, commitment, burst and recovery; the committed point stays fixed after commitment. The [retaliation contract](guard-retaliation.md) owns selection, flank fairness and lifecycle details. Damage, patterns, existing timing and weakpoint requirements remain unchanged, as do explicit Attack/Defend, orders and the west bypass. That earlier comparison did not include cover edits; the 27 November cover/spacing assignment above is separate.
 
 ### Retaliation verification
 

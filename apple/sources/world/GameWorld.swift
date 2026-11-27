@@ -809,6 +809,10 @@ final class GameWorld {
 
   private func canTraverseParty(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Bool {
     guard motion.canTraverse(from: start, to: end) else { return false }
+    return clearsGuard(from: start, to: end)
+  }
+
+  private func clearsGuard(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Bool {
     return fight.hostiles.values.allSatisfy { state in
       guard state.spec.strategicGuard, state.isVisible, !state.isDown,
         let robot = state.robot, !robot.isCleared
@@ -818,6 +822,16 @@ final class GameWorld {
         radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
       return simd_distance(resolved, end) < 0.001
     }
+  }
+
+  /// Admit connected cover destinations without building paths in the policy's hot loop.
+  /// The motor owns route construction and checks physical clearance while walking it.
+  private func canReachParty(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Bool {
+    if canTraverseParty(from: start, to: end) { return true }
+    guard let startRegion = region(near: start), grid.region(at: end) == startRegion,
+      canStandParty(end)
+    else { return false }
+    return clearsGuard(from: start, to: end)
   }
 
   /// Static grid routes also need short legal legs round a living machine's dynamic hull.
@@ -871,10 +885,20 @@ final class GameWorld {
       }
     }
     var next: [PartyMember: CompanionTactics.Intent] = [:]
+    // Reserve intended places, rather than transient moving bodies. A later companion
+    // cannot claim the same cover/escape slot; existing orders keep their own anchors.
+    var reserved: [PartyMember: SIMD2<Float>] = [:]
+    for member in session.companions {
+      reserved[member] =
+        Self.point(of: session.order(of: member)) ?? companionIntents[member]?.position
+        ?? formationTargets[member] ?? current[member]
+    }
     for member in session.companions {
       guard let position = current[member] else { continue }
       var policy = tactics[member] ?? CompanionTactics()
       let base = formationTargets[member] ?? position
+      reserved[member] = nil
+      let occupied = Array(reserved.values)
       let intent = policy.plan(
         input: CompanionTactics.Input(
           member: member, leader: session.leader, position: position, leaderPosition: leader,
@@ -885,14 +909,21 @@ final class GameWorld {
           phase: guardState.robot.phase, stage: guardState.strategy.phase,
           weakpoints: fight.weakpoints(for: guardState.id), dt: dt),
         canStand: { self.canStandParty($0) },
-        canTraverse: { self.canTraverseParty(from: $0, to: $1) },
+        canTraverse: { self.canReachParty(from: $0, to: $1) },
         canFire: {
           self.fight.companionCanFire(member, from: $0, at: $1, weapon: $2, figures: current)
         },
         isCovered: { self.fight.companionHasCover(at: $0, from: guardState.robot) },
-        isThreatened: { self.fight.companionIsThreatened(at: $0, by: guardState.robot) })
+        isThreatened: { self.fight.companionIsThreatened(at: $0, by: guardState.robot) },
+        isSpaced: { point in
+          simd_distance(point, leader) >= CompanionTactics.minimumSpacing
+            && occupied.allSatisfy {
+              simd_distance(point, $0) >= CompanionTactics.minimumSpacing
+            }
+        })
       tactics[member] = policy
       next[member] = intent
+      reserved[member] = Self.point(of: session.order(of: member)) ?? intent.position ?? base
     }
     companionIntents = next
     let status = session.companions.compactMap { member -> String? in
@@ -1475,6 +1506,14 @@ final class GameWorld {
     /// What a scripted playtest can see each frame.
     var playtestSnapshot: PlaytestRunner.Snapshot {
       let robot = fight.hostiles["stranger"]?.robot
+      let current = positions
+      let guardState = current[session.leader].flatMap { fight.companionGuard(near: $0) }
+      let covered = Set(
+        current.compactMap { member, point -> PartyMember? in
+          guard let guardState, fight.companionHasCover(at: point, from: guardState.robot)
+          else { return nil }
+          return member
+        })
       return PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
@@ -1492,7 +1531,8 @@ final class GameWorld {
           uniqueKeysWithValues: session.party.map { ($0, fight.status(for: $0)) }),
         guardTarget: fight.guardTarget(for: "stranger"), robotCommittedPoint: robot?.committedPoint,
         partyHits: Dictionary(
-          uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }))
+          uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }),
+        companionTargets: companionTargets, coveredMembers: covered)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

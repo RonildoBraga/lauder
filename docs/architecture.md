@@ -1,12 +1,14 @@
 # Lauder — architecture
 
-**Updated:** 26 November 2026
+**Updated:** 27 November 2026
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
 
 The [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). The [build 34 preview](prototype-plan.md#build-34-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The merged baseline, delivered preview and new branch remain distinguishable.
 
 [Guard retaliation](guard-retaliation.md) is implemented on `codex/guard-retaliation` and delivered in the [build 35 preview](prototype-plan.md#build-35-testflight-preview), with source and Simulator verification in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The maintainer's build 34 command feedback does not establish phone behaviour for this new preview.
+
+The current [cover and spacing pass](bridge-cover-spacing.md) is implemented and source/Simulator verified in [PR #175](https://github.com/RonildoBraga/lauder/pull/175), before merge. Blender owns the two approach blockers and their matching visuals. GameWorld reserves intended companion destinations and order anchors; CompanionTactics receives spacing, connectivity and physical queries. The existing motor alone builds and caches routes around cover; real collision/rays still execute the resulting intentions.
 
 ## Decision and platform
 
