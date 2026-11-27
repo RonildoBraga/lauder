@@ -112,6 +112,7 @@
       let firedTriggers: Int
       let beat: StoryBeat
       let hitsTaken: Int
+      let hitsAllowed: Int
       /// Hostiles down other than the guard's pack, its drones and crawlers, which go down with it.
       let defeated: Int
       let formation: GameSession.Formation
@@ -697,7 +698,7 @@
               && snapshot.partyHits[snapshot.leader] == 0
               && snapshot.party.allSatisfy { member in
                 guard let hits = snapshot.partyHits[member] else { return false }
-                return hits < GameSession.hitsAllowed
+                return hits < snapshot.hitsAllowed
               },
             "the leader did not evade the live burst or a companion was incapacitated: \(snapshot.partyHits)"
           )

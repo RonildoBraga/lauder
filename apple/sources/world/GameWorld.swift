@@ -1688,7 +1688,7 @@ final class GameWorld {
       return PlaytestRunner.Snapshot(
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
-        hitsTaken: session.hitsTaken,
+        hitsTaken: session.hitsTaken, hitsAllowed: GameSession.hitsAllowed,
         defeated: session.defeated.filter { fight.hostiles[$0]?.spec.isPack != true }.count,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
