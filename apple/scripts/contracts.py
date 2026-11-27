@@ -115,7 +115,9 @@ def problems(root=ROOT):
         level_outputs.extend(outputs.values())
     model_folder = literal(root, common, "SPAWNED_SCENES")
     metadata = literal(root, common, "MODEL_METADATA")
-    exports = level_outputs + [f"{model_folder}/{name}.usdz" for name in spawned] + list(metadata.values())
+    acknowledgements = literal(root, common, "MODEL_ACKNOWLEDGEMENTS")
+    exports = (level_outputs + [f"{model_folder}/{name}.usdz" for name in spawned]
+               + list(metadata.values()) + list(acknowledgements.values()))
     records = json.loads((root / "blender/level-exports.json").read_text())
     same("Export manifest record names", list(records), level_keys + [f"models/{n}" for n in spawned])
     recorded = [path for record in records.values() for path in record.get("wrote", {})]

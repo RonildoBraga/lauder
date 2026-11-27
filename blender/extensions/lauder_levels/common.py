@@ -61,6 +61,8 @@ SPAWNED = ("crawler", "hostile", "laura", "miki", "scout-drone", "spider-bot-hea
 SPAWNED_SCENES = "apple/sources/content/models"
 #: The robot's geometry values travel with its static, articulated scene file.
 MODEL_METADATA = {"spider-bot-heavy": "apple/sources/content/RobotModelGeometry.swift"}
+#: Human-readable credit exported alongside the applicable runtime model.
+MODEL_ACKNOWLEDGEMENTS = {"spider-bot-heavy": "apple/sources/content/acknowledgements.txt"}
 
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"
