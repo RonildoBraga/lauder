@@ -114,6 +114,7 @@ While Codex worked on the guard's leg stagger (#199), the maintainer asked for *
 - **Headless routes:** all fifteen pass, the fourteen guard-only routes and **drone-fight**.
 - **Rendered drone-fight:** It passed in 69.4 s, 23/23 steps, with no retry; Laura took one hit. Miki downed both drones 9.4 s after the guard noticed the party, and the squad then dismantled the guard. Frame time averaged 16.8 ms (p99 16.8 ms, one frame of 185 ms), and the party update 1.5 ms. An earlier run on the preceding source also passed, in 70.2 s.
 - **Rendered robot-parts:** on the preceding source it passed on the guard-only bridge (61.7 s, 35/35 steps), which shows the guard-only routes launch on the right level.
+- **After #202 landed:** `main` was merged in as `b60f4b8`, and the full check passed on it. Codex's review then found that downed and cleared drones stopped moving once the fight ended. In `c204fb6` they keep falling and circling. The full check passed on it too. The rendered drone-fight passed again on it: 66.9 s, 23/23 steps, no retry, and Laura took one hit. Frame time averaged 16.7 ms (p99 16.8 ms, worst 62.4 ms), and the party update 1.5 ms.
 - **Not checked:** these are Simulator results, not phone evidence. Controls, readability, audibility, balance, enjoyment and sustained phone performance are unchecked.
 
 ## Eye, legs and grenades — in development
