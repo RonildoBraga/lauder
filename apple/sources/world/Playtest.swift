@@ -42,6 +42,9 @@
       case expectLock(Bool)
       /// A press of the weapon switch: the leader's other weapon (ADR 0021).
       case swap
+      /// Dismantle the guard through ordinary movement, leader/weapon switches and Fire.
+      case dismantleGuard
+      case waitForRetry(seconds: Float)
     }
 
     /// What the runner can see of the game each frame.
@@ -67,6 +70,11 @@
       var robotShots = 0
       /// Whether the aim is locked on a hostile (ADR 0020).
       var locked = false
+      var guardStrategy: GuardStrategy? = nil
+      var guardPoints: [GuardWeakpoint] = []
+      var robotPosition: SIMD2<Float>? = nil
+      var robotFacing: SIMD2<Float>? = nil
+      var isRetrying = false
     }
 
     struct Frame {
@@ -84,6 +92,9 @@
         let seconds: Double
         var robotPhase: String? = nil
         var robotShots = 0
+        var guardPhase: String? = nil
+        var reactorDamage: Int? = nil
+        var windowRemaining: Float? = nil
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -127,6 +138,9 @@
     private var presses = 0
     private var sincePress: Float = 0
     private var talking = false
+    private var guardRelease = false
+    private var lastGuardDodge: Float = -10
+    private var guardStageSeen: GuardStrategy.Phase?
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -148,6 +162,12 @@
     init?(scenario: String) {
       guard let steps = Self.steps(for: scenario) else { return nil }
       name = scenario
+      self.steps = steps
+    }
+
+    /// A focused contract run uses the same input driver as the named rendered routes.
+    init(steps: [Step], name: String) {
+      self.name = name
       self.steps = steps
     }
 
@@ -186,7 +206,10 @@
             Summary.Mark(
               name: label, seconds: Double(elapsed),
               robotPhase: snapshot.robotPhase.map { String(describing: $0) },
-              robotShots: snapshot.robotShots))
+              robotShots: snapshot.robotShots,
+              guardPhase: snapshot.guardStrategy.map { String(describing: $0.phase) },
+              reactorDamage: snapshot.guardStrategy?.reactorDamage,
+              windowRemaining: snapshot.guardStrategy?.windowRemaining))
           announce(label)
           advance()
         case .act:
@@ -195,6 +218,22 @@
           return press(InputRules.Raw(controllerLock: true))
         case .swap:
           return press(InputRules.Raw(controllerSwap: true))
+        case .dismantleGuard:
+          if let raw = dismantleGuard(snapshot) { return raw }
+        case .waitForRetry(let seconds):
+          if snapshot.beat == .crossing && snapshot.robotPhase == .hidden && !snapshot.isRetrying {
+            // Retry restores the content before its fade finishes. Once it has finished,
+            // release through the real input gate before attempting fresh movement.
+            pressFrame += 1
+            if pressFrame >= 3 { advance() }
+            return InputRules.Raw()
+          }
+          if stepTime > seconds {
+            failures.append("the encounter did not retry within \(Int(seconds)) s")
+            advance()
+            continue
+          }
+          return InputRules.Raw()
         case .expectLock(let locked):
           expect(
             snapshot.locked == locked, locked ? "nothing was locked" : "the lock still held")
@@ -398,6 +437,152 @@
       advance()
     }
 
+    /// A bounded player script, not a simulation shortcut: no teleports, state writes or
+    /// damage immunity. It observes the same component markers that the player sees.
+    private mutating func dismantleGuard(_ snapshot: Snapshot) -> InputRules.Raw? {
+      if snapshot.defeated > 0 {
+        // The crossing/order scenarios begin as Miki. Return through the real cycle so later
+        // checks retain their intended squad roles, rather than inheriting Tom by accident.
+        if guardRelease {
+          guardRelease = false
+          return InputRules.Raw()
+        }
+        if snapshot.leader != .miki {
+          guardRelease = true
+          return InputRules.Raw(controllerSwitch: true)
+        }
+        advance()
+        return nil
+      }
+      if snapshot.isRetrying || snapshot.beat != .stranger || stepTime > 60 {
+        failures.append(
+          "guard combination failed or retried at \(Self.seconds(elapsed)); "
+            + "\(snapshot.leader.displayName) at "
+            + Self.describe(snapshot.positions[snapshot.leader] ?? [.nan, .nan])
+            + "; stage \(String(describing: snapshot.guardStrategy?.phase)), "
+            + "core \(snapshot.guardStrategy?.reactorDamage ?? 0), "
+            + "robot \(String(describing: snapshot.robotPhase))")
+        advance()
+        return nil
+      }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      guard let strategy = snapshot.guardStrategy, let centre = snapshot.robotPosition,
+        let at = snapshot.positions[snapshot.leader]
+      else { return InputRules.Raw() }
+      if guardStageSeen != strategy.phase {
+        guardStageSeen = strategy.phase
+        let label =
+          switch strategy.phase {
+          case .sensor: "front sensor challenge"
+          case .coupling: "sensor disabled"
+          case .reactor: "side coupling breached"
+          case .complete: "reactor disabled"
+          }
+        marks.append(
+          Summary.Mark(
+            name: label, seconds: Double(elapsed),
+            robotPhase: snapshot.robotPhase.map { String(describing: $0) },
+            robotShots: snapshot.robotShots, guardPhase: String(describing: strategy.phase),
+            reactorDamage: strategy.reactorDamage, windowRemaining: strategy.windowRemaining))
+        announce(label)
+      }
+      let member: PartyMember
+      let kind: Weapon.Kind
+      switch strategy.phase {
+      case .sensor:
+        member = .miki
+        kind = .longRifle
+      case .coupling:
+        member = .laura
+        kind = .energySword
+      case .reactor:
+        member = .tom
+        kind = .minigun
+      case .complete: return InputRules.Raw()
+      }
+      if snapshot.leader != member {
+        guardRelease = true
+        return InputRules.Raw(controllerSwitch: true)
+      }
+      if snapshot.weapon.kind != kind {
+        guardRelease = true
+        return InputRules.Raw(controllerSwap: true)
+      }
+      guard
+        let point = snapshot.guardPoints.min(by: {
+          simd_distance($0.ground, at) < simd_distance($1.ground, at)
+        })
+      else { return InputRules.Raw() }
+      if !snapshot.locked {
+        guardRelease = true
+        return InputRules.Raw(controllerLock: true)
+      }
+      let delta = point.ground - at
+      var raw = InputRules.Raw()
+      let radial = at - centre
+      let distance = simd_length(radial)
+      if strategy.phase == .coupling || strategy.phase == .reactor {
+        // Approach the nearest side around the full leg footprint, rather than steering
+        // straight through it. Both component sides are equivalent, so no fixed flank wins.
+        let needsAttack =
+          strategy.phase == .reactor && strategy.windowRemaining == 0
+          && snapshot.robotPhase != .committed && snapshot.robotPhase != .burst
+          && snapshot.robotPhase != .recovering
+        // A flank outside the robot's sight cone cannot provoke its next recovery. Step into
+        // view while the core is closed, then move to the side once its attack commits.
+        let side =
+          needsAttack
+          ? snapshot.robotFacing ?? [0, 1] : simd_normalize(point.ground - centre)
+        let radius: Float = strategy.phase == .coupling ? 2.65 : 3.5
+        var destination = centre + side * radius
+        if distance > 0.1 {
+          let direction = radial / distance
+          let cross = direction.x * side.y - direction.y * side.x
+          if simd_dot(direction, side) < 0.9 {
+            let angle: Float = cross >= 0 ? 0.35 : -0.35
+            let rotated = SIMD2(
+              direction.x * cos(angle) - direction.y * sin(angle),
+              direction.x * sin(angle) + direction.y * cos(angle))
+            destination = centre + rotated * max(radius, distance)
+          }
+        }
+        let approach = destination - at
+        if simd_length(approach) > 0.18 {
+          raw.stick = Movement.stick(
+            towards: approach, cameraOffset: snapshot.level.cameraOffset)
+        }
+      } else if distance > 11 || distance < 5 {
+        let away = distance > 0.1 ? radial / distance : snapshot.robotFacing ?? [0, 1]
+        raw.stick = Movement.stick(
+          towards: centre + away * 8 - at, cameraOffset: snapshot.level.cameraOffset)
+      }
+      // A committed volley does not home in. A real roll crosses its old line; its ordinary
+      // cooldown and vulnerability rules still apply. Sensor fire waits for visible recovery.
+      if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
+        strategy.phase != .coupling, distance > 0.1
+      {
+        let tangent = SIMD2(-radial.y, radial.x)
+        raw.stick = Movement.stick(
+          towards: tangent, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+        return raw
+      }
+      if simd_length(delta) > 0.001 {
+        raw.aimStick = Movement.stick(
+          towards: delta, cameraOffset: snapshot.level.cameraOffset)
+      }
+      raw.controllerFire =
+        point.exposed
+        && (strategy.phase != .coupling
+          || simd_length(delta) < Weapon.energySword.range + point.radius)
+      return raw
+    }
+
     /// Record one rendered frame's elapsed time, before any simulation runs.
     mutating func tick(dt: Float) {
       guard summary == nil, startedAt != nil else { return }
@@ -523,7 +708,7 @@
       [
         .mark("start"), .walk([6.5, 66]), .mark("buried road"), .walk([6.5, 20]),
         .mark("first tower"), .walk([6.5, 10]), .expectBeat(.stranger),
-        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
+        .dismantleGuard, .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
         .mark("beyond the first tower"), .walk([6.5, -206.15]), .mark("mid-span"),
         .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .mark("Manhattan end"),
         .talk, .expectBeat(.arrived), .expectTriggers(5), .walk([-7, -494.3]),
@@ -551,7 +736,7 @@
         .waitForRobotPhase(.burst, seconds: 2), .mark("guard burst"),
         .waitForRobotPhase(.recovering, seconds: 2), .expectRobotShots(atLeast: 3),
         .mark("guard recovery"),
-        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .expectHits(0),
+        .dismantleGuard, .expectDefeated(1), .mark("guard disabled"), .expectHits(0),
         .wait(seconds: 1),
       ] + restartRun
 
@@ -559,9 +744,9 @@
     /// again at its checkpoint with inventory restored; the second attempt returns fire.
     private static let fightRetry: [Step] =
       toTheStranger + [
-        .wait(seconds: 20), .expectBeat(.crossing), .expectHits(0), .expectDefeated(0),
+        .waitForRetry(seconds: 90), .expectBeat(.crossing), .expectHits(0), .expectDefeated(0),
         .mark("retry"),
-        .walk([6.5, 10]), .expectBeat(.stranger), .fire(seconds: 4),
+        .walk([6.5, 10]), .expectBeat(.stranger), .dismantleGuard,
         .expectDefeated(1), .mark("won after the retry"),
       ]
 
@@ -571,24 +756,26 @@
     private static let lockOn: [Step] =
       toTheStranger + [
         .wait(seconds: 0.5), .lock, .expectLock(true), .wait(seconds: 0.6),
-        .mark("locked on the guard"), .fire(seconds: 4), .expectDefeated(1), .expectLock(false),
+        .mark("locked on the guard"), .dismantleGuard, .expectDefeated(1), .expectLock(false),
         .mark("guard down, lock let go"), .wait(seconds: 1),
       ] + restartRun
 
     /// Tom's two weapons in the first fight (ADR 0021): he raises his dome against the guard's
-    /// bursts and nobody is hurt, then switches to the minigun and brings the guard down.
+    /// bursts and nobody is hurt. The minigun alone cannot defeat its armour; all three then
+    /// dismantle it with their own weapons.
     private static let weapons: [Step] =
       toTheStranger + [
         .switchLeader, .swap, .wait(seconds: 0.3), .fire(seconds: 2.5), .mark("Tom's dome"),
-        .fire(seconds: 2), .expectHits(0), .swap, .wait(seconds: 0.3), .fire(seconds: 5),
-        .expectDefeated(1), .mark("guard down to the minigun"), .wait(seconds: 1),
+        .fire(seconds: 2), .expectHits(0), .swap, .wait(seconds: 0.3), .fire(seconds: 1),
+        .expectDefeated(0), .mark("armour stops the minigun"), .dismantleGuard,
+        .expectDefeated(1), .mark("guard dismantled by the party"), .wait(seconds: 1),
       ] + restartRun
 
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
     /// the second tower.
     private static let pastTheGuard: [Step] =
       toTheStranger + [
-        .fire(seconds: 4), .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
+        .dismantleGuard, .expectDefeated(1), .mark("guard disabled"), .walk([6.5, -12]),
         .walk([6.5, -206.15]), .walk([-7, -240]), .mark("beyond mid-span"),
       ]
 

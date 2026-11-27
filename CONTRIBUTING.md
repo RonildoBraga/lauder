@@ -65,21 +65,21 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 ```
 
 ```bash
-./apple/scripts/playtest first-fight ambush
+./apple/scripts/playtest first-fight lock-on
 ```
 
 It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and reports pass/fail with reasons, frame times, party-update cost, body overlaps, slot keeping and the widest gap. It saves marked screenshots, video, traces and summaries under `.local/playtest/<time>/`, which Git ignores, or under `--output`.
 
 Use `./apple/scripts/playtest --list` for the current scenario names. The scenario families cover:
 
-- The bridge opening, fights, recruitment and Restart.
+- The three-character bridge opening, its guard fight, paired weapons, lock-on and Restart.
 - Formations, squad orders and refused destinations.
 
 Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-and-performance), rather than maintaining a second scenario list here.
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the step/result and small discs mark companion destinations. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The bridge is the only playable level. Its pause menu offers **Resume**, **Restart** and **Vibration**. There is no level selector or weapon bench. Small test-only levels in `apple/tests/support` exercise collision and weapons; they are not app content.
+The bridge is the only playable level. Its pause menu offers **Resume**, **Restart**, **Vibration** and, with a controller or keyboard, **Status panel**. Touch exposes Resume, Restart and Vibration directly and always shows the status panel. There is no level selector or weapon bench. Small test-only levels in `apple/tests/support` exercise collision and weapons; they are not app content. The [strategic guard](docs/strategic-guard.md) is the current assigned branch work; its implementation and verification status live in the [prototype plan](docs/prototype-plan.md#strategic-guard--in-development).
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.
 

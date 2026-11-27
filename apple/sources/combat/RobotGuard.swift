@@ -3,6 +3,20 @@ import simd
 /// One bounded machine, independent of entities and animation playback. Fixed-step authority
 /// chooses movement, an honest committed aim point and one discharge at a time.
 struct RobotGuard {
+  enum Pattern: Hashable, Sendable {
+    case precision, fan
+
+    var name: String { self == .precision ? "Precision burst" : "Fan sweep" }
+    var roundCount: Int { self == .precision ? 3 : 5 }
+    var trackingTime: Float { self == .precision ? RobotGuard.trackingTime : 1.4 }
+    var commitTime: Float { self == .precision ? RobotGuard.commitTime : 0.6 }
+    var shotInterval: Float { self == .precision ? RobotGuard.shotInterval : 0.16 }
+
+    func yawOffset(round: Int) -> Float {
+      self == .precision ? 0 : Float(round - 2) * 7 * .pi / 180
+    }
+  }
+
   enum Phase: Equatable, Sendable {
     case hidden, patrol, notice, tracking, committed, burst, recovering, searching, down, cleared
   }
@@ -12,6 +26,18 @@ struct RobotGuard {
     let origin: SIMD3<Float>
     let direction: SIMD3<Float>
     let burst: Int
+    let pattern: Pattern
+
+    init(
+      gun: Int, origin: SIMD3<Float>, direction: SIMD3<Float>, burst: Int,
+      pattern: Pattern = .precision
+    ) {
+      self.gun = gun
+      self.origin = origin
+      self.direction = direction
+      self.burst = burst
+      self.pattern = pattern
+    }
   }
 
   static let speed: Float = 0.55
@@ -29,6 +55,8 @@ struct RobotGuard {
   private static let patrolOffsets: [SIMD2<Float>] = [[0, -1.5], [3, -1.5], [1.5, 0]]
 
   let home: SIMD2<Float>
+  private let strategicPatterns: Bool
+  private(set) var pattern = Pattern.precision
   private(set) var phase = Phase.hidden
   private(set) var position: SIMD2<Float>
   private(set) var facing: SIMD2<Float> = [0, 1]
@@ -49,10 +77,20 @@ struct RobotGuard {
   private var aimingPoint: SIMD2<Float>?
   private var repositionRemaining: Float = 0
   private var repositionGoal: SIMD2<Float>?
+  private var gunOffsets = SIMD2<Float>.zero
 
-  init(home: SIMD2<Float>) {
+  init(home: SIMD2<Float>, strategicPatterns: Bool = false) {
     self.home = home
+    self.strategicPatterns = strategicPatterns
     position = home
+  }
+
+  var nextPattern: Pattern {
+    strategicPatterns && pattern == .precision ? .fan : .precision
+  }
+
+  var recoveryDuration: Float {
+    strategicPatterns ? GuardStrategy.windowDuration : Self.recoveryTime
   }
 
   var isVisible: Bool { phase != .hidden }
@@ -87,7 +125,7 @@ struct RobotGuard {
     updateGunDirections()
   }
 
-  /// One player injury at most per committed three-round burst, including crossfire.
+  /// One player injury at most per committed burst of either pattern, including crossfire.
   mutating func acceptBurstHit() -> Bool {
     guard !burstHitAccepted, phase == .burst || phase == .recovering else { return false }
     burstHitAccepted = true
@@ -109,7 +147,8 @@ struct RobotGuard {
     let sees = armed && hasSight && distance <= Self.detectionRange && inCone
     if sees { lastSeen = target }
     let wantsBrace = [.notice, .tracking, .committed, .burst].contains(phase)
-    brace = min(1, max(0, brace + (wantsBrace ? 2 : -2) * dt))
+    let braceTarget: Float = wantsBrace ? (strategicPatterns && pattern == .precision ? 0.6 : 1) : 0
+    brace += max(-2 * dt, min(2 * dt, braceTarget - brace))
 
     switch phase {
     case .hidden, .down, .cleared:
@@ -141,7 +180,7 @@ struct RobotGuard {
       aimingPoint = target
       turn(towards: target, dt: dt)
       if phase == .notice, elapsed >= Self.noticeTime { transition(.tracking) }
-      if phase == .tracking, elapsed >= Self.trackingTime, distance <= Self.attackRange,
+      if phase == .tracking, elapsed >= pattern.trackingTime, distance <= Self.attackRange,
         distance < 0.001 || simd_dot(offset / distance, facing) >= cos(5 * .pi / 180)
       {
         committedPoint = target
@@ -151,7 +190,7 @@ struct RobotGuard {
     case .committed:
       // Target is now a fixed point. Losing sight after commitment cannot make it home in.
       aimingPoint = committedPoint
-      if elapsed >= Self.commitTime {
+      if elapsed >= pattern.commitTime {
         roundsFired = 0
         burstHitAccepted = false
         burstSerial += 1
@@ -161,7 +200,8 @@ struct RobotGuard {
       break
     case .recovering:
       aimingPoint = committedPoint
-      if elapsed >= Self.recoveryTime {
+      if elapsed >= recoveryDuration {
+        pattern = nextPattern
         committedPoint = nil
         aimingPoint = nil
         // One short bounded reposition precedes the next warned cycle.
@@ -187,16 +227,21 @@ struct RobotGuard {
       }
     }
     updateGunDirections()
-    if phase == .burst, elapsed + 0.000001 >= Float(roundsFired) * Self.shotInterval {
+    if phase == .burst, elapsed + 0.000001 >= Float(roundsFired) * pattern.shotInterval {
       let gun = roundsFired % 2
+      gunOffsets[gun] = pattern.yawOffset(round: roundsFired)
+      updateGunDirections()
+      // A fan can revisit a barrel before its previous recoil has finished. Reset before
+      // measuring this discharge, so the rendered muzzle and the actual ray stay identical.
+      recoilElapsed[gun] = 0
+      gunRecoil[gun] = 0
       let shot = Discharge(
-        gun: gun, origin: muzzle(gun: gun), direction: gunDirections[gun], burst: burstSerial)
+        gun: gun, origin: muzzle(gun: gun), direction: gunDirections[gun], burst: burstSerial,
+        pattern: pattern)
       roundsFired += 1
       lastGun = gun
       shotSerial += 1
-      recoilElapsed[gun] = 0
-      gunRecoil[gun] = 0
-      if roundsFired == 3 { transition(.recovering) }
+      if roundsFired == pattern.roundCount { transition(.recovering) }
       return shot
     }
     return nil
@@ -219,6 +264,9 @@ struct RobotGuard {
   private mutating func transition(_ next: Phase) {
     phase = next
     elapsed = 0
+    if next == .notice || next == .tracking || next == .patrol || next == .searching {
+      gunOffsets = .zero
+    }
   }
 
   private mutating func updateGunDirections() {
@@ -231,7 +279,7 @@ struct RobotGuard {
       let mount = Self.rotate(RobotModelGeometry.gunMounts[gun], yaw: yaw)
       let delta = aimingPoint - position - SIMD2(mount.x, mount.z)
       let desired = Movement.yaw(towards: delta)
-      let relative = (desired - yaw).remainder(dividingBy: 2 * .pi)
+      let relative = (desired - yaw).remainder(dividingBy: 2 * .pi) + gunOffsets[gun]
       let ground = Movement.facing(
         yaw: yaw + min(Self.gunYawLimit, max(-Self.gunYawLimit, relative)))
       let vertical =

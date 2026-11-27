@@ -93,6 +93,7 @@ The rejected first robot blockout used asset-specific matte materials from the e
 - The view looks straight along the bridge, so pushing up walks towards Manhattan. Diagonal views may suit open areas later.
 - Tall landmarks, such as tower tops and buildings, fade to a see-through ghost while they come between the camera and the party, so the player still sees what is in the way. The ghost is unlit, in each part's own colour, since a lit see-through landmark that fills the screen costs the phone's GPU too much.
 - World markers, such as the leader's ring, order rings, the refusal cross, the aim marker and the [lock](decisions/0020-lock-on.md)'s red ring, keep a readable size on screen: a camera that shows more of the ground draws them larger, as the [architecture](architecture.md#movement-and-presentation) sets out.
+- The strategic-guard branch places the leader disc, assisted target disc, lock ring, companion order rings and DEBUG destination discs at one shared height above the baked tower shadows. Their undersides must remain visible in both sun and shadow; the upright refusal cross keeps its separate placement.
 
 ## Characters and interface
 
@@ -102,6 +103,8 @@ The rejected first robot blockout used asset-specific matte materials from the e
   - Miki's hair and Laura's hood sit behind their faces, so the bare face shows which way they look.
   - No rigging is needed at this size. Each pawn bobs once a step, rocks from side to side and leans into its movement. The leader's [dodge roll](decisions/0019-dodge-roll.md) tumbles the whole figure. Hostiles keep their own models.
 - The interface is light and small, so the world stays the subject: frosted panels with ink words. The status panel keeps to the essentials: the party and its formation, a new objective or line for a few seconds, and a threat or the state of the weapon in hand while they matter; with a controller or keyboard, the pause menu's Status panel choice hides it. A compass at the top centre points to the next goal with its distance. A controller's or keyboard's controls that apply show in one strip at the bottom, and the touch buttons are frosted too. Controls and their rules do not change.
+
+The assigned [strategic guard](strategic-guard.md) uses the accepted C model and simple gameplay cues first. Sensor, side-coupling and reactor feedback must identify which contribution succeeded, with the reactor's open/closed state and the two attack preparations readable at the current camera distance. Motion and brief words must carry the rule as well as colour. No red line reveals the guard's exact aim. This branch is in development; these are review requirements rather than verified phone results, and they do not require a new character or enemy art pass.
 
 ## The bridge in the frozen world
 
@@ -116,7 +119,7 @@ On 23 November 2026 the maintainer assigned the bridge environment in Blender be
 Build decoration once, in the level's Blender file, with shared palette materials. A model in `blender/assets` keeps its own file. Decorative details do not need their own physics bodies.
 
 - At most four explicit lights, with at most one casting shadows. Suns, point lights and spot lights count alike, and only a sun or a spot light can cast the shadow. Blender's export checks this for each level's lights. Under the daylight sun, a point or spot light shows only when it is very strong, in Blender's preview as in the game.
-- At most 60,000 triangles and 150 draw calls in view, at most 16 materials, and characters of at most 400 triangles, which today's stand-ins exceed: [Miki's README](../blender/assets/miki/README.md) gives the count.
+- At most 60,000 triangles and 150 draw calls in view, at most 16 materials, and a 400-triangle target for party characters. Today's shared-body pawns are under 300 triangles; [Miki's README](../blender/assets/miki/README.md) records their provenance. Record the robot and complete scene's actual counts separately before making performance claims.
 - No textures apart from baked ambient occlusion, at most 4 MB per level.
 - No particles or postprocessing. A static paper-grain overlay and light snowfall are candidates, each to be measured on the phone and agreed first. Shots are the exception ([ADR 0007](decisions/0007-aiming-and-shot-feedback.md)): streaks, flashes, chips and marks made of plain blocks in the palette's colours, made once and reused.
 - No line shows the leader's aim ([ADR 0008](decisions/0008-weapon-feel-and-combat-plan.md)). The pose shows it: the weapon held low across the body, or raised along the facing, and kicked by each shot; a sword's swing lifts its blade. Laura's blade glows in her colour and Tom's dome is see-through in his, so the [paired weapons](decisions/0021-paired-weapons.md) add no colour to the palette. Figures rock back from their own shots and away from a hit, and a downed hostile falls away from the shot. The figures have no rig, so these move whole figures and the weapon.

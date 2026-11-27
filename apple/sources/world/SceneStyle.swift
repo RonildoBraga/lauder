@@ -78,7 +78,7 @@ struct SceneStyle {
   /// colour.
   func leaderMarker() -> ModelEntity {
     let disc = ModelEntity(mesh: .generateCylinder(height: 0.015, radius: 0.34), materials: [warm])
-    disc.position.y = -PartyBody.height / 2 + 0.025
+    disc.position.y = -PartyBody.height / 2 + Self.groundMarkerHeight
     disc.scale = [markerScale, 1, markerScale]
     return disc
   }
@@ -112,9 +112,9 @@ struct SceneStyle {
 
   /// The lock ring's radius as authored, before the marker scale.
   static let lockRingRadius: Float = 0.62
-  /// How high the lock ring's centre stands: above the towers' baked shadows, which lie 3 cm
-  /// over the snow, so the ring still shows round a hostile in a tower's shadow.
-  static let lockRingHeight: Float = 0.045
+  /// The ground markers' centres: their undersides clear the towers' baked shadows, which lie
+  /// 3 cm over the snow. Keep the leader, target, lock, order and playtest markers at this height.
+  static let groundMarkerHeight: Float = 0.045
 
   /// A member of the party, from the model named after them in `blender/assets`.
   func partyMember(_ member: PartyMember) -> Entity {

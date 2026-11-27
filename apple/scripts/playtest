@@ -7,7 +7,7 @@ live in apple/sources/world/Playtest.swift. Results go to .local/playtest/<time>
 root unless --output is given; that folder is ignored by Git.
 
     ./apple/scripts/playtest           # every scenario, one after another
-    ./apple/scripts/playtest first-fight ambush
+    ./apple/scripts/playtest first-fight weapons
     ./apple/scripts/playtest --list
 """
 

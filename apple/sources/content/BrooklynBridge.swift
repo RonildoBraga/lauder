@@ -32,7 +32,7 @@ enum BrooklynBridge {
   /// It warns, commits its aim and fires a short burst, with the tower's stone as real cover.
   static let stranger = Level.Hostile(
     id: "stranger", name: "The guard robot", hiddenAt: layout.marker(named: "stranger.stand"),
-    standAt: layout.marker(named: "stranger.stand"), hits: 6, attack: .robot,
+    standAt: layout.marker(named: "stranger.stand"), hits: 6, attack: .robot, strategicGuard: true,
     windUp: 1, recovery: 1.8, range: 12)
 
   /// The first fight, as the party walks through the first tower. A retry starts just outside
@@ -43,7 +43,7 @@ enum BrooklynBridge {
     cues: [
       (0, .reveal(stranger.id)),
       (0, .engage(stranger.id)),
-      (0.6, .say(speaker: "Miki", line: "Still guarding something.")),
+      (0.6, .say(speaker: "Miki", line: "Armoured. I'll take its sensor when it cools.")),
     ], safeExit: layout.area(named: "robot.exit"))
 
   /// The end of the opening (M4): the three reach the Manhattan end together, the party stops,

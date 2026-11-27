@@ -50,5 +50,21 @@
         #expect(PlaytestRunner.steps(for: name) != nil, "\(name)")
       }
     }
+
+    @Test
+    func aGuardRetryFailsTheScriptInsteadOfSilentlyWinningAnotherAttempt() {
+      let world = GameWorld(level: BrooklynBridge.level)
+      walk(world, to: [6.5, 10])
+      var snapshot = world.playtestSnapshot
+      snapshot.isRetrying = true
+      var runner = PlaytestRunner(steps: [.dismantleGuard], name: "retry-contract")
+      for _ in 0..<90 where !runner.isFinished {
+        _ = runner.input(snapshot)
+        runner.tick(dt: 1 / 60)
+      }
+      #expect(runner.summary?.passed == false)
+      #expect(runner.summary?.failures.count == 1)
+      #expect(runner.summary?.failures.first?.contains("retried") == true)
+    }
   }
 #endif

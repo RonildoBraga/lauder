@@ -33,6 +33,7 @@ final class GameWorld {
   private(set) var diagnostic: String?
   /// A hostile winding up a shot, such as "The stranger is aiming."
   private(set) var threat: String?
+  private(set) var guardHint: String?
   /// Whether the leader's weapon is drawn.
   private(set) var weaponDrawn = false
   /// The hostile the aim is locked on, by id, or nil (ADR 0020).
@@ -534,6 +535,7 @@ final class GameWorld {
   /// Reset squad movement and the camera around `spot`, with the weapon holstered.
   private func resetSquad(around spot: SIMD2<Float>) {
     threat = nil
+    guardHint = nil
     weaponDrawn = false
     fireHeld = false
     aimStick = nil
@@ -633,7 +635,7 @@ final class GameWorld {
       leaderDelta = walking * PartyBody.speed * fight.leaderWalking * dt
     }
     let isRolling = roll != nil
-    let leaderEnd = motion.resolve(start: leaderStart, delta: leaderDelta)
+    let leaderEnd = resolvePartyMotion(start: leaderStart, delta: leaderDelta)
     place(leader, at: leaderEnd)
     if lockPressPending {
       lockPressPending = false
@@ -706,7 +708,7 @@ final class GameWorld {
         speed: PartyBody.speed, dt: dt,
         targetMoves: order == .following)
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
-      let end = motion.resolve(start: start, delta: delta)
+      let end = resolvePartyMotion(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
       motors[member] = motor
       place(member, at: end)
@@ -725,6 +727,20 @@ final class GameWorld {
         ? "\($0.displayName) can't reach you" : "\($0.displayName) can't get there"
     }
     if diagnostic != message { diagnostic = message }
+  }
+
+  /// The bridge owns static cover; a living strategic guard adds its solid hull. Recheck the
+  /// slid segment against scenery so avoiding the machine never pushes a pawn through a pier.
+  private func resolvePartyMotion(start: SIMD2<Float>, delta: SIMD2<Float>) -> SIMD2<Float> {
+    var end = motion.resolve(start: start, delta: delta)
+    for state in fight.hostiles.values
+    where state.spec.strategicGuard && state.isVisible && !state.isDown {
+      guard let robot = state.robot, !robot.isCleared else { continue }
+      end = GuardCollision.resolve(
+        start: start, delta: end - start, centre: state.position,
+        radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
+    }
+    return motion.canTraverse(from: start, to: end) ? end : start
   }
 
   // MARK: - Squad orders
@@ -923,7 +939,7 @@ final class GameWorld {
   private func showOrders() {
     for (member, ring) in orderMarkers {
       if member != session.leader, case .going(let point) = session.order(of: member) {
-        ring.position = [point.x, 0.02, point.y]
+        ring.position = [point.x, SceneStyle.groundMarkerHeight, point.y]
         ring.isEnabled = true
       } else {
         ring.isEnabled = false
@@ -1032,6 +1048,8 @@ final class GameWorld {
     if let (first, second) = outcome.face { faceEachOther(first, second) }
     let threat = fight.threat
     if self.threat != threat { self.threat = threat }
+    let guardHint = fight.guardHint
+    if self.guardHint != guardHint { self.guardHint = guardHint }
     if weaponDrawn != fight.isDrawn { weaponDrawn = fight.isDrawn }
     if lockedHostile != fight.lock { lockedHostile = fight.lock }
     shieldDome.isEnabled = fight.shieldIsUp
@@ -1272,7 +1290,10 @@ final class GameWorld {
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader),
-        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0, locked: fight.lock != nil)
+        robotPhase: robot?.phase, robotShots: robot?.shotSerial ?? 0, locked: fight.lock != nil,
+        guardStrategy: fight.guardStrategies["stranger"],
+        guardPoints: fight.weakpoints(for: "stranger"),
+        robotPosition: robot?.position, robotFacing: robot?.facing, isRetrying: isRetrying)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
@@ -1294,6 +1315,8 @@ final class GameWorld {
       for member in PartyMember.allCases {
         let disc = ModelEntity(
           mesh: .generateCylinder(height: 0.01, radius: 0.12), materials: [style.signal])
+        disc.name = "playtest.target.\(member.rawValue)"
+        disc.position.y = SceneStyle.groundMarkerHeight
         disc.isEnabled = false
         root.addChild(disc)
         targetMarkers[member] = disc
@@ -1321,7 +1344,7 @@ final class GameWorld {
         let target = companionTargets[member]
         disc.isEnabled = target != nil && member != session.leader
         if let target {
-          disc.position = [target.x, 0.012, target.y]
+          disc.position = [target.x, SceneStyle.groundMarkerHeight, target.y]
         }
       }
       // The playtest's progress takes the status line while a scripted run is active.

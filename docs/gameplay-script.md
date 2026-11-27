@@ -1,9 +1,9 @@
 # Lauder — gameplay walkthrough
 
-**Updated:** 23 November 2026\
-**Status:** The game opens on the Brooklyn Bridge ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)), and the whole opening is built. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines the checks.
+**Updated:** 26 November 2026\
+**Status:** The merged baseline contains the Brooklyn Bridge opening ([ADR 0004](decisions/0004-brooklyn-bridge-opening.md)). The assigned [strategic guard](strategic-guard.md) revision is in development on `codex/strategic-bridge-guard` and passes local checks and rendered Simulator verification; it has not merged or received a new delivery. Biographies and dialogue remain working proposals from the [story bible](story/story-bible.md), whose [Chapter One outline](story/story-bible.md#chapter-one--across-the-bridge) this walkthrough follows. The [prototype plan](prototype-plan.md) defines the checks.
 
-Combat stays occasional. The [future squad and combat design](#future-squad-and-combat-design) passes a design gate before any combat or formation work beyond the opening.
+Combat stays occasional. The first-tower revision below is authorised; the [future squad and combat design](#future-squad-and-combat-design) remains separate design context for work beyond this encounter.
 
 The bridge is the only playable scene after the maintainer's [bridge-only reset](decisions/0017-bridge-only-reset.md). Other prototype venues and their dedicated systems are retired.
 
@@ -33,11 +33,19 @@ The player learns to move, look, switch leader and try the formations. A few pla
 
 A heavy, four-legged machine patrols the outgoing side of the first tower. Its dark faceted armour, square sensor and twin guns identify it as a different kind of threat. Miki notices that it is still guarding something; the scene does not explain who built it or why it remains there.
 
-The robot turns toward Miki at a limited rate, gives notice, stops and braces while tracking, then commits to one aim point. It fires three rounds, alternating its guns, and recovers before trying again. There is no red aiming line or projected danger cone. Its body and gun direction, the planted pause and the shots supply the warning. Actual barrel-origin shots meet the tower's stone; neither a gun nor a committed shot can ignore cover.
+In the merged baseline, the robot turns toward the active leader at a limited rate, gives notice, stops and braces while tracking, then commits to one aim point. It fires three rounds, alternating its guns, and recovers before trying again. There is no red aiming line or projected danger cone. Its body and gun direction, the planted pause and the shots supply the warning. Actual barrel-origin shots meet the tower's stone; neither a gun nor a committed shot can ignore cover.
 
-**Fire** uses the leader's weapon in hand, Miki's long rifle at first, and takes the assisted target in sight; the right stick gives manual aim, and R1 switches to the other weapon ([ADR 0021](decisions/0021-paired-weapons.md)). The robot is a valid target when engaged, without waiting for a human's deliberate warning miss. It takes six hits in this prototype: two long-rifle shots, one shotgun blast or one swing of Laura's sword, or a moment of minigun fire. Miki can take three hits, with at most one injury from a robot burst. A third mistake fades the screen and retries from the existing first-tower checkpoint with the encounter's initial inventory restored.
+**Fire** uses the leader's weapon in hand, Miki's long rifle at first, and takes the assisted target in sight; the right stick gives manual aim, and R1 switches to the other weapon ([ADR 0021](decisions/0021-paired-weapons.md)). The robot is a valid target when engaged, without waiting for a human's deliberate warning miss. Build 32 uses its six-hit toughness; the strategic revision replaces that rule with component dismantling. The leader can take three hits, with at most one injury from a robot burst. A third mistake fades the screen and retries from the existing first-tower checkpoint, resetting the encounter and weapon state.
 
-The machine remains within its small guard area. Miki can break sight, withdraw and return without resetting her spent ammunition or the robot's damage. She can also take the west arch and reach the authored safe exit beyond the whole guard envelope. That resolves the encounter without pretending that the robot was killed and cancels any queued fire before the party walks on. This route remains available with no ammunition.
+The machine remains within its small guard area. The party can break sight, withdraw and return without resetting progress; each weapon retains its magazine and reloads automatically without a shared spare-round limit. The west arch leads to the authored safe exit beyond the whole guard envelope. That resolves the encounter without pretending that the robot was killed and cancels queued fire before the party walks on. It requires no attack.
+
+**Assigned strategic revision, in development:** The player reads and dismantles the machine rather than winning by firing any weapon into its armour:
+
+1. Lead as Miki and use her long rifle to disable the sensor. That damage persists for the attempt.
+2. Switch manually to Laura, use the tower and the machine's readable attack cycle to reach its side, and breach the coupling with her energy sword. Solid cover still stops the strike, and the breach persists.
+3. Switch to Tom and use the minigun against the exposed reactor. Recovery opens a 4-second window; a breach made during recovery also grants the full window, even if the machine starts moving again. Twelve accepted core rounds across repeated windows disable the guard. Missing a window means using cover and waiting for the next, not repeating Miki's and Laura's work.
+
+The guard alternates three-round precision bursts with five-round fan cannon attacks, each with readable preparation and commitment. Wrong-role hits and closed armour give feedback without ordinary health damage. The two followers obey movement/hold orders but do not attack or complete steps automatically. Tom's shield is usable while he leads and drops on a switch. L1 / LB, Q or touch Next remains the only leader-cycle command; existing Fire, aim/lock, Swap and Roll supply the actions. The west bypass remains available throughout. [Strategic guard](strategic-guard.md) contains the complete accepted contract and verification questions; this walkthrough does not claim the revision is tested or delivered.
 
 ### 3. Onwards (M4 and M5, built)
 
@@ -49,7 +57,7 @@ Lines stay provisional and brief. None of the scenes explains anyone's past beyo
 
 ## What the opening has
 
-The bridge is one level value: its scenery, starting party, spawns, trigger areas and encounters, while the session holds the party and the story's beat. Three [pawns](visual-direction.md#characters-and-interface) share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad ([ADR 0003](decisions/0003-squad-movement.md) phases S1 to S3) rather than on the leader's exact path: in whichever formation the player chooses, or where an order sends them. The guard's encounter has bounded patrol, a committed burst, real cover, retreat, a safe bypass and a retry; then comes the end of the opening. Every character can fire their own weapon as leader ([ADR 0010](decisions/0010-squad-weapons.md)), and the leader can dodge-roll through a burst ([ADR 0019](decisions/0019-dodge-roll.md)). [Touch controls](touch-controls.md) give the phone a second input path.
+The bridge is one level value: its scenery, starting party, spawns, trigger areas and encounters, while the session holds the party and the story's beat. Three [pawns](visual-direction.md#characters-and-interface) share session-owned leadership and Pause, leader cycling and an eased camera, and companions follow as a squad ([ADR 0003](decisions/0003-squad-movement.md) phases S1 to S3) rather than on the leader's exact path: in whichever formation the player chooses, or where an order sends them. The merged guard encounter has bounded patrol, a committed burst, real cover, retreat, a safe bypass and a retry; then comes the end of the opening. Every character can use their paired weapons as leader ([ADR 0021](decisions/0021-paired-weapons.md)), and the leader can dodge-roll through a burst ([ADR 0019](decisions/0019-dodge-roll.md)). The strategic component sequence above is the branch's assigned extension. [Touch controls](touch-controls.md) give the phone a second input path.
 
 ## Readable controls and party feedback
 
@@ -67,4 +75,4 @@ The retained Close, Spread and Column formations and move/hold/follow orders tes
 
 [The Quiet Yard](encounters/the-quiet-yard.md) and the story bible's later Relay House screenplay remain unimplemented narrative proposals. The Quiet Yard offers optional filter seals, a safe detour, a covered patrol gap, combat and retreat. It is retained to discuss the trio's roles and emotional purpose, not as an additional playable scene.
 
-Next, use the bridge to settle one small gameplay loop and the questions a prototype should answer. Weapon tuning, abilities and further places follow that decision. The [prototype plan](prototype-plan.md#combat-design-review-gate) records this gate.
+Next, finish and evaluate the assigned strategic guard as one small bridge loop. Wider weapon tuning, signature abilities and further places follow the result. The [prototype plan](prototype-plan.md#combat-design-review-gate) records this gate.

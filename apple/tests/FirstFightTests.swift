@@ -82,7 +82,7 @@ struct FirstFightTests {
   func theGuardCanBeDisabledWithoutAnAuthoredHumanWarningShot() {
     let world = GameWorld(level: BrooklynBridge.level)
     walk(world, to: [6.5, 10])
-    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(dismantleGuard(world))
     #expect(run(world, upTo: 1) { !world.session.inEncounter })
     #expect(world.session.hitsTaken == 0 && world.threat == nil)
     #expect(world.observation == "The guard robot is down.")
@@ -127,13 +127,17 @@ struct FirstFightTests {
     let rotation = body.orientation.vector
     let threat = world.threat
     let hits = world.session.hitsTaken
+    let shots = world.playtestSnapshot.robotShots
     pressPause(world)
     for _ in 0..<180 { world.update(with: .neutral, sampledIn: .paused, deltaTime: 1 / 60) }
     #expect(body.position == at && body.orientation.vector == rotation)
     #expect(world.threat == threat && world.session.hitsTaken == hits)
     pressPause(world)
     #expect(!world.isPaused)
-    #expect(run(world, upTo: 5) { world.session.hitsTaken != hits })
+    #expect(
+      run(world, upTo: 20) {
+        world.playtestSnapshot.robotShots > shots && world.session.hitsTaken != hits
+      })
   }
 
   @Test
@@ -141,7 +145,7 @@ struct FirstFightTests {
     let world = GameWorld(level: BrooklynBridge.level)
     let entities = count(world.root)
     walk(world, to: [6.5, 10])
-    #expect(run(world, upTo: 24) { world.isRetrying })
+    #expect(run(world, upTo: 60) { world.isRetrying })
     #expect(world.session.hitsTaken == GameSession.hitsAllowed)
     #expect(run(world, upTo: 2) { !world.isRetrying })
     #expect(world.session.beat == .crossing && world.session.hitsTaken == 0)
@@ -152,7 +156,7 @@ struct FirstFightTests {
     #expect(world.root.findEntity(named: "hostile.stranger")?.isEnabled == false)
     #expect(count(world.root) == entities)
     walk(world, to: [6.5, 10])
-    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(dismantleGuard(world))
   }
 
   @Test
@@ -162,7 +166,7 @@ struct FirstFightTests {
     let offset = BrooklynBridge.cameraOffset
     let lean = {
       simd_length(
-        SIMD2(camera.position.x, camera.position.z) - position(world, .miki)
+        SIMD2(camera.position.x, camera.position.z) - position(world, world.session.leader)
           - SIMD2(offset.x, offset.z))
     }
     walk(world, to: [6.5, 18])
@@ -183,7 +187,7 @@ struct FirstFightTests {
           && simd_dot(simd_normalize(actual), simd_normalize(towards)) > 0.99
       })
     #expect(lean() < EncounterSimulation.cameraLeanLimit + 0.01)
-    #expect(run(world, upTo: 6, fire: true) { world.session.defeated.contains("stranger") })
+    #expect(dismantleGuard(world))
     #expect(run(world, upTo: 3) { abs(lean()) < 0.05 })
   }
 

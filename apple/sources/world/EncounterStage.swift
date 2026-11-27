@@ -13,6 +13,7 @@ final class EncounterStage {
   private var visuals: [String: Entity] = [:]
   private var hostileWeaponProps: [String: Entity] = [:]
   private var robots: [String: RobotPresentation] = [:]
+  private var componentMarkers: [String: [ModelEntity]] = [:]
   private let targetMarker: Entity
   /// The red ring round the locked hostile (ADR 0020).
   private let lockMarker: Entity
@@ -62,6 +63,16 @@ final class EncounterStage {
       container.addChild(body)
       bodies[spec.id] = body
       visuals[spec.id] = visual
+      if spec.strategicGuard {
+        componentMarkers[spec.id] = (0..<2).map { index in
+          let marker = ModelEntity(
+            mesh: .generateSphere(radius: 1), materials: [style.ink])
+          marker.name = "combat.component.\(spec.id).\(index)"
+          marker.isEnabled = false
+          container.addChild(marker)
+          return marker
+        }
+      }
     }
   }
 
@@ -80,7 +91,10 @@ final class EncounterStage {
     for shot in fight.shots {
       let side: ShotEffects.Side = shot.side == .party ? .party : .hostile
       if let trace = shot.trace {
-        effects.show(trace, side: side, muzzle: shot.muzzle)
+        let impact =
+          shot.armoured
+          ? Ballistics.Trace(start: trace.start, end: trace.end, strike: .scenery) : trace
+        effects.show(impact, side: side, muzzle: shot.muzzle)
       } else {
         effects.show(
           shot.path, side: side, height: EncounterSimulation.aimHeight, muzzle: shot.muzzle)
@@ -91,6 +105,23 @@ final class EncounterStage {
 
   private func show(_ fight: EncounterSimulation, dt: Float) {
     for (id, state) in fight.hostiles {
+      let points = fight.weakpoints(for: id)
+      for (index, marker) in (componentMarkers[id] ?? []).enumerated() {
+        marker.isEnabled = points.indices.contains(index)
+        guard points.indices.contains(index) else { continue }
+        let point = points[index]
+        marker.position = point.centre
+        marker.scale = SIMD3(repeating: point.radius)
+        let member: PartyMember =
+          switch point.part {
+          case .sensor: .miki
+          case .coupling: .laura
+          case .reactor: .tom
+          }
+        let material = UnlitMaterial(
+          color: point.exposed ? SceneStyle.colour(of: member) : .darkGray)
+        marker.model?.materials = [material]
+      }
       if let body = bodies[id] {
         body.isEnabled = state.isVisible
         body.position = [state.position.x, PartyBody.height / 2, state.position.y]
@@ -114,15 +145,16 @@ final class EncounterStage {
       }
     }
     if let target = fight.target {
-      targetMarker.position = [target.x, 0.012, target.y]
+      targetMarker.position = [target.x, SceneStyle.groundMarkerHeight, target.y]
       targetMarker.isEnabled = true
     } else {
       targetMarker.isEnabled = false
     }
     if let id = fight.lock, let point = fight.lockPoint {
       let scale = robots[id] == nil ? lockScale : robotLockScale
+      let centre = robots[id] == nil ? point : fight.hostiles[id]?.position ?? point
       lockMarker.scale = [scale, 1, scale]
-      lockMarker.position = [point.x, SceneStyle.lockRingHeight, point.y]
+      lockMarker.position = [centre.x, SceneStyle.groundMarkerHeight, centre.y]
       lockMarker.isEnabled = true
     } else {
       lockMarker.isEnabled = false
