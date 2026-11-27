@@ -14,6 +14,16 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Build 38 TestFlight preview
+
+The maintainer requested **“Go ahead and check CI for PR #193, then deploy the updated build to my phone using TestFlight so I can test the new combat mechanics.”** (chat, 27 November 2026; no public permalink). This explicitly authorises an internal preview without merging PR #193 or claiming physical acceptance. [Check 123](https://github.com/RonildoBraga/lauder/actions/runs/45927652845) passed on exact `84d4576`; automatic Codex review completed without findings on its equivalent application/test source `303617b`.
+
+The earlier build 33–37 stack is now merged into main. Its merged base `2532577` has exactly the tree of `a44537e`; recording that ancestry changed no files. The later main `07af9fd` changes only three status documents, incorporated in `a5fa434` without changing reviewed app, asset, test or tooling content. PR #193 remains unmerged. The release branch `codex/testflight-robot-combat` adds only the discovered build number and this preparation record.
+
+Fresh Apple discovery for Lauder's bundle ID checked builds and accepted/processing uploads, selected unused **0.1.0 (38)** and retained the existing tester/group baseline. The preview carries persistent eye criticals, independently detachable sword-damaged legs and Tom-only manual grenades; the [bounded contract](robot-eye-legs-grenades.md) owns the exact controls and starting tuning. All previous squad commands, actual cover and the quiet bypass remain intact.
+
+**Preparation in progress:** final delta review, a new full archive-bound standard check, signed archive/team/dSYM verification, one API-authenticated upload, successful Apple processing, unchanged existing-tester availability and exact testing-note readback follow. Source/Simulator results in the next section remain evidence for those app sources; the new build's delivery is not claimed yet. Build 37 remains the delivered comparison.
+
 ## Eye, legs and grenades — in development
 
 The maintainer's build 37 playtest found ordinary hits dominant. They requested persistent eye criticals, repeated Laura sword contacts detaching individual legs and slowing the robot, and grenade throws. The task clarification selected **“Tom only; manual throws”** (chat, 27 November 2026; no public permalink). [Issue #192](https://github.com/RonildoBraga/lauder/issues/192) assigns the bounded revision based on `a44537e`; the [contract](robot-eye-legs-grenades.md) owns the rules and prototype tuning. It does not authorise merge or another TestFlight upload.
