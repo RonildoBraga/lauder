@@ -272,7 +272,8 @@
       var result = PlaytestRunner.Snapshot(
         level: template.level, leader: .miki, party: [.miki, .tom, .laura],
         positions: [.miki: leader, .laura: companion, .tom: [0, 1.5]],
-        mode: .exploring, firedTriggers: 0, beat: .stranger, hitsTaken: 0, defeated: 0,
+        mode: .exploring, firedTriggers: 0, beat: .stranger, hitsTaken: 0,
+        hitsAllowed: template.hitsAllowed, defeated: 0,
         formation: .close, orders: [:], refusedOrders: 0, camera: template.camera,
         weapon: template.weapon)
       result.guardStrategy = GuardStrategy()
