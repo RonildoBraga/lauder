@@ -5,7 +5,7 @@
 
 **Current delivered revision:** The maintainer assigned [companion body-shot fallback first](https://github.com/RonildoBraga/lauder/issues/200#issuecomment-7210709561), with Simulator tests and coordination with Claude. Original source/native and three rendered routes pass on `e764b30`. PR #204 merged before [PR #205](https://github.com/RonildoBraga/lauder/pull/205), whose `4789ed0` source is delivered in [build 42](prototype-plan.md#build-42-testflight-preview) after fresh archive-bound checks, packaged Simulator regression, signing/audits and Apple/notes verification. Claude’s actual post-merge review reported no finding; drones remain separate from this release.
 
-**Combined assignment:** The [build 43 preparation](prototype-plan.md#build-43-combined-testflight-preview) adds missing native and rendered companion/drone verification while Claude fixes the warned target under [issue #207](https://github.com/RonildoBraga/lauder/issues/207#issuecomment-7211731957). These checks are in development; no fresh combined pass or delivery is claimed. Build 42 remains the delivered guard-only fallback.
+**Combined assignment:** The [build 43 preparation](prototype-plan.md#build-43-combined-testflight-preview) integrates Claude’s warning-target fix with native companion/drone coverage and the new rendered route. Full source/native and rendered checks pass on `4800560`, including a companion downing a drone before player damage while the guard remains alive. Final-head CI/review, merge and release remain pending; build 42 is still delivered. The guard-only touch route does not verify combined touch/drone play.
 
 ## Maintainer direction
 
@@ -61,7 +61,7 @@ This changes only Miki/Tom’s guard-shot preference: Laura keeps her intact-leg
 
 The existing drone override remains subordinate to companion engagement, explicit Attack/Defend, movement orders and safety; the leader stays manual. A companion already engaging may use a real clear gun shot at a diving or recovering drone. Defend, a blocked shot or a control/lifecycle interruption must not invent fire, damage or replayed feedback. The guard-shot fallback retains its direct-eye-first rule and Laura’s leg role; no automatic grenade or shield is added.
 
-New native coverage and the rendered `companion-drones` route are being prepared to verify those boundaries with real targets, weapon handling and vulnerable members. The rendered route must distinguish companion drone contributions from player damage while the guard remains alive; native tests separately cover orders/blockers, drone-caused injury/Retry and feedback cancellation. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) owns actual results and release gates; no new pass is claimed yet.
+Four new native tests and the rendered `companion-drones` route pass on `4800560`, using real targets, weapon handling and vulnerable members. The route’s target/member accounting shows Tom downing `drone.2` before player damage or guard defeat; native tests separately cover orders/blockers, drone-caused injury/Retry and feedback cancellation. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) owns exact source, route results and pending release gates. The guard-only touch regression is not combined touch/drone verification, and no new physical result is claimed.
 
 ## Verification gate
 
