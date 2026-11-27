@@ -42,6 +42,18 @@
       #expect(summary.passed, "\(name): \(summary.failures)")
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
+      if name == "companion-drones" {
+        let mark = try #require(summary.marks.first { $0.name == "companion drone down" })
+        let damage = try #require(mark.damage)
+        #expect((mark.health ?? 0) > 0)
+        #expect(damage.byMember[PartyMember.miki.rawValue, default: 0] == 0)
+        let followerDamage = damage.byTarget.filter { $0.key.hasPrefix("drone.") }
+          .values.reduce(0) { total, members in
+            total + members[PartyMember.tom.rawValue, default: 0]
+              + members[PartyMember.laura.rawValue, default: 0]
+          }
+        #expect(followerDamage >= ScoutDrone.health)
+      }
       if name == "robot-parts" {
         let opening = try #require(summary.legStagger)
         #expect(opening.completed && opening.staggeredSamples >= 2)

@@ -35,6 +35,7 @@ SCENARIOS = [
     "bridge-walk", "first-fight", "fight-retry", "opening", "formations", "orders", "lock-on",
     "weapons", "companions", "retaliation", "cover-spacing", "damage-feedback", "touch-fight", "robot-parts",
     "drone-fight",
+    "companion-drones",
 ]
 
 
