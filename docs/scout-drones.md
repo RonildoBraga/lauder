@@ -1,7 +1,7 @@
 # Scout drones at the first tower
 
 **Date:** 27 November 2026  
-**Status:** Built under [issue #201](https://github.com/RonildoBraga/lauder/issues/201) and played on the phone in [TestFlight build 41](prototype-plan.md#build-41-testflight-preview), where the maintainer said “Feels right”. [PR #203](https://github.com/RonildoBraga/lauder/pull/203) merges it into `main`. The [prototype plan](prototype-plan.md#scout-drones--in-development) records what has been checked.
+**Status:** The separate [build 41 preview](prototype-plan.md#build-41-testflight-preview) received the maintainer’s general “Feels right” phone feedback. PR #203 remains open while [issue #207](https://github.com/RonildoBraga/lauder/issues/207) fixes warning-target transfer and missing companion/drone coverage is added. The [combined build 43 preparation](prototype-plan.md#build-43-combined-testflight-preview) records pending integration, checks and release gates; build 42 remains the latest delivered build without drones.
 
 ## The request
 
@@ -25,6 +25,8 @@ The guard fight is still the bridge's only fight, as after the 26 November “Gu
 3. It commits to where that member stood when the warning ended, then dives along that straight line at **6 m/s**.
 4. It fires a burst of **three** rounds at the committed point, the first **0.35 s** after it commits. A burst hurts at most one member once, like the guard's.
 5. It levels off at **1.3 m** for a low pass that carries **2.5 m** beyond the point, then climbs back.
+
+**Warning-target correction, pending:** [Claude’s accepted fix](https://github.com/RonildoBraga/lauder/issues/207#issuecomment-7211731957) keeps a warning with the member it named. If that member loses sight, the drone retains their last-seen point and commits there only with a valid run-up, otherwise gives up. Another member may be selected only through a fresh full one-second warning, cue and HUD line. Companion danger during the warning follows that same last-seen point. The addressing source and native regression are pending; earlier build 41 feedback does not verify this correction.
 
 The dive doesn't follow its target, so a step aside in the 0.35 s before the first round, or cover, beats it. The guard's committed aim gives the same kind of moment before its burst.
 
@@ -64,6 +66,8 @@ These are simple shapes, as [AGENTS.md](../AGENTS.md) asks.
 - **New tests:** tests of the drone's own flight cover circling, the warning, the commit, the burst, the low pass, walls, low cover, the fall and the quiet exit. Fight tests cover taking turns, waking the guard, rising to assisted fire, falling with the guard, the quiet exit and the lock.
 - **The older tests:** the guard's own tests that the drones broke now run on `BrooklynBridge.guardOnly`, a debug copy of the bridge without the drones. Each keeps testing the guard alone, as it was written to.
 - **Routes:** the fourteen earlier playtest routes play the guard alone in the same way. The new **drone-fight** route plays the shipped fight: Miki shoots both drones down through the aim help, stepping out of their dives, and then the squad dismantles the guard.
+
+**New combined verification pending:** The warning sight-loss regression and independent native companion/weapon/order/blocker/injury/reset coverage are being added alongside the rendered `companion-drones` route. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) will record the tested source and actual results; the earlier routes above do not establish these transitions.
 
 ## Limits
 
