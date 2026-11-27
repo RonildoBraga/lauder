@@ -348,6 +348,39 @@ class ExportRecordTests(unittest.TestCase):
             self.assertIn("changed since the spider-bot-heavy model was exported",
                           L.stale_model_export(repository, "spider-bot-heavy"))
 
+    def test_the_robot_credit_and_acknowledgement_are_required_export_inputs_and_outputs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            self.assertIsNone(L.stale_model_export(repository, "spider-bot-heavy"))
+            credit = repository / L.ROBOT_CREDIT
+            credit.write_text(credit.read_text() + "\nUpdated credit.\n")
+            self.assertIn(L.ROBOT_CREDIT + " changed since",
+                          L.stale_model_export(repository, "spider-bot-heavy"))
+            self.assertIsNone(L.stale_model_export(repository, "miki"))
+        for section, name in [("made from", L.ROBOT_CREDIT), ("wrote", L.ROBOT_ACKNOWLEDGEMENTS)]:
+            with self.subTest(missing_record=name), tempfile.TemporaryDirectory() as folder:
+                repository = scratch(folder)
+                records = json.loads((repository / L.EXPORT_RECORD).read_text())
+                record = records[L._model_key("spider-bot-heavy")]
+                del record[section][name]
+                L.record_exports(repository, L._model_key("spider-bot-heavy"),
+                                 record["made from"], record["wrote"])
+                self.assertIn("does not say how",
+                              L.stale_model_export(repository, "spider-bot-heavy"))
+        for name in [L.ROBOT_CREDIT, L.ROBOT_ACKNOWLEDGEMENTS]:
+            with self.subTest(missing_file=name), tempfile.TemporaryDirectory() as folder:
+                repository = scratch(folder)
+                (repository / name).unlink()
+                self.assertIn(name + " is missing",
+                              L.stale_model_export(repository, "spider-bot-heavy"))
+
+    def test_an_empty_robot_credit_refuses_export(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repository = scratch(folder)
+            (repository / L.ROBOT_CREDIT).write_text(" \n")
+            with self.assertRaisesRegex(L.LayoutError, "must contain the model's attribution"):
+                L.robot_credit(repository)
+
     def test_exports_go_stale_when_the_level_file_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             repository = scratch(folder)

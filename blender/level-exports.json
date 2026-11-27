@@ -48,12 +48,14 @@
   "models/spider-bot-heavy": {
     "format": 1,
     "made from": {
+      "blender/assets/spider-bot-heavy/CREDIT.txt": "3233a3feebf3ef06344a6db747aeba03bb0562a34ed4a669d9bdfb98a51f49f7",
       "blender/assets/spider-bot-heavy/spider-bot-heavy.blend": "a3e0fa94dcac0308ab89f7f0a059dff0a8cf46a3b8b98331a2a4d965e494dfbc",
       "blender/extensions/lauder_levels/robot_geometry.py": "cf7edaee16d17c81d794ce6d4fc620c038f8e31b4fea03076316c38daaeabec6"
     },
     "wrote": {
       "apple/sources/content/RobotModelGeometry.swift": "b3fbe35a20a8eb8d90997805470315c1b46b678ac48cb37fa15db274f8211b06",
-      "apple/sources/content/models/spider-bot-heavy.usdz": "4c293ffcd3d4daa32b9487af43f5454121a648b22a41925c6cda41eb4bef285e"
+      "apple/sources/content/acknowledgements.txt": "3233a3feebf3ef06344a6db747aeba03bb0562a34ed4a669d9bdfb98a51f49f7",
+      "apple/sources/content/models/spider-bot-heavy.usdz": "0fcd60a6ee2f61f3fd4fdda8d5f7363a3764e285779696aa51b58d672aac933b"
     }
   },
   "models/tom": {

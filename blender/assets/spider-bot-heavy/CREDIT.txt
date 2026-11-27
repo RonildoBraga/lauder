@@ -1,0 +1,18 @@
+Lauder C heavy walker (spider-bot-heavy)
+
+Reference: Low-poly Spider Bot (Rigged) by rznn7
+Source: https://rznn7.itch.io/low-poly-spider-bot
+Licence: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+The reference-derived Lauder model, runtime USDZ, authored motion and rendered
+previews retain this CC BY 4.0 notice. Lauder's changes include new faceted
+geometry, a connected torso, substantial hip housings and legs, twin guns, a
+square sensor, linked components, and new walking, turning, bracing and recoil
+motion. Geometry and rigid-part motion were authored for Lauder by Codex in
+Blender on 23 November 2026, following Lauder's selected C heavy-walker concept.
+
+No original model, rig, animation or texture was downloaded or imported.
+No creator endorsement is implied. The material is supplied without warranties
+as described in the licence. This file-level notice does not change the licences
+of Lauder's code or unrelated assets.
