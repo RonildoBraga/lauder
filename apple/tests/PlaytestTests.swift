@@ -16,6 +16,7 @@
       var runner = try #require(PlaytestRunner(scenario: name))
       if name == "touch-fight" { world.controls.useTouchControls() }
       var frames = 0
+      var coveredGrenadeSamples = 0
       while !runner.isFinished {
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
@@ -30,6 +31,20 @@
         world.update(
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
         let after = world
+        if name == "robot-parts", after.playtestSnapshot.grenadeInFlight {
+          let snapshot = after.playtestSnapshot
+          if case .holding(let held) = after.session.order(of: .miki) {
+            let anchor = try #require(held)
+            let position = try #require(snapshot.positions[.miki])
+            #expect(simd_distance(anchor, [4.5, 11]) <= 0.3)
+            #expect(simd_distance(position, anchor) <= 0.3)
+          } else {
+            Issue.record("Miki must keep her real Hold anchor during Tom's grenade check")
+          }
+          #expect(snapshot.coveredMembers.contains(.miki))
+          #expect(snapshot.partyHits[.miki, default: 0] == 0)
+          coveredGrenadeSamples += 1
+        }
         runner.record(
           PlaytestRunner.Frame(
             dt: dt, leader: after.session.leader, positions: after.playtestSnapshot.positions,
@@ -55,6 +70,7 @@
         #expect(followerDamage >= ScoutDrone.health)
       }
       if name == "robot-parts" {
+        #expect(coveredGrenadeSamples > 0)
         let opening = try #require(summary.legStagger)
         #expect(opening.completed && opening.staggeredSamples >= 2)
         #expect(opening.observedSeconds > 0 && opening.shotsDuringStagger == 0)

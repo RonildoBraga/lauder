@@ -330,18 +330,18 @@ enum InputRules {
       let dodgeEdge = dodge && !state.dodgeWasPressed && !commanded
       let swapEdge = swap && !state.swapWasPressed
       // Navigation/weapon/target commands win a simultaneous throw, consuming its edge.
-      // An accepted throw briefly takes the leader's hands instead of firing or acting.
+      // Gameplay checks availability before an accepted throw takes the leader's hands.
       let grenadeEdge =
         grenade && !state.grenadeWasPressed && !commanded && !dodgeEdge && !swapEdge
         && !lockEdge && raw.touchTarget == nil
       return (
         Input(
           movement: movement,
-          actionPressed: actionEdge && !commanded && !grenadeEdge,
+          actionPressed: actionEdge && !commanded,
           pausePressed: false,
           switchPressed: switchEdge,
-          fireHeld: fire && !grenadeEdge,
-          firePressed: fire && !state.fireWasPressed && !grenadeEdge,
+          fireHeld: fire,
+          firePressed: fire && !state.fireWasPressed,
           formationPressed: formationEdge,
           command: command,
           commandPoint: commandPoint,

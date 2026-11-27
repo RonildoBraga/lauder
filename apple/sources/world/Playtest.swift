@@ -1950,7 +1950,10 @@
     /// Tom throws, Pause freezes the flight, Laura breaks a leg, then the squad finishes.
     private static let robotParts: [Step] =
       toTheStranger + [
-        .order(.hold), .switchLeader, .walk([6.5, 5]), .lock, .grenade,
+        // Leave Miki behind the west block instead of holding her in the firing lane.
+        .walk([4.5, 11]), .order(.hold), .switchLeader, .walk([6.5, 11]), .walk([6.5, 5]),
+        .expectOrder(.miki, "holding"), .expectNear(.miki, [4.5, 11], within: 0.3),
+        .mark("Miki held behind cover"), .lock, .grenade,
         .wait(seconds: 0.2), .mark("Tom's grenade in flight"),
         .pause, .wait(seconds: 0.5), .pause, .wait(seconds: 1.5),
         .expectGrenadeDamage, .mark("grenade detonated"), .formation,

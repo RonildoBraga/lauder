@@ -57,14 +57,14 @@ struct GrenadeInputTests {
   }
 
   @Test
-  func throwingTakesTheLeadersHandsButKeepsMovement() {
+  func aThrowRequestPreservesCombatInputsUntilGameplayChecksItsAvailability() {
     var state = InputRules.State(needsNeutralInput: false)
     let raw = InputRules.Raw(
       touchStick: [0.4, 0.2], touchIsTouching: true, touchAction: true,
       touchFire: true, touchGrenade: true)
     let input = sample(raw, state: &state)
     #expect(input.grenadePressed && input.movement == [0.4, 0.2])
-    #expect(!input.fireHeld && !input.firePressed && !input.actionPressed)
+    #expect(input.fireHeld && input.firePressed && input.actionPressed)
     #expect(!input.dodgePressed && !input.swapPressed && !input.switchPressed)
     #expect(!sample(raw, state: &state).grenadePressed)
   }
