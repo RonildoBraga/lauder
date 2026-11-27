@@ -4,7 +4,6 @@ import contextlib
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import io
-import json
 import plistlib
 import stat
 from pathlib import Path

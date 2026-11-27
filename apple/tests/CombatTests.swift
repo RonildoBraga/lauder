@@ -78,7 +78,7 @@ struct CombatTests {
   func theStrangerStepsOutWaitsThenAimsAndHisFirstShotMisses() {
     var stranger = HostileState(spec: rifle)
     #expect(!stranger.isVisible && !stranger.isTargetable)
-    #expect(stranger.step(dt: 1, canHit: true, toward: .zero) == nil)
+    #expect(stranger.step(dt: 1, canHit: true) == nil)
     stranger.reveal()
     #expect(stranger.isVisible)
     _ = run(&stranger, seconds: HostileState.stepOutTime + 0.05, canHit: true)
@@ -140,7 +140,7 @@ struct CombatTests {
     var shots: [HostileState.Shot] = []
     let dt = GameWorld.simulationStep
     for _ in 0..<Int((seconds / dt).rounded()) {
-      if let shot = hostile.step(dt: dt, canHit: canHit, toward: .zero) { shots.append(shot) }
+      if let shot = hostile.step(dt: dt, canHit: canHit) { shots.append(shot) }
     }
     return shots
   }
