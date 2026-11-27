@@ -57,7 +57,7 @@ The world loads the bridge synchronously and retains it across Restart. Figure m
 
 GameSession composes a BridgeProgress value and owns exploring/dialogue/paused mode, the party in switching order and active leader, Close/Spread/Column, each companion's following/going/holding order, one-shot trigger progress, bridge story beat, fight checkpoint/hits/defeated IDs and dialogue cursor. BridgeProgress keeps the bridge's beats in order: only the next can begin. A level can still start with fewer than three and recruit the others, a rule the tests keep; the bridge starts with all three. StoryBeat is shared content data without a dependency on GameSession.
 
-GameWorld owns a body for every stable member ID, their visibility and position, companion routes/motors/targets, the navigation grid and flat movement blockers. Figures outside the party stay hidden unless a level has them lying where they wait; on the bridge all three travel from the start. It owns a WorldCamera and one EncounterSimulation/EncounterStage pair. WorldCamera owns camera/landmark presentation; CameraRig computes its motion and projection without scene entities. App activity, input availability and input readiness are operational gates, not extra gameplay modes.
+GameWorld owns a body for every stable member ID, their visibility and position, companion routes/motors/targets, the navigation grid and flat movement blockers. Figures outside the party stay hidden; on the bridge all three travel from the start. It owns a WorldCamera and one EncounterSimulation/EncounterStage pair. WorldCamera owns camera/landmark presentation; CameraRig computes its motion and projection without scene entities. App activity, input availability and input readiness are operational gates, not extra gameplay modes.
 
 The owned update samples controls, resolves InputRules using session mode, handles the accepted intent and advances fixed-step movement/combat while allowed. Entity transforms do not publish through SwiftUI every frame. UI observes coarse state and plays emitted feedback while active.
 
@@ -93,7 +93,7 @@ The bridge starts with Miki, Tom and Laura together, Tom and Laura in the Close 
 
 ### The action press
 
-With the supply case's search and Laura's Help gone, the bridge has no contextual actions: while exploring, the action press looks around. Scene cues such as a member appearing, standing up or taking a scripted shot remain for later scenes.
+With the supply case's search and Laura's Help gone, the bridge has no contextual actions: while exploring, the action press looks around. Of the older scene cues, only a scripted shot remains for later scenes. The cues for a member appearing, standing up or turning to face another were removed once nothing used them.
 
 ### Fights
 

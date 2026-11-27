@@ -59,18 +59,20 @@ struct CompanionTacticsTests {
     #expect(fallback.weapon == .shotgun && fallback.targetsBody && fallback.fire)
   }
 
+  /// Laura's legs only ever go, and the guard stays active once all four have: with just the
+  /// eye left, Miki's and Tom's part, she has no part of her own and takes ordinary shots.
   @Test
-  func closedPartsAllowOrdinaryFireAndExposedPartsRestoreTheSpecialistPreference() {
+  func onceTheLastLegIsGoneLauraTakesOrdinaryShotsFromWhereSheStands() {
     var planner = CompanionTactics()
-    let ordinary = plan(
-      &planner, input(exposed: false), canFireAtBody: { _, _ in true })
-    #expect(ordinary.position == [0, -6] && ordinary.targetsBody && ordinary.fire)
-    let opening = plan(
-      &planner, input(exposed: true), canFireAtBody: { _, _ in true })
-    #expect(opening.fire && !opening.targetsBody && opening.activity == .attacking)
-    let closedAgain = plan(
-      &planner, input(exposed: false), canFireAtBody: { _, _ in true })
-    #expect(closedAgain.fire && closedAgain.targetsBody && closedAgain.activity == .attacking)
+    let leg = plan(
+      &planner, input(member: .laura, leader: .miki), canFireAtBody: { _, _ in true })
+    #expect(leg.fire && !leg.targetsBody && leg.weapon == .energySword)
+    #expect(leg.activity == .attacking)
+    let eyeOnly = plan(
+      &planner, input(member: .laura, leader: .miki, points: [weakpoint(.eye)]),
+      canFireAtBody: { _, _ in true })
+    #expect(eyeOnly.position == [0, -6] && eyeOnly.targetsBody && eyeOnly.fire)
+    #expect(eyeOnly.weapon == .shotgun && eyeOnly.activity == .attacking)
   }
 
   @Test(arguments: [PartyMember.miki, .tom])
@@ -593,7 +595,7 @@ struct CompanionTacticsTests {
     baseTarget: SIMD2<Float>? = nil, order: GameSession.Order = .following,
     stance: GameSession.CombatStance = .attack, active: Bool = true,
     phase: RobotGuard.Phase = .recovering, stage: GuardStrategy.Phase = .active,
-    exposed: Bool = true, points: [GuardWeakpoint]? = nil, dt: Float = 1 / 60
+    points: [GuardWeakpoint]? = nil, dt: Float = 1 / 60
   ) -> CompanionTactics.Input {
     let part: GuardStrategy.Part = member == .laura ? .leg(0) : .eye
     return .init(
@@ -601,15 +603,15 @@ struct CompanionTacticsTests {
       baseTarget: baseTarget ?? position, order: order, stance: stance, active: active,
       guardPosition: .zero,
       guardFacing: [0, -1], phase: phase, stage: stage,
-      weakpoints: points ?? [weakpoint(part, exposed: exposed)], dt: dt)
+      weakpoints: points ?? [weakpoint(part)], dt: dt)
   }
 
-  private func weakpoint(
-    _ part: GuardStrategy.Part, ground: SIMD2<Float> = [0, -1.45], exposed: Bool = true
-  ) -> GuardWeakpoint {
+  private func weakpoint(_ part: GuardStrategy.Part, ground: SIMD2<Float> = [0, -1.45])
+    -> GuardWeakpoint
+  {
     .init(
       id: "guard.\(part)", hostileID: "guard", part: part,
-      centre: [ground.x, 1.5, ground.y], radius: 0.4, exposed: exposed)
+      centre: [ground.x, 1.5, ground.y], radius: 0.4)
   }
 
   private func plan(

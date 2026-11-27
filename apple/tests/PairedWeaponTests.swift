@@ -337,6 +337,7 @@ struct PairedWeaponTests {
         shooter
           ? Level.Hostile(
             id: "target", name: "Shooter", hiddenAt: [0, -8], standAt: [0, -8], hits: hits,
+            attack: .shoot,
             windUp: 0.3, recovery: 0.3, range: 14)
           : robot("target", at: [0, -8], hits: hits)
       ]

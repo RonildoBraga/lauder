@@ -861,7 +861,7 @@
       {
         raw.aimStick = Movement.stick(
           towards: point.ground - at, cameraOffset: snapshot.level.cameraOffset)
-        raw.controllerFire = point.exposed
+        raw.controllerFire = true
       }
       return raw
     }

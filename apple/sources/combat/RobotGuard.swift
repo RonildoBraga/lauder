@@ -67,7 +67,6 @@ struct RobotGuard {
   private(set) var position: SIMD2<Float>
   private(set) var facing: SIMD2<Float> = [0, 1]
   private(set) var shotSerial = 0
-  private(set) var lastGun = 0
   private(set) var burstSerial = 0
   private(set) var gunRecoil = SIMD2<Float>.zero
   private(set) var gunDirections: [SIMD3<Float>] = [[0, 0, 1], [0, 0, 1]]
@@ -322,7 +321,6 @@ struct RobotGuard {
         gun: gun, origin: muzzle(gun: gun), direction: gunDirections[gun], burst: burstSerial,
         pattern: pattern)
       roundsFired += 1
-      lastGun = gun
       shotSerial += 1
       if roundsFired == pattern.roundCount { transition(.recovering) }
       return shot

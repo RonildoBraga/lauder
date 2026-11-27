@@ -71,14 +71,12 @@ enum CombatSound: String, CaseIterable, Sendable {
   case rifle
   case strikeBody = "strike-body"
   case strikeBlock = "strike-block"
-  case emptyClick = "empty-click"
   case guardWarning = "guard-warning"
   case guardLegBreak = "guard-leg-break"
 
   /// What an event sounds like: each weapon its own shot or swing, the minigun's spin-up, each
-  /// change of Tom's dome, a strike on a body or a block, and an empty click. Holding the dome
-  /// up is heard through its changes, not as a shot. A hit on the leader is heard as the strike
-  /// on her body.
+  /// change of Tom's dome, and a strike on a body or a block. Holding the dome up is heard
+  /// through its changes, not as a shot. A hit on the leader is heard as the strike on her body.
   static func of(_ event: CombatEvent) -> CombatSound? {
     switch event {
     case .fired(let kind, _, _):
@@ -102,7 +100,6 @@ enum CombatSound: String, CaseIterable, Sendable {
       }
     case .struckBody: .strikeBody
     case .struckBlock: .strikeBlock
-    case .empty: .emptyClick
     case .leaderHit: nil
     case .guardTargeted: .guardWarning
     case .guardLegBroken: .guardLegBreak
@@ -250,8 +247,6 @@ enum HapticCue: CaseIterable, Sendable {
   case domeBreak
   /// A sharp, heavier jolt when a hostile's shot hits the leader.
   case leaderHit
-  /// A light tick for Fire with no rounds.
-  case emptyClick
 
   /// What the leader feels of an event; nothing for a companion's or hostile's weapon. Only
   /// the leader holds up the dome.
@@ -266,7 +261,6 @@ enum HapticCue: CaseIterable, Sendable {
     case .dome(.raised, _): .domeUp
     case .dome(.collapsed, _): .domeBreak
     case .leaderHit: .leaderHit
-    case .empty: .emptyClick
     default: nil
     }
   }
@@ -302,7 +296,6 @@ enum HapticCue: CaseIterable, Sendable {
       case .domeUp: [rumble(0.4, 0.3, for: 0.25)]
       case .domeBreak: [tap(0.9, 0.8), rumble(0.6, 0.3, for: 0.2)]
       case .leaderHit: [tap(1, 0.9), tap(0.6, 0.4, at: 0.06), rumble(0.5, 0.3, for: 0.12)]
-      case .emptyClick: [tap(0.35, 1)]
       }
     return try CHHapticPattern(events: events, parameters: [])
   }

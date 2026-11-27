@@ -74,10 +74,4 @@ struct WeaponHandling: Sendable {
       reloadRemaining = weapon.reloadTime
     }
   }
-
-  /// The click spends no round and starts no reload, but cannot be spammed to bypass cadence.
-  mutating func emptyClick() {
-    burstRemaining = 0
-    cooldown = max(cooldown, weapon.interval)
-  }
 }

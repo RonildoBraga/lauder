@@ -20,7 +20,7 @@ struct CompanionAutonomyTests {
         let point = try #require(snapshot.guardPoints.first)
         let aim = Movement.stick(
           towards: point.ground - position(world, .miki), cameraOffset: world.level.cameraOffset)
-        update(world, raw: InputRules.Raw(aimStick: aim, controllerFire: point.exposed))
+        update(world, raw: InputRules.Raw(aimStick: aim, controllerFire: true))
         try #require(!world.isRetrying)
         #expect(!world.playtestSnapshot.companionActivities.values.contains(.attacking))
       }

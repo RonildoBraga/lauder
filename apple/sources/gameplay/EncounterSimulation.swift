@@ -24,17 +24,12 @@ final class EncounterSimulation {
     var line: String?
     var facing: SIMD2<Float>?
     var retry = false
-    var appeared: [PartyMember] = []
-    var stood: [PartyMember] = []
     var shooter: (member: PartyMember, facing: SIMD2<Float>)?
-    var face: (PartyMember, PartyMember)?
   }
 
   static let aimHeight: Float = 1.25
   static let cameraLeanShare: Float = 0.4
   static let cameraLeanLimit: Float = 3
-  static let focusShare: Float = 0.8
-  static let focusLimit: Float = 7
   static let seed: UInt64 = 8
 
   private(set) var hostiles: [String: HostileState] = [:]
@@ -175,7 +170,6 @@ final class EncounterSimulation {
   private var leaderFacing = SIMD2<Float>(0, -1)
   private var aimOrigin = SIMD2<Float>.zero
   private let specs: [String: Level.Hostile]
-  private let blockers: [PartyMotion.Box]
   private let movementObstacles: [PartyMotion.Box]
   private let lookout: SIMD2<Float>
   private var encounter: Level.Encounter?
@@ -217,7 +211,6 @@ final class EncounterSimulation {
     crawlerMotion = PartyMotion(radius: Crawler.radius, obstacles: level.obstacles)
     startingLeader = level.party[0]
     weaponLeader = level.party[0]
-    blockers = Aim.blockers(level.boxes, above: Self.aimHeight)
     movementObstacles = level.obstacles
     lookout = -level.heading
     specs = Dictionary(
@@ -620,8 +613,6 @@ final class EncounterSimulation {
       case .reveal(let id): hostiles[id]?.reveal()
       case .engage(let id): hostiles[id]?.engage()
       case .say(let speaker, let line): outcome.line = "\(speaker): “\(line)”"
-      case .appear(let member): outcome.appeared.append(member)
-      case .stand(let member): outcome.stood.append(member)
       case .shot(let member, let id):
         guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
         // This fight has no cinematic damage shortcut: only actual damaging contacts count.
@@ -637,7 +628,6 @@ final class EncounterSimulation {
         let offset = state.position - from
         if simd_length(offset) > 0.001 { outcome.shooter = (member, simd_normalize(offset)) }
         outcome.line = "\(state.spec.name) is down."
-      case .face(let first, let second): outcome.face = (first, second)
       case .talk(let conversation): _ = session.converse(conversation)
       }
     }
@@ -762,7 +752,6 @@ final class EncounterSimulation {
         spec.attack == .shoot
       {
         rifle.begin(deliberateMiss: shot == .miss)
-        if shot == .miss, let line = spec.missLine { outcome.line = line }
       }
       if spec.attack == .shoot, state.isVisible, !state.isDown {
         var generator = enemyRandom[spec.id] ?? SeededRandom(seed: Self.seed)
@@ -1204,9 +1193,6 @@ final class EncounterSimulation {
 
   func cameraLean(leader: SIMD2<Float>) -> SIMD2<Float> {
     guard let encounter else { return .zero }
-    if let focus = encounter.focus {
-      return Self.lean(from: leader, towards: focus, share: Self.focusShare, limit: Self.focusLimit)
-    }
     let current = Set(encounter.hostiles.map(\.id))
     guard
       // Circling drones would sway the camera; it leans towards the ground's hostiles.
