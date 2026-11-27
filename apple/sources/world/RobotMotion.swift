@@ -63,6 +63,11 @@ struct RobotMotion {
     }
     detachedLegs = detached
     if let index = stepping, detachedLegs.contains(index) { stepping = nil }
+    // A missing foot must not make the remaining support cycle quicker. The body already
+    // moves more slowly; lengthen each surviving swing and its lookahead by the same ratio.
+    let duration =
+      Self.stepTime * Float(Self.order.count)
+      / Float(max(1, Self.order.count - detachedLegs.count))
     let velocity = elapsed > 0 ? change / elapsed : .zero
     let turning = elapsed > 0 ? turn / elapsed : 0
     previous = position
@@ -70,7 +75,7 @@ struct RobotMotion {
 
     if elapsed > 0 {
       if let index = stepping {
-        feet[index].progress = min(1, feet[index].progress + elapsed / Self.stepTime)
+        feet[index].progress = min(1, feet[index].progress + elapsed / duration)
         let progress = feet[index].progress
         let amount = Self.smooth(progress)
         feet[index].point = simd_mix(feet[index].start, feet[index].end, SIMD3(repeating: amount))
@@ -89,11 +94,11 @@ struct RobotMotion {
           let distance = simd_length(wanted - feet[index].point)
           guard distance > 0.06 || abs(Self.wrap(yaw + leg.angle - feet[index].yaw)) > 0.045
           else { continue }
-          let ahead = position + velocity * Self.stepTime
+          let ahead = position + velocity * duration
           feet[index].start = feet[index].point
-          feet[index].end = Self.goal(leg, at: ahead, yaw: yaw + turning * Self.stepTime)
+          feet[index].end = Self.goal(leg, at: ahead, yaw: yaw + turning * duration)
           feet[index].startYaw = feet[index].yaw
-          feet[index].endYaw = yaw + turning * Self.stepTime + leg.angle
+          feet[index].endYaw = yaw + turning * duration + leg.angle
           feet[index].progress = 0
           stepping = index
           next = (orderIndex + 1) % Self.order.count

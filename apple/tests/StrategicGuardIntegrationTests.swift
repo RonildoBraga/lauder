@@ -62,6 +62,38 @@ struct StrategicGuardIntegrationTests {
   }
 
   @Test
+  func nativeSwordLegLossAlsoReducesTheRealHostilesTurnRate() throws {
+    let trial = try Trial()
+    let rates: [Float] = [0.52, 0.32, 0.16, 0.08]
+    for leg in 0..<4 {
+      for _ in 0..<120 * 8 {
+        trial.step(weapon: .energySword, leg: leg)
+        if trial.strategy.detachedLegs.contains(leg) { break }
+      }
+      try #require(trial.strategy.detachedLegs.count == leg + 1)
+      var peak: Float = 0
+      for _ in 0..<120 * 20 {
+        let before = try #require(trial.robot)
+        let flank = before.position + SIMD2(-before.facing.y, before.facing.x) * 8
+        trial.step(weapon: .energySword, fire: false, fixedOrigin: flank)
+        let after = try #require(trial.robot)
+        let angle = abs(
+          (Movement.yaw(towards: after.facing) - Movement.yaw(towards: before.facing))
+            .remainder(dividingBy: 2 * .pi))
+        let rate = angle * 120
+        #expect(rate <= rates[leg] + 0.0001)
+        #expect(
+          simd_distance(before.position, after.position)
+            <= RobotGuard.speed * trial.strategy.speedMultiplier / 120 + 0.00001)
+        peak = max(peak, rate)
+      }
+      #expect(peak > rates[leg] * 0.9, "The real encounter must still permit a bounded pivot")
+    }
+    trial.fight.reset()
+    #expect(trial.strategy.turnMultiplier == 1 && trial.strategy.speedMultiplier == 1)
+  }
+
+  @Test
   func sceneryBlocksAnEyeLockAndCreatesNoCriticalOrDamageEvent() throws {
     let wall = Level.Box.box("wall", at: [0, 1.5, 3], size: [8, 3, 0.5])
     let trial = try Trial(boxes: [wall])

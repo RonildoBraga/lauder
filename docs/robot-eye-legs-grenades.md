@@ -1,7 +1,7 @@
 # Bridge robot: eye, legs and grenades
 
 **Date:** 27 November 2026  
-**Status:** Bounded implementation under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), on `codex/robot-eye-legs-grenades`, based on the delivered [build 37 preview](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Internal [build 38](prototype-plan.md#build-38-testflight-preview) delivers the revision before merge or physical acceptance; exact archive source is `d08ae6f` and PRs #193/#195 remain unmerged.
+**Status:** The eye/leg/grenade implementation under [issue #192](https://github.com/RonildoBraga/lauder/issues/192) is delivered in [build 38](prototype-plan.md#build-38-testflight-preview), archive source `d08ae6f`; PRs #193/#195 are merged into `main`. The maintainer reported basic phone success. The current [locomotion follow-up](#leg-loss-locomotion-follow-up), under [issue #196](https://github.com/RonildoBraga/lauder/issues/196), uses current code `b6e0b83`, equivalent to full-check source `3c0cb6b`, with rendered Simulator comparisons on preceding `aa9d0f5` as detailed in the plan; it remains unmerged and unuploaded. The [prototype plan](prototype-plan.md#leg-loss-locomotion--in-development) separates current verification from the earlier `303617b` results.
 
 After testing build 37, the maintainer requested that hitting the eye be a critical hit and that repeated Laura sword strikes on one leg make it fall off and slow the robot. They also requested grenade throwing and selected **“Tom only; manual throws”** in the task clarification (chat; no public permalink). This authorises the bounded mechanic revision, not new characters, scenes, biographies, enemy families or a general ability system. Numeric values below are prototype tuning choices, not additional quoted maintainer decisions.
 
@@ -17,11 +17,27 @@ Assistance and lock aim ranged weapons at the eye; spread, facing, range and phy
 
 The existing C robot already contains **four reusable leg assemblies**. Each intact leg has its own count of accepted sword contacts. **Three** actual sword strikes on that same leg detach it. Hits on another leg do not advance its counter; bullets and explosions cannot count as sword strikes. Each swing causes at most one health change per enemy and normal sword damage still applies. The leader's sword selects the nearest reachable intact leg inside its real arc; cover and reach remain authoritative.
 
-Each missing leg reduces translation by **25%**: 75%, 50%, 25%, then no translation after four losses. Turning, warned attacks and the ordinary burst/recovery cycle remain available. With all four gone, a measured shared body drop settles the hull onto the ground; native eye/muzzle positions and presentation use that same drop. This is a bounded prototype, not a simulated balance or falling-body system.
+Each missing leg reduces translation by **25%**: 75%, 50%, 25%, then no translation after four losses. Build 38 retains healthy turn speed and step timing; the [locomotion follow-up](#leg-loss-locomotion-follow-up) below adds progressive turn and gait impairment. Warned attacks and the ordinary burst/recovery cycle remain available. With all four gone, a measured shared body drop settles the hull onto the ground; native eye/muzzle positions and presentation use that same drop. This is a bounded prototype, not a simulated balance or falling-body system.
 
 A damaged leg gains a small warm indicator, stronger after its second contact. On the third, the full existing connector/leg assembly drops and tumbles into a noncolliding prop. Removed legs no longer offer target volumes or take turns in the gait. At most four props exist; Retry/Restart removes them and restores all four legs, health and counters. Navigation clearance remains conservative rather than shrinking around the missing limb.
 
 Under an explicit **Attack** order, Miki and Tom prefer real eye opportunities and Laura prefers reachable intact legs with her sword; safe ordinary fire remains available. Defend still stops companion attacks and recalls them. Go/Hold, player leadership, native handling, ally rays, spacing and the quiet bypass retain their existing authority. A companion cannot throw a grenade.
+
+### Leg-loss locomotion follow-up
+
+After the build 38 phone comparison, the maintainer requested compromised walking and spinning when a leg is lost. [Issue #196](https://github.com/RonildoBraga/lauder/issues/196) adds the following starting tuning; these numbers are implementation choices, not extra quoted maintainer decisions:
+
+| Missing legs | Travel speed limit | Body turn limit | Remaining-leg swing time |
+|---|---:|---:|---:|
+| 0 | 100% | 0.80 rad/s (100%) | 0.12 s |
+| 1 | 75% | 0.52 rad/s (65%) | 0.16 s |
+| 2 | 50% | 0.32 rad/s (40%) | 0.24 s |
+| 3 | 25% | 0.16 rad/s (20%) | 0.48 s |
+| 4 | None | 0.08 rad/s (10%) | No legs to step |
+
+The physical turn cap applies during patrol, searching, repositioning and target tracking. It cannot be bypassed by switching a target or seeking a movement goal. A grounded guard keeps only a very slow emergency pivot, so a flank target does not silently deadlock its existing warning/attack cycle. The committed point, gun yaw limits, real cover and actual muzzle rays keep their existing authority; a committed burst does not home in on a moving target.
+
+The remaining feet retain the existing world-space planting and two-link IK. Slower swing timing prevents the queue from becoming quicker merely because missing feet are skipped. There is no presentation-only body tilt, new mesh, physics simulation or navigation-radius change. Pause freezes the motion; Retry/Restart restore the healthy rules and all legs. Build 38 does not include this follow-up, whose source and rendered verification are [tracked separately](prototype-plan.md#leg-loss-locomotion--in-development).
 
 ## Tom's manual grenade
 
@@ -33,4 +49,4 @@ The **3 m** blast causes **180** damage at its centre, falling linearly to **60*
 
 Tom's grenade recharges over **8 s** of active simulation. Switching leaders cannot refill it or transfer a pending throw, and companions never spend it. The touch label and controller/keyboard hint show the rounded-up recharge. Scripted party holds reject new throws. Pause freezes flight, fuse and recharge; interruption release gates prevent stale throw requests on return. Retry/Restart clears the projectile, blast and recharge. Taking the quiet exit cancels an unfinished projectile so it cannot damage a cleared encounter.
 
-This first version has no ammunition inventory, new weapon slot, dependency, general projectile framework or automatic grenade AI. The new input and visual footprint need physical-phone acceptance after source and Simulator checks; build 37's generic success does not establish these controls or combat balance.
+This first version has no ammunition inventory, new weapon slot, dependency, general projectile framework or automatic grenade AI. The build 38 report establishes basic phone success, not exhaustive controls or combat balance. The new locomotion needs its own source and Simulator verification, followed by a separately delivered phone comparison.

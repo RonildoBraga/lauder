@@ -5,6 +5,66 @@ import simd
 
 struct RobotLegMotionTests {
   @Test
+  func fewerSupportingLegsTakeProgressivelyLongerSwingsInsteadOfHurryingTheQueue() throws {
+    let durations = try (0..<4).map { lost in
+      var motion = RobotMotion()
+      motion.reset(position: .zero, facing: [0, -1])
+      let missing = Set([3, 2, 1].prefix(lost))
+      let dt: Float = 1 / 240
+      let speed = RobotGuard.speed * Float(4 - lost) / 4
+      var liftedAt: Float?
+      for frame in 1...1200 {
+        let time = Float(frame) * dt
+        _ = motion.advance(
+          position: [0, -time * speed], facing: [0, -1], brace: 0,
+          detachedLegs: missing, dt: dt)
+        let lifted = motion.footPositions[0].y > RobotModelGeometry.legs[0].foot.z + 0.00001
+        if lifted, liftedAt == nil { liftedAt = time }
+        if !lifted, let liftedAt { return time - liftedAt }
+      }
+      throw MissingSwing()
+    }
+    #expect(durations[0] > 0.1 && durations[0] < 0.14)
+    for index in 1..<durations.count { #expect(durations[index] > durations[index - 1]) }
+    #expect(durations[3] > durations[0] * 3)
+    #expect(durations[3] < durations[0] * 5)
+  }
+
+  @Test(arguments: [1, 2, 3])
+  func pauseFreezesADamagedSwingAndResetRestoresTheHealthyCadence(lost: Int) throws {
+    var motion = RobotMotion()
+    motion.reset(position: .zero, facing: [0, -1])
+    let missing = Set([3, 2, 1].prefix(lost))
+    let dt: Float = 1 / 120
+    let speed = RobotGuard.speed * Float(4 - lost) / 4
+    var position = SIMD2<Float>.zero
+    for frame in 1...600 {
+      position = [0, -Float(frame) * dt * speed]
+      _ = motion.advance(
+        position: position, facing: [0, -1], brace: 0, detachedLegs: missing, dt: dt)
+      if motion.footPositions[0].y > RobotModelGeometry.legs[0].foot.z + 0.001 { break }
+    }
+    try #require(motion.footPositions[0].y > RobotModelGeometry.legs[0].foot.z + 0.001)
+    let paused = motion.footPositions
+    for _ in 0..<120 {
+      _ = motion.advance(position: position, facing: [0, -1], brace: 0, dt: 0)
+    }
+    #expect(motion.footPositions == paused)
+    _ = motion.advance(position: position, facing: [0, -1], brace: 0, dt: dt)
+    #expect(motion.footPositions[0] != paused[0])
+
+    motion.reset(position: .zero, facing: [0, -1])
+    var fresh = RobotMotion()
+    fresh.reset(position: .zero, facing: [0, -1])
+    for frame in 1...180 {
+      let at = SIMD2<Float>(0, -Float(frame) * dt * RobotGuard.speed)
+      _ = motion.advance(position: at, facing: [0, -1], brace: 0, dt: dt)
+      _ = fresh.advance(position: at, facing: [0, -1], brace: 0, dt: dt)
+      #expect(motion.footPositions == fresh.footPositions)
+    }
+  }
+
+  @Test
   func losingTheSwingingLegCancelsItsStepWithoutMovingPlantedFeet() throws {
     var motion = RobotMotion()
     motion.reset(position: .zero, facing: [0, -1])
@@ -62,4 +122,6 @@ struct RobotLegMotionTests {
     #expect(motion.footPositions[0] != before[0])
     for index in 1...3 { #expect(motion.footPositions[index] == before[index]) }
   }
+
+  private struct MissingSwing: Error {}
 }

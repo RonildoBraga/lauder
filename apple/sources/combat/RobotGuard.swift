@@ -144,10 +144,12 @@ struct RobotGuard {
   mutating func step(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
     party: [SIMD2<Float>], awareOfTarget: Bool = false, speedMultiplier: Float = 1,
-    grounded: Bool = false
+    turnMultiplier: Float = 1, grounded: Bool = false
   ) -> Discharge? {
     guard dt.isFinite, dt > 0, target.x.isFinite, target.y.isFinite else { return nil }
     let speed = !grounded && speedMultiplier.isFinite ? max(0, min(1, speedMultiplier)) : 0
+    let pivot = turnMultiplier.isFinite ? max(0, min(1, turnMultiplier)) : 0
+    let turning = grounded ? min(pivot, GuardStrategy.groundedTurnMultiplier) : pivot
     guard phase != .hidden, phase != .down, phase != .cleared else { return nil }
     let wantedDrop: Float = grounded ? Self.groundedDrop : 0
     let dropStep = Self.groundedDrop / Self.settleDuration * dt
@@ -175,7 +177,9 @@ struct RobotGuard {
       if repositionRemaining > 0 {
         repositionRemaining = max(0, repositionRemaining - dt)
         let goal = repositionGoal ?? home
-        move(towards: goal, dt: dt, obstacles: obstacles, party: party, speedMultiplier: speed)
+        move(
+          towards: goal, dt: dt, obstacles: obstacles, party: party,
+          speedMultiplier: speed, turnMultiplier: turning)
         if simd_distance(position, goal) < 0.1 { repositionRemaining = 0 }
       } else if canAcquire {
         needsAttackRange = false
@@ -183,7 +187,9 @@ struct RobotGuard {
         transition(.notice)
       } else {
         let goal = home + Self.patrolOffsets[patrolIndex]
-        move(towards: goal, dt: dt, obstacles: obstacles, party: party, speedMultiplier: speed)
+        move(
+          towards: goal, dt: dt, obstacles: obstacles, party: party,
+          speedMultiplier: speed, turnMultiplier: turning)
         if simd_distance(position, goal) < 0.15 {
           patrolIndex = (patrolIndex + 1) % Self.patrolOffsets.count
         }
@@ -196,7 +202,7 @@ struct RobotGuard {
         return nil
       }
       aimingPoint = target
-      turn(towards: target, dt: dt)
+      turn(towards: target, dt: dt, multiplier: turning)
       if phase == .notice, elapsed >= Self.noticeTime { transition(.tracking) }
       if phase == .tracking, elapsed >= pattern.trackingTime {
         if distance > Self.attackRange {
@@ -251,7 +257,7 @@ struct RobotGuard {
       } else if let lastSeen {
         move(
           towards: bounded(lastSeen), dt: dt, obstacles: obstacles, party: party,
-          speedMultiplier: speed)
+          speedMultiplier: speed, turnMultiplier: turning)
       }
     }
     updateGunDirections()
@@ -318,24 +324,25 @@ struct RobotGuard {
     }
   }
 
-  private mutating func turn(towards target: SIMD2<Float>, dt: Float) {
+  private mutating func turn(towards target: SIMD2<Float>, dt: Float, multiplier: Float) {
+    guard multiplier > 0 else { return }
     let offset = target - position
     guard simd_length_squared(offset) > 0.000001 else { return }
     let yaw = Movement.turn(
       from: Movement.yaw(towards: facing), towards: Movement.yaw(towards: offset),
-      limit: Self.turnRate * dt)
+      limit: Self.turnRate * multiplier * dt)
     facing = Movement.facing(yaw: yaw)
   }
 
   private mutating func move(
     towards goal: SIMD2<Float>, dt: Float, obstacles: [PartyMotion.Box],
-    party: [SIMD2<Float>], speedMultiplier: Float
+    party: [SIMD2<Float>], speedMultiplier: Float, turnMultiplier: Float
   ) {
     let target = bounded(goal)
     let delta = target - position
     let distance = simd_length(delta)
     guard distance > 0.05 else { return }
-    turn(towards: target, dt: dt)
+    turn(towards: target, dt: dt, multiplier: turnMultiplier)
     // Heavy articulated legs stop, turn and then advance. Translating through a broad turn
     // stretches a planted foot beyond the actual two-link reach during the corner.
     guard simd_dot(delta / distance, facing) >= cos(1 * .pi / 180) else { return }

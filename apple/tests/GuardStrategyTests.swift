@@ -80,9 +80,12 @@ struct GuardStrategyTests {
   @Test
   func eachLostLegReducesWalkingByOneQuarterWithoutDefeatingTheGuard() {
     var state = GuardStrategy()
+    #expect(state.turnMultiplier == 1)
+    let turning: [Float] = [0.65, 0.4, 0.2, 0.1]
     for index in 0..<4 {
       for _ in 0..<3 { _ = state.accept(weapon: .energySword, part: .leg(index), damage: 30) }
       #expect(state.speedMultiplier == 1 - Float(index + 1) * 0.25)
+      #expect(state.turnMultiplier == turning[index])
     }
     #expect(state.detachedLegs == [0, 1, 2, 3] && state.speedMultiplier == 0)
     #expect(state.health == GuardStrategy.maximumHealth - 360 && state.phase == .active)
@@ -115,5 +118,6 @@ struct GuardStrategyTests {
     let reset = GuardStrategy()
     #expect(reset.health == GuardStrategy.maximumHealth && reset.phase == .active)
     #expect(reset.swordHits.isEmpty && reset.detachedLegs.isEmpty && reset.speedMultiplier == 1)
+    #expect(reset.turnMultiplier == 1)
   }
 }
