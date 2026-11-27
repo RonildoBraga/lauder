@@ -367,6 +367,9 @@ final class GameWorld {
       case .guardLegBroken:
         return legBreakGeneration == controls.touchGeneration && session.mode == .exploring
           && !controls.needsNeutralInput && !isRetrying
+      case .droneWarning, .crawlerWarning:
+        // A pack member's warning, like the guard's, is not heard once its moment has passed.
+        return session.mode == .exploring && !controls.needsNeutralInput && !isRetrying
       default:
         return true
       }
@@ -1623,7 +1626,7 @@ final class GameWorld {
     clearDamageFeedback()
     combatEvents.removeAll {
       switch $0 {
-      case .guardTargeted, .guardLegBroken, .damaged: true
+      case .guardTargeted, .guardLegBroken, .droneWarning, .crawlerWarning, .damaged: true
       default: false
       }
     }

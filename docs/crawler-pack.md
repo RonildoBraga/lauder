@@ -39,7 +39,7 @@ The guard fight is still the bridge's only fight. The numbers below are my start
 
 **Falling.** A downed crawler collapses where it is. When the guard goes down, its crawlers and drones go down with it, so the fight still ends with the guard. After the quiet exit, the crawlers walk back to their places and fold, harmlessly.
 
-**Lifecycle.** Pause freezes them, and Retry and Restart reset them.
+**Lifecycle.** Pause freezes them, and Retry and Restart reset them. Like the guard's, a wind-up's warning sound isn't heard once Pause, Restart or leaving the app has interrupted it, and the same now holds for a drone's warning.
 
 ## Companions, lock and touch
 
