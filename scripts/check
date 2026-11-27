@@ -60,6 +60,11 @@ def main():
             [sys.executable, "-I", "-B", "apple/scripts/test-testflight-release.py"],
             output / "release-contracts.log",
         )
+        print("Checking Simulator recording lifecycle.", flush=True)
+        run(
+            [sys.executable, "-I", "-B", "apple/scripts/test-playtest-recording.py"],
+            output / "recording.log",
+        )
         print("Running the Blender extension's tests.", flush=True)
         run(
             [sys.executable, "-I", "-B", "blender/test_lauder_levels.py"],

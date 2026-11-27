@@ -91,7 +91,7 @@ struct WeaponFeelTests {
       windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true)
     var state = HostileState(spec: spec)
     state.reveal()
-    _ = state.step(dt: HostileState.stepOutTime, canHit: true, toward: .zero)
+    _ = state.step(dt: HostileState.stepOutTime, canHit: true)
     state.engage()
     let windUp = spec.windUp
     #expect(state.phase == .aiming(remaining: windUp))
@@ -110,7 +110,7 @@ struct WeaponFeelTests {
     // Out of a wind-up, a hit delays nothing.
     var shot: HostileState.Shot?
     for _ in 0..<400 where shot == nil {
-      shot = state.step(dt: 1 / 120, canHit: true, toward: .zero)
+      shot = state.step(dt: 1 / 120, canHit: true)
     }
     #expect(shot == .miss)
     let recovering = state.phase
@@ -119,7 +119,7 @@ struct WeaponFeelTests {
     // The next wind-up can be delayed afresh.
     for _ in 0..<400 {
       if case .aiming = state.phase { break }
-      _ = state.step(dt: 1 / 120, canHit: true, toward: .zero)
+      _ = state.step(dt: 1 / 120, canHit: true)
     }
     guard case .aiming(let remaining) = state.phase else {
       Issue.record("no second wind-up")

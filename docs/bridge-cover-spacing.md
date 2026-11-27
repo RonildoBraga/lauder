@@ -1,13 +1,13 @@
 # Bridge cover and companion spacing
 
 **Date:** 27 November 2026\
-**Status:** Implemented and source/Simulator verified on `codex/bridge-cover-spacing`, in [PR #175](https://github.com/RonildoBraga/lauder/pull/175) for [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The [prototype plan](prototype-plan.md#bridge-cover-and-spacing--in-development) records the exact source and results. Merge and another release remain separate decisions; the latest delivered preview remains [TestFlight 0.1.0 (35)](prototype-plan.md#build-35-testflight-preview).
+**Status:** Implemented and source/Simulator verified on `codex/bridge-cover-spacing`, in [PR #175](https://github.com/RonildoBraga/lauder/pull/175) for [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The [prototype plan](prototype-plan.md#bridge-cover-and-spacing--in-development) records the original source and results and owns current release gates and delivery evidence; the comparison below retains its original baseline.
 
 ## Assignment and comparison
 
 The maintainer said **“Looks good. Go ahead and improve the cover and companion spacing on the bridge.”** This is a relayed chat instruction on 27 November 2026; no public chat permalink is available. It authorises the bounded layout and positioning changes below. “Looks good” is generic feedback, not a measured phone-control, audibility or performance result. Merge and another release are not part of this assignment.
 
-The question is whether useful separate shelter and less crowded companion destinations make [Attack/Defend](companion-autonomy.md#attack-and-defend) more meaningful. Keep the existing guard damage, alternating precision/fan patterns, warning and recovery timings, [weakpoint sequence](strategic-guard.md#prototype-dismantling-sequence), input rules and quiet west bypass as the comparison baseline. This adds no enemy, weapon, ability, cover-snap input or general tactical framework.
+The question is whether useful separate shelter and less crowded companion destinations make [Attack/Defend](companion-autonomy.md#attack-and-defend) more meaningful. Keep the existing guard damage, alternating precision/fan patterns, warning and recovery timings, [then-current weakpoint sequence](strategic-guard.md#earlier-mandatory-prototype), input rules and quiet west bypass as the comparison baseline. This adds no enemy, weapon, ability, cover-snap input or general tactical framework.
 
 ## Two simple shelters
 

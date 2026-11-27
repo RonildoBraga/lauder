@@ -501,7 +501,7 @@ The [walkthrough](gameplay-script.md#the-brooklyn-bridge-opening) follows Miki, 
 2. Meet the C robot at the first tower. Fight using the tower as cover, or take the west arch to its safe exit. Each committed burst can cause at most one injury; a third injury retries that fight.
 3. Cross the second tower together. Try Close/Spread/Column and move/hold orders, then gather at the Manhattan end.
 
-Only the bridge is available. Pause has Resume, Restart, Vibration and, with a controller or keyboard, Status panel. There is no alternate-scene selector, weapon bench, endless spawn, automatic combat-cover controls, grenade, signature, elevation or salvage-repair system.
+Only the bridge is available. Pause has Resume, Restart, Vibration and Status panel with controller, keyboard or touch. Tom's manual grenade remains available through the shared inputs below. There is no alternate-scene selector, weapon bench, endless spawn, automatic combat-cover controls, signature, elevation or salvage-repair system.
 
 ## Input and interaction contract
 

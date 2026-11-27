@@ -30,8 +30,6 @@ struct Level {
       case shoot
       /// The bounded, planted-burst guard used at the first tower.
       case robot
-      /// Runs at the leader at this speed, in metres per second.
-      case charge(speed: Float)
       /// A scout drone that circles its guard and dives at the party (issue #201). It starts
       /// `orbit` radians round its circle, and `slot` orders its first dive after the others'.
       case drone(orbit: Float, slot: Int)
