@@ -343,18 +343,11 @@ final class EncounterSimulation {
     else { return false }
     let start = ballistics.point(origin)
     let delta = point.centre - start
-    let friends = figures.filter { $0.key != member }.map {
-      Ballistics.Target(id: "ally.\($0.key.rawValue)", centre: ballistics.point($0.value))
-    }
+    let friends = allyTargets(of: member, among: figures)
     if kind == .energySword {
-      let radial = origin - state.position
-      let side = point.ground - state.position
-      guard simd_length(radial) >= RobotModelGeometry.bodyRadius + PartyBody.radius,
-        simd_length(side) > 0.001,
-        simd_dot(simd_normalize(radial), simd_normalize(side)) >= 0.55,
-        simd_distance(origin, point.ground) <= weapon.range + point.radius,
-        ballistics.isClear(from: start, to: point.centre)
-      else { return false }
+      guard swordReaches(point, of: state.position, from: origin, reach: weapon.range) else {
+        return false
+      }
       let trace = ballistics.trace(
         from: start, direction: delta, range: simd_length(delta), targets: friends)
       if case .body = trace.strike { return false }
@@ -379,9 +372,7 @@ final class EncounterSimulation {
     let target = hostileTarget(id)
     let delta = target.centre - start
     guard simd_length(delta) <= weapon.range else { return false }
-    let friends = figures.filter { $0.key != member }.map {
-      Ballistics.Target(id: "ally.\($0.key.rawValue)", centre: ballistics.point($0.value))
-    }
+    let friends = allyTargets(of: member, among: figures)
     let points = weakpoints(for: id)
     let trace = traceCombat(
       from: start, direction: delta, targets: [target] + points.map(\.target) + friends)
@@ -402,7 +393,8 @@ final class EncounterSimulation {
     let direction = simd_normalize(committed - robot.position)
     let offset = point - robot.position
     let along = simd_dot(offset, direction)
-    let width: Float = robot.pattern == .fan ? max(0, along) * tan(15 * .pi / 180) + 0.8 : 1.1
+    let width: Float =
+      robot.pattern == .fan ? max(0, along) * tan(RobotGuard.gunYawLimit) + 0.8 : 1.1
     return along > 0 && along <= RobotGuard.attackRange + 2
       && simd_length(offset - direction * along) < width
   }
@@ -844,7 +836,7 @@ final class EncounterSimulation {
     let path = trace.path
     let armoured: Bool
     if case .body(let id) = path.strike {
-      armoured = id.hasPrefix("ally.")
+      armoured = id.hasPrefix(Self.allyPrefix)
     } else {
       armoured = false
     }
@@ -1020,9 +1012,7 @@ final class EncounterSimulation {
       from: start, direction: ray,
       targets: hostiles.values.filter { $0.isVisible && !$0.isDown }
         .flatMap { [hostileTarget($0.spec.id)] + weakpoints(for: $0.spec.id).map(\.target) }
-        + allies.filter { $0.key != member }.map {
-          Ballistics.Target(id: "ally.\($0.key.rawValue)", centre: ballistics.point($0.value))
-        })
+        + allyTargets(of: member, among: allies))
     scatter.fired(spread: weapon.spread)
     scatters[member] = scatter
     random[member] = generator
@@ -1182,6 +1172,37 @@ final class EncounterSimulation {
     jolts[member, default: BodyJolt()].push(towards: position - target, by: BodyJolt.recoil)
   }
 
+  /// The prefix that marks a member as an ally in a shot's way, not its target.
+  static let allyPrefix = "ally."
+
+  /// The party as targets of a hostile's round, each by its member's ID.
+  private func partyTargets(_ party: [PartyMember: SIMD2<Float>]) -> [Ballistics.Target] {
+    party.map { Ballistics.Target(id: $0.key.rawValue, centre: ballistics.point($0.value)) }
+  }
+
+  /// Everyone but `member`, as allies a shot of theirs could strike instead of its target.
+  private func allyTargets(
+    of member: PartyMember, among figures: [PartyMember: SIMD2<Float>]
+  ) -> [Ballistics.Target] {
+    figures.filter { $0.key != member }.map {
+      Ballistics.Target(id: Self.allyPrefix + $0.key.rawValue, centre: ballistics.point($0.value))
+    }
+  }
+
+  /// A hostile's hit on a member: they jolt along `push`, a hit on the leader is felt, and it
+  /// counts towards the encounter's retry. Each caller first decides whether its attack can
+  /// still hurt anyone, since a burst or a ram hurts at most once.
+  private func hurt(
+    _ member: PartyMember, along push: SIMD2<Float>, at point: SIMD2<Float>,
+    session: GameSession, outcome: inout Outcome
+  ) {
+    if simd_length_squared(push) > 0 {
+      jolts[member, default: BodyJolt()].push(towards: push, by: BodyJolt.hit)
+    }
+    if member == session.leader { events.append(.leaderHit(at: point)) }
+    if session.takeHit(member) { outcome.retry = true }
+  }
+
   private func report(_ path: ShotPath, firedBy kind: Weapon.Kind, byLeader: Bool) {
     events.append(.fired(kind, at: path.start, byLeader: byLeader))
     switch path.strike {
@@ -1295,9 +1316,7 @@ final class EncounterSimulation {
     let trace = guarded(
       ballistics.traceAcrossLevel(
         from: discharge.origin, direction: direction,
-        targets: party.map {
-          Ballistics.Target(id: $0.key.rawValue, centre: ballistics.point($0.value))
-        }), party: party)
+        targets: partyTargets(party)), party: party)
     shots.append(
       Shot(
         path: trace.path, side: .hostile,
@@ -1307,10 +1326,9 @@ final class EncounterSimulation {
     if case .body(let id) = trace.strike, let member = PartyMember(rawValue: id),
       state.acceptRobotBurstHit()
     {
-      jolts[member, default: BodyJolt()].push(
-        towards: [direction.x, direction.z], by: BodyJolt.hit)
-      if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
-      if session.takeHit(member) { outcome.retry = true }
+      hurt(
+        member, along: [direction.x, direction.z], at: trace.path.end, session: session,
+        outcome: &outcome)
     }
   }
 
@@ -1323,20 +1341,16 @@ final class EncounterSimulation {
       ballistics.traceAcrossLevel(
         from: ballistics.point(start),
         direction: [discharge.direction.x, 0, discharge.direction.y],
-        targets: discharge.deliberateMiss
-          ? []
-          : party.map {
-            Ballistics.Target(id: $0.key.rawValue, centre: ballistics.point($0.value))
-          }), party: party)
+        targets: discharge.deliberateMiss ? [] : partyTargets(party)), party: party)
     let muzzle = WeaponPose.muzzle(
       from: start, facing: enemyHandling[id]?.facing ?? discharge.direction, kind: .rifle)
     shots.append(Shot(path: trace.path, side: .hostile, muzzle: muzzle, trace: trace))
     report(trace.path, firedBy: .rifle, byLeader: false)
     hostileJolts[id, default: BodyJolt()].push(towards: -discharge.direction, by: BodyJolt.recoil)
     if case .body(let body) = trace.strike, let member = PartyMember(rawValue: body) {
-      jolts[member, default: BodyJolt()].push(towards: discharge.direction, by: BodyJolt.hit)
-      if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
-      if session.takeHit(member) { outcome.retry = true }
+      hurt(
+        member, along: discharge.direction, at: trace.path.end, session: session,
+        outcome: &outcome)
     }
   }
 
@@ -1419,9 +1433,7 @@ final class EncounterSimulation {
     let trace = guarded(
       ballistics.traceAcrossLevel(
         from: discharge.origin, direction: direction,
-        targets: party.map {
-          Ballistics.Target(id: $0.key.rawValue, centre: ballistics.point($0.value))
-        }), party: party)
+        targets: partyTargets(party)), party: party)
     shots.append(
       Shot(
         path: trace.path, side: .hostile, muzzle: [discharge.origin.x, discharge.origin.z],
@@ -1430,10 +1442,9 @@ final class EncounterSimulation {
     if case .body(let id) = trace.strike, let member = PartyMember(rawValue: id),
       state.acceptDroneBurstHit()
     {
-      jolts[member, default: BodyJolt()].push(
-        towards: [direction.x, direction.z], by: BodyJolt.hit)
-      if member == session.leader { events.append(.leaderHit(at: trace.path.end)) }
-      if session.takeHit(member) { outcome.retry = true }
+      hurt(
+        member, along: [direction.x, direction.z], at: trace.path.end, session: session,
+        outcome: &outcome)
     }
   }
 
@@ -1617,13 +1628,10 @@ final class EncounterSimulation {
       return
     }
     let direction = ram.to - ram.from
-    if simd_length(direction) > 0.0001 {
-      jolts[struck.key, default: BodyJolt()].push(
-        towards: simd_normalize(direction), by: BodyJolt.hit)
-    }
     events.append(.struckBody(at: struck.value))
-    if struck.key == session.leader { events.append(.leaderHit(at: struck.value)) }
-    if session.takeHit(struck.key) { outcome.retry = true }
+    hurt(
+      struck.key, along: simd_length(direction) > 0.0001 ? simd_normalize(direction) : .zero,
+      at: struck.value, session: session, outcome: &outcome)
   }
 
   /// Whether standing at `point` is in a crawler's way: near the fixed line of one winding up
@@ -1694,6 +1702,24 @@ final class EncounterSimulation {
   /// a shot.
   static let swingArc: Float = 110 * .pi / 180
   static let blockArc: Float = 120 * .pi / 180
+  /// How far round the guard from a leg a sword still reaches it: the least cosine between
+  /// the ways from the guard's centre to the swinger and to the leg.
+  static let swordSide: Float = 0.55
+
+  /// Whether a sword swung from `origin` reaches this leg of the guard standing at `centre`:
+  /// from outside its hull, on the leg's side, within reach and past nothing solid. The swing
+  /// adds its arc, and a companion's plan adds a lane clear of the others.
+  private func swordReaches(
+    _ point: GuardWeakpoint, of centre: SIMD2<Float>, from origin: SIMD2<Float>, reach: Float
+  ) -> Bool {
+    let radial = origin - centre
+    let side = point.ground - centre
+    return simd_length(radial) >= RobotModelGeometry.bodyRadius + PartyBody.radius
+      && simd_length(side) > 0.001
+      && simd_dot(simd_normalize(radial), simd_normalize(side)) >= Self.swordSide
+      && simd_distance(origin, point.ground) <= reach + point.radius
+      && ballistics.isClear(from: ballistics.point(origin), to: point.centre)
+  }
 
   /// The weapon switch: the member's other weapon comes into hand, drawn if this one was, after
   /// its own draw time. The one put away keeps its magazine, and any reload goes on.
@@ -1751,13 +1777,8 @@ final class EncounterSimulation {
         for point in legs {
           let offset = point.ground - origin
           let distance = simd_length(offset)
-          let radial = origin - target.position
-          let side = point.ground - target.position
-          guard simd_length(radial) >= RobotModelGeometry.bodyRadius + PartyBody.radius,
-            simd_dot(simd_normalize(radial), simd_normalize(side)) >= 0.55,
-            distance <= reach + point.radius,
-            distance < 0.001 || simd_dot(offset / distance, facing) >= cos(Self.swingArc / 2),
-            ballistics.isClear(from: ballistics.point(origin), to: point.centre)
+          guard distance < 0.001 || simd_dot(offset / distance, facing) >= cos(Self.swingArc / 2),
+            swordReaches(point, of: target.position, from: origin, reach: reach)
           else { continue }
           contact = point
           break
