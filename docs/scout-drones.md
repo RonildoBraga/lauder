@@ -1,7 +1,7 @@
 # Scout drones at the first tower
 
 **Date:** 27 November 2026  
-**Status:** In development on `claude/scout-drones` under [issue #201](https://github.com/RonildoBraga/lauder/issues/201). It is unmerged and not uploaded to TestFlight. The [prototype plan](prototype-plan.md#scout-drones--in-development) records what has been checked.
+**Status:** In development on `claude/scout-drones` under [issue #201](https://github.com/RonildoBraga/lauder/issues/201). It is unmerged; [TestFlight build 41](prototype-plan.md#build-41-testflight-preview) previews it for the existing testers. The [prototype plan](prototype-plan.md#scout-drones--in-development) records what has been checked.
 
 ## The request
 

@@ -119,7 +119,14 @@ While Codex worked on the guard's leg stagger (#199), the maintainer asked for *
 
 ### Build 41 TestFlight preview
 
-After the checks above, the maintainer answered “Yes, upload it” to Claude's question “Upload the drones to TestFlight for you to try?” (Claude session, 27 November 2026; no public permalink). That authorises this internal preview from the unmerged `claude/scout-drones` branch. It does not authorise a merge. Discovery found builds up to 40 used, so the preview is **0.1.0 (41)**. The branch commits that number, as the preview branches for builds 33–35 did. Archive, upload, Apple processing and availability to the existing testers are recorded here once confirmed.
+After the checks above, the maintainer answered “Yes, upload it” to Claude's question “Upload the drones to TestFlight for you to try?” (Claude session, 27 November 2026; no public permalink). That authorises this internal preview from the unmerged `claude/scout-drones` branch. It does not authorise a merge. Discovery found builds up to 40 used, so the preview is **0.1.0 (41)**. The branch commits that number, as the preview branches for builds 33–35 did.
+
+**Delivered.**
+- **Archive:** `apple/scripts/testflight archive --reviewed-preview` archived `claude/scout-drones` at `42d6669`. Before archiving, its own full `./scripts/check` passed on the frozen source. It then verified the signed archive, and the API-key upload succeeded once.
+- **Apple:** at 05:57 UTC on 27 November 2026, Apple reported the build COMPLETE and VALID, internal only, in beta testing and unexpired. It is available to the existing internal testers, the internal group set and tester membership are unchanged, and the upload had no errors.
+- **What was not done:** no tester was invited, no TestFlight test notes were written, and nothing was submitted to the public App Store. The archive and its symbols are kept privately.
+- **The branch afterwards:** later commits change only documentation.
+- **Still unchecked:** the phone playtest of controls, readability, sound, balance and sustained performance.
 
 ## Eye, legs and grenades — in development
 
