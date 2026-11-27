@@ -176,6 +176,19 @@ The maintainer asked for another new enemy, “Once it's merged, create another 
 - **Frame time:** 16.7 ms mean and 16.8 ms p99 in the Simulator. That isn't phone performance.
 - **Not checked:** phone readability, audibility, balance and sustained frame rate. Merging needs the baseline-iPhone check.
 
+**After Codex's review**, `60b9878` fixes the three findings on PR #212: the dome's ram origin, rams sliding along walls, and pack warnings hidden by the guard's recovery text. The whole Swift suite passes, 590 tests, and each new test fails without its fix.
+
+### Build 44 TestFlight preview
+
+The maintainer answered “Yes, upload it” to Claude's question “Upload the crawlers to TestFlight as build 44 for a phone check?” (Claude session, 27 November 2026; no public permalink). That authorises this internal preview from the unmerged `claude/crawler-pack` branch. It does not authorise a merge. Discovery found builds up to 43 used, so the preview is **0.1.0 (44)**, committed on the branch in `d700791`.
+
+**Delivered.**
+- **Archive:** `apple/scripts/testflight archive --reviewed-preview` archived `claude/crawler-pack` at `d700791`. Before archiving, its own full `./scripts/check` passed on the frozen source. It then verified the signed archive, and the API-key upload succeeded once.
+- **Apple:** at 08:30 UTC on 27 November 2026, Apple reported the build COMPLETE and VALID, internal only, in beta testing and unexpired. It is available to the existing internal testers, the internal group set and tester membership are unchanged, and the upload had no errors.
+- **What was not done:** no tester was invited, no TestFlight test notes were written, and nothing was submitted to the public App Store. The archive and its symbols are kept privately.
+- **The branch afterwards:** later commits change only documentation.
+- **Phone check:** pending. Merging PR #212 needs it.
+
 ## Scout drones — in development
 
 While Codex worked on the guard's leg stagger (#199), the maintainer asked for **“a different enemy”** and chose **“Scout drones”** **“With the first guard”** (chat, 27 November 2026; no public permalink). [Issue #201](https://github.com/RonildoBraga/lauder/issues/201) records Claude's claim and the files it avoids while #199 is active. The [drone contract](scout-drones.md) holds the starting rules: two drones circle the guard at 3 m, take turns to warn for 1 s and dive along a committed line with a three-round burst that hurts at most once, pass low enough for the sword, and fall with the guard. The [scout-drone model](../blender/assets/scout-drone/README.md) is simple shapes in the guard's colours.
