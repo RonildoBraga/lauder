@@ -512,7 +512,7 @@ struct CompanionAutonomyTests {
       step(
         intents: [
           .tom: CompanionTactics.Intent(
-            lookAt: point.ground, weapon: .minigun, fire: true, activity: .attacking)
+            lookAt: point.ground, engaged: true, weapon: .minigun, fire: true, activity: .attacking)
         ],
         facingAway: facingAway)
     }
@@ -523,7 +523,7 @@ struct CompanionAutonomyTests {
       figures[.laura] = robot.position + [-6, 0]
       step(intents: [
         member: CompanionTactics.Intent(
-          lookAt: robot.position, weapon: member == .tom ? .minigun : .shotgun,
+          lookAt: robot.position, engaged: true, weapon: member == .tom ? .minigun : .shotgun,
           targetsBody: true, fire: true, activity: .attacking)
       ])
     }

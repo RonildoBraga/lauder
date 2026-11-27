@@ -408,7 +408,7 @@ final class EncounterSimulation {
         && companionGuard(near: aimOrigin) != nil
       ? Set(
         intents.keys.filter {
-          $0 != session.leader && session.party.contains($0) && intents[$0]?.lookAt != nil
+          $0 != session.leader && session.party.contains($0) && intents[$0]?.engaged == true
         })
       : []
     for member in autonomousMembers.subtracting(active) where member != session.leader {

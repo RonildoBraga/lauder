@@ -589,6 +589,62 @@ struct CompanionTacticsTests {
     #expect(blocked == .init(activity: .following))
   }
 
+  // MARK: - Engagement and the pack (issue #209, finding 13)
+
+  @Test
+  func aPlanSaysWhenItEngagesTheGuardRatherThanLeavingItToItsLookPoint() {
+    var planner = CompanionTactics()
+    let engaging = plan(&planner, input())
+    #expect(engaging.engaged && engaging.lookAt != nil)
+    let body = plan(&planner, input(points: []), canFireAtBody: { _, _ in true })
+    #expect(body.engaged && body.targetsBody)
+    let ordered = plan(&planner, input(order: .going([0, -8])))
+    #expect(!ordered.engaged && ordered.activity == .ordered)
+    let away = plan(&planner, input(active: false))
+    #expect(!away.engaged && away.lookAt == nil)
+  }
+
+  @Test
+  func underAttackAnEngagedPlanShootsTheDivingDroneOrTheClosingCrawlerFirst() {
+    let engaged = CompanionTactics.Intent(
+      position: [1, -5], lookAt: [0, -1.45], engaged: true, weapon: .longRifle,
+      activity: .waiting)
+    let drone = CompanionTactics.PackTarget(
+      kind: .drone, id: "drone", position: [3, 2], weapon: .assaultRifle)
+    let atDrone = CompanionTactics.preferringPack(engaged, stance: .attack) { drone }
+    #expect(atDrone.drone == "drone" && atDrone.crawler == nil)
+    #expect(atDrone.lookAt == [3, 2] && atDrone.weapon == .assaultRifle)
+    #expect(atDrone.fire && atDrone.activity == .attacking && atDrone.engaged)
+    // Where the companion goes stays the plan's own.
+    #expect(atDrone.position == engaged.position)
+    let crawler = CompanionTactics.PackTarget(
+      kind: .crawler, id: "crawler", position: [-2, 1], weapon: .longRifle)
+    let atCrawler = CompanionTactics.preferringPack(engaged, stance: .attack) { crawler }
+    #expect(atCrawler.crawler == "crawler" && atCrawler.drone == nil && atCrawler.fire)
+    #expect(atCrawler.position == engaged.position)
+    // With nothing of the pack to shoot, the plan is unchanged.
+    #expect(CompanionTactics.preferringPack(engaged, stance: .attack) { nil } == engaged)
+  }
+
+  @Test
+  func defendAnUnengagedPlanAndSeekingSafetyKeepThePlanWithoutAskingForThePack() {
+    var asked = 0
+    let target = { () -> CompanionTactics.PackTarget? in
+      asked += 1
+      return .init(kind: .drone, id: "drone", position: [3, 2], weapon: .assaultRifle)
+    }
+    let engaged = CompanionTactics.Intent(
+      lookAt: [0, -1.45], engaged: true, weapon: .longRifle, activity: .waiting)
+    #expect(CompanionTactics.preferringPack(engaged, stance: .defend, target: target) == engaged)
+    var idle = engaged
+    idle.engaged = false
+    #expect(CompanionTactics.preferringPack(idle, stance: .attack, target: target) == idle)
+    var avoiding = engaged
+    avoiding.activity = .avoiding
+    #expect(CompanionTactics.preferringPack(avoiding, stance: .attack, target: target) == avoiding)
+    #expect(asked == 0)
+  }
+
   private func input(
     member: PartyMember = .miki, leader: PartyMember = .laura,
     position: SIMD2<Float> = [0, -6], leaderPosition: SIMD2<Float> = [0, -6],

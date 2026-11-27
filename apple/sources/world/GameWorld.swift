@@ -1047,26 +1047,15 @@ final class GameWorld {
           asides[member] = aside
         }
       }
-      // A scout drone on its dive takes a companion's fire ahead of the guard while its plan
-      // engages. Movement, orders and seeking safety keep the plan's own (issue #201).
-      if session.combatStance == .attack, intent.lookAt != nil, intent.activity != .avoiding,
-        let drone = fight.companionDrone(for: member, from: position, figures: current)
-      {
-        intent.lookAt = drone.position
-        intent.weapon = drone.weapon
-        intent.drone = drone.id
-        intent.fire = true
-        intent.activity = .attacking
-      } else if session.combatStance == .attack, intent.lookAt != nil,
-        intent.activity != .avoiding,
-        let crawler = fight.companionCrawler(for: member, from: position, figures: current)
-      {
-        // A crawler closing in or winding up comes next, as the drones' dives do (issue #208).
-        intent.lookAt = crawler.position
-        intent.weapon = crawler.weapon
-        intent.crawler = crawler.id
-        intent.fire = true
-        intent.activity = .attacking
+      // A scout drone on its dive, then a crawler closing in or winding up, takes the fire of a
+      // companion whose plan engages, after any step out of a ram's line (issues #201, #208).
+      intent = CompanionTactics.preferringPack(intent, stance: session.combatStance) {
+        if let drone = self.fight.companionDrone(for: member, from: position, figures: current) {
+          return .init(kind: .drone, id: drone.id, position: drone.position, weapon: drone.weapon)
+        }
+        return self.fight.companionCrawler(for: member, from: position, figures: current).map {
+          .init(kind: .crawler, id: $0.id, position: $0.position, weapon: $0.weapon)
+        }
       }
       tactics[member] = policy
       next[member] = intent

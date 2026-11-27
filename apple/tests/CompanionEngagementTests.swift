@@ -70,7 +70,8 @@ struct CompanionEngagementTests {
         aiming: true, fireHeld: attack, firePressed: attack, figures: figures, session: session,
         companionIntents: [
           .miki: .init(
-            lookAt: point.ground, weapon: .longRifle, fire: true, activity: .attacking)
+            lookAt: point.ground, engaged: true, weapon: .longRifle, fire: true,
+            activity: .attacking)
         ], facings: [.miki: -front])
       return leader
     }
