@@ -169,7 +169,12 @@ The maintainer asked for another new enemy, “Once it's merged, create another 
 - **The model:** the [crawler model](../blender/assets/crawler/README.md) is simple shapes in the guard's colours.
 - **The branch:** it is cut from the drones work at Codex's `c6e6cb8`. That work merged into main as #203 (`a71a9f9`, with the same tree).
 
-**Checks:** pending; recorded here once run.
+**Checks, iPhone 13 Pro Max Simulator with iOS 27.0:**
+- **Full check, `27e2723`:** `./scripts/check` passed. That covers contracts, release contracts, the Blender tests, the 17 sounds, formatting, the build and the whole Swift Testing suite.
+- **`91d368e`, the drone and crawler warning fix:** the warning lifecycle, pack, crawler and drone suites pass, 28 tests in all. The new lifecycle test fails without the fix.
+- **Rendered routes, `91d368e`:** **crawler-fight** passed 27/27 steps in 65.4 s, and **drone-fight** passed 23/23 in 70.7 s.
+- **Frame time:** 16.7 ms mean and 16.8 ms p99 in the Simulator. That isn't phone performance.
+- **Not checked:** phone readability, audibility, balance and sustained frame rate. Merging needs the baseline-iPhone check.
 
 ## Scout drones — in development
 
