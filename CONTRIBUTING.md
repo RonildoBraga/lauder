@@ -257,7 +257,7 @@ The supported path makes levels and models in Blender, exports each level's look
 
 ### Sounds
 
-The combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 343 KB in all, stored with Git LFS. The original `guard-warning.wav` is a short two-note acquisition cue, synthesised by the same script without voice recordings or third-party samples. After changing the script, run it from the repository root and commit the files it writes:
+The combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 688 KB in all, stored with Git LFS. The original `guard-warning.wav` is a short two-note acquisition cue, synthesised by the same script without voice recordings or third-party samples. After changing the script, run it from the repository root and commit the files it writes:
 
 ```sh
 python3 apple/scripts/make-sounds.py

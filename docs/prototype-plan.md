@@ -14,6 +14,25 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Weapon sounds — in development
+
+[Issue #162](https://github.com/RonildoBraga/lauder/issues/162) gives the paired weapons their own sounds. In a Claude session on 27 November 2026, which has no public permalink, the maintainer said: “see if you can help and start resolving all the git issues”. The work is on `claude/weapon-sounds`, based on the build 36 source (`codex/testflight-guard-damage`, [PR #185](https://github.com/RonildoBraga/lauder/pull/185)).
+
+- **Sounds:** `apple/scripts/make-sounds.py` now generates sixteen sounds instead of eight.
+  - **Weapons:** each of the six paired weapons has its own: the long rifle, the assault rifle, the shotgun, the sword's swing and the minigun's round. The hostiles' rifle keeps its own.
+  - **Minigun:** it whines as it spins up.
+  - **Tom's dome:** it has five: rising, running down with 1.5 s left, let go or dropped, run out, and recharged in his hands.
+  - **Removed:** the old carbine, light-burst and close-scatter sounds, made for the weapons that [ADR 0021](decisions/0021-paired-weapons.md) replaced.
+- **Events:** the fight reports when a minigun begins to spin up, for the leader and for companions. It reports each change of the dome once.
+- **Vibration:** the leader feels each weapon, the spin-up, and the dome rising and breaking. The DualSense trigger profiles are unchanged.
+- **Verification:** `./scripts/check` passed on an iOS 27 iPhone 17 Simulator:
+  - 13 declaration-contract tests, 31 offline release-contract tests and 52 Blender tests;
+  - the 16 generated sounds;
+  - strict Swift formatting, the app build and Swift Testing.
+  - **New tests** cover each sound's mapping, the spin-up heard once for each hold, and each change of the dome heard once.
+  - A script measured each sound's length, loudness over time and pitch direction. None has been heard on a phone.
+- **Not verified:** how the sounds and vibrations feel on the phone, which [#163](https://github.com/RonildoBraga/lauder/issues/163) tracks.
+
 ## Guard damage and feedback — in development
 
 On 27 November 2026 the maintainer requested damage from every successful hit, with increased damage for the appropriate companion/weapon at an enemy weakness, white normal numbers, red weak-point numbers and restrained effective-hit feedback. They approved the shared-health proposal with **“Proceed with your recommendations”** (chat; no public permalink). [Issue #183](https://github.com/RonildoBraga/lauder/issues/183) records that explicit assignment. It authorises this bounded damage/feedback revision, including directly related contact and presentation findings in [issue #180](https://github.com/RonildoBraga/lauder/issues/180), without authorising merge or another TestFlight delivery.
@@ -398,7 +417,7 @@ On 26 November 2026 the maintainer gave each character two weapons, and chose ho
   - Tom: a minigun that spins up, and a shield dome that stays up round him while Fire is held.
 - **Switching:** R1 / RB, T or the touch **Swap** button brings the other weapon into hand, and each keeps its magazine.
 - **Rounds:** none are counted beyond the magazine, and the status shows the weapon in hand.
-- **Not built yet:** each weapon borrows the nearest existing sound, and dedicated sounds are left for a later pass.
+- **Sounds:** at first each weapon borrowed the nearest existing sound. [Weapon sounds](#weapon-sounds--in-development) gives each its own.
 - **Checks:** `./scripts/check` passed: 13 declaration-contract tests, 28 offline release tests, 52 Blender tests, seven sound fingerprints, Swift formatting, the app build, and Swift Testing on an iOS 27 iPhone 17 simulator, 283 tests in 395 runs. New tests cover the pairs and the switch keeping each magazine, the switch press, the long rifle's heavy hit, the assault rifle's rapid fire past a reload, the minigun's spin-up and slower walk, the dome stopping shots for everyone inside it and shots landing once it drops, its run-down and recharge, and the sword striking in front within reach and turning shots from in front only.
 - **Simulator:** in the new `weapons` route Tom raises his dome against the guard's bursts and nobody is hurt, then switches to the minigun and brings the guard down. Its screenshot shows the dome round all three, with the status reading **Shield · Up**. Mean frame time was 16.7 ms and p99 16.8 ms, Simulator measurements only.
 

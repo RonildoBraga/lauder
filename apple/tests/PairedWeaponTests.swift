@@ -119,6 +119,71 @@ struct PairedWeaponTests {
     #expect(fight.leaderWalking == Weapon.minigun.walking)
   }
 
+  /// The minigun's spin-up is heard once each time Fire is held, from Tom (#162).
+  @Test
+  func theMinigunsSpinUpIsHeardOncePerHold() {
+    let level = range()
+    let session = GameSession(level: level)
+    session.cycleLeader()
+    let fight = EncounterSimulation(level: level)
+    for _ in 0..<120 { step(fight, session: session, level: level, aiming: true) }
+    _ = fight.takeEvents()
+    var heard: [CombatEvent] = []
+    func listen() {
+      heard += fight.takeEvents().filter { if case .spinUp = $0 { true } else { false } }
+    }
+    for _ in 0..<120 {
+      step(fight, session: session, level: level, fire: true)
+      listen()
+    }
+    #expect(heard == [.spinUp(at: level.spawn(.tom), byLeader: true)])
+    for _ in 0..<12 {
+      step(fight, session: session, level: level)
+      listen()
+    }
+    for _ in 0..<12 {
+      step(fight, session: session, level: level, fire: true)
+      listen()
+    }
+    #expect(heard.count == 2, "a fresh hold spins it up again")
+  }
+
+  /// Each change of Tom's dome is heard once: raised, running down, run out while held,
+  /// recharged in his hands, then raised and let go with charge left (#162).
+  @Test
+  func eachChangeOfTomsDomeIsHeardOnce() {
+    let level = range()
+    let session = GameSession(level: level)
+    session.cycleLeader()
+    let fight = EncounterSimulation(level: level)
+    step(fight, session: session, level: level)
+    fight.swapWeapon(for: .tom)
+    _ = fight.takeEvents()
+    var heard: [CombatEvent.DomeChange] = []
+    func listen() {
+      for case .dome(let change, _) in fight.takeEvents() { heard.append(change) }
+    }
+    for _ in 0..<Int((ShieldDome.duration + 0.5) * 120) {
+      step(fight, session: session, level: level, fire: true)
+      listen()
+    }
+    #expect(heard == [.raised, .fading, .collapsed])
+    heard = []
+    for _ in 0..<Int((ShieldDome.rechargeDelay + ShieldDome.rechargeTime + 0.5) * 120) {
+      step(fight, session: session, level: level)
+      listen()
+    }
+    #expect(heard == [.recharged])
+    heard = []
+    for _ in 0..<60 {
+      step(fight, session: session, level: level, fire: true)
+      listen()
+    }
+    step(fight, session: session, level: level)
+    listen()
+    #expect(heard == [.raised, .lowered])
+  }
+
   /// Held, Tom's dome stops the shooter's shots for everyone inside it, Laura between Tom and
   /// the shooter included, while he walks slowly. Let go, the next shots get through.
   @Test
