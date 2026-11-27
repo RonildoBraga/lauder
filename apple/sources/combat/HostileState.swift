@@ -91,6 +91,8 @@ struct HostileState {
 
   mutating func acceptRobotBurstHit() -> Bool { robot?.acceptBurstHit() ?? false }
 
+  mutating func staggerRobot() -> Bool { robot?.stagger() ?? false }
+
   mutating func stepRobot(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
     party: [SIMD2<Float>], awareOfTarget: Bool = false, speedMultiplier: Float = 1,

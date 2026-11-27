@@ -137,6 +137,17 @@
     }
 
     struct Summary: Codable, Sendable {
+      /// Samples of the first real, nonlethal leg break, retained through victory and Restart.
+      struct LegStagger: Codable, Sendable {
+        var firstShotSerial = 0
+        var lastShotSerial = 0
+        var staggeredSamples = 0
+        var observedSeconds: Double = 0
+        var shotsDuringStagger = 0
+        var completed = false
+        var freshWarningObserved = false
+      }
+
       struct Mark: Codable, Sendable {
         let name: String
         let seconds: Double
@@ -184,6 +195,7 @@
       var damage = DamageTally()
       var maximumDamageLabels = 0
       var nonTouchInputFrames: Int? = nil
+      var legStagger: LegStagger? = nil
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -227,6 +239,9 @@
     private var observedDamage = DamageTally()
     private var maximumDamageLabels = 0
     private var nonTouchInputFrames = 0
+    private var previousLegsLost: Int?
+    private var legStagger: Summary.LegStagger?
+    private var legStaggerStartedAt: Float = 0
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -291,6 +306,7 @@
       }
       if snapshot.isRetrying && !wasRetrying { retryCount += 1 }
       wasRetrying = snapshot.isRetrying
+      if name == "robot-parts" { observeLegStagger(snapshot) }
       if startedAt == nil { startedAt = Date() }
       guard elapsed >= 0.5 else { return InputRules.Raw() }
       let leader = snapshot.leader
@@ -791,6 +807,52 @@
         raw.controllerFire = point.exposed
       }
       return raw
+    }
+
+    /// Observe ordinary simulation snapshots; never prolong the opening or stop player fire.
+    private mutating func observeLegStagger(_ snapshot: Snapshot) {
+      let previous = previousLegsLost
+      previousLegsLost = snapshot.guardStrategy?.detachedLegs.count
+      if legStagger == nil, previous == 0, let count = previousLegsLost, count > 0,
+        let health = snapshot.guardStrategy?.health, health > 0
+      {
+        guard snapshot.robotPhase == .staggered else {
+          failures.append("the first nonlethal leg break did not enter stagger")
+          recordGuardMark("leg break missed stagger", snapshot: snapshot)
+          return
+        }
+        // A shot may already have resolved earlier in this same fixed step. Only subsequent
+        // continuously staggered observations can establish a shot during the opening.
+        legStagger = Summary.LegStagger(
+          firstShotSerial: snapshot.robotShots, lastShotSerial: snapshot.robotShots,
+          staggeredSamples: 1)
+        legStaggerStartedAt = elapsed
+        recordGuardMark("leg-break stagger begins", snapshot: snapshot)
+        return
+      }
+      guard var observed = legStagger else { return }
+      if !observed.completed {
+        if snapshot.robotPhase == .staggered {
+          let extraShots = max(0, snapshot.robotShots - observed.lastShotSerial)
+          if extraShots > 0 && observed.shotsDuringStagger == 0 {
+            failures.append("the guard fired during a continuously observed leg-break stagger")
+          }
+          observed.shotsDuringStagger += extraShots
+          observed.lastShotSerial = snapshot.robotShots
+          observed.staggeredSamples += 1
+          observed.observedSeconds = Double(max(0, elapsed - legStaggerStartedAt))
+        } else {
+          observed.completed = true
+          recordGuardMark("leg-break stagger ends", snapshot: snapshot)
+        }
+      }
+      if observed.completed, !observed.freshWarningObserved, snapshot.robotPhase == .notice,
+        snapshot.guardTarget != nil
+      {
+        observed.freshWarningObserved = true
+        recordGuardMark("fresh warning after leg-break stagger", snapshot: snapshot)
+      }
+      legStagger = observed
     }
 
     private mutating func recordGuardMark(
@@ -1369,6 +1431,11 @@
 
     private mutating func finish() {
       guard summary == nil else { return }
+      if name == "robot-parts",
+        legStagger?.completed != true || (legStagger?.staggeredSamples ?? 0) < 2
+      {
+        failures.append("robot-parts did not observe a complete nonlethal leg-break stagger")
+      }
       let result = Summary(
         scenario: name, orientation: orientation,
         passed: failures.isEmpty && warningFrames == 0,
@@ -1385,7 +1452,8 @@
         peakPartyHits: Dictionary(
           uniqueKeysWithValues: peakPartyHits.map { ($0.key.rawValue, $0.value) }),
         retryCount: retryCount, damage: observedDamage, maximumDamageLabels: maximumDamageLabels,
-        nonTouchInputFrames: usesTouch ? nonTouchInputFrames : nil)
+        nonTouchInputFrames: usesTouch ? nonTouchInputFrames : nil,
+        legStagger: legStagger)
       summary = result
       write(result)
     }

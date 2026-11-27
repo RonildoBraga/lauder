@@ -18,7 +18,8 @@ struct RobotGuard {
   }
 
   enum Phase: Equatable, Sendable {
-    case hidden, patrol, notice, tracking, committed, burst, recovering, searching, down, cleared
+    case hidden, patrol, notice, tracking, committed, burst, recovering, staggered, searching, down,
+      cleared
   }
 
   struct Discharge: Equatable, Sendable {
@@ -54,6 +55,8 @@ struct RobotGuard {
   /// The exported belly plate's lowest rigid point is 0.775 m above the deck.
   static let groundedDrop: Float = 0.775
   static let settleDuration: Float = 0.6
+  static let staggerDuration: Float = 0.6
+  static let staggerDepth: Float = 0.08
   /// The final leg faces the bridge entrance again instead of patrolling only north/east/west.
   private static let patrolOffsets: [SIMD2<Float>] = [[0, -1.5], [3, -1.5], [1.5, 0]]
 
@@ -84,9 +87,17 @@ struct RobotGuard {
   /// After warning someone beyond gun range, wait for a reachable target before warning again.
   private var needsAttackRange = false
   private var settleDrop: Float = 0
+  /// nil means no recovery cycle was interrupted; zero means that cycle has now elapsed.
+  private var recoveryAfterStagger: Float?
 
-  /// Shared by physical rays, the eye and presentation. Bracing never adds a second drop.
-  var bodyDrop: Float { max(settleDrop, RobotModelGeometry.braceDepth * brace) }
+  /// One shared drop for physical rays, the eye, body targets and planted-foot presentation.
+  var bodyDrop: Float {
+    let lowered = max(settleDrop, RobotModelGeometry.braceDepth * brace)
+    guard phase == .staggered else { return lowered }
+    let progress = max(0, min(1, elapsed / Self.staggerDuration))
+    let pulse = sin(.pi * progress)
+    return min(Self.groundedDrop, lowered + Self.staggerDepth * pulse * pulse)
+  }
 
   init(home: SIMD2<Float>, strategicPatterns: Bool = false) {
     self.home = home
@@ -118,7 +129,10 @@ struct RobotGuard {
   mutating func engage() { armed = true }
 
   mutating func knockDown() {
+    // Ending the stagger must not lift the wreck by removing its current shared body dip.
+    settleDrop = bodyDrop
     transition(.down)
+    recoveryAfterStagger = nil
     committedPoint = nil
     gunRecoil = .zero
     recoilElapsed = SIMD2(repeating: 10)
@@ -126,12 +140,37 @@ struct RobotGuard {
 
   mutating func clear() {
     transition(.cleared)
+    recoveryAfterStagger = nil
     committedPoint = nil
     aimingPoint = nil
     gunRecoil = .zero
     recoilElapsed = SIMD2(repeating: 10)
     brace = 0
     updateGunDirections()
+  }
+
+  /// The encounter calls this only after a newly detached, nonlethal leg. Existing damage
+  /// remains real; future rounds and the old aim are discarded before a complete new warning.
+  @discardableResult
+  mutating func stagger() -> Bool {
+    guard isTargetable else { return false }
+    if phase == .recovering {
+      recoveryAfterStagger = max(0, recoveryDuration - elapsed)
+    } else if phase == .burst {
+      // Cancelling the remaining rounds must not remove the recovery owed after a volley.
+      recoveryAfterStagger = recoveryDuration
+    } else if phase != .staggered {
+      recoveryAfterStagger = nil
+    }
+    transition(.staggered)
+    committedPoint = nil
+    aimingPoint = nil
+    roundsFired = 0
+    gunOffsets = .zero
+    repositionRemaining = 0
+    repositionGoal = nil
+    updateGunDirections()
+    return true
   }
 
   /// One party injury at most per committed burst of either pattern, including crossfire.
@@ -165,9 +204,12 @@ struct RobotGuard {
     let sees = armed && hasSight && distance <= Self.detectionRange && (inCone || awareOfTarget)
     let canAcquire = sees && (!needsAttackRange || distance <= Self.attackRange)
     if sees { lastSeen = target }
-    let wantsBrace = [.notice, .tracking, .committed, .burst].contains(phase)
-    let braceTarget: Float = wantsBrace ? (strategicPatterns && pattern == .precision ? 0.6 : 1) : 0
-    brace += max(-2 * dt, min(2 * dt, braceTarget - brace))
+    if phase != .staggered {
+      let wantsBrace = [.notice, .tracking, .committed, .burst].contains(phase)
+      let braceTarget: Float =
+        wantsBrace ? (strategicPatterns && pattern == .precision ? 0.6 : 1) : 0
+      brace += max(-2 * dt, min(2 * dt, braceTarget - brace))
+    }
 
     switch phase {
     case .hidden, .down, .cleared:
@@ -229,20 +271,27 @@ struct RobotGuard {
       }
     case .burst:
       break
+    case .staggered:
+      // An early break during recovery must not shorten an opening already owed. Stagger
+      // time consumes that remaining recovery, rather than adding another complete cycle.
+      if let remaining = recoveryAfterStagger { recoveryAfterStagger = max(0, remaining - dt) }
+      if elapsed >= Self.staggerDuration {
+        if let remaining = recoveryAfterStagger {
+          recoveryAfterStagger = nil
+          if remaining > 0 {
+            transition(.recovering)
+            elapsed = recoveryDuration - remaining
+          } else {
+            finishRecovery(sees: sees, obstacles: obstacles)
+          }
+        } else {
+          transition(.patrol)
+        }
+      }
     case .recovering:
       aimingPoint = committedPoint
       if elapsed >= recoveryDuration {
-        pattern = nextPattern
-        committedPoint = nil
-        aimingPoint = nil
-        // One short bounded reposition precedes the next warned cycle.
-        patrolIndex = (patrolIndex + 1) % Self.patrolOffsets.count
-        let side = SIMD2(-facing.y, facing.x)
-        let mover = PartyMotion(radius: RobotModelGeometry.navigationRadius, obstacles: obstacles)
-        repositionGoal = [facing, side, -side, -facing].map { bounded(position + $0 * 0.9) }
-          .first { simd_distance(position, $0) > 0.25 && mover.canTraverse(from: position, to: $0) }
-        repositionRemaining = repositionGoal == nil ? 0 : 4
-        transition(sees ? .patrol : .searching)
+        finishRecovery(sees: sees, obstacles: obstacles)
       }
     case .searching:
       aimingPoint = lastSeen
@@ -279,6 +328,21 @@ struct RobotGuard {
       return shot
     }
     return nil
+  }
+
+  private mutating func finishRecovery(sees: Bool, obstacles: [PartyMotion.Box]) {
+    recoveryAfterStagger = nil
+    pattern = nextPattern
+    committedPoint = nil
+    aimingPoint = nil
+    // One short bounded reposition precedes the next warned cycle.
+    patrolIndex = (patrolIndex + 1) % Self.patrolOffsets.count
+    let side = SIMD2(-facing.y, facing.x)
+    let mover = PartyMotion(radius: RobotModelGeometry.navigationRadius, obstacles: obstacles)
+    repositionGoal = [facing, side, -side, -facing].map { bounded(position + $0 * 0.9) }
+      .first { simd_distance(position, $0) > 0.25 && mover.canTraverse(from: position, to: $0) }
+    repositionRemaining = repositionGoal == nil ? 0 : 4
+    transition(sees ? .patrol : .searching)
   }
 
   /// Exactly the same mount/yaw/recoil transform used by the visual gun hierarchy.

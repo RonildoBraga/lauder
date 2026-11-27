@@ -684,6 +684,7 @@ final class EncounterSimulation {
               ? "\(targetName) targeted · \(robot.pattern.name): firing."
               : "\(robot.pattern.name): firing."
           case .recovering: threatNow = "\(spec.name) is recovering."
+          case .staggered: threatNow = "Leg broken — guard staggered. Reposition."
           default: break
           }
           hostiles[spec.id] = state
@@ -1058,7 +1059,13 @@ final class EncounterSimulation {
         knockDown(targetID, from: shooter)
         outcome.line = "The guard robot is down."
       } else if result.brokeComponent {
-        outcome.line = "Leg detached. Guard movement reduced."
+        var staggered = state
+        if staggered.staggerRobot() {
+          hostiles[targetID] = staggered
+          events.append(.guardLegBroken(at: state.position))
+          threat = "Leg broken — guard staggered. Reposition."
+        }
+        outcome.line = "Leg detached. Guard staggered."
       }
       return
     }

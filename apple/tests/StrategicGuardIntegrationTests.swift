@@ -50,6 +50,8 @@ struct StrategicGuardIntegrationTests {
       #expect(trial.strategy.detachedLegs.contains(leg))
       #expect(trial.strategy.swordHits[leg] == 3)
       #expect(trial.hits.count - before == 3)
+      #expect(trial.robot?.phase == .staggered && trial.robot?.committedPoint == nil)
+      #expect(trial.legBreaks.count == trial.strategy.detachedLegs.count)
       #expect(!trial.fight.weakpoints(for: Trial.id).contains { $0.part == .leg(leg) })
     }
     #expect(trial.strategy.detachedLegs == [0, 2] && trial.strategy.speedMultiplier == 0.5)
@@ -59,6 +61,58 @@ struct StrategicGuardIntegrationTests {
         $0.effectiveness == .normal && $0.amount == Weapon.energySword.damage
       })
     #expect(trial.strategy.health == GuardStrategy.maximumHealth - 6 * Weapon.energySword.damage)
+  }
+
+  @Test
+  func onlyTheThirdNonlethalSwordContactStartsOneStaggerAndPauseDoesNotReplayIt() throws {
+    let trial = try Trial()
+    for wanted in 1...3 {
+      for _ in 0..<120 * 5 {
+        trial.step(weapon: .energySword, leg: 0)
+        if trial.hits.count == wanted { break }
+      }
+      try #require(trial.hits.count == wanted)
+      #expect(trial.legBreaks.count == (wanted == 3 ? 1 : 0))
+      #expect((trial.robot?.phase == .staggered) == (wanted == 3))
+    }
+    let before = try #require(trial.robot)
+    #expect(trial.fight.guardTarget == nil)
+    trial.session.togglePause()
+    for _ in 0..<120 { trial.step(weapon: .energySword, leg: 0) }
+    #expect(trial.robot?.elapsed == before.elapsed && trial.robot?.phase == .staggered)
+    #expect(trial.legBreaks.count == 1 && trial.hits.count == 3)
+    trial.session.togglePause()
+    // Ordinary gun contacts remain useful through the opening; they cannot restart it.
+    for _ in 0..<120 * 3 {
+      trial.step(weapon: .minigun, front: false)
+      if trial.hits.count > 3 { break }
+    }
+    #expect(trial.hits.count > 3 && trial.legBreaks.count == 1)
+    #expect(trial.strategy.detachedLegs == [0])
+    trial.fight.reset()
+    #expect(trial.strategy == GuardStrategy() && trial.robot?.phase == .hidden)
+  }
+
+  @Test
+  func aLethalThirdLegContactDefeatsInsteadOfStartingAReaction() throws {
+    let trial = try Trial()
+    for _ in 0..<120 * 8 {
+      trial.step(weapon: .energySword, leg: 0)
+      if trial.strategy.swordHits[0] == 2 { break }
+    }
+    try #require(trial.strategy.swordHits[0] == 2 && trial.legBreaks.isEmpty)
+    for _ in 0..<120 * 80 {
+      trial.step(weapon: .minigun, front: false)
+      if trial.strategy.health <= Weapon.energySword.damage { break }
+    }
+    try #require(trial.strategy.health > 0 && trial.strategy.health <= Weapon.energySword.damage)
+    for _ in 0..<120 * 5 {
+      trial.step(weapon: .energySword, leg: 0)
+      if trial.strategy.phase == .complete { break }
+    }
+    #expect(trial.strategy.health == 0 && trial.strategy.detachedLegs == [0])
+    #expect(trial.hits.last?.brokeComponent == true && trial.legBreaks.isEmpty)
+    #expect(trial.robot?.phase == .down && trial.session.defeated == [Trial.id])
   }
 
   @Test
@@ -169,6 +223,7 @@ struct StrategicGuardIntegrationTests {
     ]
     private(set) var hits: [DamageHit] = []
     private(set) var shots: [EncounterSimulation.Shot] = []
+    private(set) var legBreaks: [SIMD2<Float>] = []
     var strategy: GuardStrategy { fight.guardStrategies[Self.id] ?? GuardStrategy() }
     var robot: RobotGuard? { fight.hostiles[Self.id]?.robot }
 
@@ -229,6 +284,7 @@ struct StrategicGuardIntegrationTests {
       shots += fight.shots.filter { $0.actor == member }
       for event in fight.takeEvents() {
         if case .damaged(let hit) = event { hits.append(hit) }
+        if case .guardLegBroken(let position) = event { legBreaks.append(position) }
       }
     }
   }
