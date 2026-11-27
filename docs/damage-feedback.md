@@ -1,7 +1,7 @@
 # Guard damage and feedback
 
 **Date:** 27 November 2026\
-**Status:** The current [eye/leg/grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), retains the shared-health and feedback pipeline while simplifying part bonuses. Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development); it is unmerged and not delivered. Earlier source `533f012` passed its recorded checks and was delivered in [build 36](prototype-plan.md#build-36-testflight-preview), then retained in [build 37](prototype-plan.md#build-37-testflight-preview). Those historical results do not validate these new mechanics or establish physical acceptance.
+**Status:** The current [eye/leg/grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), retains the shared-health and feedback pipeline while simplifying part bonuses. Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Internal [build 38](prototype-plan.md#build-38-testflight-preview) delivers it before merge or physical acceptance. Earlier source `533f012` passed its recorded checks and was delivered in [build 36](prototype-plan.md#build-36-testflight-preview), then retained in [build 37](prototype-plan.md#build-37-testflight-preview). Those historical results do not validate these new mechanics or establish physical acceptance.
 
 ## Maintainer direction
 
@@ -9,7 +9,7 @@ For the earlier shared-health revision, the maintainer asked for **“every succ
 
 That assignment replaced the earlier first-guard requirement that all three characters complete a mandatory sequence without changing biographies, enhancement histories or the exploration-led story direction. It added no scene, enemy, weapon, signature ability, random critical-chance system or dependency. The implementation assignment did not authorise merge or release. A later explicit TestFlight request authorised the verified [build 36 preview](prototype-plan.md#build-36-testflight-preview); merge and further deliveries keep their own authorisation.
 
-**Current revision:** [Issue #192](https://github.com/RonildoBraga/lauder/issues/192) replaces the former weapon/exposure-gated bonus sequence with a persistent eye critical target, independent breakable legs and Tom's manual grenade. The [robot contract](robot-eye-legs-grenades.md) owns those new part/resource rules. Build 37 remains the delivered baseline until a separately verified upload. Earlier authorisation and delivery statements above describe that baseline.
+**Current revision:** [Issue #192](https://github.com/RonildoBraga/lauder/issues/192) replaces the former weapon/exposure-gated bonus sequence with a persistent eye critical target, independent breakable legs and Tom's manual grenade. The [robot contract](robot-eye-legs-grenades.md) owns those new part/resource rules. The separately authorised [build 38 preview](prototype-plan.md#build-38-testflight-preview) now delivers them; the build 36–37 authorisation and delivery statements above remain historical baseline records.
 
 ## One health pool
 
