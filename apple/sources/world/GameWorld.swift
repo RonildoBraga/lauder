@@ -433,7 +433,7 @@ final class GameWorld {
     #if DEBUG
       let started = DispatchTime.now().uptimeNanoseconds
     #endif
-    advanceParty(
+    let grenadeTakesHands = advanceParty(
       movement: input.movement, aim: input.aim, fireHeld: input.fireHeld,
       firePressed: input.firePressed, dodgePressed: input.dodgePressed,
       grenadePressed: input.grenadePressed, lockPressed: input.lockPressed, deltaTime: deltaTime)
@@ -442,7 +442,7 @@ final class GameWorld {
         dt: deltaTime,
         milliseconds: Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
     #endif
-    if mode == .exploring, input.actionPressed { performAction() }
+    if mode == .exploring, input.actionPressed, !grenadeTakesHands { performAction() }
   }
 
   /// Dialogue and Pause controls stay distinct from world actions: in those modes the action
@@ -643,18 +643,30 @@ final class GameWorld {
   /// The party's movement, the fight, the camera and the HUD's lines for one frame of play, as in
   /// production; deterministic route and soak tests drive it too. Input availability, Pause and
   /// fresh-edge handling remain in `step` and InputRules.
+  /// Returns whether an eligible queued grenade takes the leader's hands for this frame.
+  @discardableResult
   func advanceParty(
     movement: SIMD2<Float>, aim: SIMD2<Float>? = nil, fireHeld: Bool = false,
     firePressed: Bool = false, dodgePressed: Bool = false, grenadePressed: Bool = false,
     lockPressed: Bool = false, deltaTime: Float
-  ) {
-    guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
-    self.fireHeld = fireHeld
-    aimStick = aim
-    if firePressed { firePressPending = true }
-    if dodgePressed { dodgePressPending = true }
+  ) -> Bool {
+    guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return false }
     if grenadePressPending != session.leader { grenadePressPending = nil }
-    if grenadePressed, session.leader == .tom { grenadePressPending = .tom }
+    let canThrow =
+      roll == nil && !dodgePressed && !dodgePressPending
+      && fight.canThrowGrenade(by: session.leader)
+    if grenadePressed, canThrow { grenadePressPending = session.leader }
+    // An eligible request can wait less than one fixed step. Keep its hands priority until
+    // that step, without banking refused requests through recharge, a roll or a scene.
+    let grenadeTakesHands = grenadePressPending == session.leader && canThrow
+    self.fireHeld = fireHeld && !grenadeTakesHands
+    aimStick = aim
+    if grenadeTakesHands {
+      firePressPending = false
+    } else if firePressed {
+      firePressPending = true
+    }
+    if dodgePressed { dodgePressPending = true }
     if lockPressed { lockPressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
@@ -673,6 +685,7 @@ final class GameWorld {
       crossRemaining -= elapsed
       if crossRemaining <= 0 { refusalCross.isEnabled = false }
     }
+    return grenadeTakesHands
   }
 
   private func simulateStep(movement: SIMD2<Float>, dt: Float) {
