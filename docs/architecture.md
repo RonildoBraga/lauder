@@ -6,7 +6,7 @@
 
 The [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). The [build 34 preview](prototype-plan.md#build-34-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The merged baseline, delivered preview and new branch remain distinguishable.
 
-[Guard retaliation](guard-retaliation.md) is implemented on `codex/guard-retaliation`, with source and Simulator verification in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The maintainer's build 34 command feedback does not establish phone behaviour for this new branch.
+[Guard retaliation](guard-retaliation.md) is implemented on `codex/guard-retaliation` and delivered in the [build 35 preview](prototype-plan.md#build-35-testflight-preview), with source and Simulator verification in the [prototype plan](prototype-plan.md#guard-retaliation--in-development). The maintainer's build 34 command feedback does not establish phone behaviour for this new preview.
 
 ## Decision and platform
 
