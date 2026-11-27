@@ -9,6 +9,8 @@ struct TouchInput {
     case dodge
     /// The leader's other weapon (ADR 0021).
     case swap
+    /// One fresh request to throw the squad's grenade.
+    case grenade
     /// A finger pressing the ground, where holding opens the order menu (ADR 0003, phase S3).
     case ground
     /// The pause menu's Vibration choice, shown only while paused (ADR 0008).
@@ -77,6 +79,7 @@ struct TouchInput {
       touchFire: pressed.contains(.fire), touchFormation: pressed.contains(.formation),
       touchDodge: pressed.contains(.dodge),
       touchSwap: pressed.contains(.swap),
+      touchGrenade: pressed.contains(.grenade),
       touchGround: pressed.contains(.ground),
       touchMark: mark, touchOrder: order, touchTarget: target)
   }

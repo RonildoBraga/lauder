@@ -43,7 +43,10 @@ enum BrooklynBridge {
     cues: [
       (0, .reveal(stranger.id)),
       (0, .engage(stranger.id)),
-      (0.6, .say(speaker: "Miki", line: "Armoured. I'll take its sensor when it cools.")),
+      (
+        0.6,
+        .say(speaker: "Miki", line: "Armoured. Aim for its red eye. Laura, those legs can break.")
+      ),
     ], safeExit: layout.area(named: "robot.exit"))
 
   /// The end of the opening (M4): the three reach the Manhattan end together, the party stops,

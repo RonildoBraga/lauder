@@ -11,7 +11,7 @@ struct DamageFeedback: Equatable, Sendable {
     let id: UInt64
     let target: String
     let attacker: PartyMember
-    let weapon: Weapon.Kind
+    let weapon: Weapon.Kind?
     let effectiveness: DamageHit.Effectiveness
     /// A stable vertical place for reduced-motion presentation, separate for each attacker.
     let stackSlot: Int

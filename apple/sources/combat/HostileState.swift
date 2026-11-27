@@ -93,11 +93,12 @@ struct HostileState {
 
   mutating func stepRobot(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
-    party: [SIMD2<Float>], awareOfTarget: Bool = false
+    party: [SIMD2<Float>], awareOfTarget: Bool = false, speedMultiplier: Float = 1,
+    grounded: Bool = false
   ) -> RobotGuard.Discharge? {
     let shot = robot?.step(
       dt: dt, target: target, hasSight: hasSight, obstacles: obstacles, party: party,
-      awareOfTarget: awareOfTarget)
+      awareOfTarget: awareOfTarget, speedMultiplier: speedMultiplier, grounded: grounded)
     if let robot { position = robot.position }
     return shot
   }

@@ -1,5 +1,6 @@
 import RealityKit
 import Testing
+import UIKit
 import simd
 
 @testable import Lauder
@@ -13,7 +14,7 @@ struct RobotPresentationTests {
     body.position.y = PartyBody.height / 2
     let visual = SceneStyle().robot()
     body.addChild(visual)
-    let presenter = RobotPresentation(visual: visual)
+    let presenter = RobotPresentation(visual: visual, debrisParent: body)
     presenter.reset(position: .zero, facing: [0, -1])
     return (body, visual, presenter)
   }
@@ -121,6 +122,122 @@ struct RobotPresentationTests {
     #expect(
       motion.footPositions
         == RobotModelGeometry.legs.map { SIMD3(-$0.foot.x, $0.foot.z, $0.foot.y) })
+  }
+
+  @Test
+  func aDetachedAssemblyKeepsItsWorldPoseOutsideTheMovingBody() throws {
+    let world = Entity()
+    let body = Entity()
+    body.position = [3, PartyBody.height / 2, -5]
+    world.addChild(body)
+    let visual = SceneStyle().robot()
+    body.addChild(visual)
+    let presenter = RobotPresentation(visual: visual, debrisParent: world)
+    presenter.reset(position: [3, -5], facing: [1, 0])
+    let connector = try part("front-left connector", in: visual)
+    let before = connector.transformMatrix(relativeTo: nil)
+    presenter.update(
+      position: [3, -5], facing: [1, 0], brace: 0, gunDirections: [], gunRecoil: .zero,
+      down: false, detachedLegs: [0], dt: 0)
+    let fallen = try #require(world.findEntity(named: "robot.fallen-leg.front-left"))
+    #expect(!connector.isEnabled)
+    let after = fallen.transformMatrix(relativeTo: nil)
+    #expect(simd_distance(before.columns.3, after.columns.3) < 0.0001)
+    #expect(simd_distance(before.columns.0, after.columns.0) < 0.0001)
+    _ = try part("front-left foot", in: fallen)
+    _ = try part("front-left upper pivot", in: fallen)
+    func noPhysics(_ entity: Entity) {
+      #expect(entity.components[CollisionComponent.self] == nil)
+      #expect(entity.components[PhysicsBodyComponent.self] == nil)
+      for child in entity.children { noPhysics(child) }
+    }
+    noPhysics(fallen)
+
+    body.position.x += 2
+    presenter.update(
+      position: [5, -5], facing: [1, 0], brace: 0, gunDirections: [], gunRecoil: .zero,
+      down: false, dt: 0)
+    #expect(fallen.transformMatrix(relativeTo: nil) == after)
+    #expect(!connector.isEnabled)
+  }
+
+  @Test
+  func fallenLegsSettleWithoutReappearingAndResetRemovesTheProps() throws {
+    let world = Entity()
+    let body = Entity()
+    body.position.y = PartyBody.height / 2
+    world.addChild(body)
+    let visual = SceneStyle().robot()
+    body.addChild(visual)
+    let presenter = RobotPresentation(visual: visual, debrisParent: world)
+    presenter.reset(position: .zero, facing: [0, -1])
+    presenter.update(
+      position: .zero, facing: [0, -1], brace: 0, gunDirections: [], gunRecoil: .zero,
+      down: false, detachedLegs: [0, 1, 2, 3], dt: 0)
+    let debris = try #require(world.findEntity(named: "robot.leg-debris"))
+    #expect(debris.children.count == 4)
+    let paused = debris.children.map { $0.transformMatrix(relativeTo: nil) }
+    presenter.update(
+      position: .zero, facing: [0, -1], brace: 0, gunDirections: [], gunRecoil: .zero,
+      down: true, dt: 0)
+    #expect(debris.children.map { $0.transformMatrix(relativeTo: nil) } == paused)
+    for _ in 0..<45 {
+      presenter.update(
+        position: .zero, facing: [0, -1], brace: 0, gunDirections: [], gunRecoil: .zero,
+        down: false, detachedLegs: [0, 1, 2, 3], dt: 1 / 60)
+      for entity in debris.children {
+        #expect(entity.visualBounds(relativeTo: nil).min.y >= -0.001)
+      }
+    }
+    #expect(debris.children.count == 4)
+    let settled = debris.children.map { $0.transformMatrix(relativeTo: nil) }
+    for entity in debris.children {
+      #expect(abs(entity.visualBounds(relativeTo: nil).min.y) < 0.001)
+    }
+    presenter.update(
+      position: .zero, facing: [0, -1], brace: 1, gunDirections: [], gunRecoil: .zero,
+      down: true, dt: 1 / 60)
+    #expect(debris.children.map { $0.transformMatrix(relativeTo: nil) } == settled)
+    for leg in RobotModelGeometry.legs {
+      #expect(try !part("\(leg.name) connector", in: visual).isEnabled)
+    }
+    presenter.reset(position: .zero, facing: [0, -1])
+    #expect(debris.children.isEmpty)
+    for leg in RobotModelGeometry.legs {
+      #expect(try part("\(leg.name) connector", in: visual).isEnabled)
+    }
+  }
+
+  @Test
+  func theMeasuredHullDropGroundsTheBellyAndKeepsVisibleMuzzlesAligned() throws {
+    let (body, visual, presenter) = fixture()
+    defer { withExtendedLifetime(body) {} }
+    let drop: Float = 0.775
+    let brace: Float = 0.8
+    let directions = [SIMD3<Float>(0, 0, -1), SIMD3<Float>(0, 0, -1)]
+    presenter.update(
+      position: .zero, facing: [0, -1], brace: brace,
+      gunDirections: directions, gunRecoil: .zero, down: false,
+      detachedLegs: [0, 1, 2, 3], bodyDrop: drop, dt: 0)
+    let belly = try part("belly plate", in: visual)
+    #expect(abs(belly.visualBounds(relativeTo: nil).min.y) < 0.001)
+    for index in 0..<2 {
+      let muzzle = try part(index == 0 ? "muzzle-left" : "muzzle-right", in: visual)
+      let wanted = RobotModelGeometry.muzzles[index] - SIMD3(0, drop, 0)
+      #expect(simd_distance(muzzle.position(relativeTo: nil), wanted) < 0.001)
+    }
+    let eye = try part("square sensor", in: visual)
+    #expect(simd_distance(eye.position(relativeTo: nil), [0, 1.53 - drop, -0.7045]) < 0.001)
+    let mesh = try #require(eye.children.first { $0.components[ModelComponent.self] != nil })
+    let material = try #require(
+      mesh.components[ModelComponent.self]?.materials.first as? UnlitMaterial)
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+    #expect(material.color.tint.getRed(&red, green: &green, blue: &blue, alpha: &alpha))
+    #expect(abs(red - 1) < 0.0001 && abs(green) < 0.0001 && abs(blue) < 0.0001)
+    #expect(abs(alpha - 1) < 0.0001)
   }
 
   /// Reconstruct real endpoints independently: a clamped inverse solve must not silently move

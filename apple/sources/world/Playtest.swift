@@ -12,11 +12,13 @@
       var normal = 0
       var weakpoint = 0
       var hits = 0
+      var grenade = 0
       var byMember: [String: Int] = [:]
 
       mutating func record(_ hit: DamageHit) {
         if hit.effectiveness == .normal { normal += hit.amount } else { weakpoint += hit.amount }
         hits += 1
+        if hit.weapon == nil { grenade += hit.amount }
         byMember[hit.attacker.rawValue, default: 0] += hit.amount
       }
     }
@@ -58,6 +60,9 @@
       case expectLock(Bool)
       /// A press of the weapon switch: the leader's other weapon (ADR 0021).
       case swap
+      case grenade
+      case expectGrenadeDamage
+      case expectLegLoss
       /// Dismantle the guard through ordinary movement, leader/weapon switches and Fire.
       case dismantleGuard
       case waitForRetry(seconds: Float)
@@ -118,6 +123,8 @@
       var damage = DamageTally()
       var damageLabelCount = 0
       var showsPanel = true
+      var grenadeCooldown: Float = 0
+      var grenadeInFlight = false
     }
 
     struct Frame {
@@ -136,8 +143,7 @@
         var robotPhase: String? = nil
         var robotShots = 0
         var guardPhase: String? = nil
-        var reactorDamage: Int? = nil
-        var windowRemaining: Float? = nil
+        var legsLost: Int? = nil
         var companionActivities: [String: String]? = nil
         var combatStance: String? = nil
         var guardTarget: String? = nil
@@ -326,8 +332,7 @@
               robotPhase: snapshot.robotPhase.map { String(describing: $0) },
               robotShots: snapshot.robotShots,
               guardPhase: snapshot.guardStrategy.map { String(describing: $0.phase) },
-              reactorDamage: snapshot.guardStrategy?.reactorDamage,
-              windowRemaining: snapshot.guardStrategy?.windowRemaining,
+              legsLost: snapshot.guardStrategy?.detachedLegs.count,
               combatStance: String(describing: snapshot.combatStance),
               guardTarget: snapshot.guardTarget?.rawValue,
               committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] },
@@ -341,12 +346,24 @@
           return press(InputRules.Raw(controllerLock: true))
         case .swap:
           return press(InputRules.Raw(controllerSwap: true))
+        case .grenade:
+          return press(InputRules.Raw(controllerGrenade: true))
+        case .expectGrenadeDamage:
+          expect(
+            snapshot.damage.grenade > 0 && snapshot.grenadeCooldown > 0,
+            "Tom's manual grenade did not cause native blast damage")
+        case .expectLegLoss:
+          expect(
+            snapshot.guardStrategy?.detachedLegs.isEmpty == false,
+            "no leg detached through native sword contacts")
         case .dismantleGuard:
           if let raw = dismantleGuard(snapshot) { return raw }
         case .companionFight:
           if let raw = companionFight(snapshot) { return raw }
         case .companionPrerequisites:
-          if snapshot.guardStrategy?.couplingBreached == true {
+          if (snapshot.guardStrategy?.health ?? GuardStrategy.maximumHealth) < GuardStrategy
+            .maximumHealth - 150
+          {
             advance()
             continue
           }
@@ -685,7 +702,7 @@
       advance()
     }
 
-    /// Native cooperation with no automatic leader switch or fire after the sensor breaks.
+    /// Native cooperation with no automatic leader switch or fire after Miki's opening hit.
     /// The script may reposition/roll Miki to keep the fight engaged, just as a player can.
     private mutating func companionFight(_ snapshot: Snapshot) -> InputRules.Raw? {
       guard snapshot.leader == .miki else {
@@ -706,7 +723,7 @@
         failures.append(
           "companions did not dismantle the guard without a retry; "
             + "stage \(String(describing: snapshot.guardStrategy?.phase)), "
-            + "core \(snapshot.guardStrategy?.reactorDamage ?? 0), "
+            + "legs lost \(snapshot.guardStrategy?.detachedLegs.count ?? 0), "
             + "activities \(snapshot.companionActivities)")
         advance()
         return nil
@@ -731,7 +748,9 @@
         guardRelease = false
         return InputRules.Raw()
       }
-      if strategy.phase == .sensor && snapshot.weapon.kind != .longRifle {
+      if snapshot.damage.byMember[PartyMember.miki.rawValue, default: 0] == 0
+        && snapshot.weapon.kind != .longRifle
+      {
         guardRelease = true
         return InputRules.Raw(controllerSwap: true)
       }
@@ -764,7 +783,9 @@
         guardRelease = true
         return raw
       }
-      if strategy.phase == .sensor, let point = snapshot.guardPoints.first {
+      if snapshot.damage.byMember[PartyMember.miki.rawValue, default: 0] == 0,
+        let point = snapshot.guardPoints.first(where: { $0.part == .eye })
+      {
         raw.aimStick = Movement.stick(
           towards: point.ground - at, cameraOffset: snapshot.level.cameraOffset)
         raw.controllerFire = point.exposed
@@ -781,8 +802,7 @@
           robotPhase: snapshot.robotPhase.map { String(describing: $0) },
           robotShots: snapshot.robotShots,
           guardPhase: snapshot.guardStrategy.map { String(describing: $0.phase) },
-          reactorDamage: snapshot.guardStrategy?.reactorDamage,
-          windowRemaining: snapshot.guardStrategy?.windowRemaining,
+          legsLost: snapshot.guardStrategy?.detachedLegs.count,
           companionActivities: Dictionary(
             uniqueKeysWithValues: snapshot.companionActivities.map {
               ($0.key.rawValue, $0.value.rawValue)
@@ -941,9 +961,8 @@
       defendPreviousPositions = snapshot.positions
       let stopped =
         current.health == defendBaseline?.health
-        && current.sensorDisabled == defendBaseline?.sensorDisabled
-        && current.couplingBreached == defendBaseline?.couplingBreached
-        && current.reactorDamage == defendBaseline?.reactorDamage
+        && current.detachedLegs == defendBaseline?.detachedLegs
+        && current.swordHits == defendBaseline?.swordHits
       let spent = snapshot.partyWeapons.contains { member, state in
         member != snapshot.leader && state.loaded < (defendLoaded[member] ?? state.loaded)
       }
@@ -1013,9 +1032,8 @@
       }
       let progressed =
         strategy.health != defendBaseline?.health
-        || strategy.sensorDisabled != defendBaseline?.sensorDisabled
-        || strategy.couplingBreached != defendBaseline?.couplingBreached
-        || strategy.reactorDamage != defendBaseline?.reactorDamage
+        || strategy.detachedLegs != defendBaseline?.detachedLegs
+        || strategy.swordHits != defendBaseline?.swordHits
       let spent = snapshot.partyWeapons.contains { member, weapon in
         member != snapshot.leader && weapon.loaded < (defendLoaded[member] ?? weapon.loaded)
       }
@@ -1127,7 +1145,7 @@
             + "\(snapshot.leader.displayName) at "
             + Self.describe(snapshot.positions[snapshot.leader] ?? [.nan, .nan])
             + "; stage \(String(describing: snapshot.guardStrategy?.phase)), "
-            + "core \(snapshot.guardStrategy?.reactorDamage ?? 0), "
+            + "legs lost \(snapshot.guardStrategy?.detachedLegs.count ?? 0), "
             + "robot \(String(describing: snapshot.robotPhase))")
         advance()
         return nil
@@ -1141,40 +1159,25 @@
       else { return InputRules.Raw() }
       // This player script explicitly commits the squad. Normal companion support is useful
       // throughout the longer health-based fight; no automatic permission bypass supplies it.
-      if snapshot.combatStance != .attack {
+      if !strategy.detachedLegs.isEmpty && snapshot.combatStance != .attack {
         guardRelease = true
         return InputRules.Raw(dpadUp: true)
       }
       if guardStageSeen != strategy.phase {
         guardStageSeen = strategy.phase
-        let label =
-          switch strategy.phase {
-          case .sensor: "front sensor challenge"
-          case .coupling: "sensor disabled"
-          case .reactor: "side coupling breached"
-          case .complete: "reactor disabled"
-          }
-        marks.append(
-          Summary.Mark(
-            name: label, seconds: Double(elapsed),
-            robotPhase: snapshot.robotPhase.map { String(describing: $0) },
-            robotShots: snapshot.robotShots, guardPhase: String(describing: strategy.phase),
-            reactorDamage: strategy.reactorDamage, windowRemaining: strategy.windowRemaining))
-        announce(label)
+        recordGuardMark("eye and legs", snapshot: snapshot)
       }
       let member: PartyMember
       let kind: Weapon.Kind
-      switch strategy.phase {
-      case .sensor:
-        member = .miki
-        kind = .longRifle
-      case .coupling:
+      if strategy.detachedLegs.isEmpty {
         member = .laura
         kind = .energySword
-      case .reactor:
+      } else if snapshot.damage.weakpoint == 0 {
+        member = .miki
+        kind = .longRifle
+      } else {
         member = .tom
         kind = .minigun
-      case .complete: return InputRules.Raw()
       }
       if snapshot.leader != member {
         guardRelease = true
@@ -1184,9 +1187,16 @@
         guardRelease = true
         return InputRules.Raw(controllerSwap: true)
       }
+      let candidates = snapshot.guardPoints.filter {
+        if member == .laura {
+          if case .leg = $0.part { return true }
+          return false
+        }
+        return $0.part == .eye
+      }
       guard
-        let point = snapshot.guardPoints.min(by: {
-          simd_distance($0.ground, at) < simd_distance($1.ground, at)
+        let point = candidates.min(by: {
+          simd_distance_squared($0.ground, at) < simd_distance_squared($1.ground, at)
         })
       else { return InputRules.Raw() }
       let delta = point.ground - at
@@ -1194,19 +1204,10 @@
       let radial = at - centre
       let distance = simd_length(radial)
       var needsPeek = false
-      if strategy.phase == .coupling || strategy.phase == .reactor {
-        // Approach the nearest side around the full leg footprint, rather than steering
-        // straight through it. Both component sides are equivalent, so no fixed flank wins.
-        let needsAttack =
-          strategy.phase == .reactor && strategy.windowRemaining == 0
-          && snapshot.robotPhase != .committed && snapshot.robotPhase != .burst
-          && snapshot.robotPhase != .recovering
-        // A flank outside the robot's sight cone cannot provoke its next recovery. Step into
-        // view while the core is closed, then move to the side once its attack commits.
-        let side =
-          needsAttack
-          ? snapshot.robotFacing ?? [0, 1] : simd_normalize(point.ground - centre)
-        let radius: Float = strategy.phase == .coupling ? 2.65 : 3.5
+      if member == .laura {
+        // Repeated native swings on the nearest intact leg; movement remains outside hull.
+        let side = simd_normalize(point.ground - centre)
+        let radius: Float = 2.4
         var destination = centre + side * radius
         if distance > 0.1 {
           let direction = radial / distance
@@ -1250,9 +1251,9 @@
         }
       }
       // A committed volley does not home in. A real roll crosses its old line; its ordinary
-      // cooldown and vulnerability rules still apply. Sensor fire waits for visible recovery.
+      // cooldown and vulnerability rules still apply; eye criticals have no exposure timer.
       if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
-        strategy.phase != .coupling, distance > 0.1
+        member != .laura, distance > 0.1
       {
         let tangent = SIMD2(-radial.y, radial.x)
         raw.stick = Movement.stick(
@@ -1271,10 +1272,9 @@
         raw.aimStick = Movement.stick(
           towards: delta, cameraOffset: snapshot.level.cameraOffset)
       }
-      // Closed parts still take ordinary damage. Keep a real burst going between bonus
-      // windows instead of inheriting the former puzzle's no-damage waiting rule.
+      // Every real contact counts. Sword hits must actually reach a surviving leg.
       raw.controllerFire =
-        strategy.phase != .coupling
+        member != .laura
         || simd_length(delta) < Weapon.energySword.range + point.radius
       return raw
     }
@@ -1635,6 +1635,18 @@
         .mark("Manhattan, together"), .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki, .tom, .laura])]
 
+    /// The new mechanics are accepted through ordinary input, not injected damage/parts:
+    /// Tom throws, Pause freezes the flight, Laura breaks a leg, then the squad finishes.
+    private static let robotParts: [Step] =
+      toTheStranger + [
+        .order(.hold), .switchLeader, .walk([6.5, 5]), .lock, .grenade,
+        .wait(seconds: 0.2), .mark("Tom's grenade in flight"),
+        .pause, .wait(seconds: 0.5), .pause, .wait(seconds: 1.5),
+        .expectGrenadeDamage, .mark("grenade detonated"), .formation,
+        .dismantleGuard, .expectDefeated(1), .expectLegLoss, .expectDamageFeedback,
+        .mark("leg detached and guard down"), .wait(seconds: 1),
+      ] + restartRun
+
     /// Every bridge scenario, by the name `apple/scripts/playtest` gives it.
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
@@ -1642,7 +1654,7 @@
       ("weapons", weapons), ("companions", companions), ("retaliation", retaliation),
       ("cover-spacing", coverSpacing),
       ("damage-feedback", damageFeedback),
-      ("touch-fight", touchFightRoute),
+      ("touch-fight", touchFightRoute), ("robot-parts", robotParts),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

@@ -12,9 +12,9 @@ struct GuardRetaliationTests {
     let trial = try Trial()
     try trial.awaitMikiWarning()
     #expect(
-      trial.partyShots.contains { $0.actor == .miki && $0.path.strike == .body("guard.sensor.0") })
-    #expect(trial.fight.guardStrategies["guard"]?.sensorDisabled == true)
-    #expect(trial.fight.guardStrategies["guard"]?.couplingBreached == false)
+      trial.partyShots.contains { $0.actor == .miki && $0.path.strike == .body("guard.eye") })
+    #expect((trial.fight.guardStrategies["guard"]?.health ?? .max) < GuardStrategy.maximumHealth)
+    #expect(trial.fight.guardStrategies["guard"]?.detachedLegs.isEmpty == true)
     #expect(trial.warned.prefix(2).elementsEqual([.tom, .miki]))
     #expect(trial.warned.filter { $0 == .miki }.count == 1)
     #expect(trial.fight.guardTarget(for: "guard") == .miki)
@@ -27,6 +27,7 @@ struct GuardRetaliationTests {
     let trial = try Trial()
     try trial.awaitMikiWarning()
     let loaded = trial.fight.status(for: .miki).loaded
+    let health = trial.fight.guardStrategies["guard"]?.health
     trial.session.cycleLeader()
     trial.step()
     #expect(trial.fight.guardTarget(for: "guard") == .miki)
@@ -56,7 +57,7 @@ struct GuardRetaliationTests {
     #expect(sawBurst && sawRecovery)
     #expect(trial.fight.status(for: .miki).loaded == loaded)
     #expect(trial.warned.filter { $0 == .miki }.count == 1)
-    #expect(trial.fight.guardStrategies["guard"]?.reactorDamage == 0 && !trial.retried)
+    #expect(trial.fight.guardStrategies["guard"]?.health == health && !trial.retried)
   }
 
   @Test
@@ -67,27 +68,21 @@ struct GuardRetaliationTests {
       #expect(trial.partyShots.isEmpty)
       #expect(!trial.warned.contains(.miki))
       #expect(trial.warned.allSatisfy { $0 == .tom })
-      #expect(trial.fight.guardStrategies["guard"]?.sensorDisabled == false)
+      #expect(trial.fight.guardStrategies["guard"]?.health == GuardStrategy.maximumHealth)
+      #expect(trial.fight.guardStrategies["guard"]?.detachedLegs.isEmpty == true)
       #expect(!trial.retried)
     }
   }
 
   @Test
-  func aRealAttackBehindLowCoverDoesNotMakeAnUnseenCompanionEligible() throws {
-    let wall = Level.Box.box("low-screen", at: [0, 0.725, 3], size: [1.5, 1.45, 0.4])
+  func coveredAttackIntentsCannotDealDamageOrEarnAnUnseenCompanionWarning() throws {
+    let wall = Level.Box.box("low-screen", at: [0, 0.725, 3], size: [4, 1.45, 0.4])
     let trial = try Trial(
       boxes: [wall], figures: [.tom: [6, 6], .miki: [0, 6], .laura: [-6, 6]])
-    for _ in 0..<120 * 15 {
-      trial.step(companionFire: true)
-      if trial.fight.guardStrategies["guard"]?.sensorDisabled == true,
-        trial.warned.count >= 2
-      {
-        break
-      }
-    }
-    #expect(
-      trial.partyShots.contains { $0.actor == .miki && $0.path.strike == .body("guard.sensor.0") })
-    #expect(trial.fight.guardStrategies["guard"]?.sensorDisabled == true)
+    for _ in 0..<120 * 15 { trial.step(companionFire: true) }
+    #expect(trial.partyShots.isEmpty)
+    #expect(trial.fight.status(for: .miki).loaded == Weapon.longRifle.capacity)
+    #expect(trial.fight.guardStrategies["guard"]?.health == GuardStrategy.maximumHealth)
     #expect(trial.warned.count >= 2 && !trial.warned.contains(.miki))
     #expect(trial.warned.allSatisfy { $0 == .tom } && !trial.retried)
   }
@@ -206,7 +201,8 @@ struct GuardRetaliationTests {
     retry.session.retryEncounter()
     retry.fight.reset()
     #expect(retry.fight.guardTarget(for: "guard") == nil && retry.fight.guardTarget == nil)
-    #expect(retry.fight.guardStrategies["guard"]?.sensorDisabled == false)
+    #expect(retry.fight.guardStrategies["guard"]?.health == GuardStrategy.maximumHealth)
+    #expect(retry.fight.guardStrategies["guard"]?.detachedLegs.isEmpty == true)
     try retry.begin()
     let before = retry.warned.count
     for _ in 0..<120 * 3 {
@@ -262,7 +258,7 @@ struct GuardRetaliationTests {
         step(companionFire: true)
         if fight.guardTarget == .miki, robot?.phase == .notice { return }
       }
-      Issue.record("a real sensor shot did not produce a later visible Miki warning")
+      Issue.record("a real eye shot did not produce a later visible Miki warning")
       throw FixtureFailure.missingWarning
     }
 
@@ -271,7 +267,7 @@ struct GuardRetaliationTests {
       leaderFire: Bool = false, leaderFacing: SIMD2<Float> = [0, -1]
     ) {
       let leader = figures[session.leader] ?? .zero
-      let point = fight.weakpoints(for: "guard").first
+      let point = fight.weakpoints(for: "guard").first(where: { $0.part == .eye })
       let target = ordinaryCompanionFire ? robot?.position ?? .zero : point?.ground ?? .zero
       let miki = figures[.miki] ?? .zero
       let direction = target - miki
@@ -283,7 +279,7 @@ struct GuardRetaliationTests {
             lookAt: target, weapon: .longRifle,
             targetsBody: ordinaryCompanionFire,
             fire: ordinaryCompanionFire
-              || (companionFire && point?.part == .sensor && point?.exposed == true),
+              || (companionFire && point?.part == .eye && point?.exposed == true),
             activity: .attacking)
         ], facings: [.miki: simd_length(direction) > 0.001 ? simd_normalize(direction) : [0, -1]])
       retried = retried || outcome.retry

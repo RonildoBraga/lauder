@@ -17,30 +17,28 @@ struct GuardWeakpoint {
   }
 
   static func make(id: String, robot: RobotGuard, strategy: GuardStrategy) -> [Self] {
-    let part: GuardStrategy.Part
-    let offsets: [SIMD3<Float>]
-    switch strategy.phase {
-    case .sensor:
-      part = .sensor
-      offsets = [[0, 1.65, -1.45]]
-    case .coupling:
-      part = .coupling
-      offsets = [[-1.45, 1.25, 0], [1.45, 1.25, 0]]
-    case .reactor:
-      part = .reactor
-      offsets = [[-1.45, 1.65, 0], [1.45, 1.65, 0]]
-    case .complete:
-      return []
-    }
+    guard strategy.phase == .active else { return [] }
     let rotation = simd_quatf(angle: Movement.yaw(towards: robot.facing), axis: [0, 1, 0])
-    return offsets.enumerated().map { index, offset in
-      let centre =
-        SIMD3(robot.position.x, -RobotModelGeometry.braceDepth * robot.brace, robot.position.y)
-        + rotation.act(offset)
+    let base = SIMD3(
+      robot.position.x, -robot.bodyDrop, robot.position.y)
+    func point(_ part: GuardStrategy.Part, suffix: String, offset: SIMD3<Float>, radius: Float)
+      -> Self
+    {
+      let centre = base + rotation.act(offset)
       return Self(
-        id: "\(id).\(part).\(index)", hostileID: id, part: part, centre: centre,
-        radius: part == .sensor ? 0.35 : 0.4,
-        exposed: strategy.isExposed(part, recovering: robot.phase == .recovering))
+        id: "\(id).\(suffix)", hostileID: id, part: part, centre: centre,
+        radius: radius, exposed: true)
     }
+    // The red sensor's actual exported centre; the previous marker sat well in front of it.
+    var points = [point(.eye, suffix: "eye", offset: [0, 1.53, -0.7045], radius: 0.2)]
+    for (index, leg) in RobotModelGeometry.legs.enumerated()
+    where !strategy.detachedLegs.contains(index) {
+      // A generous lower-leg contact follows the generated foot direction rather than the
+      // old invisible side coupling. Blender source +z is game +y, and source +x is game -x.
+      let source = simd_mix(leg.hip, leg.foot, SIMD3(repeating: 0.7))
+      let offset = SIMD3(-source.x, source.z, source.y)
+      points.append(point(.leg(index), suffix: "leg.\(index)", offset: offset, radius: 0.35))
+    }
+    return points
   }
 }

@@ -9,7 +9,7 @@ struct CompanionEngagementTests {
     case missingGuardComponent
   }
 
-  /// A real, unmatched sword contact is still the player's attack. Before that contact,
+  /// A real, ordinary sword contact is still the player's attack. Before that contact,
   /// explicit stale AI fire intents must not turn the quiet approach into a fight.
   @Test
   func ordinaryPlayerSwordContactActivatesCompanionsOutsideTheDetectionCone() throws {
@@ -42,9 +42,9 @@ struct CompanionEngagementTests {
     @discardableResult
     func step(attack: Bool = false) throws -> SIMD2<Float> {
       guard let robot = fight.hostiles["guard"]?.robot,
-        let point = fight.weakpoints(for: "guard").first
+        let point = fight.weakpoints(for: "guard").first(where: { $0.part == .eye })
       else {
-        Issue.record("The engagement fixture lost its live guard or sensor component")
+        Issue.record("The engagement fixture lost its live guard or eye component")
         throw FixtureFailure.missingGuardComponent
       }
       let front = simd_normalize(point.ground - robot.position)
@@ -62,9 +62,11 @@ struct CompanionEngagementTests {
             > RobotModelGeometry.bodyRadius + PartyBody.radius)
       }
       #expect(simd_dot(radial, robot.facing) < cos(50 * .pi / 180))
-      #expect(simd_distance(leader, point.ground) < Weapon.energySword.range + point.radius)
+      #expect(
+        simd_distance(leader, robot.position)
+          < Weapon.energySword.range + RobotModelGeometry.bodyRadius)
       _ = fight.step(
-        dt: 1 / 120, leader: leader, facing: simd_normalize(point.ground - leader),
+        dt: 1 / 120, leader: leader, facing: simd_normalize(robot.position - leader),
         aiming: true, fireHeld: attack, firePressed: attack, figures: figures, session: session,
         companionIntents: [
           .miki: .init(
@@ -95,7 +97,7 @@ struct CompanionEngagementTests {
     #expect(hit.target == "guard" && hit.attacker == .laura && hit.weapon == .energySword)
     #expect(hit.effectiveness == .normal && hit.amount == Weapon.energySword.damage)
     #expect(fight.guardStrategies["guard"]?.health == beforeHealth - hit.amount)
-    #expect(fight.guardStrategies["guard"]?.sensorDisabled == false)
+    #expect(fight.guardStrategies["guard"]?.detachedLegs.isEmpty == true)
     #expect(fight.companionGuard(near: contactPosition) != nil)
     #expect(fight.hostiles["guard"]?.robot?.phase == .patrol)
     try step()

@@ -124,6 +124,7 @@ final class GameWorld {
   /// The level's fight rules and presentation, kept separate (ADR 0004, ADR 0008).
   @ObservationIgnored private let fight: EncounterSimulation
   @ObservationIgnored private let stage: EncounterStage
+  private(set) var grenadeStatus = "Grenade"
   @ObservationIgnored private var fireHeld = false
   /// Where the right stick aims, in the stick's terms, and where that is on the ground while the
   /// leader is armed to aim (ADR 0007).
@@ -141,6 +142,7 @@ final class GameWorld {
   @ObservationIgnored private(set) var roll: DodgeRoll?
   @ObservationIgnored private var rollCooldown: Float = 0
   @ObservationIgnored private var dodgePressPending = false
+  @ObservationIgnored private var grenadePressPending: PartyMember?
   /// A lock press waiting for the next fixed step (ADR 0020).
   @ObservationIgnored private var lockPressPending = false
   /// Tom's dome, shown round him while he leads with it raised (ADR 0021).
@@ -182,6 +184,9 @@ final class GameWorld {
   private(set) var otherWeaponName = ""
 
   private func updateWeaponStatus() {
+    grenadeStatus =
+      fight.grenadeCooldown > 0
+      ? "Grenade \(Int(ceil(fight.grenadeCooldown)))s" : "Grenade"
     let state = fight.status(for: session.leader)
     let name = state.kind.name
     let practice = session.inEncounter ? "" : " · Practice"
@@ -408,6 +413,7 @@ final class GameWorld {
       unsimulatedTime = 0
       firePressPending = false
       dodgePressPending = false
+      grenadePressPending = nil
       lockPressPending = false
       return
     }
@@ -420,7 +426,7 @@ final class GameWorld {
     advanceParty(
       movement: input.movement, aim: input.aim, fireHeld: input.fireHeld,
       firePressed: input.firePressed, dodgePressed: input.dodgePressed,
-      lockPressed: input.lockPressed, deltaTime: deltaTime)
+      grenadePressed: input.grenadePressed, lockPressed: input.lockPressed, deltaTime: deltaTime)
     #if DEBUG
       recordPlaytest(
         dt: deltaTime,
@@ -517,6 +523,7 @@ final class GameWorld {
   /// After a switch: the camera eases to the new leader, and a previous leader who joins a
   /// holding squad holds where they stand.
   private func followNewLeader() {
+    grenadePressPending = nil
     pinHolds()
     camera.switchLeader()
     showLeaderMarker()
@@ -567,6 +574,7 @@ final class GameWorld {
     roll = nil
     rollCooldown = 0
     dodgePressPending = false
+    grenadePressPending = nil
     lockPressPending = false
     lockedHostile = nil
     for member in PartyMember.allCases { showPose(member) }
@@ -624,14 +632,16 @@ final class GameWorld {
   /// fresh-edge handling remain in `step` and InputRules.
   func advanceParty(
     movement: SIMD2<Float>, aim: SIMD2<Float>? = nil, fireHeld: Bool = false,
-    firePressed: Bool = false, dodgePressed: Bool = false, lockPressed: Bool = false,
-    deltaTime: Float
+    firePressed: Bool = false, dodgePressed: Bool = false, grenadePressed: Bool = false,
+    lockPressed: Bool = false, deltaTime: Float
   ) {
     guard session.mode == .exploring, deltaTime.isFinite, deltaTime > 0 else { return }
     self.fireHeld = fireHeld
     aimStick = aim
     if firePressed { firePressPending = true }
     if dodgePressed { dodgePressPending = true }
+    if grenadePressPending != session.leader { grenadePressPending = nil }
+    if grenadePressed, session.leader == .tom { grenadePressPending = .tom }
     if lockPressed { lockPressPending = true }
     let elapsed = min(deltaTime, 1 / 30)
     // Equal steps keep party movement independent of the display's frame times (#28). The
@@ -1272,6 +1282,7 @@ final class GameWorld {
       dt: dt, leader: position, facing: Movement.facing(yaw: yaw[leader] ?? 0),
       aiming: aimDirection != nil, fireHeld: armed && fireHeld,
       firePressed: armed && firePressPending, figures: figures, session: session,
+      grenadePressed: grenadePressPending == leader && !fight.holdsParty && untouchable.isEmpty,
       untouchable: untouchable, companionIntents: companionIntents,
       facings: Dictionary(
         uniqueKeysWithValues: figures.keys.map {
@@ -1280,6 +1291,7 @@ final class GameWorld {
     stage.update(fight, dt: dt)
     updateWeaponStatus()
     firePressPending = false
+    grenadePressPending = nil
     // The leader turns there in the steps to come, at her turn rate (ADR 0008).
     if let facing = outcome.facing { facingGoal = facing }
     // Members still rocking from a shot or a hit show it, and those that just settled stand
@@ -1598,7 +1610,8 @@ final class GameWorld {
         partyHits: Dictionary(
           uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }),
         companionTargets: companionTargets, coveredMembers: covered,
-        damage: damageTally, damageLabelCount: damageFeedback.labels.count, showsPanel: showsPanel)
+        damage: damageTally, damageLabelCount: damageFeedback.labels.count, showsPanel: showsPanel,
+        grenadeCooldown: fight.grenadeCooldown, grenadeInFlight: fight.grenade != nil)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.

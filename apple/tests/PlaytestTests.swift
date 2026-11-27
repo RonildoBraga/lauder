@@ -247,7 +247,7 @@
       }
       #expect(orderedAttack && peeked, "the ordinary command must precede the clear-lane approach")
       #expect(world.session.leader == .miki && !world.isRetrying)
-      #expect(world.playtestSnapshot.guardStrategy?.sensorDisabled == false)
+      #expect(world.playtestSnapshot.guardStrategy?.detachedLegs.isEmpty == true)
     }
 
     @Test

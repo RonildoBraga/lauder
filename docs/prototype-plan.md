@@ -14,6 +14,14 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Eye, legs and grenades — in development
+
+The maintainer's build 37 playtest found ordinary hits dominant. They requested persistent eye criticals, repeated Laura sword contacts detaching individual legs and slowing the robot, and grenade throws. The task clarification selected **“Tom only; manual throws”** (chat, 27 November 2026; no public permalink). [Issue #192](https://github.com/RonildoBraga/lauder/issues/192) assigns the bounded revision based on `a44537e`; the [contract](robot-eye-legs-grenades.md) owns the rules and prototype tuning. It does not authorise merge or another TestFlight upload.
+
+The source replaces the sensor/coupling/core gate with actual front-eye criticals and four independent sword-leg counters. It reuses the existing leg assemblies for bounded detachment and gait changes, without changing Blender assets or adding physics. Tom gets a manual grenade through shared input authority, a committed scenery-tested arc, one ordinary cover-tested blast result per enemy and an 8-second recharge that survives switching. Attack/Defend, hard orders, player leadership, warnings and the quiet bypass remain authoritative.
+
+**Verification in progress:** the Debug app builds. Native combat/contact, geometry, input, lifecycle and loaded-model regressions, the full standard check and fresh rendered Simulator routes follow. Physical controls, audibility, balance and sustained phone performance remain unverified for this revision. Build 37 is the latest delivered comparison; the earlier records below retain their original sources and results.
+
 ## Build 37 TestFlight preview
 
 The maintainer requested **“Send it to my phone for testing using the TestFlight”** (chat, 27 November 2026; no public permalink). This authorises an internal TestFlight preview of the latest reviewed changes, without merging the open stack into `main` or claiming physical acceptance. The release branch `codex/testflight-controls-audio` combines [PR #187](https://github.com/RonildoBraga/lauder/pull/187), [PR #188](https://github.com/RonildoBraga/lauder/pull/188) and [PR #189](https://github.com/RonildoBraga/lauder/pull/189). The source integration preserves their existing damage, squad authority, input release rules and native audio owners. Main remains unchanged.
@@ -307,6 +315,7 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Permit companion attacks / cease fire and recall via cover | D-pad up / down | Hold on ground, then the drawn Attack / Defend choice | Up / down arrows |
 | Send left / right member ahead | D-pad left / right | Hold on ground, then a name | Left / right arrows |
 | Both go / both hold | No direct binding | Hold on ground, then Both / Hold | G / H |
+| Tom throws one grenade while leading | Circle / B | Grenade (Tom only) | C |
 | Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
 | [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
@@ -320,7 +329,7 @@ Touch is automatic without an extended controller. An attached controller is pre
 
 Touch taps select the visible whole-body envelope, using full height and navigation radius with a 30-point exterior allowance. An empty valid tap retains an on-screen or partly visible lock and releases an entirely off-screen one; assisted aim remains available without a lock. The [touch contract](touch-controls.md) describes the short-tap/hold distinction, shared drawn order-menu choices and edge limitations. Release guidance stays visible when the status panel is hidden.
 
-Switching preserves positions and progress; held movement can continue on the new leader. Circle / B is unassigned. A weapon switch needs a fresh press, and each weapon keeps its magazine. Switch, formation and order commands consume a simultaneous action or roll. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
+Switching preserves positions and progress; held movement can continue on the new leader. Circle / B throws a grenade only while Tom leads. A weapon switch needs a fresh press, and each weapon keeps its magazine. Switch, formation and order commands consume a simultaneous action, roll or grenade request. Grenades need a fresh press and cannot queue during recharge. A roll needs a fresh press, fires nothing and waits 0.5 s after the last. A lock press needs a fresh press too; one within 0.3 s of the last lets go, and a lock also lets go once its hostile is down or more than 30 m away. Dialogue and Pause consume gameplay edges rather than queueing them. Pause, interruptions, reconnection and source changes require neutral input; every button, key and finger must release, including a finger resting at stick centre.
 
 Formations and orders still need two companions, so a level that starts with fewer than three offers them once the others join; the bridge starts with all three. There is nothing on the bridge to search or help with, so Look only looks around.
 

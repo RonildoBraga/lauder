@@ -1,23 +1,25 @@
 # Guard damage and feedback
 
 **Date:** 27 November 2026\
-**Status:** Implemented on `codex/guard-damage`, following [issue #183](https://github.com/RonildoBraga/lauder/issues/183). This revision starts from [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`, retaining its bridge cover and companion spacing. Source and rendered Simulator checks passed on `533f012`, recorded in [PR #184](https://github.com/RonildoBraga/lauder/pull/184) and the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Physical-phone behaviour, balance and performance remain unverified. Internal [TestFlight 0.1.0 (36)](prototype-plan.md#build-36-testflight-preview) now delivers this revision from reviewed archive source `2db6130`, through [PR #185](https://github.com/RonildoBraga/lauder/pull/185); Apple processing and existing-tester access are verified.
+**Status:** The current [eye/leg/grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), retains the shared-health and feedback pipeline while simplifying part bonuses. New source/native and rendered verification remains pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development); it is unmerged and not delivered. Earlier source `533f012` passed its recorded checks and was delivered in [build 36](prototype-plan.md#build-36-testflight-preview), then retained in [build 37](prototype-plan.md#build-37-testflight-preview). Those historical results do not validate these new mechanics or establish physical acceptance.
 
 ## Maintainer direction
 
-The maintainer asked for **“every successful hit”** to deal damage, with larger rewards for the appropriate companion and weak point, white normal-damage numbers, red weak-point numbers and restrained feedback for highly effective attacks. After the proposal to use shared enemy health and an optional weakness route, they said **“Proceed with your recommendations”**. These are relayed chat instructions on 27 November 2026; there is no public chat permalink. They authorise this bounded combat revision, including the related contact and feedback findings in [issue #180](https://github.com/RonildoBraga/lauder/issues/180).
+For the earlier shared-health revision, the maintainer asked for **“every successful hit”** to deal damage, with larger rewards for the appropriate companion and weak point, white normal-damage numbers, red weak-point numbers and restrained feedback for highly effective attacks. After the proposal to use shared enemy health and an optional weakness route, they said **“Proceed with your recommendations”**. These are relayed chat instructions on 27 November 2026; there is no public chat permalink. They authorised that bounded revision, including the related contact and feedback findings in [issue #180](https://github.com/RonildoBraga/lauder/issues/180).
 
-This replaces the earlier first-guard requirement that all three characters complete a mandatory sequence. It does not change biographies, enhancement histories or the exploration-led story direction. No new scene, enemy, weapon, signature ability, random critical-chance system or dependency is part of the task. The implementation assignment did not authorise merge or release. A later explicit TestFlight request authorised the verified [build 36 preview](prototype-plan.md#build-36-testflight-preview); merge and further deliveries keep their own authorisation.
+That assignment replaced the earlier first-guard requirement that all three characters complete a mandatory sequence without changing biographies, enhancement histories or the exploration-led story direction. It added no scene, enemy, weapon, signature ability, random critical-chance system or dependency. The implementation assignment did not authorise merge or release. A later explicit TestFlight request authorised the verified [build 36 preview](prototype-plan.md#build-36-testflight-preview); merge and further deliveries keep their own authorisation.
+
+**Current revision:** [Issue #192](https://github.com/RonildoBraga/lauder/issues/192) replaces the former weapon/exposure-gated bonus sequence with a persistent eye critical target, independent breakable legs and Tom's manual grenade. The [robot contract](robot-eye-legs-grenades.md) owns those new part/resource rules. Build 37 remains the delivered baseline until a separately verified upload. Earlier authorisation and delivery statements above describe that baseline.
 
 ## One health pool
 
-The guard starts with **1,500 health**. Every valid damaging enemy contact reduces that same pool; reaching zero is the only damage-based victory condition. Armour, a closed component or an unmatched weapon receives normal damage. A shot stopped by scenery or an ally is not a successful enemy hit, and a missed sword swing causes no damage.
+The guard starts with **1,500 health**. Every valid damaging enemy contact reduces that same pool; reaching zero is the only damage-based victory condition. Ordinary body and leg contacts receive normal damage. A shot stopped by scenery or an ally is not a successful enemy hit, and a missed sword swing causes no damage.
 
 ```text
 damage = weapon base damage × range modifier × weakness multiplier
 ```
 
-Firearms use the actual hit distance for their existing positive range reduction; sword contacts use base damage after reach, arc and cover checks. Normal damage uses **×1**. The appropriate weapon hitting its matching exposed part uses **×3**. Exposure and actual contact both matter. A multiplier is not awarded merely because a particular character is selected, the aim is locked, or a shot starts inside an oversized component volume. The actual health reduction is clamped to the remaining health; feedback reports that applied amount.
+Firearms use the actual hit distance for their existing positive range reduction; sword contacts use base damage after reach, arc and cover checks. Normal damage uses **×1**. An actual firearm hit on the visible front eye uses **×3**, with any gun and at any robot attack phase. Physical contact matters. A multiplier is not awarded merely because a particular character is selected, the aim is locked, or a shot starts inside an oversized component volume. The actual health reduction is clamped to the remaining health; feedback reports that applied amount.
 
 | Weapon | Starting damage per contact | Existing cost |
 |---|---:|---|
@@ -29,21 +31,17 @@ Firearms use the actual hit distance for their existing positive range reduction
 
 These values and the guard's health are prototype tuning, not settled balance. The current shotgun is one scattered ray per blast; this task does not introduce pellets. Existing effective-range reduction remains positive. Tom's dome remains defensive equipment rather than another damaging weapon. Enemy attack timing, the party injury/retry rules and ordinary physical vulnerability retain their existing owners.
 
-## Optional weakness route
+## Eye and leg opportunities
 
-| Opportunity | Preferred native weapon | Result |
-|---|---|---|
-| Exposed front sensor during recovery | Long rifle | Bonus damage and persistent sensor disable |
-| Exposed side coupling after the sensor | Energy sword | Bonus damage and persistent coupling breach |
-| Exposed core after the breach | Minigun | Bonus damage to the shared health pool |
+The eye remains available for later criticals; there is no disabled-sensor prerequisite, coupling breach or timed reactor window. The existing coarse body collision is refined only for a real front-eye ray, retaining scenery, allies and other enemies as blockers. The [robot contract](robot-eye-legs-grenades.md) records the measured target and collision approximation.
 
-The breach opens a **4-second** core window if made during recovery; otherwise entering the next recovery opens it. Later recovery entries supply another window. Closed windows retain ordinary damage and existing health loss. Sensor and coupling state survive retreat within the encounter and switching; Retry and Restart reset them with health. There is no separate required core-round total and no requirement to finish this route before health can reach zero.
+Laura's first two sword contacts damage a leg and the third detaches that individual leg, while every accepted contact also removes normal shared health once. Distinct leg counters, missing target volumes and progressive translation penalties replace the old coupling progress. Retry and Restart restore the counters and health; retreat within the encounter preserves them. No part chain is required before a kill.
 
-Weapon behaviour determines the match, not an additional actor-identity damage gate. Player and companion hits use the same rules. Switching still gives the player direct control of positioning and timing. All damage-dealing characters can make progress through ordinary attacks.
+Tom's grenade produces one ordinary area-damage result per enemy, with actual blast-cover checks and no eye or sword-leg multiplier. Its damage source has no paired weapon; it cannot aggregate with rapid gun contacts. Player and companion weapon hits otherwise use the same health rules.
 
 ## Companion authority
 
-Under an explicit **Attack** command in an engaged fight, a companion prefers a reachable exposed matching part. When that opportunity is closed or unavailable, they can use a safe ordinary attack: Miki's long rifle, Laura's shotgun or Tom's minigun. Useful local firing places respect the existing cover, hull, ally rays, intended spacing and destination bounds. If no legal shot is available, nearby support and movement remain useful; intention alone never causes damage.
+Under an explicit **Attack** command in an engaged fight, a companion prefers its useful reachable target: the eye for Miki/Tom and an intact leg for Laura. When that opportunity is closed or unavailable, they can use a safe ordinary attack: Miki's long rifle, Laura's shotgun or Tom's minigun. Useful local firing places respect the existing cover, hull, ally rays, intended spacing and destination bounds. If no legal shot is available, nearby support and movement remain useful; intention alone never causes damage.
 
 **Defend** remains immediate companion cease-fire and recall. Hold keeps its anchor and allows only a shot possible from there; Go keeps movement priority. The selected leader is always player-controlled. Quiet acquisition, the west bypass, retreat, neutral-input gates and lifecycle retain authority. This adds neither automatic shielding nor a general tactical AI framework.
 
@@ -52,9 +50,9 @@ Under an explicit **Attack** command in an engaged fight, a companion prefers a 
 The simulation emits a resolved `DamageHit` only after an accepted health reduction. It includes the enemy, attacker, weapon, actual amount, impact position, effectiveness and whether a component broke. The existing frame's event batch supplies health feedback and presentation together; a shot, a planning label or an impact alone cannot stand in for damage.
 
 - **Normal:** white number with a dark outline/shadow against the snow.
-- **Matched weakness:** red number with a small weak-point symbol and stronger type, so colour is not the only distinction.
+- **Eye critical:** red number with a small weak-point symbol and stronger type, so colour is not the only distinction.
 - **Effective impact:** a restrained, rate-limited glint from the existing pooled effects, especially on a component break. This does not add another damage multiplier or a random critical roll.
-- **Health:** one guard health bar; the optional part cue explains an opportunity rather than claiming immunity elsewhere.
+- **Health:** one guard health bar; the eye/leg cue explains an opportunity rather than claiming immunity elsewhere.
 
 Numbers keep a readable screen size at the actual projected impact position, rise gently and fade over an initial **0.8 seconds**. The presenter keeps a bounded visible set, initially **eight** labels. Fast minigun and assault-rifle contacts accumulate over **0.30 seconds**, keyed by enemy, attacker, weapon and effectiveness; every hit contributes to the displayed amount, and white and red totals are never combined into a misleading red value. Single rifle, shotgun and sword contacts retain individual feedback. The overlay is not interactive and cannot intercept touch controls. Reduce Motion uses stable separate positions instead of rising labels, so consecutive totals remain readable without movement.
 
@@ -62,9 +60,9 @@ Pause suspends or hides feedback alongside play. Backgrounding, Retry and Restar
 
 ## Verification gate
 
-Run rule and native-contact checks for ordinary solo damage/victory, positive closed/unmatched damage, correct exposed bonuses, optional structural progress, finite/overkill/reset behaviour and player/AI equality. Verify body/component overlap counts a bullet only once, point-blank classification respects the aimed contact, and sword-body damage retains real reach, arc and solid-cover checks. Marker materials should be reused rather than rebuilt every update.
+Run rule and native-contact checks for ordinary solo damage/victory, persistent eye bonuses with each gun, independent sword-leg progress, finite/overkill/reset behaviour and player/AI equality. Verify body/component overlap counts a bullet only once, clear oblique eye contacts remain critical, rear hull and cover still block them, point-blank classification respects the aimed contact, and sword-body damage retains real reach, arc and solid-cover checks. Marker materials should be reused rather than rebuilt every update.
 
-Check actual companion normal attacks and weak-point preferences under Attack, cease-fire on Defend, hard orders, spacing, manual leadership, quiet bypass and lifecycle. Compare displayed sums against accepted health reduction, including rapid fire, mixed effectiveness, a killing blow, multiple fixed steps per presented frame and cancellation across Pause/interruption/Retry/Restart.
+Check actual companion normal attacks and eye/leg preferences under Attack, cease-fire on Defend, hard orders, spacing, manual leadership, quiet bypass and lifecycle. Compare displayed sums against accepted health reduction, including rapid fire, mixed effectiveness, a killing blow, multiple fixed steps per presented frame and cancellation across Pause/interruption/Retry/Restart.
 
 The standard `./scripts/check` and ordinary-input rendered Simulator encounters must pass on a recorded source. Record damage contributions, time to defeat, injuries/retries, clarity and remaining limits in the prototype plan and PR. Simulator checks do not establish physical controls, audibility, phone readability, sustained performance or enjoyment. Verification for earlier previews does not validate this damage revision.
 

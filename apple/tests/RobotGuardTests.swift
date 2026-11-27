@@ -160,6 +160,67 @@ struct RobotGuardTests {
   }
 
   @Test
+  func eachLegSpeedMultiplierScalesNativeWalkingWithoutChangingTheRoute() {
+    var distances: [Float] = []
+    for multiplier: Float in [1, 0.75, 0.5, 0.25, 0] {
+      var robot = readyRobot()
+      var travelled: Float = 0
+      for _ in 0..<120 * 6 {
+        let before = robot.position
+        _ = robot.step(
+          dt: dt, target: [0, 30], hasSight: false, obstacles: [], party: [],
+          speedMultiplier: multiplier)
+        let distance = simd_distance(before, robot.position)
+        #expect(distance <= RobotGuard.speed * multiplier * dt + 0.00001)
+        travelled += distance
+      }
+      distances.append(travelled)
+    }
+    #expect(distances[0] > 0.5)
+    for index in 1..<distances.count {
+      #expect(abs(distances[index] - distances[0] * (1 - Float(index) * 0.25)) < 0.01)
+    }
+  }
+
+  @Test
+  func aLeglessGuardSettlesToItsBellyButStillWarnsTurnsAndFiresBothPatterns() {
+    var robot = RobotGuard(home: .zero, strategicPatterns: true)
+    robot.reveal()
+    robot.engage()
+    var patterns: Set<RobotGuard.Pattern> = []
+    for _ in 0..<120 * 18 {
+      let shot = robot.step(
+        dt: dt, target: [5, 5], hasSight: true, obstacles: [], party: [],
+        awareOfTarget: true, speedMultiplier: 0, grounded: true)
+      if let shot { patterns.insert(shot.pattern) }
+      #expect(robot.position == .zero)
+      #expect(robot.bodyDrop >= 0 && robot.bodyDrop <= RobotGuard.groundedDrop)
+    }
+    #expect(abs(robot.bodyDrop - RobotGuard.groundedDrop) < 0.0001)
+    #expect(patterns == [.precision, .fan])
+    #expect(simd_dot(robot.facing, simd_normalize(SIMD2<Float>(5, 5))) > 0.99)
+    #expect(robot.recoveryDuration == 4)
+  }
+
+  @Test
+  func groundedHullMuzzlesAndEyeShareOneTotalDropWithoutDoubleBracing() throws {
+    var robot = readyRobot()
+    for _ in 0..<120 {
+      _ = robot.step(
+        dt: dt, target: [0, 30], hasSight: false, obstacles: [], party: [],
+        speedMultiplier: 0, grounded: true)
+      for gun in 0..<2 {
+        #expect(abs(robot.muzzle(gun: gun).y - (1.52 - robot.bodyDrop)) < 0.0001)
+      }
+      let eye = try #require(
+        GuardWeakpoint.make(id: "guard", robot: robot, strategy: GuardStrategy())
+          .first { $0.part == .eye })
+      #expect(abs(eye.centre.y - (1.53 - robot.bodyDrop)) < 0.0001)
+    }
+    #expect(abs(RobotGuard.groundedDrop - robot.bodyDrop) < 0.0001)
+  }
+
+  @Test
   func aLaterPatrolLegFacesTheEntranceAndReacquiresAStationaryTraveller() {
     var robot = readyRobot()
     // Let it turn away and start the eastbound leg before the traveller returns from cover.

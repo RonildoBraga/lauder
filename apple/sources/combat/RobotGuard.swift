@@ -51,6 +51,9 @@ struct RobotGuard {
   static let recoveryTime: Float = 1.8
   static let searchTime: Float = 3
   static let gunYawLimit: Float = 15 * .pi / 180
+  /// The exported belly plate's lowest rigid point is 0.775 m above the deck.
+  static let groundedDrop: Float = 0.775
+  static let settleDuration: Float = 0.6
   /// The final leg faces the bridge entrance again instead of patrolling only north/east/west.
   private static let patrolOffsets: [SIMD2<Float>] = [[0, -1.5], [3, -1.5], [1.5, 0]]
 
@@ -80,6 +83,10 @@ struct RobotGuard {
   private var gunOffsets = SIMD2<Float>.zero
   /// After warning someone beyond gun range, wait for a reachable target before warning again.
   private var needsAttackRange = false
+  private var settleDrop: Float = 0
+
+  /// Shared by physical rays, the eye and presentation. Bracing never adds a second drop.
+  var bodyDrop: Float { max(settleDrop, RobotModelGeometry.braceDepth * brace) }
 
   init(home: SIMD2<Float>, strategicPatterns: Bool = false) {
     self.home = home
@@ -92,7 +99,7 @@ struct RobotGuard {
   }
 
   var recoveryDuration: Float {
-    strategicPatterns ? GuardStrategy.windowDuration : Self.recoveryTime
+    strategicPatterns ? GuardStrategy.recoveryDuration : Self.recoveryTime
   }
 
   var isVisible: Bool { phase != .hidden }
@@ -136,10 +143,15 @@ struct RobotGuard {
 
   mutating func step(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
-    party: [SIMD2<Float>], awareOfTarget: Bool = false
+    party: [SIMD2<Float>], awareOfTarget: Bool = false, speedMultiplier: Float = 1,
+    grounded: Bool = false
   ) -> Discharge? {
     guard dt.isFinite, dt > 0, target.x.isFinite, target.y.isFinite else { return nil }
+    let speed = !grounded && speedMultiplier.isFinite ? max(0, min(1, speedMultiplier)) : 0
     guard phase != .hidden, phase != .down, phase != .cleared else { return nil }
+    let wantedDrop: Float = grounded ? Self.groundedDrop : 0
+    let dropStep = Self.groundedDrop / Self.settleDuration * dt
+    settleDrop += max(-dropStep, min(dropStep, wantedDrop - settleDrop))
     recoilElapsed += SIMD2(repeating: dt)
     for gun in 0..<2 { gunRecoil[gun] = Self.recoil(at: recoilElapsed[gun]) }
     elapsed += dt
@@ -163,7 +175,7 @@ struct RobotGuard {
       if repositionRemaining > 0 {
         repositionRemaining = max(0, repositionRemaining - dt)
         let goal = repositionGoal ?? home
-        move(towards: goal, dt: dt, obstacles: obstacles, party: party)
+        move(towards: goal, dt: dt, obstacles: obstacles, party: party, speedMultiplier: speed)
         if simd_distance(position, goal) < 0.1 { repositionRemaining = 0 }
       } else if canAcquire {
         needsAttackRange = false
@@ -171,7 +183,7 @@ struct RobotGuard {
         transition(.notice)
       } else {
         let goal = home + Self.patrolOffsets[patrolIndex]
-        move(towards: goal, dt: dt, obstacles: obstacles, party: party)
+        move(towards: goal, dt: dt, obstacles: obstacles, party: party, speedMultiplier: speed)
         if simd_distance(position, goal) < 0.15 {
           patrolIndex = (patrolIndex + 1) % Self.patrolOffsets.count
         }
@@ -237,7 +249,9 @@ struct RobotGuard {
         lastSeen = nil
         transition(.patrol)
       } else if let lastSeen {
-        move(towards: bounded(lastSeen), dt: dt, obstacles: obstacles, party: party)
+        move(
+          towards: bounded(lastSeen), dt: dt, obstacles: obstacles, party: party,
+          speedMultiplier: speed)
       }
     }
     updateGunDirections()
@@ -269,7 +283,7 @@ struct RobotGuard {
     let pitch = asin(min(1, max(-1, direction.y)))
     let mount = RobotModelGeometry.gunMounts[gun]
     let tip = RobotModelGeometry.muzzles[gun] - mount + [0, 0, gunRecoil[gun]]
-    return SIMD3(position.x, -RobotModelGeometry.braceDepth * brace, position.y)
+    return SIMD3(position.x, -bodyDrop, position.y)
       + Self.rotate(mount, yaw: yaw)
       + (simd_quatf(angle: gunYaw, axis: [0, 1, 0])
       * simd_quatf(angle: pitch, axis: [1, 0, 0])).act(tip)
@@ -298,7 +312,7 @@ struct RobotGuard {
         yaw: yaw + min(Self.gunYawLimit, max(-Self.gunYawLimit, relative)))
       let vertical =
         Float(1.25)
-        - (RobotModelGeometry.gunMounts[gun].y - RobotModelGeometry.braceDepth * brace)
+        - (RobotModelGeometry.gunMounts[gun].y - bodyDrop)
       let pitch = min(Self.gunYawLimit, max(-Self.gunYawLimit, atan2(vertical, simd_length(delta))))
       gunDirections[gun] = [ground.x * cos(pitch), sin(pitch), ground.y * cos(pitch)]
     }
@@ -315,7 +329,7 @@ struct RobotGuard {
 
   private mutating func move(
     towards goal: SIMD2<Float>, dt: Float, obstacles: [PartyMotion.Box],
-    party: [SIMD2<Float>]
+    party: [SIMD2<Float>], speedMultiplier: Float
   ) {
     let target = bounded(goal)
     let delta = target - position
@@ -325,7 +339,7 @@ struct RobotGuard {
     // Heavy articulated legs stop, turn and then advance. Translating through a broad turn
     // stretches a planted foot beyond the actual two-link reach during the corner.
     guard simd_dot(delta / distance, facing) >= cos(1 * .pi / 180) else { return }
-    let movement = delta / distance * min(Self.speed * dt, distance)
+    let movement = delta / distance * min(Self.speed * speedMultiplier * dt, distance)
     let proposed = PartyMotion(radius: RobotModelGeometry.navigationRadius, obstacles: obstacles)
       .resolve(start: position, delta: movement)
     guard
