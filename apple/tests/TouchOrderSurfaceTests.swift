@@ -69,12 +69,16 @@ struct TouchOrderSurfaceTests {
     }
     let touch = SurfaceTouch(in: surface, at: start, time: 1)
     surface.touchesBegan([touch], with: nil)
-    try await Task.sleep(for: .milliseconds(400))
     let menu = try #require(
       surface.subviews.first { view in
         view.subviews.contains { ($0 as? UILabel)?.text == "Both" }
       })
-    #expect(!menu.isHidden)
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: .seconds(3))
+    while menu.isHidden && clock.now < deadline {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    try #require(!menu.isHidden, "the held capture must actually open its menu")
     #expect(surface.bounds.contains(menu.frame))
     let title: String =
       switch choice {
@@ -97,7 +101,8 @@ struct TouchOrderSurfaceTests {
       candidates.first { hypot($0.x - start.x, $0.y - start.y) >= OrderPress.centre })
     // No move callback: the UIKit release path must apply the final visible-item selection.
     touch.point = release
-    touch.time = 1.2
+    // Synthetic UIKit timestamps must describe a hold too: wall-clock waiting alone does not.
+    touch.time = 1.5
     surface.touchesEnded([touch], with: nil)
     let input = controls.sample(mode: .exploring)
     #expect(input.command == choice.command)
