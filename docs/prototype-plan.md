@@ -14,11 +14,19 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Build 40 TestFlight preview
+
+The maintainer requested **“Go ahead and check CI and any review feedback on PR #202, address anything outstanding, then merge PR #198 followed by PR #202 and deploy the updated build to my phone using TestFlight.”** (chat, 27 November 2026; no public permalink). This authorises the reviewed stagger release. The separate request for enemy/companion intelligence ideas remains research and design work, not additional gameplay in this build.
+
+Fresh Lauder-specific discovery checked the bundle-ID record, builds and accepted/processing uploads, selected unused **0.1.0 (40)** and retained the existing tester/group baseline. PR #198 merged as `4f0a780`. PR #202 preserves the validated `4e114bb` gameplay while adding the discovered build number and preparation documentation.
+
+**Preparation in progress:** final-package CI/review and the #202 merge remain pending. A fresh source-bound full check, signed archive/identity/dSYM verification, one API-authenticated upload, successful Apple processing, unchanged existing-tester access and exact testing-note readback follow before delivery is claimed. Build 39 remains delivered; earlier source/Simulator results below do not establish build 40 availability or physical acceptance.
+
 ## Leg-break stagger — in development
 
 After reporting basic build 39 phone success, the maintainer accepted the proposed short leg-break stagger, distinct mechanical sound/body reaction and fresh full warning with **“Ok proceed”** (chat, 27 November 2026; no public permalink). [Issue #199](https://github.com/RonildoBraga/lauder/issues/199) records the bounded assignment. The [robot contract](robot-eye-legs-grenades.md#leg-break-stagger-follow-up) owns timing, recovery, physical alignment and lifecycle rules. This changes no scene, asset model or input binding.
 
-Work is based on [PR #198](https://github.com/RonildoBraga/lauder/pull/198)’s documentation-only build 39 record, whose app/assets/tests/tooling match shipped main `2b35510`; that documentation PR remains separate and unmerged. The new implementation and sound are not included in build 39. This assignment authorises neither a new merge nor a TestFlight upload.
+Work is based on [PR #198](https://github.com/RonildoBraga/lauder/pull/198)’s documentation-only build 39 record, whose app/assets/tests/tooling match shipped main `2b35510`; that documentation PR subsequently merged as `4f0a780`. The new implementation and sound are not included in build 39. The initial implementation assignment did not authorise merge or upload; the later explicit [build 40 request](#build-40-testflight-preview) now authorises the focused release, whose verification remains pending.
 
 **Verified source: `4e114bb2171889bc4bec2394cf1b2e0fcae3636f`.** The full `./scripts/check` passes with Xcode 27.2 and an iPhone 17 / iOS 27 Simulator: **13 declaration contracts, 31 offline release contracts, 52 Blender tests, seventeen generated sound fingerprints**, strict Swift formatting, app build and hosted Swift Testing including **all fourteen headless routes**. Value and native-contact regressions cover admission, interrupted attacks, preserved recovery, normal pattern/reposition completion, fresh warnings, repeated breaks, resolved injuries, targeting, Pause/bypass/reset and physical alignment. Loaded-model regressions verify death preserves the current reaction height after zero, one, three and four leg losses.
 
