@@ -195,7 +195,10 @@ struct TouchParityInputTests {
 struct TouchParitySurfaceTests {
   @Test(arguments: [CGSize(width: 926, height: 428), CGSize(width: 874, height: 402)])
   func anInsetMountedSurfaceUsesTheFullWindowViewportForTargetTaps(size: CGSize) throws {
-    let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+    let scene = try #require(
+      UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    window.frame = CGRect(origin: .zero, size: size)
     // Keep this isolated window hidden: the fixture must not replace the app's key window.
     defer { withExtendedLifetime(window) {} }
     let container = UIView(
@@ -214,6 +217,7 @@ struct TouchParitySurfaceTests {
     #expect(tap.viewHeight == Float(window.bounds.height))
     #expect(tap.viewHeight != Float(surface.bounds.height))
     #expect(window.isHidden, "the fixture does not take over the active window")
+    #expect(!window.isKeyWindow)
   }
 
   @Test
