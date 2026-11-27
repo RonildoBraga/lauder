@@ -276,7 +276,7 @@ struct GuardRetaliationTests {
         fireHeld: leaderFire, firePressed: false, figures: figures, session: session,
         companionIntents: [
           .miki: .init(
-            lookAt: target, weapon: .longRifle,
+            lookAt: target, engaged: true, weapon: .longRifle,
             targetsBody: ordinaryCompanionFire,
             fire: ordinaryCompanionFire
               || (companionFire && point?.part == .eye),

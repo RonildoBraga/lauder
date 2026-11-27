@@ -27,6 +27,9 @@ struct CompanionTactics {
   struct Intent: Equatable, Sendable {
     var position: SIMD2<Float>? = nil
     var lookAt: SIMD2<Float>? = nil
+    /// Whether the plan takes part in the guard fight: the companion draws, aims at `lookAt`
+    /// and may fire. Only an engaged plan lets the pack's targets come first.
+    var engaged = false
     var weapon: Weapon.Kind? = nil
     var targetsBody = false
     /// A scout drone to shoot instead of the guard, chosen after planning (issue #201).
@@ -35,6 +38,37 @@ struct CompanionTactics {
     var crawler: String? = nil
     var fire = false
     var activity: Activity
+  }
+
+  /// A member of the guard's pack a companion could shoot ahead of the guard: a diving drone or
+  /// a crawler closing in, as EncounterSimulation finds them (issues #201, #208).
+  struct PackTarget: Equatable, Sendable {
+    enum Kind: Equatable, Sendable { case drone, crawler }
+
+    let kind: Kind
+    let id: String
+    let position: SIMD2<Float>
+    let weapon: Weapon.Kind
+  }
+
+  /// Under Attack, a companion whose plan engages the guard, and who is not seeking safety,
+  /// shoots the pack first: `target` gives a diving drone, or else a crawler closing in.
+  /// Movement and orders keep the plan's own, and `target` is only asked when it can matter.
+  static func preferringPack(
+    _ intent: Intent, stance: GameSession.CombatStance, target: () -> PackTarget?
+  ) -> Intent {
+    guard stance == .attack, intent.engaged, intent.activity != .avoiding, let target = target()
+    else { return intent }
+    var intent = intent
+    intent.lookAt = target.position
+    intent.weapon = target.weapon
+    switch target.kind {
+    case .drone: intent.drone = target.id
+    case .crawler: intent.crawler = target.id
+    }
+    intent.fire = true
+    intent.activity = .attacking
+    return intent
   }
 
   static let leaderLeash: Float = 8
@@ -167,7 +201,7 @@ struct CompanionTactics {
         < simd_distance_squared($1.ground, input.position)
     }
     var intent = Intent(
-      lookAt: point?.ground ?? input.guardPosition, weapon: assignment?.weapon,
+      lookAt: point?.ground ?? input.guardPosition, engaged: true, weapon: assignment?.weapon,
       activity: fallback)
     if case .holding = input.order {
       goal = nil
@@ -318,16 +352,16 @@ struct CompanionTactics {
       goal = input.position
       goalActivity = .attacking
       return Intent(
-        position: goal, lookAt: input.guardPosition, weapon: weapon, targetsBody: true,
-        fire: true, activity: .attacking)
+        position: goal, lookAt: input.guardPosition, engaged: true, weapon: weapon,
+        targetsBody: true, fire: true, activity: .attacking)
     }
     if sincePlan < Self.replanInterval {
       if let goal, available(goal), safe(goal) {
         if canFireAtBody(goal, weapon) {
           goalActivity = .approaching
           return Intent(
-            position: goal, lookAt: input.guardPosition, weapon: weapon, targetsBody: true,
-            activity: .approaching)
+            position: goal, lookAt: input.guardPosition, engaged: true, weapon: weapon,
+            targetsBody: true, activity: .approaching)
         }
         if goalActivity == .waiting { return Intent(position: goal, activity: .waiting) }
       } else if goal == nil, goalActivity == .waiting {
@@ -347,8 +381,8 @@ struct CompanionTactics {
     if let goal {
       goalActivity = .approaching
       return Intent(
-        position: goal, lookAt: input.guardPosition, weapon: weapon, targetsBody: true,
-        activity: .approaching)
+        position: goal, lookAt: input.guardPosition, engaged: true, weapon: weapon,
+        targetsBody: true, activity: .approaching)
     }
     // When no real firing lane is available, retain the existing nearby support behaviour.
     let support = ([input.position, input.baseTarget] + Self.near(input.baseTarget)).filter {
