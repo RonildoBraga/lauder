@@ -43,7 +43,7 @@ struct Level {
     let hiddenAt: SIMD2<Float>
     let standAt: SIMD2<Float>
     let hits: Int
-    var attack = Attack.shoot
+    let attack: Attack
     /// The introductory guard uses shared health and optional component bonuses.
     var strategicGuard = false
     /// The visible aim before each shot, long enough to take cover or answer.
@@ -53,8 +53,6 @@ struct Level {
     var range: Float = 0
     /// The first shot misses on purpose, so the opening teaches without punishing.
     var firstShotMisses = false
-    /// Shown after that deliberate miss: how to answer it.
-    var missLine: String?
 
     var isDrone: Bool {
       if case .drone = attack { return true }
@@ -78,14 +76,8 @@ struct Level {
     case say(speaker: String, line: String)
     /// A hostile starts to fight.
     case engage(String)
-    /// A member who has not joined yet appears where they wait.
-    case appear(PartyMember)
-    /// A member who lay hurt where they waited stands up.
-    case stand(PartyMember)
     /// A scripted shot by a member that takes this hostile down.
     case shot(by: PartyMember, at: String)
-    /// Two members turn to face each other.
-    case face(PartyMember, PartyMember)
     /// A conversation begins; what it settles takes effect when it ends.
     case talk(MissionScript.Conversation)
   }
@@ -107,9 +99,6 @@ struct Level {
     /// The party stands still while the cues play, as in a short scripted scene: whoever leads
     /// and the companions, so that only the cues place and turn anyone until it ends.
     var holdsParty = false
-    /// Where the camera leans while the cues play, so that what the scene is about comes into
-    /// view, as it leans towards a hostile in a fight.
-    var focus: SIMD2<Float>?
     /// The encounter waits until every companion is close to the leader, so a scene for the
     /// whole party never begins with someone holding elsewhere (ADR 0003, phase S3).
     var gathersParty = false
@@ -132,9 +121,6 @@ struct Level {
   let party: [PartyMember]
   /// Where each member's body starts, including members who join later.
   let spawns: [PartyMember: SIMD2<Float>]
-  /// Members who lie hurt where they wait, in view from the start, until a scene stands them
-  /// up. Others who have not joined stay hidden.
-  var lying: Set<PartyMember> = []
   /// The direction the party faces at the start.
   let heading: SIMD2<Float>
   /// From the camera's target to the camera.

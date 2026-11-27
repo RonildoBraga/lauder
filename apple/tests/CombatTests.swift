@@ -11,7 +11,7 @@ struct CombatTests {
   /// Generic human timing remains tested independently of the robot bridge content.
   private let rifle = Level.Hostile(
     id: "rifle-fixture", name: "Rifle", hiddenAt: [1.2, 5.2], standAt: [4.4, 3.6],
-    hits: 2, windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true)
+    hits: 2, attack: .shoot, windUp: 1.5, recovery: 1.4, range: 14, firstShotMisses: true)
 
   @Test
   func aLineIsBlockedOnlyByABoxItCrosses() {

@@ -106,12 +106,6 @@ enum Aim {
     return ShotPath(
       start: start, end: start + unit * reach, strike: block == nil ? .nothing : .scenery)
   }
-
-  /// What stops a shot fired at `height`: blocks that reach that height or rise above it, so a
-  /// shot flies over a low block.
-  static func blockers(_ boxes: [Level.Box], above height: Float) -> [PartyMotion.Box] {
-    boxes.filter { $0.position.y + $0.size.y / 2 >= height }.map(\.footprint)
-  }
 }
 
 /// Assisted aim: Fire picks the nearest hostile within range and in sight, preferring one ahead

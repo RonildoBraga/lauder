@@ -259,7 +259,7 @@ The supported path makes levels and models in Blender, exports each level's look
 
 ### Sounds
 
-The 17 combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 725 KB in all, stored with Git LFS. The original `guard-warning.wav` is a short two-note acquisition cue. The 0.42 s `guard-leg-break.wav` combines a dry joint crack, low clonk and brief metallic ring. Both are synthesised by the same script without voice recordings or third-party samples. After changing the script, run it from the repository root and commit the files it writes:
+The 16 combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 714 KB in all, stored with Git LFS. The original `guard-warning.wav` is a short two-note acquisition cue. The 0.42 s `guard-leg-break.wav` combines a dry joint crack, low clonk and brief metallic ring. Both are synthesised by the same script without voice recordings or third-party samples. After changing the script, run it from the repository root and commit the files it writes:
 
 ```sh
 python3 apple/scripts/make-sounds.py

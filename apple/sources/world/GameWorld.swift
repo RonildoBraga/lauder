@@ -103,8 +103,6 @@ final class GameWorld {
   @ObservationIgnored private var retreatRemaining: Float = 0
   @ObservationIgnored private var squadLeader: PartyMember
   @ObservationIgnored private var yaw: [PartyMember: Float] = [:]
-  /// Members lying hurt where they wait, until a scene stands them up (Laura, M4).
-  @ObservationIgnored private var lying: Set<PartyMember>
   /// Where each companion is heading in the latest step. Tests read it.
   @ObservationIgnored private(set) var companionTargets: [PartyMember: SIMD2<Float>] = [:]
   #if DEBUG
@@ -163,8 +161,6 @@ final class GameWorld {
   @ObservationIgnored private var retryElapsed: Float?
   static let retryFadeOut: Float = 0.6
   static let retryFadeIn: Float = 0.4
-  /// How far a lying stand-in sits below a standing one, so it rests on the deck.
-  static let lyingDrop: Float = -0.67
   /// How far ahead of the leader the D-pad marks its point, before a wall shortens it (ADR 0003).
   static let orderReach: Float = 6
   /// How far a marked point may move to reach somewhere a companion can stand.
@@ -246,7 +242,6 @@ final class GameWorld {
     motion = PartyMotion(radius: PartyBody.radius, obstacles: level.obstacles)
     grid = NavigationGrid(level: level)
     squadLeader = level.party[0]
-    lying = level.lying
     route = RouteMemory(start: level.spawn(level.party[0]))
     planner = SquadPlanner(heading: level.heading)
     motors = Self.freshMotors()
@@ -635,15 +630,13 @@ final class GameWorld {
   }
 
   /// Every body at its spawn point, facing the level's starting direction. Members who have
-  /// not joined yet stay out of the squad, and hidden unless they lie hurt where they wait. A
-  /// lying member lies across that direction, which the camera looks along, so the pose reads.
+  /// not joined yet stay out of the squad and hidden.
   private func placeParty() {
     let facing = Movement.yaw(towards: level.heading)
-    lying = level.lying
     for member in PartyMember.allCases {
       place(member, at: level.spawn(member))
-      setYaw(member, lying.contains(member) ? facing - .pi / 2 : facing)
-      bodies[member]?.isEnabled = session.party.contains(member) || lying.contains(member)
+      setYaw(member, facing)
+      bodies[member]?.isEnabled = session.party.contains(member)
     }
     showLeaderMarker()
   }
@@ -1439,15 +1432,9 @@ final class GameWorld {
       combatEvents.removeFirst(combatEvents.count - Self.keptEvents)
     }
     if let line = outcome.line { observation = line }
-    for member in outcome.appeared { appear(member) }
-    for member in outcome.stood {
-      lying.remove(member)
-      showPose(member)
-    }
     if let shooter = outcome.shooter {
       setYaw(shooter.member, Movement.yaw(towards: shooter.facing))
     }
-    if let (first, second) = outcome.face { faceEachOther(first, second) }
     let threat = fight.threat
     if self.threat != threat { self.threat = threat }
     if guardTarget != fight.guardTarget { guardTarget = fight.guardTarget }
@@ -1461,31 +1448,6 @@ final class GameWorld {
       clearDamageFeedback()
       retryElapsed = 0
     }
-  }
-
-  /// A member who has not joined appears where they wait, turned towards the nearest hostile
-  /// in the open, or else towards the leader.
-  private func appear(_ member: PartyMember) {
-    guard let body = bodies[member], let here = position(of: member) else { return }
-    body.isEnabled = true
-    let standing = fight.hostiles.values.filter { $0.isVisible && !$0.isDown }.map(\.position)
-    let focus =
-      standing.min { simd_distance_squared($0, here) < simd_distance_squared($1, here) }
-      ?? position(of: session.leader)
-    if let focus, simd_distance(focus, here) > 0.01 {
-      setYaw(member, Movement.yaw(towards: focus - here))
-    }
-  }
-
-  /// Two members turn to face each other, as before a conversation.
-  private func faceEachOther(_ first: PartyMember, _ second: PartyMember) {
-    guard first != second, let a = position(of: first), let b = position(of: second) else {
-      return
-    }
-    let offset = b - a
-    guard simd_length(offset) > 0.01 else { return }
-    setYaw(first, Movement.yaw(towards: offset))
-    setYaw(second, Movement.yaw(towards: -offset))
   }
 
   /// The encounter starts again after the leader's last allowed hit: the screen fades out,
@@ -1577,16 +1539,9 @@ final class GameWorld {
     showPose(member)
   }
 
-  /// A member's facing, whether they lie face down on the deck, and how they rock for a moment
-  /// after firing or being hit (ADR 0008).
+  /// A member's facing, and how they rock for a moment after firing or being hit (ADR 0008).
   private func showPose(_ member: PartyMember) {
     let facing = simd_quatf(angle: yaw[member] ?? 0, axis: [0, 1, 0])
-    if lying.contains(member) {
-      visuals[member]?.scale = [1, 1, 1]
-      visuals[member]?.orientation = facing * simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
-      visuals[member]?.position = [0, Self.lyingDrop, 0]
-      return
-    }
     if let roll, roll.member == member {
       let tumble = roll.pose(height: PartyBody.height)
       visuals[member]?.scale = tumble.scale
@@ -1618,9 +1573,7 @@ final class GameWorld {
   /// The leader's dodge roll begins, the way they move, or the way they face with no movement
   /// held. A scene that holds the party, a roll under way or its cooldown stops it.
   private func startRoll(_ leader: PartyMember, moving: SIMD2<Float>, held: Bool) {
-    guard !held, roll == nil, rollCooldown <= 0, session.party.contains(leader),
-      !lying.contains(leader)
-    else { return }
+    guard !held, roll == nil, rollCooldown <= 0, session.party.contains(leader) else { return }
     let way = simd_length_squared(moving) > 0.000001 ? moving : facing(of: leader)
     roll = DodgeRoll(member: leader, direction: way)
     facingGoal = nil

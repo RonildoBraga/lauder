@@ -79,21 +79,6 @@ struct WeaponHandlingTests {
     #expect(handling.isReady && handling.magazineRemaining == weapon.capacity - 1)
   }
 
-  @Test
-  func anEmptyClickConsumesNoMagazineRoundAndKeepsTheOrdinaryRateLimit() {
-    let weapon = Weapon.longRifle
-    var handling = WeaponHandling(weapon: weapon)
-    handling.draw()
-    handling.advance(dt: weapon.drawTime + 0.001)
-    handling.emptyClick()
-    #expect(!handling.isReady && handling.magazineRemaining == weapon.capacity)
-    #expect(handling.reloadRemaining == 0)
-    handling.advance(dt: weapon.interval - 0.001)
-    #expect(!handling.isReady)
-    handling.advance(dt: 0.002)
-    #expect(handling.isReady)
-  }
-
   /// The sword swings at its own pace and never runs out: it has no magazine (ADR 0021).
   @Test
   func theSwordSwingsWithoutAMagazine() {

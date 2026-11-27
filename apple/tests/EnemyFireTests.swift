@@ -95,7 +95,7 @@ struct EnemyFireTests {
   private func range(windUp: Float, firstMiss: Bool = false) -> Level {
     let rifle = Level.Hostile(
       id: "rifle", name: "Rifle", hiddenAt: .zero, standAt: .zero,
-      hits: 10, windUp: windUp, recovery: 2, range: 14, firstShotMisses: firstMiss)
+      hits: 10, attack: .shoot, windUp: windUp, recovery: 2, range: 14, firstShotMisses: firstMiss)
     return Level(
       id: "enemy-fire-range",
       ground: .box("floor", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [],

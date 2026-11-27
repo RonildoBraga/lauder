@@ -269,15 +269,6 @@ def strike_block(rng):
     return finish(mix((crack, 1.0), (grit, 0.6), (whine, 0.22)), drive=1.4, peak=0.7)
 
 
-def empty_click(rng):
-    """Fire with no rounds: two small metal clicks."""
-    length = samples(0.12)
-    first = shaped(high_pass(noise(rng, length), 4000), envelope(length, 0.0012, 0.0001))
-    second = shaped(high_pass(noise(rng, length), 4500), envelope(length, 0.001, 0.0001, 0.035))
-    ring = shaped(tone(length, 3100, 3100, 1), envelope(length, 0.008, 0.0005))
-    return finish(mix((first, 1.0), (second, 0.6), (ring, 0.3)), drive=1.2, peak=0.5)
-
-
 def guard_warning(rng):
     """A short two-note acquisition warning, distinct from a shot or an impact."""
     length = samples(0.36)
@@ -325,7 +316,6 @@ SOUNDS = {
     "rifle": rifle,
     "strike-body": strike_body,
     "strike-block": strike_block,
-    "empty-click": empty_click,
     "guard-warning": guard_warning,
     "guard-leg-break": guard_leg_break,
 }

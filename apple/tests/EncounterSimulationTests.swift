@@ -91,6 +91,7 @@ struct EncounterSimulationTests {
       hostiles ?? [
         Level.Hostile(
           id: "shooter", name: "Shooter", hiddenAt: [0, -4], standAt: [0, -4], hits: hits,
+          attack: .shoot,
           windUp: 1.5, recovery: 1.4, range: 14)
       ]
     let encounter = Level.Encounter(
