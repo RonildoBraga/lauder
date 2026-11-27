@@ -4,6 +4,8 @@
 
 **Date:** 26 November 2026
 
+**Damage revision, 27 November 2026:** The authorised [guard damage and feedback](../damage-feedback.md) revision retunes the weapon damage below and uses shared guard health with optional weak-point bonuses. The tables and consequences here retain PR #158's original starting values for comparison. The paired loadouts, controls, magazines, sword deflection and dome remain the basis of the implementation. [Explicit companion Attack/Defend](../companion-autonomy.md#attack-and-defend) supersedes the original leader-only firing consequence. Current source and verification belong to the [prototype plan](../prototype-plan.md#guard-damage-and-feedback--in-development).
+
 ## Assignment
 
 The maintainer asked for each character to carry two weapons and switch between them: **“Also I want to change enhance the character mechanics so Miki can switch between a long range rifle high damage and close range rifle that can shoot multiple bulets rapid but middle range. Laura will be using a shotgun and can switch between a Jedi sword. Tom will be able to project a shield to protect him and its companions and he switches between the shield and a heavy M134 Minigun”**.

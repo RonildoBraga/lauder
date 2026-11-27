@@ -13,6 +13,8 @@
 
 The maintainer then clarified that companion combat requires an explicit Attack order. Defend stops their attacks and makes them seek cover while returning toward the leader; it is the default stance. This gives the player control over when the trio commits to a fight without changing their identities or biographies. [Attack and Defend](../companion-autonomy.md#attack-and-defend) records the control contract.
 
+**Guard damage revision, 27 November 2026:** The maintainer asked for every successful hit to cause damage and approved the proposal with **“Proceed with your recommendations”** (chat; no public permalink). The [damage assignment](../damage-feedback.md) makes the first guard's three-part route an optional reward alongside useful ordinary attacks and shared enemy health. It supersedes the earlier mandatory all-three victory rule for this encounter; it does not settle biographies, further abilities, relationships or broader story-foundation questions. Source and playtest status remain owned by the [prototype plan](../prototype-plan.md#guard-damage-and-feedback--in-development).
+
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.

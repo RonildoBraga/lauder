@@ -1,5 +1,5 @@
-/// The first guard's three-character sequence. Contact geometry belongs to the encounter;
-/// this value accepts only the required character, weapon, part and opening.
+/// The first guard's health and optional dismantling opportunities. The encounter resolves
+/// actual contact; every damaging hit counts, while a matched exposed part rewards its weapon.
 struct GuardStrategy: Equatable, Sendable {
   enum Part: CaseIterable, Sendable {
     case sensor, coupling, reactor
@@ -9,22 +9,28 @@ struct GuardStrategy: Equatable, Sendable {
     case sensor, coupling, reactor, complete
   }
 
-  enum Result: Equatable, Sendable {
-    case blocked, progressed, damaged, defeated
+  struct Hit: Equatable, Sendable {
+    let amount: Int
+    let effectiveness: DamageHit.Effectiveness
+    let brokeComponent: Bool
+    let defeated: Bool
   }
 
   static let windowDuration: Float = 4
-  static let reactorDamageRequired = 12
+  static let maximumHealth = 1500
+  static let weakpointMultiplier = 3
 
+  private(set) var health = Self.maximumHealth
   private(set) var sensorDisabled = false
   private(set) var couplingBreached = false
+  /// Actual health lost to matched exposed-core contacts; this is not a defeat requirement.
   private(set) var reactorDamage = 0
   private(set) var windowRemaining: Float = 0
   private var wasRecovering = false
 
   /// Structural progress survives a closed window, retreat and a leader or weapon switch.
   var phase: Phase {
-    if reactorDamage == Self.reactorDamageRequired { return .complete }
+    if health == 0 { return .complete }
     if couplingBreached { return .reactor }
     return sensorDisabled ? .coupling : .sensor
   }
@@ -52,32 +58,45 @@ struct GuardStrategy: Equatable, Sendable {
     }
   }
 
-  /// The adapter has already resolved an actual unobstructed contact on this part. Damage
-  /// counts contacts, not a weapon's generic damage bonus, so every role remains necessary.
+  /// The adapter has resolved a real unobstructed enemy contact. Closed or unmatched parts
+  /// still take ordinary damage. Only the exposed weapon match earns the bonus and progress.
   mutating func accept(
-    member: PartyMember, weapon: Weapon.Kind, part: Part, recovering: Bool
-  ) -> Result {
-    guard isExposed(part, recovering: recovering) else { return .blocked }
-    switch part {
-    case .sensor:
-      guard member == .miki, weapon == .longRifle else { return .blocked }
-      sensorDisabled = true
-      return .progressed
-    case .coupling:
-      guard member == .laura, weapon == .energySword else { return .blocked }
-      couplingBreached = true
-      // Breaching late in recovery still gives the player the complete independent window.
-      wasRecovering = recovering
-      if recovering { windowRemaining = Self.windowDuration }
-      return .progressed
-    case .reactor:
-      guard member == .tom, weapon == .minigun else { return .blocked }
-      reactorDamage += 1
-      if reactorDamage == Self.reactorDamageRequired {
-        windowRemaining = 0
-        return .defeated
+    weapon: Weapon.Kind, part: Part?, damage: Int, recovering: Bool
+  ) -> Hit? {
+    guard damage > 0, health > 0 else { return nil }
+    let matched =
+      part.map { part in
+        guard isExposed(part, recovering: recovering) else { return false }
+        switch (weapon, part) {
+        case (.longRifle, .sensor), (.energySword, .coupling), (.minigun, .reactor): return true
+        default: return false
+        }
+      } ?? false
+    // Bound before multiplying, so even an oversized external contact cannot overflow.
+    let base = min(damage, health)
+    let amount = matched ? min(health, base * Self.weakpointMultiplier) : base
+    health -= amount
+    var brokeComponent = false
+    if matched {
+      switch part {
+      case .sensor:
+        sensorDisabled = true
+        brokeComponent = true
+      case .coupling:
+        couplingBreached = true
+        brokeComponent = true
+        // Breaching late in recovery still supplies a complete independent bonus window.
+        wasRecovering = recovering
+        if recovering { windowRemaining = Self.windowDuration }
+      case .reactor:
+        reactorDamage += amount
+      case nil:
+        break
       }
-      return .damaged
     }
+    if health == 0 { windowRemaining = 0 }
+    return Hit(
+      amount: amount, effectiveness: matched ? .weakpoint : .normal,
+      brokeComponent: brokeComponent, defeated: health == 0)
   }
 }

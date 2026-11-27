@@ -8,6 +8,9 @@ struct Ballistics {
     let centre: SIMD3<Float>
     var halfHeight: Float = 0.6
     var radius: Float = Aim.bodyRadius
+    /// Surface components cannot award a hit when the ray starts inside their generous
+    /// targeting volume. Body cylinders retain their ordinary overlap semantics.
+    var acceptsInteriorHits = true
   }
 
   struct Trace {
@@ -132,6 +135,7 @@ struct Ballistics {
     }
     let bottom = target.centre.y - target.halfHeight
     let top = target.centre.y + target.halfHeight
+    if !target.acceptsInteriorHits, c <= 0, start.y >= bottom, start.y <= top { return nil }
     if abs(delta.y) < 0.000001 {
       guard start.y >= bottom, start.y <= top else { return nil }
     } else {

@@ -9,10 +9,10 @@ struct CompanionEngagementTests {
     case missingGuardComponent
   }
 
-  /// A real, protected sword contact is still the player's attack. Before that contact,
+  /// A real, unmatched sword contact is still the player's attack. Before that contact,
   /// explicit stale AI fire intents must not turn the quiet approach into a fight.
   @Test
-  func protectedPlayerSwordContactActivatesCompanionsOutsideTheDetectionCone() throws {
+  func ordinaryPlayerSwordContactActivatesCompanionsOutsideTheDetectionCone() throws {
     let angle: Float = 53 * .pi / 180
     let initialLeader = SIMD2<Float>(-sin(angle), cos(angle)) * 2.3
     let hostile = Level.Hostile(
@@ -83,10 +83,18 @@ struct CompanionEngagementTests {
     #expect(fight.hostiles["guard"]?.robot?.phase == .patrol)
     _ = fight.takeEvents()
 
+    let beforeHealth = try #require(fight.guardStrategies["guard"]?.health)
     let contactPosition = try step(attack: true)
     let events = fight.takeEvents()
     #expect(events.contains { if case .fired(.energySword, _, true) = $0 { true } else { false } })
-    #expect(events.contains { if case .struckBlock = $0 { true } else { false } })
+    #expect(events.contains { if case .struckBody = $0 { true } else { false } })
+    let hits = events.compactMap { event -> DamageHit? in
+      if case .damaged(let hit) = event { hit } else { nil }
+    }
+    let hit = try #require(hits.count == 1 ? hits.first : nil)
+    #expect(hit.target == "guard" && hit.attacker == .laura && hit.weapon == .energySword)
+    #expect(hit.effectiveness == .normal && hit.amount == Weapon.energySword.damage)
+    #expect(fight.guardStrategies["guard"]?.health == beforeHealth - hit.amount)
     #expect(fight.guardStrategies["guard"]?.sensorDisabled == false)
     #expect(fight.companionGuard(near: contactPosition) != nil)
     #expect(fight.hostiles["guard"]?.robot?.phase == .patrol)

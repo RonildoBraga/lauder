@@ -14,6 +14,13 @@ final class EncounterStage {
   private var hostileWeaponProps: [String: Entity] = [:]
   private var robots: [String: RobotPresentation] = [:]
   private var componentMarkers: [String: [ModelEntity]] = [:]
+  private enum ComponentLook: Equatable {
+    case closed
+    case exposed(PartyMember)
+  }
+  private var componentLooks: [String: [ComponentLook?]] = [:]
+  private let closedComponentMaterial = UnlitMaterial(color: .darkGray)
+  private let exposedComponentMaterials: [PartyMember: UnlitMaterial]
   private let targetMarker: Entity
   /// The red ring round the locked hostile (ADR 0020).
   private let lockMarker: Entity
@@ -22,6 +29,10 @@ final class EncounterStage {
   private let robotLockScale: Float
 
   init(level: Level, style: SceneStyle) {
+    exposedComponentMaterials = Dictionary(
+      uniqueKeysWithValues: PartyMember.allCases.map {
+        ($0, UnlitMaterial(color: SceneStyle.colour(of: $0)))
+      })
     let shots = Entity()
     shots.name = "combat.shots"
     effects = ShotEffects(style: style, in: shots)
@@ -64,6 +75,7 @@ final class EncounterStage {
       bodies[spec.id] = body
       visuals[spec.id] = visual
       if spec.strategicGuard {
+        componentLooks[spec.id] = [nil, nil]
         componentMarkers[spec.id] = (0..<2).map { index in
           let marker = ModelEntity(
             mesh: .generateSphere(radius: 1), materials: [style.ink])
@@ -103,6 +115,13 @@ final class EncounterStage {
     show(fight, dt: dt)
   }
 
+  /// Resolved damage shares the world's one drained event batch with sound and HUD numbers.
+  func showDamage(_ hits: [DamageHit]) {
+    for hit in hits { effects.showDamage(hit) }
+  }
+
+  func clearDamage() { effects.clearDamage() }
+
   private func show(_ fight: EncounterSimulation, dt: Float) {
     for (id, state) in fight.hostiles {
       let points = fight.weakpoints(for: id)
@@ -118,9 +137,15 @@ final class EncounterStage {
           case .coupling: .laura
           case .reactor: .tom
           }
-        let material = UnlitMaterial(
-          color: point.exposed ? SceneStyle.colour(of: member) : .darkGray)
-        marker.model?.materials = [material]
+        let look: ComponentLook = point.exposed ? .exposed(member) : .closed
+        if componentLooks[id]?[index] != look {
+          let material =
+            point.exposed
+            ? exposedComponentMaterials[member] ?? closedComponentMaterial
+            : closedComponentMaterial
+          marker.model?.materials = [material]
+          componentLooks[id]?[index] = look
+        }
       }
       if let body = bodies[id] {
         body.isEnabled = state.isVisible

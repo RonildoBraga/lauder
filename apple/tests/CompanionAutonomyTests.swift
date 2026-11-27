@@ -61,6 +61,7 @@ struct CompanionAutonomyTests {
       let summary = try #require(defence.summary)
       try #require(summary.passed, "\(summary.failures)")
       #expect(world.session.leader == .miki && !world.isRetrying)
+      #expect(world.playtestSnapshot.guardStrategy?.health == stopped.guardStrategy?.health)
       #expect(
         world.playtestSnapshot.guardStrategy?.reactorDamage == stopped.guardStrategy?.reactorDamage)
       for member in [PartyMember.laura, .tom] {
@@ -90,14 +91,13 @@ struct CompanionAutonomyTests {
     }
 
     @Test
-    func mikiCanKeepLeadingWhileLauraAndTomCompleteTheirOwnSteps() throws {
+    func mikiCanKeepLeadingWhileBothCompanionsContributeNativeDamage() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
       attack(world)
       var runner = PlaytestRunner(steps: [.companionFight], name: "companion-contract")
       _ = world.takeCombatEvents()
-      var lauraSwings = 0
-      var tomRounds = 0
+      var damage: [PartyMember: Int] = [:]
       let lauraStart = position(world, .laura)
       var lauraTravel: Float = 0
       for _ in 0..<(60 * 92) where !runner.isFinished {
@@ -111,13 +111,12 @@ struct CompanionAutonomyTests {
         update(world, raw: raw)
         let after = world.playtestSnapshot
         #expect(after.leader == .miki)
-        // One presented update can contain two native steps. Observe actual discharges,
-        // not a short-lived planning label that may already have advanced to the next role.
+        // One presented update can contain two native steps. Resolved damage retains actual
+        // actor evidence; a brief planning label or an unlanded discharge cannot supply it.
         for event in world.takeCombatEvents() {
-          switch event {
-          case .fired(.energySword, _, false): lauraSwings += 1
-          case .fired(.minigun, _, false): tomRounds += 1
-          default: break
+          if case .damaged(let hit) = event {
+            #expect(hit.amount > 0)
+            damage[hit.attacker, default: 0] += hit.amount
           }
         }
         lauraTravel = max(lauraTravel, simd_distance(position(world, .laura), lauraStart))
@@ -129,14 +128,15 @@ struct CompanionAutonomyTests {
       let summary = try #require(runner.summary)
       #expect(summary.passed, "\(summary.failures)")
       #expect(world.session.defeated == ["stranger"] && world.session.leader == .miki)
-      #expect(lauraSwings > 0)
-      #expect(tomRounds >= GuardStrategy.reactorDamageRequired)
+      #expect(damage[.miki, default: 0] > 0)
+      #expect(damage[.laura, default: 0] > 0 && damage[.tom, default: 0] > 0)
+      #expect(damage.values.reduce(0, +) == GuardStrategy.maximumHealth)
       #expect(lauraTravel > 1)
       #expect(world.playtestSnapshot.guardStrategy?.phase == .complete)
     }
 
     @Test
-    func autonomousMikiAndLauraCanPrepareTheCoreWhileTomKeepsPlayerControl() throws {
+    func autonomousMikiAndLauraCanDealDamageWhileTomKeepsPlayerControl() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       update(world)
       update(world, raw: InputRules.Raw(controllerSwitch: true))
@@ -144,18 +144,15 @@ struct CompanionAutonomyTests {
       try #require(world.session.leader == .tom)
       attack(world)
       _ = world.takeCombatEvents()
-      var mikiRounds = 0
-      var lauraSwings = 0
-      func observeDischarges() {
-        // A presented update can contain two native steps, so a successful attack's
-        // planning label can already be gone. Discharges retain the actual weapon/authority.
+      var damage: [PartyMember: Int] = [:]
+      func observeDamage() {
         for event in world.takeCombatEvents() {
-          guard case .fired(let weapon, _, let byLeader) = event else { continue }
-          #expect(!byLeader, "the player-controlled Tom must not supply either prerequisite")
-          switch weapon {
-          case .longRifle: mikiRounds += 1
-          case .energySword: lauraSwings += 1
-          default: break
+          if case .fired(_, _, let byLeader) = event {
+            #expect(!byLeader, "the player-controlled Tom must not fire without player input")
+          }
+          if case .damaged(let hit) = event {
+            #expect(hit.amount > 0 && hit.attacker != .tom)
+            damage[hit.attacker, default: 0] += hit.amount
           }
         }
       }
@@ -168,7 +165,7 @@ struct CompanionAutonomyTests {
             raw: InputRules.Raw(
               stick: Movement.stick(
                 towards: offset, cameraOffset: world.level.cameraOffset)))
-          observeDischarges()
+          observeDamage()
           try #require(!world.isRetrying, "the ordinary approach retried")
           #expect(world.session.leader == .tom)
         }
@@ -178,7 +175,7 @@ struct CompanionAutonomyTests {
       var releaseDodge = false
       for frame in 0..<60 * 60 {
         let snapshot = world.playtestSnapshot
-        if snapshot.guardStrategy?.couplingBreached == true { break }
+        if damage[.miki, default: 0] > 0 && damage[.laura, default: 0] > 0 { break }
         let centre = try #require(snapshot.robotPosition)
         let facing = try #require(snapshot.robotFacing)
         let at = position(world, .tom)
@@ -206,16 +203,16 @@ struct CompanionAutonomyTests {
         // No player Fire, aim assistance, weapon swap or subsequent leader switch supplies
         // either prerequisite. These inputs only position/defend the player-controlled Tom.
         update(world, raw: raw)
-        observeDischarges()
+        observeDamage()
         try #require(!world.isRetrying, "the autonomous prerequisite fight retried")
         #expect(world.session.leader == .tom)
       }
       let result = world.playtestSnapshot
-      #expect(result.guardStrategy?.sensorDisabled == true)
-      #expect(result.guardStrategy?.couplingBreached == true)
-      #expect(result.guardStrategy?.phase == .reactor)
-      #expect(mikiRounds > 0 && lauraSwings > 0)
-      #expect(result.guardStrategy?.reactorDamage == 0 && world.session.defeated.isEmpty)
+      #expect(damage[.miki, default: 0] > 0 && damage[.laura, default: 0] > 0)
+      #expect(
+        damage.values.reduce(0, +)
+          == GuardStrategy.maximumHealth - (try #require(result.guardStrategy?.health)))
+      #expect(damage[.tom, default: 0] == 0)
       #expect(result.weapon.kind == .minigun && result.weapon.loaded == Weapon.minigun.capacity)
     }
 
@@ -338,6 +335,33 @@ struct CompanionAutonomyTests {
     }
   #endif
 
+  @Test(arguments: [PartyMember.tom, .laura])
+  func ordinaryCompanionHitsDamageTheGuardWithoutUnlockingItsParts(member: PartyMember) throws {
+    let range = try NativeRange()
+    _ = range.fight.takeEvents()
+    let before = range.strategy.health
+    var hits: [DamageHit] = []
+    for _ in 0..<120 * 2 {
+      range.stepBody(member: member)
+      for event in range.fight.takeEvents() {
+        if case .damaged(let hit) = event { hits.append(hit) }
+      }
+    }
+    #expect(!hits.isEmpty)
+    #expect(
+      hits.allSatisfy { $0.attacker == member && $0.effectiveness == .normal && $0.amount > 0 })
+    #expect(hits.reduce(0) { $0 + $1.amount } == before - range.strategy.health)
+    #expect(range.strategy.health < before)
+    #expect(!range.strategy.sensorDisabled && !range.strategy.couplingBreached)
+    #expect(range.strategy.reactorDamage == 0 && range.session.leader == .miki)
+    let loaded = range.fight.status(for: member).loaded
+    let stoppedHealth = range.strategy.health
+    range.session.setCombatStance(.defend)
+    for _ in 0..<120 { range.stepBody(member: member) }
+    #expect(range.strategy.health == stoppedHealth)
+    #expect(range.fight.status(for: member).loaded == loaded)
+  }
+
   @Test
   func defendRejectsStaleNativeCompanionFireUntilAttackIsExplicitlyRestored() throws {
     let range = try NativeRange()
@@ -350,6 +374,7 @@ struct CompanionAutonomyTests {
       #expect(!range.fight.shots.contains { $0.actor == .tom })
     }
     #expect(range.strategy.reactorDamage == before.reactorDamage)
+    #expect(range.strategy.health == before.health)
     #expect(range.fight.status(for: .tom).loaded == loaded)
     range.session.setCombatStance(.attack)
     #expect(try #require(range.firstTomShot()).actor == .tom)
@@ -398,7 +423,7 @@ struct CompanionAutonomyTests {
       #expect(!range.fight.shots.contains { $0.actor == .tom })
     }
     #expect(range.fight.status(for: .tom).loaded == loaded)
-    #expect(range.strategy.reactorDamage < GuardStrategy.reactorDamageRequired)
+    #expect(range.strategy.health > 0)
   }
 
   @Test
@@ -498,6 +523,17 @@ struct CompanionAutonomyTests {
             lookAt: point.ground, weapon: .minigun, fire: true, activity: .attacking)
         ],
         facingAway: facingAway)
+    }
+
+    func stepBody(member: PartyMember) {
+      guard let robot = fight.hostiles["guard"]?.robot else { return }
+      figures[.tom] = robot.position + [6, 0]
+      figures[.laura] = robot.position + [-6, 0]
+      step(intents: [
+        member: CompanionTactics.Intent(
+          lookAt: robot.position, weapon: member == .tom ? .minigun : .shotgun,
+          targetsBody: true, fire: true, activity: .attacking)
+      ])
     }
 
     private func step(

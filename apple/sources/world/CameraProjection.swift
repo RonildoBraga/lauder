@@ -77,12 +77,25 @@ struct CameraProjection {
   /// Where a point on the ground shows on the screen, from 0 to 1 across and down; nil when it
   /// is behind the camera.
   func screen(ofGround point: SIMD2<Float>) -> SIMD2<Float>? {
+    screen(ofWorld: [point.x, 0, point.y])
+  }
+
+  /// A real three-dimensional impact in the same full viewport as the scene. Offscreen
+  /// coordinates stay offscreen; callers decide whether to display them.
+  func screen(ofWorld point: SIMD3<Float>) -> SIMD2<Float>? {
+    guard point.indices.allSatisfy({ point[$0].isFinite }),
+      eye.indices.allSatisfy({ eye[$0].isFinite }),
+      target.indices.allSatisfy({ target[$0].isFinite }),
+      fieldOfView.isFinite, fieldOfView > 0, fieldOfView < 180,
+      aspect.isFinite, aspect > 0
+    else { return nil }
     let (forward, right, up) = axes
-    let offset = SIMD3(point.x, 0, point.y) - eye
+    let offset = point - eye
     let depth = simd_dot(offset, forward)
-    guard depth > 0.0001, aspect > 0 else { return nil }
+    guard depth.isFinite, depth > 0.0001 else { return nil }
     let across = simd_dot(offset, right) / depth / (halfHeight * aspect)
     let upwards = simd_dot(offset, up) / depth / halfHeight
+    guard across.isFinite, upwards.isFinite else { return nil }
     return SIMD2((across + 1) / 2, (1 - upwards) / 2)
   }
 }

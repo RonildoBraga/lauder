@@ -62,8 +62,8 @@ struct PairedWeaponTests {
   // MARK: - Miki
 
   @Test
-  func theLongRifleDealsThreeHitsAShot() throws {
-    let level = range(hits: 3)
+  func theLongRifleDealsItsConfiguredDamagePerShot() throws {
+    let level = range(hits: Weapon.longRifle.damage)
     let session = GameSession(level: level)
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
@@ -166,13 +166,13 @@ struct PairedWeaponTests {
 
   // MARK: - Laura
 
-  /// A swing strikes the hostile within reach in front of her for three hits, and not one
-  /// behind her.
+  /// A swing strikes the actual body within reach in front of her, while an equally close
+  /// body behind her remains unharmed. The leg/navigation envelope alone is not a contact.
   @Test
   func theSwordStrikesInFrontWithinReach() throws {
     let spawns: [PartyMember: SIMD2<Float>] = [.laura: [0, 2], .miki: [-6, 6], .tom: [6, 6]]
-    let ahead = robot("ahead", at: [0, -1.6])
-    let behind = robot("behind", at: [0, 5.6])
+    let ahead = robot("ahead", at: [0, -0.6], hits: Weapon.energySword.damage)
+    let behind = robot("behind", at: [0, 4.6], hits: Weapon.energySword.damage)
     let level = range(hostiles: [ahead, behind], spawns: spawns)
     let session = GameSession(level: level)
     session.cycleLeader()
@@ -180,11 +180,27 @@ struct PairedWeaponTests {
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     fight.swapWeapon(for: .laura)
-    for frame in 0..<120 where !session.defeated.contains("ahead") {
+    for target in [ahead, behind] {
+      let gap = simd_distance(level.spawn(.laura), target.standAt)
+      #expect(gap > RobotModelGeometry.bodyRadius + PartyBody.radius)
+      #expect(gap < Weapon.energySword.range + RobotModelGeometry.bodyRadius)
+    }
+    var hits: [DamageHit] = []
+    var swings = 0
+    for frame in 0..<120 where swings == 0 {
       step(
         fight, session: session, level: level, fire: true, pressed: frame == 0, facing: [0, -1])
+      for event in fight.takeEvents() {
+        if case .fired(.energySword, _, true) = event { swings += 1 }
+        if case .damaged(let hit) = event { hits.append(hit) }
+      }
     }
-    #expect(session.defeated == ["ahead"], "one swing, three hits, and only in front")
+    #expect(swings == 1)
+    #expect(session.defeated == ["ahead"], "one genuine in-range swing hits only the front body")
+    #expect(hits.count == 1)
+    #expect(hits.first?.target == "ahead" && hits.first?.amount == Weapon.energySword.damage)
+    #expect(hits.first?.attacker == .laura && hits.first?.effectiveness == .normal)
+    #expect(session.remainingHealth(of: "behind", toughness: behind.hits) == behind.hits)
     #expect(fight.status(for: .laura).loaded == Weapon.energySword.capacity)
   }
 

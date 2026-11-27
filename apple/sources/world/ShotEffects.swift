@@ -21,6 +21,8 @@ final class ShotEffects {
   static let flashTime: Float = 0.06
   static let chipTime: Float = 0.4
   static let markTime: Float = 4
+  static let effectiveFlashTime: Float = 0.09
+  static let effectiveFlashInterval: Float = 0.12
   /// How many chips each strike on a block flings.
   static let chipsPerStrike = 4
 
@@ -62,6 +64,9 @@ final class ShotEffects {
   private var chips: [Chip]
   private var markPool: Pool
   private var markRemaining: [Float]
+  private var effectivePool: Pool
+  private var effectiveRemaining: [Float]
+  private var sinceEffective: Float = .infinity
   private let thickness: [Side: Float]
   private let flashSize: Float
   private let chipSize: Float
@@ -101,6 +106,8 @@ final class ShotEffects {
     chips = Array(repeating: Chip(), count: 24)
     markPool = Pool(12) { block("shot.mark", style.ink) }
     markRemaining = Array(repeating: 0, count: 12)
+    effectivePool = Pool(4) { block("shot.effective", UnlitMaterial(color: .white)) }
+    effectiveRemaining = Array(repeating: 0, count: 4)
     let markSize = 0.12 * scale
     for mark in markPool.entities { mark.scale = [markSize, markSize, 0.01] }
   }
@@ -124,6 +131,31 @@ final class ShotEffects {
       from = [muzzle.x, trace.start.y + span.y / across * distance, muzzle.y]
     }
     show(from: from, to: trace.end, strike: trace.strike, side: side, atMuzzle: muzzle != nil)
+  }
+
+  /// A small bright accent for an accepted effective hit. Rapid fire cannot fill the scene
+  /// with glints; component breaks may still accent their single decisive contact.
+  func showDamage(_ hit: DamageHit) {
+    guard hit.amount > 0, hit.effectiveness == .weakpoint || hit.brokeComponent,
+      hit.position.indices.allSatisfy({ hit.position[$0].isFinite }),
+      hit.brokeComponent || sinceEffective >= Self.effectiveFlashInterval
+    else { return }
+    sinceEffective = 0
+    let index = effectivePool.take()
+    effectiveRemaining[index] = Self.effectiveFlashTime
+    let entity = effectivePool.entities[index]
+    let size = flashSize * (hit.brokeComponent ? 2.3 : 1.9)
+    entity.position = hit.position
+    entity.scale = [size, size, size]
+    entity.orientation = simd_quatf(angle: .pi / 4, axis: simd_normalize([1, 1, 0]))
+    entity.isEnabled = true
+  }
+
+  /// Lifecycle cancellation affects resolved-hit accents without replaying or changing shots.
+  func clearDamage() {
+    effectiveRemaining = effectiveRemaining.map { _ in 0 }
+    sinceEffective = .infinity
+    for entity in effectivePool.entities { entity.isEnabled = false }
   }
 
   private func show(
@@ -154,6 +186,11 @@ final class ShotEffects {
 
   /// One frame: streaks fly on, flashes go out, chips fall and marks fade from sight.
   func update(dt: Float) {
+    sinceEffective += dt
+    for index in effectiveRemaining.indices where effectiveRemaining[index] > 0 {
+      effectiveRemaining[index] -= dt
+      if effectiveRemaining[index] <= 0 { effectivePool.entities[index].isEnabled = false }
+    }
     for side in [Side.party, .hostile] {
       guard let pool = streakPools[side], var list = streaks[side] else { continue }
       for index in list.indices where list[index].active {
@@ -207,6 +244,7 @@ final class ShotEffects {
     chips = chips.map { _ in Chip() }
     markRemaining = markRemaining.map { _ in 0 }
     for entity in chipPool.entities + markPool.entities { entity.isEnabled = false }
+    clearDamage()
   }
 
   /// A streak's block from its tail to its head, both on the shot's path.

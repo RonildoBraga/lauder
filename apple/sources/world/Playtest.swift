@@ -8,6 +8,19 @@
   /// input rules and the real frame timing are all exercised. The runner records every
   /// simulated frame and writes a trace and a summary into the app's Documents/playtest folder.
   struct PlaytestRunner {
+    struct DamageTally: Codable, Sendable {
+      var normal = 0
+      var weakpoint = 0
+      var hits = 0
+      var byMember: [String: Int] = [:]
+
+      mutating func record(_ hit: DamageHit) {
+        if hit.effectiveness == .normal { normal += hit.amount } else { weakpoint += hit.amount }
+        hits += 1
+        byMember[hit.attacker.rawValue, default: 0] += hit.amount
+      }
+    }
+
     enum Step {
       case walk(SIMD2<Float>)
       case wait(seconds: Float)
@@ -38,6 +51,7 @@
       case expectRobotShots(atLeast: Int)
       /// Dodge the observed commitment through the ordinary roll input.
       case dodgeGuard
+      case expectDamageFeedback
       /// A press of the right stick, which locks the aim on a hostile (ADR 0020).
       case lock
       /// Whether a lock holds.
@@ -95,6 +109,8 @@
       var partyHits: [PartyMember: Int] = [:]
       var companionTargets: [PartyMember: SIMD2<Float>] = [:]
       var coveredMembers: Set<PartyMember> = []
+      var damage = DamageTally()
+      var damageLabelCount = 0
     }
 
     struct Frame {
@@ -123,6 +139,8 @@
         var companionTargets: [String: [Float]]? = nil
         var coveredMembers: [String]? = nil
         var longestCoverHoldSeconds: Float? = nil
+        var health: Int? = nil
+        var damage: DamageTally? = nil
       }
       struct Timing: Codable, Sendable {
         let mean: Double
@@ -150,6 +168,8 @@
       var peakPartyHits: [String: Int] = [:]
       /// Rising retry transitions, rather than the number of frames spent fading/retrying.
       var retryCount = 0
+      var damage = DamageTally()
+      var maximumDamageLabels = 0
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -177,6 +197,9 @@
     private var defendBaseline: GuardStrategy?
     private var defendLoaded: [PartyMember: Int] = [:]
     private var defendDistances: [PartyMember: Float] = [:]
+    private var defendClosestDistances: [PartyMember: Float] = [:]
+    private var defendApproach: [PartyMember: Float] = [:]
+    private var defendPreviousPositions: [PartyMember: SIMD2<Float>] = [:]
     private var retaliationMember: PartyMember?
     private var retaliationPoint: SIMD2<Float>?
     private var retaliationDodged = false
@@ -186,6 +209,8 @@
     private var peakPartyHits: [PartyMember: Int] = [:]
     private var retryCount = 0
     private var wasRetrying = false
+    private var observedDamage = DamageTally()
+    private var maximumDamageLabels = 0
     private var startedAt: Date?
     private var marks: [Summary.Mark] = []
     private var failures: [String] = []
@@ -231,6 +256,8 @@
     /// clears exactly as it does for a player.
     mutating func input(_ snapshot: Snapshot) -> InputRules.Raw {
       guard summary == nil else { return InputRules.Raw() }
+      observedDamage = snapshot.damage
+      maximumDamageLabels = max(maximumDamageLabels, snapshot.damageLabelCount)
       for (member, hits) in snapshot.partyHits {
         peakPartyHits[member] = max(peakPartyHits[member, default: 0], hits)
       }
@@ -262,7 +289,8 @@
               windowRemaining: snapshot.guardStrategy?.windowRemaining,
               combatStance: String(describing: snapshot.combatStance),
               guardTarget: snapshot.guardTarget?.rawValue,
-              committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] }))
+              committedPoint: snapshot.robotCommittedPoint.map { [$0.x, $0.y] },
+              health: snapshot.guardStrategy?.health, damage: snapshot.damage))
           announce(label)
           advance()
         case .act:
@@ -423,6 +451,11 @@
             InputRules.Raw(
               stick: Movement.stick(towards: escape, cameraOffset: snapshot.level.cameraOffset),
               controllerDodge: true))
+        case .expectDamageFeedback:
+          expect(
+            snapshot.damage.normal > 0 && snapshot.damage.weakpoint > 0
+              && maximumDamageLabels > 0 && maximumDamageLabels <= DamageFeedback.maximumLabels,
+            "ordinary and matched damage with bounded numbers were not observed")
         case .talk:
           if snapshot.mode == .dialogue { talking = true }
           if talking, snapshot.mode == .exploring {
@@ -658,7 +691,8 @@
               ($0.key.rawValue, [$0.value.x, $0.value.y])
             }),
           coveredMembers: snapshot.coveredMembers.map(\.rawValue).sorted(),
-          longestCoverHoldSeconds: longestCoverHoldSeconds))
+          longestCoverHoldSeconds: longestCoverHoldSeconds,
+          health: snapshot.guardStrategy?.health, damage: snapshot.damage))
       announce(label)
     }
 
@@ -784,9 +818,23 @@
           uniqueKeysWithValues: snapshot.positions.compactMap {
             $0.key == snapshot.leader ? nil : ($0.key, simd_distance($0.value, leader))
           })
+        defendClosestDistances = defendDistances
+        defendPreviousPositions = snapshot.positions
       }
+      for member in defendDistances.keys {
+        guard let position = snapshot.positions[member],
+          let previous = defendPreviousPositions[member]
+        else { continue }
+        let gap = simd_distance(position, leader)
+        defendClosestDistances[member] = min(defendClosestDistances[member] ?? gap, gap)
+        // Compare both follower positions against this frame's leader. A leader moving
+        // towards a stationary follower cannot supply the companion's return evidence.
+        defendApproach[member, default: 0] += max(0, simd_distance(previous, leader) - gap)
+      }
+      defendPreviousPositions = snapshot.positions
       let stopped =
-        current.sensorDisabled == defendBaseline?.sensorDisabled
+        current.health == defendBaseline?.health
+        && current.sensorDisabled == defendBaseline?.sensorDisabled
         && current.couplingBreached == defendBaseline?.couplingBreached
         && current.reactorDamage == defendBaseline?.reactorDamage
       let spent = snapshot.partyWeapons.contains { member, state in
@@ -803,7 +851,12 @@
         let returned =
           distant.isEmpty
           || distant.contains { member, gap in
-            snapshot.positions[member].map { simd_distance($0, leader) < gap - 0.5 } == true
+            guard snapshot.positions[member] != nil,
+              defendApproach[member, default: 0] >= 0.5,
+              let closest = defendClosestDistances[member]
+            else { return false }
+            // The ordinary late roll can widen the final gap after a successful return.
+            return closest < gap - 0.5 || closest <= 2.6
           }
         if !returned {
           failures.append("Defend did not bring a distant companion toward the leader")
@@ -852,7 +905,8 @@
         defendLoaded = snapshot.partyWeapons.mapValues(\.loaded)
       }
       let progressed =
-        strategy.sensorDisabled != defendBaseline?.sensorDisabled
+        strategy.health != defendBaseline?.health
+        || strategy.sensorDisabled != defendBaseline?.sensorDisabled
         || strategy.couplingBreached != defendBaseline?.couplingBreached
         || strategy.reactorDamage != defendBaseline?.reactorDamage
       let spent = snapshot.partyWeapons.contains { member, weapon in
@@ -978,6 +1032,12 @@
       guard let strategy = snapshot.guardStrategy, let centre = snapshot.robotPosition,
         let at = snapshot.positions[snapshot.leader]
       else { return InputRules.Raw() }
+      // This player script explicitly commits the squad. Normal companion support is useful
+      // throughout the longer health-based fight; no automatic permission bypass supplies it.
+      if snapshot.combatStance != .attack {
+        guardRelease = true
+        return InputRules.Raw(dpadUp: true)
+      }
       if guardStageSeen != strategy.phase {
         guardStageSeen = strategy.phase
         let label =
@@ -1104,10 +1164,11 @@
         raw.aimStick = Movement.stick(
           towards: delta, cameraOffset: snapshot.level.cameraOffset)
       }
+      // Closed parts still take ordinary damage. Keep a real burst going between bonus
+      // windows instead of inheriting the former puzzle's no-damage waiting rule.
       raw.controllerFire =
-        point.exposed
-        && (strategy.phase != .coupling
-          || simd_length(delta) < Weapon.energySword.range + point.radius)
+        strategy.phase != .coupling
+        || simd_length(delta) < Weapon.energySword.range + point.radius
       return raw
     }
 
@@ -1169,6 +1230,9 @@
       defendBaseline = nil
       defendLoaded = [:]
       defendDistances = [:]
+      defendClosestDistances = [:]
+      defendApproach = [:]
+      defendPreviousPositions = [:]
       coverStableSince = nil
       coverStablePositions = [:]
       longestCoverHold = 0
@@ -1213,7 +1277,7 @@
         worstLeaderGap: Double(worstGap),
         peakPartyHits: Dictionary(
           uniqueKeysWithValues: peakPartyHits.map { ($0.key.rawValue, $0.value) }),
-        retryCount: retryCount)
+        retryCount: retryCount, damage: observedDamage, maximumDamageLabels: maximumDamageLabels)
       summary = result
       write(result)
     }
@@ -1298,14 +1362,14 @@
       ] + restartRun
 
     /// Tom's two weapons in the first fight (ADR 0021): he raises his dome against the guard's
-    /// bursts and nobody is hurt. The minigun alone cannot defeat its armour; all three then
-    /// dismantle it with their own weapons.
+    /// bursts and nobody is hurt. A short ordinary minigun burst damages the guard, then the
+    /// optional weak-point route demonstrates the party's larger bonuses.
     private static let weapons: [Step] =
       toTheStranger + [
         .order(.hold),
         .switchLeader, .swap, .wait(seconds: 0.3), .fire(seconds: 2.5), .mark("Tom's dome"),
         .fire(seconds: 2), .expectHits(0), .swap, .wait(seconds: 0.3), .fire(seconds: 1),
-        .expectDefeated(0), .mark("armour stops the minigun"), .formation, .dismantleGuard,
+        .expectDefeated(0), .mark("ordinary minigun damage"), .formation, .dismantleGuard,
         .expectDefeated(1), .mark("guard dismantled by the party"), .wait(seconds: 1),
       ] + restartRun
 
@@ -1344,6 +1408,15 @@
         .settleDefendCover(seconds: 6, hold: 0.5), .mark("Separate cover after Resume"),
         .order(.attack), .expectCombatStance(.attack), .companionFight,
         .expectDefeated(1), .mark("Guard dismantled after covered withdrawal"),
+      ] + restartRun
+
+    /// Show ordinary white damage before attempting the optional bonus route. Both damage
+    /// categories and bounded visible numbers must be observed through real input.
+    private static let damageFeedback: [Step] =
+      toTheStranger + [
+        .walk([6.5, 8]), .swap, .fire(seconds: 0.9), .mark("Ordinary damage numbers"),
+        .swap, .dismantleGuard, .expectDefeated(1), .expectDamageFeedback,
+        .mark("Guard defeated with normal and weak-point damage"),
       ] + restartRun
 
     /// From the start through the first-tower guard's fight, then on beyond mid-span towards
@@ -1426,6 +1499,7 @@
       ("opening", opening), ("formations", formations), ("orders", orders), ("lock-on", lockOn),
       ("weapons", weapons), ("companions", companions), ("retaliation", retaliation),
       ("cover-spacing", coverSpacing),
+      ("damage-feedback", damageFeedback),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

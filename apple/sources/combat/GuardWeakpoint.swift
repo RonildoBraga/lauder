@@ -12,7 +12,8 @@ struct GuardWeakpoint {
 
   var ground: SIMD2<Float> { [centre.x, centre.z] }
   var target: Ballistics.Target {
-    Ballistics.Target(id: id, centre: centre, halfHeight: radius, radius: radius)
+    Ballistics.Target(
+      id: id, centre: centre, halfHeight: radius, radius: radius, acceptsInteriorHits: false)
   }
 
   static func make(id: String, robot: RobotGuard, strategy: GuardStrategy) -> [Self] {

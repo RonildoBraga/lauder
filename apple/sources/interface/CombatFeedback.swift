@@ -85,6 +85,7 @@ enum CombatSound: String, CaseIterable, Sendable {
     case .empty: .emptyClick
     case .leaderHit: nil
     case .guardTargeted: .guardWarning
+    case .damaged: nil
     }
   }
 

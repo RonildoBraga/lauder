@@ -31,32 +31,39 @@ struct CompanionTacticsTests {
   }
 
   @Test
-  func onlyCurrentSpecialistChoosesItsRequiredWeapon() {
+  func specialistsPreferTheirExposedPartWhileOtherMembersCanUseOrdinaryFire() {
     for (member, stage, weapon) in [
       (PartyMember.miki, GuardStrategy.Phase.sensor, Weapon.Kind.longRifle),
       (.laura, .coupling, .energySword), (.tom, .reactor, .minigun),
     ] {
       var planner = CompanionTactics()
       let result = plan(
-        &planner, input(member: member, leader: member == .miki ? .laura : .miki, stage: stage))
+        &planner, input(member: member, leader: member == .miki ? .laura : .miki, stage: stage),
+        canFireAtBody: { _, _ in true })
       #expect(result.weapon == weapon && result.fire && result.activity == .attacking)
+      #expect(!result.targetsBody)
       for other in PartyMember.allCases where other != member {
         let support = plan(
-          &planner, input(member: other, leader: member, stage: stage))
-        #expect(support.weapon == nil && !support.fire)
+          &planner, input(member: other, leader: member, stage: stage),
+          canFireAtBody: { _, _ in true })
+        #expect(support.weapon == Weapon.pair(for: other).first?.kind)
+        #expect(support.targetsBody && support.fire && support.lookAt == .zero)
       }
     }
   }
 
   @Test
-  func closedPartKeepsPhysicalFiringPositionButNeverFiresUntilExposed() {
+  func closedPartsAllowOrdinaryFireAndExposedPartsRestoreTheSpecialistPreference() {
     var planner = CompanionTactics()
-    let waiting = plan(&planner, input(exposed: false))
-    #expect(waiting.position == [0, -6] && waiting.activity == .waiting && !waiting.fire)
-    let opening = plan(&planner, input(exposed: true))
-    #expect(opening.fire && opening.activity == .attacking)
-    let closedAgain = plan(&planner, input(exposed: false))
-    #expect(!closedAgain.fire && closedAgain.activity == .waiting)
+    let ordinary = plan(
+      &planner, input(exposed: false), canFireAtBody: { _, _ in true })
+    #expect(ordinary.position == [0, -6] && ordinary.targetsBody && ordinary.fire)
+    let opening = plan(
+      &planner, input(exposed: true), canFireAtBody: { _, _ in true })
+    #expect(opening.fire && !opening.targetsBody && opening.activity == .attacking)
+    let closedAgain = plan(
+      &planner, input(exposed: false), canFireAtBody: { _, _ in true })
+    #expect(closedAgain.fire && closedAgain.targetsBody && closedAgain.activity == .attacking)
   }
 
   @Test
@@ -124,13 +131,108 @@ struct CompanionTacticsTests {
   }
 
   @Test
-  func nonSpecialistSupportsFromNearbyCoverWithoutFiringAtArmour() throws {
+  func aBlockedOrdinaryAttackStillSupportsFromNearbyCover() throws {
     var planner = CompanionTactics()
     let result = plan(
       &planner, input(member: .tom), isCovered: { $0.x > 1 })
     let goal = try #require(result.position)
     #expect(result.activity == .waiting && result.weapon == nil && !result.fire)
     #expect(goal.x > 1 && simd_distance(goal, [0, -6]) <= 3)
+  }
+
+  @Test
+  func ordinaryAttackRepositionsToARealClearLaneAndInvalidatesAnOccupiedGoal() throws {
+    var planner = CompanionTactics()
+    let start = SIMD2<Float>(0, -6)
+    let approach = plan(
+      &planner, input(member: .tom), canFireAtBody: { point, _ in point.x > 0.1 })
+    let goal = try #require(approach.position)
+    #expect(approach.targetsBody && approach.weapon == .minigun && !approach.fire)
+    #expect(approach.activity == .approaching && goal.x > 0.1)
+    #expect(simd_distance(goal, start) <= CompanionTactics.localRadius)
+    let replaced = plan(
+      &planner, input(member: .tom, dt: 0.001),
+      canFireAtBody: { point, _ in point.x > 0.1 },
+      isSpaced: { simd_distance($0, goal) >= CompanionTactics.minimumSpacing })
+    #expect(
+      simd_distance(try #require(replaced.position), goal) >= CompanionTactics.minimumSpacing)
+    #expect(replaced.targetsBody && !replaced.fire)
+    let stopped = plan(
+      &planner, input(member: .tom), canTraverse: { _, _ in false },
+      canFireAtBody: { point, _ in point.x > 0.1 })
+    #expect(stopped.position == nil && !stopped.fire)
+  }
+
+  @Test
+  func aThreatenedNonSpecialistAvoidsBeforeTakingAnOrdinaryShot() throws {
+    var planner = CompanionTactics()
+    let result = plan(
+      &planner, input(member: .tom), canFireAtBody: { _, _ in true },
+      isCovered: { $0.x > 2 }, isThreatened: { $0.x <= 2 })
+    #expect(result.activity == .avoiding && !result.fire)
+    #expect(try #require(result.position).x > 2)
+  }
+
+  @Test
+  func blockedOrdinaryFireDoesNotRescanEveryNearbyCandidateOnEveryFixedStep() {
+    for hasCover in [false, true] {
+      var planner = CompanionTactics()
+      _ = plan(
+        &planner, input(member: .tom), isCovered: { _ in hasCover })
+      var queries = 0
+      for _ in 0..<10 {
+        let result = plan(
+          &planner, input(member: .tom, dt: 0.01),
+          canFireAtBody: { _, _ in
+            queries += 1
+            return false
+          }, isCovered: { _ in hasCover })
+        #expect(!result.fire)
+      }
+      // Current place and any retained cover place can be reconsidered immediately;
+      // a full candidate search still follows the ordinary bounded replanning interval.
+      #expect(queries <= 20)
+    }
+  }
+
+  @Test
+  func anUnavailableSpecialistLegCanStillUseASafeOrdinaryShotFromTheCurrentPlace() {
+    var planner = CompanionTactics()
+    // Keep the fallback stable across cache and replan steps, long enough to draw the gun.
+    // Rebuilding a specialist intent on cached steps used to swap it back to the sword.
+    for _ in 0..<120 {
+      let result = plan(
+        &planner, input(member: .laura, leader: .miki, stage: .coupling),
+        canTraverse: { simd_distance($0, $1) < 0.01 }, canFire: { _, _, _ in false },
+        canFireAtBody: { _, weapon in weapon == .shotgun })
+      #expect(result.targetsBody && result.weapon == .shotgun && result.fire)
+      #expect(result.position == [0, -6] && result.lookAt == .zero)
+    }
+  }
+
+  @Test
+  func aHeldNonSpecialistCanFireOrdinarilyButGoAndDefendCannot() {
+    var planner = CompanionTactics()
+    let held = plan(
+      &planner, input(member: .tom, order: .holding([0, -6])),
+      canFireAtBody: { _, _ in true },
+      isSpaced: { _ in
+        Issue.record("Spacing must not override a Hold anchor")
+        return false
+      })
+    #expect(held.position == nil && held.targetsBody && held.weapon == .minigun && held.fire)
+    for command in [
+      input(member: .tom, order: .going([2, -4])),
+      input(member: .tom, stance: .defend),
+    ] {
+      let result = plan(
+        &planner, command,
+        canFireAtBody: { _, _ in
+          Issue.record("A Go or Defend order must not query an attack")
+          return true
+        })
+      #expect(!result.fire && !result.targetsBody && result.weapon == nil)
+    }
   }
 
   @Test
@@ -182,6 +284,10 @@ struct CompanionTacticsTests {
             member: member, leader: member == .miki ? .laura : .miki, stance: .defend, stage: stage),
           canFire: { _, _, _ in
             Issue.record("Defend must not request a combat ray")
+            return true
+          },
+          canFireAtBody: { _, _ in
+            Issue.record("Defend must not request an ordinary combat ray")
             return true
           })
         #expect(!result.fire && result.weapon == nil && result.lookAt == nil)
@@ -431,12 +537,14 @@ struct CompanionTacticsTests {
     canStand: (SIMD2<Float>) -> Bool = { _ in true },
     canTraverse: (SIMD2<Float>, SIMD2<Float>) -> Bool = { _, _ in true },
     canFire: (SIMD2<Float>, GuardWeakpoint, Weapon.Kind) -> Bool = { _, _, _ in true },
+    canFireAtBody: (SIMD2<Float>, Weapon.Kind) -> Bool = { _, _ in false },
     isCovered: (SIMD2<Float>) -> Bool = { _ in false },
     isThreatened: (SIMD2<Float>) -> Bool = { _ in false },
     isSpaced: (SIMD2<Float>) -> Bool = { _ in true }
   ) -> CompanionTactics.Intent {
     planner.plan(
       input: input, canStand: canStand, canTraverse: canTraverse, canFire: canFire,
+      canFireAtBody: canFireAtBody,
       isCovered: isCovered, isThreatened: isThreatened, isSpaced: isSpaced)
   }
 }

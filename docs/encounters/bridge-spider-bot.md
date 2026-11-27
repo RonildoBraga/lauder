@@ -1,8 +1,10 @@
 # First tower — C robot guard
 
-**Updated:** 23 November 2026.
+**Updated:** 27 November 2026.
 
 **Status:** The maintainer accepted C's form and motion, then assigned replacing the first human shooter and testing movement/shooting in Simulator. Runtime integration is implemented; the standard check and three rendered Simulator routes pass. This is one prototype encounter, with initial tuning rather than settled balance. A's different-weapon variant remains future reference, and camera B is unchanged.
+
+**Reading this record:** The sections below preserve the original C integration, its initial timings, six-hit toughness and historical verification. The current [strategic guard](../strategic-guard.md), [companion autonomy](../companion-autonomy.md), [retaliation](../guard-retaliation.md), [cover/spacing](../bridge-cover-spacing.md) and authorised [health/damage revision](../damage-feedback.md) build on that baseline. The [prototype plan](../prototype-plan.md#guard-damage-and-feedback--in-development) distinguishes their current source, verification and delivery; the original six-hit/single-pattern values and solo Miki references below are historical, rather than the new damage candidate.
 
 ## Goal and placement
 
