@@ -55,9 +55,8 @@ final class GameWorld {
   /// Whether the phone or the controller vibrates in play (ADR 0008): the pause menu's choice,
   /// on until the player turns it off.
   private(set) var vibrationEnabled = true
-  /// Whether the status panel shows: unless the player has hidden it, and always with touch
-  /// controls, whose pause screen has no Status panel choice to show it again.
-  var showsPanel: Bool { !panelHidden || controls.touchControlsEnabled }
+  /// Every input source can hide the panel and show it again from Pause.
+  var showsPanel: Bool { !panelHidden }
   /// Whether the latest line and the objective are new enough to show in the status panel.
   private(set) var lineIsFresh = true
   private(set) var objectiveIsFresh = true
@@ -146,8 +145,6 @@ final class GameWorld {
   @ObservationIgnored private var lockPressPending = false
   /// Tom's dome, shown round him while he leads with it raised (ADR 0021).
   @ObservationIgnored private let shieldDome: ModelEntity
-  /// Whether the touch controls were on in the last frame, to notice them taking over.
-  @ObservationIgnored private var touchWasEnabled = true
   /// What players hear and feel, waiting for the frame to play it (ADR 0008). Headless runs,
   /// which play nothing, keep only the latest.
   @ObservationIgnored private var combatEvents: [CombatEvent] = []
@@ -392,11 +389,6 @@ final class GameWorld {
     with input: InputRules.Input, sampledIn mode: GameSession.Mode, deltaTime: Float,
     inputReady: Bool = true
   ) {
-    // Touch has no lock button, so when it takes over from a controller the lock lets go.
-    if controls.touchControlsEnabled != touchWasEnabled {
-      touchWasEnabled = controls.touchControlsEnabled
-      if touchWasEnabled { releaseLock() }
-    }
     respond(to: input, in: mode)
     if retryElapsed != nil {
       // An encounter is starting again; Pause holds the fade where it is.
@@ -418,6 +410,9 @@ final class GameWorld {
       dodgePressPending = false
       lockPressPending = false
       return
+    }
+    if mode == .exploring, let command = input.targetCommand {
+      target(command)
     }
     #if DEBUG
       let started = DispatchTime.now().uptimeNanoseconds
@@ -445,6 +440,8 @@ final class GameWorld {
         restart()
       } else if input.vibrationPressed {
         toggleVibration()
+      } else if input.panelPressed, session.mode == .paused {
+        panelHidden.toggle()
       } else if input.actionPressed {
         switch session.pauseChoice {
         case .resume: togglePause()
@@ -495,6 +492,26 @@ final class GameWorld {
   private func togglePause() {
     session.togglePause()
     controls.requireNeutralInput()
+  }
+
+  /// Target taps are consumed in this allowed frame, never queued behind a pause or source
+  /// transition. The encounter retains native candidate, lock and firing authority.
+  private func target(_ command: InputRules.TargetCommand) {
+    guard session.mode == .exploring, let leader = position(of: session.leader) else { return }
+    let axes = Movement.axes(cameraOffset: level.cameraOffset)
+    switch command {
+    case .tap(let tap):
+      fight.tapLock(
+        at: [tap.point.x, tap.point.y], viewHeight: tap.viewHeight,
+        projection: projection(aspect: tap.point.aspect), from: leader)
+    case .acquire, .next:
+      fight.selectLock(
+        from: leader, facing: Movement.facing(yaw: yaw[session.leader] ?? 0),
+        up: axes.forward, right: axes.right, advancing: command == .next)
+    case .release:
+      fight.releaseLock()
+    }
+    if lockedHostile != fight.lock { lockedHostile = fight.lock }
   }
 
   /// After a switch: the camera eases to the new leader, and a previous leader who joins a
@@ -1581,7 +1598,7 @@ final class GameWorld {
         partyHits: Dictionary(
           uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }),
         companionTargets: companionTargets, coveredMembers: covered,
-        damage: damageTally, damageLabelCount: damageFeedback.labels.count)
+        damage: damageTally, damageLabelCount: damageFeedback.labels.count, showsPanel: showsPanel)
     }
 
     /// Start a scripted playtest; an unknown scenario name is reported on the HUD.
@@ -1596,6 +1613,7 @@ final class GameWorld {
     }
 
     private func install(_ runner: PlaytestRunner) {
+      if runner.name == "touch-fight" { controls.useTouchControls() }
       playtest = runner
       observation = runner.status
       // Small discs at each companion's target, so screenshots show where they are heading.

@@ -4,8 +4,8 @@ import Foundation
 /// A finger pressing the ground for the touch order menu (ADR 0003, phase S3). Held still for
 /// about a third of a second, it opens the menu at the finger: releasing without sliding sends
 /// both companions, sliding to a name sends that companion and sliding down to Hold holds both.
-/// Slide up-left for Attack or up-right for Defend. Straight up, or moving before the menu
-/// opens, gives no order.
+/// Slide up-left for Attack or up-right for Defend. A quick stationary press is a target tap;
+/// straight up from the menu, or moving before it opens, gives no order.
 struct OrderPress {
   enum Choice: Equatable, Sendable {
     case both, left, right, hold, attack, defend
@@ -37,6 +37,7 @@ struct OrderPress {
   private(set) var isCancelled = false
   /// What a release now would choose, once open.
   private(set) var choice: Choice?
+  private var exceededTapSlop = false
 
   init(at point: CGPoint, time: TimeInterval) {
     start = point
@@ -53,14 +54,41 @@ struct OrderPress {
 
   mutating func move(to point: CGPoint) {
     guard !isCancelled else { return }
+    guard point.x.isFinite, point.y.isFinite else {
+      cancel()
+      return
+    }
     let offset = CGVector(dx: point.x - start.x, dy: point.y - start.y)
+    let distance = hypot(offset.dx, offset.dy)
+    if distance > Self.slop { exceededTapSlop = true }
     if isOpen {
       // Clamping the menu's artwork must not change the finger's directions. Re-evaluate
       // even near the start, so returning there clears a previously selected stance.
       choice = Self.choice(for: offset)
-    } else if hypot(offset.dx, offset.dy) > Self.slop {
+    } else if distance > Self.slop {
       isCancelled = true
     }
+  }
+
+  /// Accounts for the release position even without a final move callback. A short, stationary
+  /// press is a tap; a hold keeps its menu choice. Neither a late timer nor a cancelled capture
+  /// may turn a hold or drag into a target tap.
+  mutating func end(at point: CGPoint, time: TimeInterval) -> Bool {
+    move(to: point)
+    guard time.isFinite, began.isFinite, time >= began else {
+      cancel()
+      return false
+    }
+    guard time - began < Self.holdTime else { return false }
+    guard !isCancelled, !exceededTapSlop else {
+      cancel()
+      return false
+    }
+    // UIKit may deliver the short release after the menu task ran. The touch's timestamp,
+    // rather than task scheduling, decides whether it was a tap.
+    isOpen = false
+    choice = nil
+    return true
   }
 
   mutating func cancel() {

@@ -429,9 +429,8 @@ struct BridgeTests {
     #expect(world.session.pauseChoice == .statusPanel)
     world.update(with: confirm, sampledIn: .paused, deltaTime: 1 / 60)
     #expect(world.panelHidden && world.isPaused)
-    // Touch's pause screen has no Status panel choice to show it again, so with touch controls
-    // it shows anyway, and a controller brings back the player's choice.
-    #expect(world.controls.touchControlsEnabled && world.showsPanel)
+    // Touch now has the same pause choice and retains the player's panel preference.
+    #expect(world.controls.touchControlsEnabled && !world.showsPanel)
     world.restart()
     #expect(world.panelHidden)
     pressPause(world)
