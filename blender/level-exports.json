@@ -9,6 +9,15 @@
       "apple/sources/content/BrooklynBridgeLayout.swift": "3abcfa133dd8f99a8ccc63aa0b3e04d101e2d4afe58cf24d4f922b828270f54c"
     }
   },
+  "models/crawler": {
+    "format": 1,
+    "made from": {
+      "blender/assets/crawler/crawler.blend": "74e1ca37cd373896c40cc3eb803179ed0c5518fe0b582b9c0950c0c50f6673fb"
+    },
+    "wrote": {
+      "apple/sources/content/models/crawler.usdz": "62c085418a3e85ea35b81edcad4c36d25b19659abcbea9852f89321d2ec11d38"
+    }
+  },
   "models/hostile": {
     "format": 1,
     "made from": {

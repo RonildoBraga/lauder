@@ -69,7 +69,7 @@ class ContractTests(unittest.TestCase):
 
     def test_missing_model_export_registration_is_rejected(self):
         self.change("blender/extensions/lauder_levels/common.py",
-                    'SPAWNED = ("hostile", "laura", "miki", "scout-drone", "spider-bot-heavy", "tom")',
+                    'SPAWNED = ("crawler", "hostile", "laura", "miki", "scout-drone", "spider-bot-heavy", "tom")',
                     'SPAWNED = ("hostile", "laura", "miki")')
         self.refuses("Blender SPAWNED models")
         self.refuses("Export manifest record names")

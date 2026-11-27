@@ -94,6 +94,9 @@ final class GameWorld {
   @ObservationIgnored private var motors: [PartyMember: CompanionMotor]
   @ObservationIgnored private var tactics: [PartyMember: CompanionTactics] = [:]
   @ObservationIgnored private var companionIntents: [PartyMember: CompanionTactics.Intent] = [:]
+  /// Where companions are stepping aside to from a crawler's ram line, kept between steps so a
+  /// companion holds its choice (issue #208).
+  @ObservationIgnored private var crawlerAsides: [PartyMember: SIMD2<Float>] = [:]
   @ObservationIgnored private var formationTargets: [PartyMember: SIMD2<Float>] = [:]
   @ObservationIgnored private var regroupRemaining: Float = 0
   @ObservationIgnored private var regrouping = false
@@ -495,6 +498,7 @@ final class GameWorld {
           regrouping = true
           regroupRemaining = 2
           companionIntents = [:]
+          crawlerAsides = [:]
           tactics = [:]
         }
         session.pressFormation()
@@ -604,6 +608,7 @@ final class GameWorld {
     guardHealth = nil
     companionStatus = ""
     companionIntents = [:]
+    crawlerAsides = [:]
     formationTargets = [:]
     tactics = [:]
     regrouping = false
@@ -798,6 +803,7 @@ final class GameWorld {
         others: current.compactMap { $0.key == member ? nil : $0.value },
         speed: PartyBody.speed, dt: dt,
         targetMoves: order == .following && !fixedTargets.contains(member))
+      if crawlerAsides[member] != nil { motor.hurry() }
       let delta = motor.step(from: start, context: context, grid: grid, isClear: isClear)
       let end = resolvePartyMotion(start: start, delta: delta)
       motor.absorb(end - start, dt: dt)
@@ -907,12 +913,56 @@ final class GameWorld {
     return nil
   }
 
+  /// A crawler's ram line is fixed as it winds up, so a companion free to move steps out of it,
+  /// or waits where it is clear rather than cross it, in either stance. A Go or Hold order keeps
+  /// its place, as it does under the guard's burst (issue #208). Nil when nothing is in its way.
+  private func crawlerSidestep(
+    for member: PartyMember, at position: SIMD2<Float>, heading destination: SIMD2<Float>,
+    leader: SIMD2<Float>, occupied: [SIMD2<Float>], guardian: RobotGuard?
+  ) -> SIMD2<Float>? {
+    guard case .following = session.order(of: member),
+      fight.crawlerThreatens(from: position, to: destination)
+    else { return nil }
+    return fight.crawlerAside(from: position, keeping: crawlerAsides[member]) { point in
+      let clear =
+        !(guardian.map { self.fight.companionIsThreatened(at: point, by: $0) } ?? false)
+        && !self.fight.droneThreatens(point)
+      guard point != position else { return clear }
+      return clear && simd_distance(point, leader) <= CompanionTactics.leaderLeash
+        && simd_distance(point, leader) >= CompanionTactics.minimumSpacing
+        && occupied.allSatisfy { simd_distance(point, $0) >= CompanionTactics.minimumSpacing }
+        && self.canStandParty(point) && self.canReachParty(from: position, to: point)
+    }
+  }
+
   private func planCompanions(leader: SIMD2<Float>, velocity: SIMD2<Float>, dt: Float) {
     let current = positions
     guard let guardState = fight.companionGuard(near: leader), !fight.holdsParty else {
-      companionIntents = [:]
       tactics = [:]
       if !companionStatus.isEmpty { companionStatus = "" }
+      // Beyond the guard's reach its crawlers can still chase the party, and their lines still
+      // move a companion aside.
+      var sidesteps: [PartyMember: CompanionTactics.Intent] = [:]
+      var asides: [PartyMember: SIMD2<Float>] = [:]
+      if !fight.holdsParty {
+        for member in session.companions {
+          guard let position = current[member] else { continue }
+          let occupied = session.companions.filter { $0 != member }.compactMap {
+            sidesteps[$0]?.position ?? Self.point(of: session.order(of: $0))
+              ?? formationTargets[$0] ?? current[$0]
+          }
+          if let aside = crawlerSidestep(
+            for: member, at: position, heading: formationTargets[member] ?? position,
+            leader: leader, occupied: occupied, guardian: nil)
+          {
+            sidesteps[member] = CompanionTactics.Intent(
+              position: aside, activity: aside == position ? .following : .avoiding)
+            if aside != position { asides[member] = aside }
+          }
+        }
+      }
+      companionIntents = sidesteps
+      crawlerAsides = asides
       return
     }
     let away = leader - guardState.robot.position
@@ -932,6 +982,7 @@ final class GameWorld {
       }
     }
     var next: [PartyMember: CompanionTactics.Intent] = [:]
+    var asides: [PartyMember: SIMD2<Float>] = [:]
     // Reserve intended places, rather than transient moving bodies. A later companion
     // cannot claim the same cover/escape slot; existing orders keep their own anchors.
     var reserved: [PartyMember: SIMD2<Float>] = [:]
@@ -967,7 +1018,7 @@ final class GameWorld {
         isCovered: { self.fight.companionHasCover(at: $0, from: guardState.robot) },
         isThreatened: {
           self.fight.companionIsThreatened(at: $0, by: guardState.robot)
-            || self.fight.droneThreatens($0)
+            || self.fight.droneThreatens($0) || self.fight.crawlerThreatens($0)
         },
         isSpaced: { point in
           simd_distance(point, leader) >= CompanionTactics.minimumSpacing
@@ -975,6 +1026,17 @@ final class GameWorld {
               simd_distance(point, $0) >= CompanionTactics.minimumSpacing
             }
         })
+      if let aside = crawlerSidestep(
+        for: member, at: position, heading: intent.position ?? base, leader: leader,
+        occupied: occupied, guardian: guardState.robot)
+      {
+        intent.position = aside
+        if aside != position {
+          intent.activity = .avoiding
+          intent.fire = false
+          asides[member] = aside
+        }
+      }
       // A scout drone on its dive takes a companion's fire ahead of the guard while its plan
       // engages. Movement, orders and seeking safety keep the plan's own (issue #201).
       if session.combatStance == .attack, intent.lookAt != nil, intent.activity != .avoiding,
@@ -985,12 +1047,23 @@ final class GameWorld {
         intent.drone = drone.id
         intent.fire = true
         intent.activity = .attacking
+      } else if session.combatStance == .attack, intent.lookAt != nil,
+        intent.activity != .avoiding,
+        let crawler = fight.companionCrawler(for: member, from: position, figures: current)
+      {
+        // A crawler closing in or winding up comes next, as the drones' dives do (issue #208).
+        intent.lookAt = crawler.position
+        intent.weapon = crawler.weapon
+        intent.crawler = crawler.id
+        intent.fire = true
+        intent.activity = .attacking
       }
       tactics[member] = policy
       next[member] = intent
       reserved[member] = Self.point(of: session.order(of: member)) ?? intent.position ?? base
     }
     companionIntents = next
+    crawlerAsides = asides
     let status = session.companions.compactMap { member -> String? in
       guard let activity = next[member]?.activity else { return nil }
       let action =
@@ -1031,6 +1104,7 @@ final class GameWorld {
     if command == .attack || command == .defend {
       guard session.setCombatStance(command == .attack ? .attack : .defend) else { return }
       companionIntents = [:]
+      crawlerAsides = [:]
       tactics = [:]
       formationTargets = [:]
       companionStatus = ""
@@ -1631,7 +1705,7 @@ final class GameWorld {
         level: level, leader: session.leader, party: session.party, positions: positions,
         mode: session.mode, firedTriggers: session.firedTriggers.count, beat: session.beat,
         hitsTaken: session.hitsTaken,
-        defeated: session.defeated.filter { fight.hostiles[$0]?.drone == nil }.count,
+        defeated: session.defeated.filter { fight.hostiles[$0]?.spec.isPack != true }.count,
         formation: session.formation, orders: session.orders, refusedOrders: refusedOrders,
         camera: projection(aspect: PlaytestRunner.screenAspect),
         weapon: fight.status(for: session.leader),
@@ -1655,6 +1729,15 @@ final class GameWorld {
             PlaytestRunner.Snapshot.Drone(
               id: state.spec.id, position: $0.position, phase: $0.phase,
               watching: fight.droneTarget(for: state.spec.id), committedPoint: $0.committedPoint)
+          }
+        }.sorted { $0.id < $1.id },
+        crawlersDown: session.defeated.filter { fight.hostiles[$0]?.crawler != nil }.count,
+        crawlers: fight.hostiles.values.compactMap { state in
+          state.crawler.map {
+            PlaytestRunner.Snapshot.CrawlerView(
+              id: state.spec.id, position: $0.position, phase: $0.phase,
+              watching: fight.crawlerTarget(for: state.spec.id), ramStart: $0.ramStart,
+              ramEnd: $0.ramEnd)
           }
         }.sorted { $0.id < $1.id })
     }

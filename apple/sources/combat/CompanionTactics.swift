@@ -31,6 +31,8 @@ struct CompanionTactics {
     var targetsBody = false
     /// A scout drone to shoot instead of the guard, chosen after planning (issue #201).
     var drone: String? = nil
+    /// A pack crawler to shoot instead of the guard, chosen after planning (issue #208).
+    var crawler: String? = nil
     var fire = false
     var activity: Activity
   }

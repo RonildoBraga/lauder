@@ -154,6 +154,13 @@ struct CompanionMotor {
     return intended
   }
 
+  /// Something is about to strike it, so it moves off at once rather than after its usual
+  /// reaction delay, as it does to make way for the leader (a crawler's ram line, issue #208).
+  mutating func hurry() {
+    isSettled = false
+    wait = 0
+  }
+
   /// A new order: a settled companion moves off to its point however near it is, after their
   /// usual reaction, rather than waiting until it is `reengageDistance` away as a formation
   /// place must be (ADR 0003, phase S3).

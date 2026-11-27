@@ -73,6 +73,10 @@
       /// Followers down a drone while the guard lives and the player never fires.
       case companionDrones
       case expectDronesDown(Int)
+      /// Miki shoots down every pack crawler, rolling out of their rams and the guard's
+      /// committed bursts (issue #208).
+      case downCrawlers
+      case expectCrawlersDown(Int)
       case waitForRetry(seconds: Float)
       /// Miki stays under player control; Laura and Tom supply their own combat contributions.
       case companionFight
@@ -102,7 +106,7 @@
       let firedTriggers: Int
       let beat: StoryBeat
       let hitsTaken: Int
-      /// Hostiles down other than scout drones, which fall with their guard (issue #201).
+      /// Hostiles down other than the guard's pack, its drones and crawlers, which go down with it.
       let defeated: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
@@ -146,6 +150,21 @@
         let phase: ScoutDrone.Phase
         let watching: PartyMember?
         let committedPoint: SIMD2<Float>?
+      }
+
+      /// Pack crawlers down, whether shot down or gone down with their guard.
+      var crawlersDown = 0
+      /// Each pack crawler as the route can see it: where it is, what it is doing and the
+      /// fixed line of a wind-up or ram.
+      var crawlers: [CrawlerView] = []
+
+      struct CrawlerView {
+        let id: String
+        let position: SIMD2<Float>
+        let phase: Crawler.Phase
+        let watching: PartyMember?
+        let ramStart: SIMD2<Float>?
+        let ramEnd: SIMD2<Float>?
       }
     }
 
@@ -403,6 +422,12 @@
         case .expectDronesDown(let count):
           expect(
             snapshot.dronesDown == count, "\(snapshot.dronesDown) drone(s) were down, not \(count)")
+        case .downCrawlers:
+          if let raw = downCrawlers(snapshot) { return raw }
+        case .expectCrawlersDown(let count):
+          expect(
+            snapshot.crawlersDown == count,
+            "\(snapshot.crawlersDown) crawler(s) were down, not \(count)")
         case .companionFight:
           if let raw = companionFight(snapshot) { return raw }
         case .companionPrerequisites:
@@ -1218,6 +1243,81 @@
 
     /// A bounded player script, not a simulation shortcut: no teleports, state writes or
     /// damage immunity. It observes the same component markers that the player sees.
+    private mutating func downCrawlers(_ snapshot: Snapshot) -> InputRules.Raw? {
+      let standing = snapshot.crawlers.filter { $0.phase != .down }
+      if standing.isEmpty {
+        // Under Attack the companions shoot the crawlers closing in, as well as Miki.
+        let companionDamage = snapshot.crawlers.reduce(0) { total, crawler in
+          total
+            + [PartyMember.tom, .laura].reduce(0) {
+              $0 + (snapshot.damage.byTarget[crawler.id]?[$1.rawValue] ?? 0)
+            }
+        }
+        if snapshot.combatStance == .attack, companionDamage == 0 {
+          failures.append("no crawler took a companion's fire under Attack")
+        }
+        advance()
+        return nil
+      }
+      if snapshot.isRetrying || snapshot.beat != .stranger || stepTime > 60 {
+        failures.append(
+          "\(standing.count) crawler(s) still stood or the fight retried at \(Self.seconds(elapsed))"
+        )
+        advance()
+        return nil
+      }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      if snapshot.leader != .miki {
+        guardRelease = true
+        return InputRules.Raw(controllerSwitch: true)
+      }
+      guard let at = snapshot.positions[.miki],
+        let target = standing.min(by: {
+          simd_distance($0.position, at) < simd_distance($1.position, at)
+        })
+      else { return InputRules.Raw() }
+      var raw = InputRules.Raw()
+      let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+      func roll(across line: SIMD2<Float>) -> InputRules.Raw {
+        let across =
+          simd_length(line) > 0.01 ? simd_normalize(SIMD2(-line.y, line.x)) : SIMD2<Float>(1, 0)
+        let side = movement.canTraverse(from: at, to: at + across * 3) ? across : -across
+        var raw = InputRules.Raw()
+        raw.stick = Movement.stick(towards: side, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+        return raw
+      }
+      // A committed volley does not home in: roll across the guard's line, as dismantleGuard.
+      if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
+        let centre = snapshot.robotPosition, simd_distance(at, centre) > 0.1
+      {
+        return roll(across: at - centre)
+      }
+      // Nor does a ram: once a crawler's line covers her, roll out of it.
+      if elapsed - lastGuardDodge > 0.8,
+        let ram = standing.first(where: { crawler in
+          guard crawler.phase == .windingUp || crawler.phase == .ramming,
+            let start = crawler.ramStart, let end = crawler.ramEnd
+          else { return false }
+          return Crawler.distance(from: at, toSegment: start, end) < Crawler.reach + 0.4
+        }), let start = ram.ramStart, let end = ram.ramEnd
+      {
+        return roll(across: end - start)
+      }
+      // The aim help lowers the round to the nearest crawler; the route sets no lock.
+      let delta = target.position - at
+      if simd_length(delta) > 0.001 {
+        raw.aimStick = Movement.stick(towards: delta, cameraOffset: snapshot.level.cameraOffset)
+      }
+      raw.controllerFire = true
+      return raw
+    }
+
     private mutating func downDrones(_ snapshot: Snapshot) -> InputRules.Raw? {
       let flying = snapshot.drones.filter { $0.phase != .down }
       if flying.isEmpty {
@@ -1879,14 +1979,30 @@
         .mark("combined squad victory"), .wait(seconds: 1),
       ] + restartRun
 
-    /// The routes that play the shipped encounter with its drones. The others were written for
-    /// the guard's own contract and play it alone, on `BrooklynBridge.guardOnly`.
-    static let droneScenarios: Set<String> = ["drone-fight", "companion-drones"]
+    /// The shipped first-tower fight with the whole pack (issue #208), the squad on Attack: Miki
+    /// and the companions down the crawlers as they close in, Miki rolling out of their rams,
+    /// then Miki downs the drones and the squad dismantles the guard.
+    private static let crawlerFight: [Step] =
+      toTheStranger + [
+        .order(.attack), .expectCombatStance(.attack),
+        .downCrawlers, .expectCrawlersDown(BrooklynBridge.crawlers.count),
+        .mark("all crawlers down"), .downDrones, .expectDronesDown(BrooklynBridge.drones.count),
+        .mark("both drones down"), .dismantleGuard, .expectDefeated(1),
+        .mark("guard down after its pack"), .wait(seconds: 1),
+      ] + restartRun
 
-    /// The level a scenario runs on; with no scenario, the shipped bridge.
+    /// The routes written for the guard with its drones, before the crawlers joined; they play
+    /// `BrooklynBridge.guardAndDrones`.
+    static let droneScenarios: Set<String> = ["drone-fight", "companion-drones"]
+    /// The routes that play the shipped fight with the whole pack.
+    static let packScenarios: Set<String> = ["crawler-fight"]
+
+    /// The level a scenario runs on; with no scenario, the shipped bridge. The others were
+    /// written for the guard's own contract and play it alone, on `BrooklynBridge.guardOnly`.
     static func level(for scenario: String?) -> Level {
-      guard let scenario, !droneScenarios.contains(scenario) else { return BrooklynBridge.level }
-      return BrooklynBridge.guardOnly
+      guard let scenario, !packScenarios.contains(scenario) else { return BrooklynBridge.level }
+      return droneScenarios.contains(scenario)
+        ? BrooklynBridge.guardAndDrones : BrooklynBridge.guardOnly
     }
 
     /// Every bridge scenario, by the name `apple/scripts/playtest` gives it.
@@ -1899,6 +2015,7 @@
       ("touch-fight", touchFightRoute), ("robot-parts", robotParts),
       ("drone-fight", droneFight),
       ("companion-drones", companionDroneFight),
+      ("crawler-fight", crawlerFight),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

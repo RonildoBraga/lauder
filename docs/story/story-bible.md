@@ -15,6 +15,8 @@ The maintainer then clarified that companion combat requires an explicit Attack 
 
 **Guard damage revision, 27 November 2026:** The maintainer asked for every successful hit to cause damage and approved the proposal with **“Proceed with your recommendations”** (chat; no public permalink). The [damage assignment](../damage-feedback.md) makes the first guard's three-part route an optional reward alongside useful ordinary attacks and shared enemy health. It supersedes the earlier mandatory all-three victory rule for this encounter; it does not settle biographies, further abilities, relationships or broader story-foundation questions. Source and playtest status remain owned by the [prototype plan](../prototype-plan.md#guard-damage-and-feedback--in-development).
 
+**Crawler pack, 27 November 2026:** The maintainer asked for another new enemy, then said “start building the crawlers now”, choosing **“Crawler pack”** **“With the first guard”** (chat; no public permalink). Three small ground machines from the same first-tower guard walk up to the party and ram it, and they go down with it, so its fight is still the bridge's only one. The [crawler contract](../crawler-pack.md) holds the rules; it settles nothing about who built them.
+
 **Scout drones, 27 November 2026:** The maintainer asked for a different enemy, **“We should in the mentime also create a different enemy while Codex is working”**, then chose **“Scout drones”** **“With the first guard”** (chat; no public permalink). Two small drones keep watch with the first-tower machine and fall with it, so its fight is still the bridge's only one. The [drone contract](../scout-drones.md) holds the rules; it settles nothing about who built either machine.
 
 ## Agreed direction

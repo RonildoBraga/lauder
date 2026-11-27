@@ -161,6 +161,16 @@ Choose **TestFlight → Lauder → Update**; the pause screen identifies **0.1.0
 
 On 27 November 2026, after the delivery checkpoint above, the maintainer reported **“It worked”** and authorised **“merge PR #193 and the TestFlight release PR #195, then update the git issues”** (chat; no public permalink). PR #193 merged as **`8ae7e1723337d776a7a857c532700ea8b55fd008`**, whose tree matches checked feature head `a5fa434`. After the dependency merge, ancestry-only commit `265f2df` preserved PR #195’s delivered tree while retargeting it to main. [Check 134](https://github.com/RonildoBraga/lauder/actions/runs/45931744507) passed on that exact head at **2026-11-27 03:22:28 UTC**; fresh review-thread and finding checks found no outstanding finding. PR #195 then merged as **`35945ff7fa5a66c3610d2418a463f6dd68bca9c2`**. Main now contains build 38’s app sources; no additional upload occurred. This is basic phone feedback, not exhaustive controls or measured performance. The separate [locomotion follow-up](#leg-loss-locomotion--in-development) is not in the delivered archive. The original delivery proof and its pre-merge checkpoint above remain unchanged.
 
+## Crawler pack — in development
+
+The maintainer asked for another new enemy, “Once it's merged, create another new enemy but check the git issues and comments to coordinate things with Codex”, then said “start building the crawlers now” (chat, 27 November 2026; no public permalink). Asked which enemy and where, they chose **“Crawler pack”** **“With the first guard”**.
+- **The claim:** [issue #208](https://github.com/RonildoBraga/lauder/issues/208) records Claude's claim and the files it avoids.
+- **The rules:** the [crawler contract](crawler-pack.md) holds the starting rules. Three crawlers get up once the guard's fight is engaged. Each walks round blockers to a member and winds up for 0.6 s, its line fixed from the start. It rams 3 m, hurting at most once, then recovers, exposed. Crawlers never wind up over the guard's attacks or two on one member, and they go down with the guard.
+- **The model:** the [crawler model](../blender/assets/crawler/README.md) is simple shapes in the guard's colours.
+- **The branch:** it is cut from the drones work at Codex's `c6e6cb8`. That work merged into main as #203 (`a71a9f9`, with the same tree).
+
+**Checks:** pending; recorded here once run.
+
 ## Scout drones — in development
 
 While Codex worked on the guard's leg stagger (#199), the maintainer asked for **“a different enemy”** and chose **“Scout drones”** **“With the first guard”** (chat, 27 November 2026; no public permalink). [Issue #201](https://github.com/RonildoBraga/lauder/issues/201) records Claude's claim and the files it avoids while #199 is active. The [drone contract](scout-drones.md) holds the starting rules: two drones circle the guard at 3 m, take turns to warn for 1 s and dive along a committed line with a three-round burst that hurts at most once, pass low enough for the sword, and fall with the guard. The [scout-drone model](../blender/assets/scout-drone/README.md) is simple shapes in the guard's colours.

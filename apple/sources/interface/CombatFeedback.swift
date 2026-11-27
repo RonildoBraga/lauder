@@ -106,8 +106,8 @@ enum CombatSound: String, CaseIterable, Sendable {
     case .leaderHit: nil
     case .guardTargeted: .guardWarning
     case .guardLegBroken: .guardLegBreak
-    // The drones borrow the guard's warning until they have a sound of their own.
-    case .droneWarning: .guardWarning
+    // The drones and crawlers borrow the guard's warning until they have sounds of their own.
+    case .droneWarning, .crawlerWarning: .guardWarning
     case .damaged: nil
     }
   }

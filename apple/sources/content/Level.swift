@@ -35,6 +35,9 @@ struct Level {
       /// A scout drone that circles its guard and dives at the party (issue #201). It starts
       /// `orbit` radians round its circle, and `slot` orders its first dive after the others'.
       case drone(orbit: Float, slot: Int)
+      /// A crawler from the guard's pack that walks up to the party and rams it (issue #208);
+      /// `slot` orders when it gets up after the others.
+      case crawler(slot: Int)
     }
 
     let id: String
@@ -59,6 +62,14 @@ struct Level {
       if case .drone = attack { return true }
       return false
     }
+
+    var isCrawler: Bool {
+      if case .crawler = attack { return true }
+      return false
+    }
+
+    /// The guard's pack: its drones and crawlers, which fall when it does.
+    var isPack: Bool { isDrone || isCrawler }
   }
 
   /// What happens at a moment after an encounter begins.

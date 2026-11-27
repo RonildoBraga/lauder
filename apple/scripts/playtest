@@ -36,6 +36,7 @@ SCENARIOS = [
     "weapons", "companions", "retaliation", "cover-spacing", "damage-feedback", "touch-fight", "robot-parts",
     "drone-fight",
     "companion-drones",
+    "crawler-fight",
 ]
 
 
