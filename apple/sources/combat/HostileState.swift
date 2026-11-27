@@ -1,7 +1,7 @@
 import simd
 
-/// A bridge hostile: it reveals itself, then fires from its authored place or charges the
-/// leader. Its encounter supplies the timeline, and EncounterSimulation resolves the actual shot.
+/// A bridge hostile: its encounter supplies the reveal/engage timeline, and
+/// EncounterSimulation advances its attack and resolves actual shots.
 struct HostileState {
   enum Phase: Equatable {
     case hidden
@@ -9,7 +9,6 @@ struct HostileState {
     case waiting
     case aiming(remaining: Float)
     case recovering(remaining: Float)
-    case charging
     case down
   }
 
@@ -20,7 +19,6 @@ struct HostileState {
   }
 
   static let stepOutTime: Float = 0.8
-  static let reach: Float = 0.9
   static let flinchDelay: Float = 0.2
   static let flinchLimit: Float = 0.5
 
@@ -93,7 +91,6 @@ struct HostileState {
     switch spec.attack {
     case .shoot: .aiming(remaining: spec.windUp)
     case .robot, .drone: .waiting
-    case .charge: .charging
     }
   }
 
@@ -158,7 +155,7 @@ struct HostileState {
   }
 
   mutating func step(
-    dt: Float, canHit: Bool, toward target: SIMD2<Float>, canFire: Bool = true
+    dt: Float, canHit: Bool, canFire: Bool = true
   ) -> Shot? {
     switch phase {
     case .hidden, .waiting, .down:
@@ -170,14 +167,6 @@ struct HostileState {
         phase = .steppingOut(elapsed: elapsed + dt)
       } else {
         phase = engaged ? attacking : .waiting
-      }
-      return nil
-    case .charging:
-      guard case .charge(let speed) = spec.attack else { return nil }
-      let offset = target - position
-      let distance = simd_length(offset)
-      if distance > Self.reach {
-        position += offset / distance * min(speed * dt, distance - Self.reach)
       }
       return nil
     case .aiming(let remaining):
