@@ -734,7 +734,7 @@ final class EncounterSimulation {
       if case .aiming = state.phase { aimingNow = inRange } else { aimingNow = false }
       rifle.advance(dt: dt, toward: leader - origin, aiming: state.isVisible && aimingNow)
       if !state.isVisible || state.isDown { rifle.cancel() }
-      if let shot = state.step(dt: dt, canHit: canHit, toward: leader, canFire: inRange),
+      if let shot = state.step(dt: dt, canHit: canHit, canFire: inRange),
         spec.attack == .shoot
       {
         rifle.begin(deliberateMiss: shot == .miss)
@@ -753,12 +753,10 @@ final class EncounterSimulation {
       hostileWeaponPoses[spec.id] = rifle.pose
       switch state.phase {
       case .aiming where aimingNow: threatNow = "\(spec.name) is aiming."
-      case .charging: threatNow = "\(spec.name) is running at you."
       default: break
       }
       hostiles[spec.id] = state
-      let direction = spec.attack == .shoot ? rifle.facing : leader - state.position
-      faceHostile(spec.id, state, facing: state.position + direction)
+      faceHostile(spec.id, state, facing: state.position + rifle.facing)
     }
     threat = threatNow
     if outcome.retry { return outcome }
