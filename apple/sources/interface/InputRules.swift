@@ -46,6 +46,8 @@ enum InputRules {
     var controllerLock = false
     /// R1 / RB: the leader's other weapon (ADR 0021).
     var controllerSwap = false
+    /// Circle / B: throw the squad's ready grenade.
+    var controllerGrenade = false
     /// The D-pad's directions: squad orders while exploring, and up or down in the pause menu.
     var dpadUp = false
     var dpadDown = false
@@ -67,6 +69,8 @@ enum InputRules {
     var keyboardLock = false
     /// T: the leader's other weapon (ADR 0021).
     var keyboardSwap = false
+    /// C: throw the squad's ready grenade; G retains Both Go.
+    var keyboardGrenade = false
     /// G / H retain spatial Both Go / Hold independently of the combat stance arrows.
     var keyboardBothGo = false
     var keyboardHold = false
@@ -97,6 +101,8 @@ enum InputRules {
     var touchDodge = false
     /// The touch layout's Swap button: the leader's other weapon (ADR 0021).
     var touchSwap = false
+    /// The touch layout's Grenade button, one throw per fresh press.
+    var touchGrenade = false
     /// A finger pressing the ground, which may open the order menu.
     var touchGround = false
     /// Where the touch menu opened since the last sample: the press's point, which the world
@@ -114,14 +120,15 @@ enum InputRules {
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardFire
         || keyboardFormation || keyboardDodge || keyboardLock || keyboardSwap || hasArrowKey
-        || hasAimKey || keyboardBothGo || keyboardHold
+        || hasAimKey || keyboardBothGo || keyboardHold || keyboardGrenade
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
     var hasControllerInput: Bool {
       let deadZone = Movement.deadZone * Movement.deadZone
       return simd_length_squared(stick) > deadZone || simd_length_squared(aimStick) > deadZone
         || controllerAction || controllerPause || controllerSwitch || controllerFire
-        || controllerFormation || controllerDodge || controllerLock || controllerSwap || hasDpad
+        || controllerFormation || controllerDodge || controllerLock || controllerSwap
+        || controllerGrenade || hasDpad
     }
   }
 
@@ -147,6 +154,7 @@ enum InputRules {
     var bothGoWasPressed = false
     var holdWasPressed = false
     var panelWasPressed = false
+    var grenadeWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -190,6 +198,8 @@ enum InputRules {
     var swapPressed = false
     /// A fresh touch targeting event while exploring; it does not fire the weapon.
     var targetCommand: TargetCommand?
+    /// One fresh throw request; simulation owns availability, trajectory and damage.
+    var grenadePressed = false
 
     static let neutral = Input(
       movement: .zero, actionPressed: false, pausePressed: false, switchPressed: false)
@@ -209,6 +219,7 @@ enum InputRules {
     let dodge = raw.keyboardDodge || raw.controllerDodge || raw.touchDodge
     let lock = raw.keyboardLock || raw.controllerLock
     let swap = raw.keyboardSwap || raw.controllerSwap || raw.touchSwap
+    let grenade = raw.keyboardGrenade || raw.controllerGrenade || raw.touchGrenade
     let up = raw.dpadUp || raw.arrowUp
     let down = raw.dpadDown || raw.arrowDown
     let left = raw.dpadLeft || raw.arrowLeft
@@ -243,6 +254,7 @@ enum InputRules {
     next.bothGoWasPressed = raw.keyboardBothGo
     next.holdWasPressed = raw.keyboardHold
     next.panelWasPressed = panel
+    next.grenadeWasPressed = grenade
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
       next.needsNeutralInput =
@@ -254,7 +266,7 @@ enum InputRules {
         || simd_length_squared(raw.touchStick) > deadZone * deadZone
         || !raw.touchStick.x.isFinite || !raw.touchStick.y.isFinite
         || raw.hasKeyboardInput || action || pause || cycle || restart || fire || formation
-        || raw.hasDpad || raw.touchGround || vibration || panel || dodge || lock || swap
+        || raw.hasDpad || raw.touchGround || vibration || panel || dodge || lock || swap || grenade
         || raw.touchTarget != nil
       return (.neutral, next)
     }
@@ -315,23 +327,31 @@ enum InputRules {
       // A switch or a squad command in the same sample discards the leader's action and roll.
       let commanded = switchEdge || formationEdge || command != nil
       let lockEdge = lock && !state.lockWasPressed
+      let dodgeEdge = dodge && !state.dodgeWasPressed && !commanded
+      let swapEdge = swap && !state.swapWasPressed
+      // Navigation/weapon/target commands win a simultaneous throw, consuming its edge.
+      // An accepted throw briefly takes the leader's hands instead of firing or acting.
+      let grenadeEdge =
+        grenade && !state.grenadeWasPressed && !commanded && !dodgeEdge && !swapEdge
+        && !lockEdge && raw.touchTarget == nil
       return (
         Input(
           movement: movement,
-          actionPressed: actionEdge && !commanded,
+          actionPressed: actionEdge && !commanded && !grenadeEdge,
           pausePressed: false,
           switchPressed: switchEdge,
-          fireHeld: fire,
-          firePressed: fire && !state.fireWasPressed,
+          fireHeld: fire && !grenadeEdge,
+          firePressed: fire && !state.fireWasPressed && !grenadeEdge,
           formationPressed: formationEdge,
           command: command,
           commandPoint: commandPoint,
           markPoint: raw.touchMark,
           aim: aim,
-          dodgePressed: dodge && !state.dodgeWasPressed && !commanded,
+          dodgePressed: dodgeEdge,
           lockPressed: lockEdge,
-          swapPressed: swap && !state.swapWasPressed,
-          targetCommand: commanded || lockEdge ? nil : raw.touchTarget
+          swapPressed: swapEdge,
+          targetCommand: commanded || lockEdge ? nil : raw.touchTarget,
+          grenadePressed: grenadeEdge
         ), next
       )
     }

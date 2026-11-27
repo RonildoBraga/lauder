@@ -25,6 +25,7 @@ struct RobotMotion {
   private var previousYaw: Float = 0
   private var next = 0
   private var stepping: Int?
+  private var detachedLegs: Set<Int> = []
   private static let order = [0, 3, 1, 2]
   static let stepTime: Float = 0.12
 
@@ -42,11 +43,15 @@ struct RobotMotion {
     previousYaw = yaw
     next = 0
     stepping = nil
+    detachedLegs.removeAll()
   }
 
   mutating func advance(
-    position: SIMD2<Float>, facing: SIMD2<Float>, brace: Float, dt: Float
+    position: SIMD2<Float>, facing: SIMD2<Float>, brace: Float,
+    detachedLegs missing: Set<Int> = [], bodyDrop: Float? = nil, dt: Float
   ) -> [LegPose] {
+    let detached = detachedLegs.union(
+      missing.filter { RobotModelGeometry.legs.indices.contains($0) })
     let yaw = Movement.yaw(towards: facing)
     if feet.isEmpty { reset(position: position, facing: facing) }
     let elapsed = max(0, min(dt, 1 / 15))
@@ -56,6 +61,8 @@ struct RobotMotion {
     if simd_length(change) > 0.3 || abs(turn) > 0.4 {
       reset(position: position, facing: facing)
     }
+    detachedLegs = detached
+    if let index = stepping, detachedLegs.contains(index) { stepping = nil }
     let velocity = elapsed > 0 ? change / elapsed : .zero
     let turning = elapsed > 0 ? turn / elapsed : 0
     previous = position
@@ -76,6 +83,7 @@ struct RobotMotion {
         for offset in 0..<Self.order.count {
           let orderIndex = (next + offset) % Self.order.count
           let index = Self.order[orderIndex]
+          guard !detachedLegs.contains(index) else { continue }
           let leg = RobotModelGeometry.legs[index]
           let wanted = Self.goal(leg, at: position, yaw: yaw)
           let distance = simd_length(wanted - feet[index].point)
@@ -96,7 +104,8 @@ struct RobotMotion {
     return RobotModelGeometry.legs.enumerated().map { index, leg in
       Self.solve(
         leg, foot: feet[index].point, footYaw: feet[index].yaw,
-        position: position, yaw: yaw, brace: brace)
+        position: position, yaw: yaw,
+        bodyDrop: bodyDrop ?? RobotModelGeometry.braceDepth * brace)
     }
   }
 
@@ -110,10 +119,10 @@ struct RobotMotion {
 
   private static func solve(
     _ leg: RobotModelGeometry.Leg, foot: SIMD3<Float>, footYaw: Float,
-    position: SIMD2<Float>, yaw: Float, brace: Float
+    position: SIMD2<Float>, yaw: Float, bodyDrop: Float
   ) -> LegPose {
     let local = simd_quatf(angle: -yaw, axis: [0, 1, 0])
-      .act(foot - SIMD3(position.x, -RobotModelGeometry.braceDepth * brace, position.y))
+      .act(foot - SIMD3(position.x, -bodyDrop, position.y))
     let delta = SIMD3(-local.x, local.z, local.y) - leg.hip
     let radial = simd_length(SIMD2(delta.x, delta.y))
     let l1 = RobotModelGeometry.upperLength

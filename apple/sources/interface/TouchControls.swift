@@ -28,6 +28,10 @@ struct TouchControls: UIViewRepresentable {
   /// The pause menu's current status-panel choice.
   let panelTitle: String
   let mode: GameSession.Mode
+  /// Shared squad readiness, supplied by gameplay; the control keeps its finger while waiting.
+  var grenadeTitle: String = "Grenade"
+  /// Only Tom throws the shared grenade; a held contact survives a leader change until lift.
+  var showsGrenade = true
 
   func makeUIView(context: Context) -> Surface {
     let view = Surface(controls: controls)
@@ -40,7 +44,8 @@ struct TouchControls: UIViewRepresentable {
       actionTitle: actionTitle, nextLeaderName: nextLeaderName, showsFire: showsFire,
       swapTitle: swapTitle, showsFormation: showsFormation,
       formationTitle: formationTitle, orderNames: orderNames,
-      vibrationTitle: vibrationTitle, panelTitle: panelTitle, mode: mode, generation: generation)
+      vibrationTitle: vibrationTitle, panelTitle: panelTitle, mode: mode, generation: generation,
+      grenadeTitle: grenadeTitle, showsGrenade: showsGrenade)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -56,6 +61,7 @@ struct TouchControls: UIViewRepresentable {
     private let fire = TouchZone(title: "Fire")
     private let dodge = TouchZone(title: "Roll")
     private let swap = TouchZone()
+    private let grenade = TouchZone(title: "Grenade")
     private let formation = TouchZone(title: "Formation")
     private let vibration = TouchZone()
     private let panel = TouchZone()
@@ -63,6 +69,7 @@ struct TouchControls: UIViewRepresentable {
     private var generation: Int?
     private var mode = GameSession.Mode.exploring
     private var showsFire = false
+    private var showsGrenade = true
     private var orderNames: (left: String, right: String)?
     /// The finger pressing the ground for the order menu, from its touch to its release.
     private var press: OrderPress?
@@ -79,7 +86,7 @@ struct TouchControls: UIViewRepresentable {
       backgroundColor = .clear
       isMultipleTouchEnabled = true
       for zone in [
-        stick, action, cycle, pause, fire, dodge, swap, formation, vibration, panel,
+        stick, action, cycle, pause, fire, dodge, swap, grenade, formation, vibration, panel,
       ] {
         addSubview(zone)
       }
@@ -94,6 +101,8 @@ struct TouchControls: UIViewRepresentable {
       vibration.accessibilityHint = "Turns vibration off, or on again."
       panel.accessibilityHint = "Shows or hides the status panel."
       swap.accessibilityHint = "Brings the leader's other weapon into hand."
+      grenade.accessibilityHint =
+        "Throws once toward the selected enemy or the way you aim. The squad shares its recharge."
       stick.accessibilityLabel = "Move"
       stick.accessibilityHint = "Drag to move the active character. Lift your finger to stop."
       stick.accessibilityTraits = .allowsDirectInteraction
@@ -118,7 +127,7 @@ struct TouchControls: UIViewRepresentable {
       }
       let buttons: [(TouchZone, TouchInput.Button)] = [
         (cycle, .cycle), (pause, .pause), (fire, .fire), (dodge, .dodge), (formation, .formation),
-        (vibration, .vibration), (panel, .panel), (swap, .swap),
+        (vibration, .vibration), (panel, .panel), (swap, .swap), (grenade, .grenade),
       ]
       for (zone, button) in buttons {
         zone.changed = { [weak self] _, isPressed, generation in
@@ -134,10 +143,12 @@ struct TouchControls: UIViewRepresentable {
     func update(
       actionTitle: String, nextLeaderName: String?, showsFire: Bool, swapTitle: String,
       showsFormation: Bool, formationTitle: String, orderNames: (left: String, right: String)?,
-      vibrationTitle: String, panelTitle: String, mode: GameSession.Mode, generation: Int
+      vibrationTitle: String, panelTitle: String, mode: GameSession.Mode, generation: Int,
+      grenadeTitle: String = "Grenade", showsGrenade: Bool = true
     ) {
       self.mode = mode
       self.showsFire = showsFire
+      self.showsGrenade = showsGrenade
       self.orderNames = orderNames
       if self.generation != generation {
         reset()
@@ -204,6 +215,9 @@ struct TouchControls: UIViewRepresentable {
       // stays while a finger holds it. Swap sits above it on the same terms.
       swap.setTitle("Swap: \(swapTitle)")
       swap.accessibilityLabel = "Swap to \(swapTitle)"
+      grenade.setTitle(grenadeTitle)
+      grenade.accessibilityLabel = "Grenade"
+      grenade.accessibilityValue = grenadeTitle
       refreshWeaponVisibility()
       // Formation appears with the second companion; a finger on it keeps it until it lifts.
       formation.isHidden = !showsFormation && !formation.isCaptured
@@ -215,7 +229,7 @@ struct TouchControls: UIViewRepresentable {
       panel.isHidden = mode != .paused && !panel.isCaptured
       // Keep every zone tracking while paused or talking so held fingers must still be
       // released. The action zone stays bright: it continues a conversation or restarts.
-      for zone in [stick, cycle, fire, dodge, swap, formation] {
+      for zone in [stick, cycle, fire, dodge, swap, grenade, formation] {
         zone.alpha = mode == .exploring ? 1 : 0.55
       }
     }
@@ -224,13 +238,14 @@ struct TouchControls: UIViewRepresentable {
       for zone in [fire, dodge, swap] {
         zone.isHidden = (!showsFire || mode != .exploring) && !zone.isCaptured
       }
+      grenade.isHidden = (!showsGrenade || mode != .exploring) && !grenade.isCaptured
     }
 
     func reset() {
       let generation = controls.touchGeneration
       self.generation = generation
       for zone in [
-        stick, action, cycle, pause, fire, dodge, swap, formation, vibration, panel,
+        stick, action, cycle, pause, fire, dodge, swap, grenade, formation, vibration, panel,
       ] {
         zone.reset(generation: generation)
       }
@@ -258,6 +273,9 @@ struct TouchControls: UIViewRepresentable {
       swap.frame = CGRect(
         x: dodge.frame.minX, y: bounds.height - 116 - inset,
         width: cycle.frame.minX - 12 - dodge.frame.minX, height: 52)
+      // One utility control above Roll, left of Formation; the existing controls stay put.
+      grenade.frame = CGRect(
+        x: dodge.frame.minX, y: formation.frame.minY, width: 112, height: 52)
       pause.frame = CGRect(x: bounds.width - 112 - inset, y: inset, width: 112, height: 44)
       // Beside Resume, shown only while paused.
       vibration.frame = CGRect(

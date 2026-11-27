@@ -217,7 +217,7 @@
     }
 
     @Test
-    func theGuardDriverOrdersAttackThenPeeksOutFromRealCoverBeforeTryingToFire() throws {
+    func afterLegLossTheRangedDriverOrdersAttackThenPeeksFromCoverBeforeFiring() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
       walk(world, to: [3.64, 11.09])
@@ -229,6 +229,13 @@
       try #require(
         !rays.isClear(from: rays.point(at), to: point.centre)
           || !rays.isClear(from: rays.point(centre, above: 1.52), to: rays.point(at)))
+      // This policy-only observation starts after Laura's leg break. The native world is
+      // unchanged; actual contacts/detachment are exercised by robot-parts and combat tests.
+      var observed = try #require(snapshot.guardStrategy)
+      for _ in 0..<GuardStrategy.swordHitsToDetach {
+        _ = observed.accept(weapon: .energySword, part: .leg(0), damage: 30)
+      }
+      snapshot.guardStrategy = observed
       var runner = PlaytestRunner(steps: [.dismantleGuard], name: "manual-cover-peek-contract")
       var peeked = false
       var orderedAttack = false
@@ -247,7 +254,7 @@
       }
       #expect(orderedAttack && peeked, "the ordinary command must precede the clear-lane approach")
       #expect(world.session.leader == .miki && !world.isRetrying)
-      #expect(world.playtestSnapshot.guardStrategy?.sensorDisabled == false)
+      #expect(world.playtestSnapshot.guardStrategy?.detachedLegs.isEmpty == true)
     }
 
     @Test

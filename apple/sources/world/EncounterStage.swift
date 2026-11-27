@@ -14,13 +14,18 @@ final class EncounterStage {
   private var hostileWeaponProps: [String: Entity] = [:]
   private var robots: [String: RobotPresentation] = [:]
   private var componentMarkers: [String: [ModelEntity]] = [:]
-  private enum ComponentLook: Equatable {
-    case closed
-    case exposed(PartyMember)
-  }
+  private enum ComponentLook: Equatable { case damaged, nearBreak }
   private var componentLooks: [String: [ComponentLook?]] = [:]
-  private let closedComponentMaterial = UnlitMaterial(color: .darkGray)
-  private let exposedComponentMaterials: [PartyMember: UnlitMaterial]
+  private let damagedLegMaterial = UnlitMaterial(color: .orange)
+  private let nearBreakMaterial = UnlitMaterial(color: .red)
+  private let grenadeProp = ModelEntity(
+    mesh: .generateSphere(radius: 0.16), materials: [UnlitMaterial(color: .orange)])
+  private let blastProp: ModelEntity = {
+    var material = UnlitMaterial(color: .orange)
+    material.blending = .transparent(opacity: .init(floatLiteral: 0.25))
+    return ModelEntity(mesh: .generateSphere(radius: 1), materials: [material])
+  }()
+  private var blastRemaining: Float = 0
   private let targetMarker: Entity
   /// The red ring round the locked hostile (ADR 0020).
   private let lockMarker: Entity
@@ -29,10 +34,6 @@ final class EncounterStage {
   private let robotLockScale: Float
 
   init(level: Level, style: SceneStyle) {
-    exposedComponentMaterials = Dictionary(
-      uniqueKeysWithValues: PartyMember.allCases.map {
-        ($0, UnlitMaterial(color: SceneStyle.colour(of: $0)))
-      })
     let shots = Entity()
     shots.name = "combat.shots"
     effects = ShotEffects(style: style, in: shots)
@@ -58,12 +59,20 @@ final class EncounterStage {
     container.addChild(targetMarker)
     container.addChild(lockMarker)
     container.addChild(shots)
+    grenadeProp.name = "combat.grenade"
+    blastProp.name = "combat.blast"
+    grenadeProp.isEnabled = false
+    blastProp.isEnabled = false
+    container.addChild(grenadeProp)
+    container.addChild(blastProp)
 
     for spec in level.encounters.flatMap(\.hostiles) {
       let body = Entity()
       body.name = "hostile.\(spec.id)"
       let visual = spec.attack == .robot ? style.robot() : style.hostile()
-      if spec.attack == .robot { robots[spec.id] = RobotPresentation(visual: visual) }
+      if spec.attack == .robot {
+        robots[spec.id] = RobotPresentation(visual: visual, debrisParent: container)
+      }
       if spec.attack == .shoot {
         let weapon = style.weapon(for: .rifle)
         weapon.name = "hostile.\(spec.id).rifle"
@@ -75,8 +84,8 @@ final class EncounterStage {
       bodies[spec.id] = body
       visuals[spec.id] = visual
       if spec.strategicGuard {
-        componentLooks[spec.id] = [nil, nil]
-        componentMarkers[spec.id] = (0..<2).map { index in
+        componentLooks[spec.id] = Array(repeating: nil, count: GuardStrategy.legCount)
+        componentMarkers[spec.id] = (0..<GuardStrategy.legCount).map { index in
           let marker = ModelEntity(
             mesh: .generateSphere(radius: 1), materials: [style.ink])
           marker.name = "combat.component.\(spec.id).\(index)"
@@ -90,6 +99,9 @@ final class EncounterStage {
 
   func reset(_ fight: EncounterSimulation) {
     effects.clear()
+    blastRemaining = 0
+    blastProp.isEnabled = false
+    grenadeProp.isEnabled = false
     for (id, presentation) in robots {
       if let state = fight.hostiles[id], let robot = state.robot {
         presentation.reset(position: state.position, facing: robot.facing)
@@ -100,6 +112,15 @@ final class EncounterStage {
 
   func update(_ fight: EncounterSimulation, dt: Float) {
     effects.update(dt: dt)
+    if let centre = fight.blasts.last {
+      blastProp.position = centre
+      blastRemaining = 0.45
+    } else {
+      blastRemaining = max(0, blastRemaining - dt)
+    }
+    blastProp.isEnabled = blastRemaining > 0
+    let blastScale = Grenade.blastRadius * (1 - blastRemaining / 0.45)
+    blastProp.scale = [blastScale, 0.12, blastScale]
     for shot in fight.shots {
       let side: ShotEffects.Side = shot.side == .party ? .party : .hostile
       if let trace = shot.trace {
@@ -123,27 +144,23 @@ final class EncounterStage {
   func clearDamage() { effects.clearDamage() }
 
   private func show(_ fight: EncounterSimulation, dt: Float) {
+    grenadeProp.isEnabled = fight.grenade != nil
+    if let grenade = fight.grenade { grenadeProp.position = grenade.position }
     for (id, state) in fight.hostiles {
       let points = fight.weakpoints(for: id)
       for (index, marker) in (componentMarkers[id] ?? []).enumerated() {
-        marker.isEnabled = points.indices.contains(index)
-        guard points.indices.contains(index) else { continue }
-        let point = points[index]
+        let hits = fight.guardStrategies[id]?.swordHits[index] ?? 0
+        guard hits > 0, let point = points.first(where: { $0.part == .leg(index) }) else {
+          marker.isEnabled = false
+          continue
+        }
+        marker.isEnabled = true
         marker.position = point.centre
-        marker.scale = SIMD3(repeating: point.radius)
-        let member: PartyMember =
-          switch point.part {
-          case .sensor: .miki
-          case .coupling: .laura
-          case .reactor: .tom
-          }
-        let look: ComponentLook = point.exposed ? .exposed(member) : .closed
+        marker.scale = SIMD3(repeating: 0.14)
+        let look: ComponentLook =
+          hits >= GuardStrategy.swordHitsToDetach - 1 ? .nearBreak : .damaged
         if componentLooks[id]?[index] != look {
-          let material =
-            point.exposed
-            ? exposedComponentMaterials[member] ?? closedComponentMaterial
-            : closedComponentMaterial
-          marker.model?.materials = [material]
+          marker.model?.materials = [look == .nearBreak ? nearBreakMaterial : damagedLegMaterial]
           componentLooks[id]?[index] = look
         }
       }
@@ -155,7 +172,8 @@ final class EncounterStage {
         presentation.update(
           position: state.position, facing: robot.facing, brace: robot.brace,
           gunDirections: robot.gunDirections, gunRecoil: robot.gunRecoil,
-          down: state.isDown, dt: dt)
+          down: state.isDown, detachedLegs: fight.guardStrategies[id]?.detachedLegs ?? [],
+          bodyDrop: robot.bodyDrop, dt: dt)
       } else if let visual = visuals[id], let pose = fight.hostilePoses[id] {
         visual.orientation = pose.orientation
         visual.position = pose.position

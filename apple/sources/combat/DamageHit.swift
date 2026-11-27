@@ -9,7 +9,7 @@ struct DamageHit: Equatable, Sendable {
 
   let target: String
   let attacker: PartyMember
-  let weapon: Weapon.Kind
+  let weapon: Weapon.Kind?
   let amount: Int
   let position: SIMD3<Float>
   let effectiveness: Effectiveness

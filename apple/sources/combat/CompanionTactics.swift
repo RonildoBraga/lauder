@@ -45,6 +45,7 @@ struct CompanionTactics {
     let stance: GameSession.CombatStance
     let phase: RobotGuard.Phase
     let stage: GuardStrategy.Phase
+    let part: GuardStrategy.Part?
     let threatened: Bool
   }
 
@@ -86,9 +87,11 @@ struct CompanionTactics {
       return Intent(activity: .ordered)
     }
     let threatened = isThreatened(input.position) && !isCovered(input.position)
+    let assignment = Self.assignment(
+      member: input.member, position: input.position, points: input.weakpoints)
     let next = Context(
       member: input.member, leader: input.leader, order: input.order, stance: input.stance,
-      phase: input.phase, stage: input.stage, threatened: threatened)
+      phase: input.phase, stage: input.stage, part: assignment?.part, threatened: threatened)
     if context != next {
       goal = nil
       goalTargetsBody = false
@@ -154,7 +157,6 @@ struct CompanionTactics {
       }
       return Intent(position: goal, activity: goal == nil ? .following : goalActivity)
     }
-    let assignment = Self.assignment(member: input.member, stage: input.stage)
     let points = input.weakpoints.filter { $0.part == assignment?.part }
     let point = points.min {
       simd_distance_squared($0.ground, input.position)
@@ -366,13 +368,24 @@ struct CompanionTactics {
   }
 
   private static func assignment(
-    member: PartyMember, stage: GuardStrategy.Phase
+    member: PartyMember, position: SIMD2<Float>, points: [GuardWeakpoint]
   ) -> (part: GuardStrategy.Part, weapon: Weapon.Kind, radii: [Float])? {
-    switch (member, stage) {
-    case (.miki, .sensor): (.sensor, .longRifle, [6, 7])
-    case (.laura, .coupling): (.coupling, .energySword, [2.65])
-    case (.tom, .reactor): (.reactor, .minigun, [3.5, 4])
-    default: nil
+    switch member {
+    case .miki: return (.eye, .longRifle, [6, 7])
+    case .tom: return (.eye, .minigun, [3.5, 4])
+    case .laura:
+      let legs = points.filter {
+        if case .leg(let index) = $0.part { return (0..<GuardStrategy.legCount).contains(index) }
+        return false
+      }
+      guard
+        let leg = legs.min(by: {
+          let a = simd_distance_squared($0.ground, position)
+          let b = simd_distance_squared($1.ground, position)
+          return a == b ? $0.id < $1.id : a < b
+        })
+      else { return nil }
+      return (leg.part, .energySword, [2.65])
     }
   }
 

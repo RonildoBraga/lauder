@@ -1,13 +1,13 @@
 # Companion autonomy at the first tower
 
 **Date:** 27 November 2026\
-**Status:** The ordinary-attack extension for [shared guard health and damage feedback](damage-feedback.md) is implemented on `codex/guard-damage` under [issue #183](https://github.com/RonildoBraga/lauder/issues/183), based on [PR #175](https://github.com/RonildoBraga/lauder/pull/175), source `5421873`. Source/rendered verification passed on `533f012`, recorded in the [prototype plan](prototype-plan.md#guard-damage-and-feedback--in-development). Earlier autonomy/Attack/Defend results remain recorded below and in the [earlier plan section](prototype-plan.md#companion-autonomy--in-development). The ordinary-attack extension is now delivered in internal [build 36](prototype-plan.md#build-36-testflight-preview), through [PR #185](https://github.com/RonildoBraga/lauder/pull/185). Apple processing and existing-tester access are verified; earlier preview feedback does not establish this revision's phone behaviour, balance or performance.
+**Status:** The current [eye/leg preferences](robot-eye-legs-grenades.md) are implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Earlier Attack/Defend, ordinary-attack and retaliation checks remain historical evidence below; they do not validate this revision or establish its phone behaviour, balance or performance.
 
 ## Maintainer direction
 
 After playing build 33, the maintainer reported **“It worked nice”**, then asked for companions to act independently. The explicit follow-up choice was **“Companions can complete the weakpoint steps too”**. These are maintainer decisions relayed from chat, which has no public permalink. The first comment is generic phone feedback; it does not establish individual control acceptance, sustained performance or permission to merge.
 
-The player always controls the leader. The other two may move and fight within this encounter, including completing their own native contributions to the [strategic guard](strategic-guard.md). All three characters still contribute, but the player need not switch leader for every step. Existing L1 / LB, Q and touch Next remain available for taking direct control.
+The player always controls the leader. The other two may move and fight within this encounter, including using their native opportunities against the [strategic guard](strategic-guard.md). Every companion can contribute; no all-three sequence is required for victory. Existing L1 / LB, Q and touch Next remain available for taking direct control.
 
 The maintainer then clarified: **“they should only attack and complet the steps if I press to attack”** and **“if I press to defend on the d pad then they should seek cover and try to go back to me”**. This replaces automatic engagement permission with an explicit standing squad stance. The player firing or the guard noticing the party does not authorise companion attacks.
 
@@ -15,31 +15,33 @@ After build 34 the maintainer reported **“The Attack and Defend controls are w
 
 On 27 November the maintainer requested positive damage from every successful hit and approved the shared-health/optional-weakness proposal with **“Proceed with your recommendations”** (chat; no public permalink). Companions therefore need a safe ordinary-attack fallback when their specialist opportunity is unavailable. This replaces the earlier all-three victory gate while preserving explicit commands and player ownership. The [damage contract](damage-feedback.md) owns the new rules; it does not settle biographies or add signature abilities.
 
+That ordinary-attack revision was delivered in builds 36–37, with its original checks recorded on `533f012`. Issue #192 subsequently replaces the weapon-gated sensor/coupling/core route with persistent eye criticals and independent sword-leg damage. Tom's new grenade remains a manual action while he leads; companions cannot throw it.
+
 ## Attack and Defend
 
 - Start in **Defend**. D-pad/arrow **Up** orders **Attack**; **Down** orders **Defend**. Left/right still position the individual companion. Keyboard **G/H** and the touch ground menu retain Both/Hold orders.
-- **Attack** permits role-aware companion attacks once the fight is engaged: prefer a useful matching exposed part, otherwise use a safe ordinary shot. It persists across leader changes until Defend is ordered; the player-controlled leader is always manual.
+- **Attack** permits role-aware companion attacks once the fight is engaged: Miki/Tom prefer a useful eye shot and Laura a reachable intact leg, otherwise use a safe ordinary shot. It persists across leader changes until Defend is ordered; the player-controlled leader is always manual.
 - **Defend** immediately revokes companion fire permission, cancels old Hold/Go orders and recalls the companions without cycling the formation. They try legal nearby cover along the return toward the leader; remote cover cannot pin them away from the squad. If no useful returning cover exists, they follow normally. A new Go/Hold order may still position them defensively, but does not permit firing.
-- The touch ground menu offers **Attack** on the upper-left diagonal and **Defend** on the upper-right; straight up still cancels. These stance commands do not require a reachable marked destination. Their current stance is visible in the HUD.
+- The touch ground menu's drawn **Attack** and **Defend** choices set the stance without requiring a reachable marked destination. The [touch contract](touch-controls.md) owns visible-choice selection, directional fallback and top-edge cancellation limits. The current stance is visible in the HUD.
 - Pause/dialogue cannot change the stance. Source switches and interruptions require fresh neutral input. Retry and Restart return to Defend and require a new Attack command.
 
 ## Bounded behaviour
 
 | Companion | Preferred weakness opportunity | Ordinary fallback |
 |---|---|---|
-| Miki | Long rifle against the exposed front sensor | Long-rifle body shot |
-| Laura | Reach an external side angle and strike the coupling with the energy sword | Shotgun body shot |
-| Tom | Minigun against the exposed core | Minigun body shot |
+| Miki | Long rifle against the persistent eye | Long-rifle body shot |
+| Laura | Reach an intact leg and strike it with the energy sword | Shotgun body shot |
+| Tom | Minigun against the persistent eye | Minigun body shot; no automatic grenade |
 
-The same weapon, exposure and physical-contact rules apply to player and companion hits. Every valid damaging contact reduces the shared guard health; matching exposed parts earn the bonus. The weapon match does not add an actor-identity damage gate. A companion's intention is not a scripted damage shortcut. Weapon draw, turning, magazine/reload, cadence, minigun spin-up, spread and cover remain real. Health loss and optional broken parts retain their persistence/reset rules. The health, weapon values and bonus multiplier are initial tuning rather than settled balance.
+The same physical-contact rules apply to player and companion hits. Every valid damaging contact reduces shared guard health; actual eye hits earn the critical multiplier with any gun. Laura's three sword contacts on the same leg detach it, and each missing leg reduces translation by 25%. An intention is not a scripted damage shortcut. Weapon draw, turning, magazine/reload, cadence, minigun spin-up, spread and cover remain real. Health loss and leg counters persist on retreat and reset on Retry/Restart. Health, damage, durability and movement values remain prototype tuning.
 
 - **Engagement:** companion combat requires the explicit Attack stance as well as the guard noticing the party or the player attacking it. An unaware guard, quiet approach or west-arch bypass must not be turned into a fight by a companion.
 - **Positions:** seek nearby legal places with useful sight or tower cover, avoid committed fire before ordinary firing, and keep tactical destinations within the existing **8 m leader leash**. Body-fire candidates are short local moves; connected regions admit cover destinations while the existing motor owns cached routes and real collision. Intended spacing and actual moving-body separation remain distinct, as the [cover contract](bridge-cover-spacing.md) explains. No teleportation or damage immunity supplies a successful move.
-- **Order priority:** Hold keeps its anchor; Go keeps its destination and movement priority. A companion may not abandon those orders to obtain a firing angle or a coupling strike. If the ordered position cannot support the action, that action waits. Defend explicitly cancels old orders to recall both companions; later position orders remain defensive until Attack is pressed.
+- **Order priority:** Hold keeps its anchor; Go keeps its destination and movement priority. A companion may not abandon those orders to obtain an eye angle or a leg strike. If the ordered position cannot support the action, that action waits. Defend explicitly cancels old orders to recall both companions; later position orders remain defensive until Attack is pressed.
 - **Regrouping:** the existing Formation/Follow press clears tactical intentions and grants a temporary regroup interval: at least 2 seconds and until followers return near the leader, unless a new accepted Go/Hold order replaces that temporary request. A refused order does not cancel regrouping. It retains its existing order-clearing/formation-cycle behaviour and never changes the standing Attack/Defend stance. The leader withdrawing also suppresses attacks and brings uncommanded companions back. Defend supplies persistent cease-fire and recall; explicit Hold/Go movement orders otherwise remain authoritative until cleared.
 - **Ownership:** switching immediately returns the new leader to player authority; the old leader may resume bounded companion behaviour. Autonomous decisions never drive the player's current leader or replay an action after a control transition.
 - **Lifecycle:** Pause, dialogue, inactivity and release gates retain their authority. Retry and Restart reset transient combat intentions alongside the encounter.
-- **Defence:** use legal movement and cover. This task does not add automatic shield activation, signature abilities, healing, invulnerability or a general tactical AI framework. Tom's player-controlled dome retains its existing switch/drop rule.
+- **Defence:** use legal movement and cover. This task does not add automatic shield activation, grenade throws, signature abilities, healing, invulnerability or a general tactical AI framework to companions. Tom's player-controlled dome retains its existing switch/drop rule.
 
 The existing retaliation pass makes a real attacking companion eligible for the guard's next warned cycle. Defend revokes attacks and recalls companions, but does not erase recent attack evidence or cancel a cycle already warned against them. The named target, finite turning and fixed committed point are owned by the [retaliation contract](guard-retaliation.md), rather than by companion navigation.
 
@@ -47,7 +49,7 @@ The aim is visible cooperation using the existing scene, weapons and simple sign
 
 ## Verification gate
 
-Before reporting the new behaviour as working, verify actual ordinary companion damage and useful exposed-part preferences; awareness/attack activation; a quiet bypass; legal side access and cover; destination leash and temporary regroup/retreat; Hold/Go precedence; player authority after switching; native firing limits; Pause/interruption and Retry/Restart. Include a rendered Simulator encounter with the player staying on one leader while the others contribute through their actual weapons. Shared-health progress must not require all three role steps.
+Before reporting the new behaviour as working, verify actual ordinary companion damage, persistent eye preferences and Laura's independent leg counters; awareness/attack activation; a quiet bypass; legal leg access and cover; destination leash and temporary regroup/retreat; Hold/Go precedence; player authority after switching; native firing limits; no automatic grenade throws; Pause/interruption and Retry/Restart. Include a rendered Simulator encounter with the player staying on one leader while the others contribute through their actual weapons. Shared-health progress must not require all three role steps.
 
 Record the tested source and actual results in the prototype plan and PR. Simulator results will not by themselves establish phone controls, multi-touch, readability, sustained frame pacing or enjoyment. Merge and TestFlight delivery keep their own authorisation and verification gates.
 

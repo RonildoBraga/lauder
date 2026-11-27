@@ -29,6 +29,7 @@ final class GameControls {
   private(set) var lockButtonName: String?
   /// The button that brings the leader's other weapon into hand (ADR 0021).
   private(set) var swapButtonName = "Swap"
+  private(set) var grenadeButtonName = "Grenade"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -145,13 +146,14 @@ final class GameControls {
         pad?.rightThumbstick.xAxis.value ?? 0, pad?.rightThumbstick.yAxis.value ?? 0),
       controllerAction: pad?.buttonA.isPressed == true,
       controllerPause: pad?.buttonMenu.isPressed == true,
-      // One switch, going round the party; Circle / B is free.
+      // One switch, going round the party; Circle / B throws a grenade.
       controllerSwitch: pad?.leftShoulder.isPressed == true,
       controllerFire: pad?.rightTrigger.isPressed == true,
       controllerFormation: pad?.buttonY.isPressed == true,
       controllerDodge: pad?.buttonX.isPressed == true,
       controllerLock: pad?.rightThumbstickButton?.isPressed == true,
       controllerSwap: pad?.rightShoulder.isPressed == true,
+      controllerGrenade: pad?.buttonB.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
@@ -161,6 +163,7 @@ final class GameControls {
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
       keyboardDodge: pressed(.spacebar), keyboardLock: pressed(.keyO),
       keyboardSwap: pressed(.keyT),
+      keyboardGrenade: pressed(.keyC),
       keyboardBothGo: pressed(.keyG), keyboardHold: pressed(.keyH),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
@@ -175,6 +178,7 @@ final class GameControls {
       touchFormation: touch.touchFormation,
       touchDodge: touch.touchDodge,
       touchSwap: touch.touchSwap,
+      touchGrenade: touch.touchGrenade,
       touchGround: touch.touchGround,
       touchMark: touch.touchMark, touchOrder: touch.touchOrder, touchTarget: touch.touchTarget
     )
@@ -257,34 +261,36 @@ final class GameControls {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "L1",
         fire: "R2", aim: "Right stick", formation: "Triangle", dodge: "Square", lock: "R3",
-        swap: "R1")
+        swap: "R1", grenade: "Circle")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "LB",
-        fire: "RT", aim: "Right stick", formation: "Y", dodge: "X", lock: "RS", swap: "RB")
+        fire: "RT", aim: "Right stick", formation: "Y", dodge: "X", lock: "RS", swap: "RB",
+        grenade: "B")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
         cycle: "Left shoulder", fire: "Right trigger", aim: "Right stick", formation: "Button Y",
-        dodge: "Button X", lock: "Right stick press", swap: "Right shoulder")
+        dodge: "Button X", lock: "Right stick press", swap: "Right shoulder", grenade: "Button B")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F",
-      aim: "IJKL", formation: "R", dodge: "Space", lock: "O", swap: "T")
+      aim: "IJKL", formation: "R", dodge: "Space", lock: "O", swap: "T", grenade: "C")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
-      aim: nil, formation: "Formation", dodge: "Roll", lock: "Tap enemy", swap: "Swap")
+      aim: nil, formation: "Formation", dodge: "Roll", lock: "Tap enemy", swap: "Swap",
+      grenade: "Grenade")
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, cycle: String, fire: String, aim: String?,
-    formation: String, dodge: String, lock: String?, swap: String
+    formation: String, dodge: String, lock: String?, swap: String, grenade: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -296,6 +302,7 @@ final class GameControls {
     if dodgeButtonName != dodge { dodgeButtonName = dodge }
     if lockButtonName != lock { lockButtonName = lock }
     if swapButtonName != swap { swapButtonName = swap }
+    if grenadeButtonName != grenade { grenadeButtonName = grenade }
   }
 
   isolated deinit {

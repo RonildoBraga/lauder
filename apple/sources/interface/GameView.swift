@@ -182,7 +182,8 @@ struct GameView: View {
           orderNames: orderNames,
           vibrationTitle: vibrationTitle,
           panelTitle: world.showsPanel ? "Status panel: On" : "Status panel: Off",
-          mode: world.session.mode)
+          mode: world.session.mode,
+          grenadeTitle: world.grenadeStatus, showsGrenade: world.session.leader == .tom)
       }
     }
     .handlesGameControllerEvents(matching: .gamepad)
@@ -396,6 +397,9 @@ struct GameView: View {
     var others: [String] = []
     if world.showsWeapon {
       others.append("\(world.controls.fireButtonName) · Fire")
+      if world.session.leader == .tom {
+        others.append("\(world.controls.grenadeButtonName) · \(world.grenadeStatus)")
+      }
       // The other of the leader's two weapons (ADR 0021).
       others.append("\(world.controls.swapButtonName) · \(world.otherWeaponName)")
       others.append("\(world.controls.dodgeButtonName) · Roll")

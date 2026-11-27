@@ -31,25 +31,32 @@ struct CompanionTacticsTests {
   }
 
   @Test
-  func specialistsPreferTheirExposedPartWhileOtherMembersCanUseOrdinaryFire() {
-    for (member, stage, weapon) in [
-      (PartyMember.miki, GuardStrategy.Phase.sensor, Weapon.Kind.longRifle),
-      (.laura, .coupling, .energySword), (.tom, .reactor, .minigun),
-    ] {
+  func mikiAndTomPreferThePersistentEyeWhileLauraTakesTheNearestIntactLeg() {
+    for (member, weapon) in [(PartyMember.miki, Weapon.Kind.longRifle), (.tom, .minigun)] {
       var planner = CompanionTactics()
       let result = plan(
-        &planner, input(member: member, leader: member == .miki ? .laura : .miki, stage: stage),
-        canFireAtBody: { _, _ in true })
-      #expect(result.weapon == weapon && result.fire && result.activity == .attacking)
-      #expect(!result.targetsBody)
-      for other in PartyMember.allCases where other != member {
-        let support = plan(
-          &planner, input(member: other, leader: member, stage: stage),
-          canFireAtBody: { _, _ in true })
-        #expect(support.weapon == Weapon.pair(for: other).first?.kind)
-        #expect(support.targetsBody && support.fire && support.lookAt == .zero)
-      }
+        &planner, input(member: member, leader: .laura), canFireAtBody: { _, _ in true })
+      #expect(result.weapon == weapon && result.fire && !result.targetsBody)
+      #expect(result.lookAt == [0, -1.45])
     }
+    var planner = CompanionTactics()
+    let near = weakpoint(.leg(2), ground: [1.45, 0])
+    let far = weakpoint(.leg(0), ground: [-1.45, 0])
+    let result = plan(
+      &planner,
+      input(member: .laura, leader: .miki, position: [3, 0], points: [far, near]))
+    #expect(result.weapon == .energySword && result.fire && !result.targetsBody)
+    #expect(result.lookAt == near.ground)
+    // Detaching that leg removes its volume. Even within the replan interval the next
+    // surviving leg becomes authoritative instead of retaining the old cached contact.
+    let next = plan(
+      &planner,
+      input(member: .laura, leader: .miki, position: [3, 0], points: [far], dt: 0.001))
+    #expect(next.lookAt == far.ground && next.weapon == .energySword)
+    let fallback = plan(
+      &planner, input(member: .laura, leader: .miki, points: []),
+      canFireAtBody: { _, weapon in weapon == .shotgun })
+    #expect(fallback.weapon == .shotgun && fallback.targetsBody && fallback.fire)
   }
 
   @Test
@@ -90,8 +97,8 @@ struct CompanionTacticsTests {
     let result = plan(
       &planner,
       input(
-        member: .laura, leader: .miki, position: actor, leaderPosition: [0, -4], stage: .coupling,
-        points: [weakpoint(.coupling, ground: [1.45, 0])]),
+        member: .laura, leader: .miki, position: actor, leaderPosition: [0, -4], stage: .active,
+        points: [weakpoint(.leg(0), ground: [1.45, 0])]),
       canTraverse: { start, end in
         // A chord crossing the living body is illegal, even on otherwise open ground.
         let delta = end - start
@@ -110,7 +117,7 @@ struct CompanionTacticsTests {
   func illegalPierPathsNeverBecomeOrbitOrFiringTargets() {
     var planner = CompanionTactics()
     let result = plan(
-      &planner, input(member: .laura, leader: .miki, stage: .coupling),
+      &planner, input(member: .laura, leader: .miki, stage: .active),
       canTraverse: { _, _ in false }, canFire: { _, _, _ in false })
     #expect(result.position == nil && result.activity == .following && !result.fire)
   }
@@ -134,7 +141,7 @@ struct CompanionTacticsTests {
   func aBlockedOrdinaryAttackStillSupportsFromNearbyCover() throws {
     var planner = CompanionTactics()
     let result = plan(
-      &planner, input(member: .tom), isCovered: { $0.x > 1 })
+      &planner, input(member: .tom, points: []), isCovered: { $0.x > 1 })
     let goal = try #require(result.position)
     #expect(result.activity == .waiting && result.weapon == nil && !result.fire)
     #expect(goal.x > 1 && simd_distance(goal, [0, -6]) <= 3)
@@ -145,20 +152,20 @@ struct CompanionTacticsTests {
     var planner = CompanionTactics()
     let start = SIMD2<Float>(0, -6)
     let approach = plan(
-      &planner, input(member: .tom), canFireAtBody: { point, _ in point.x > 0.1 })
+      &planner, input(member: .tom, points: []), canFireAtBody: { point, _ in point.x > 0.1 })
     let goal = try #require(approach.position)
     #expect(approach.targetsBody && approach.weapon == .minigun && !approach.fire)
     #expect(approach.activity == .approaching && goal.x > 0.1)
     #expect(simd_distance(goal, start) <= CompanionTactics.localRadius)
     let replaced = plan(
-      &planner, input(member: .tom, dt: 0.001),
+      &planner, input(member: .tom, points: [], dt: 0.001),
       canFireAtBody: { point, _ in point.x > 0.1 },
       isSpaced: { simd_distance($0, goal) >= CompanionTactics.minimumSpacing })
     #expect(
       simd_distance(try #require(replaced.position), goal) >= CompanionTactics.minimumSpacing)
     #expect(replaced.targetsBody && !replaced.fire)
     let stopped = plan(
-      &planner, input(member: .tom), canTraverse: { _, _ in false },
+      &planner, input(member: .tom, points: []), canTraverse: { _, _ in false },
       canFireAtBody: { point, _ in point.x > 0.1 })
     #expect(stopped.position == nil && !stopped.fire)
   }
@@ -167,7 +174,7 @@ struct CompanionTacticsTests {
   func aThreatenedNonSpecialistAvoidsBeforeTakingAnOrdinaryShot() throws {
     var planner = CompanionTactics()
     let result = plan(
-      &planner, input(member: .tom), canFireAtBody: { _, _ in true },
+      &planner, input(member: .tom, points: []), canFireAtBody: { _, _ in true },
       isCovered: { $0.x > 2 }, isThreatened: { $0.x <= 2 })
     #expect(result.activity == .avoiding && !result.fire)
     #expect(try #require(result.position).x > 2)
@@ -178,11 +185,11 @@ struct CompanionTacticsTests {
     for hasCover in [false, true] {
       var planner = CompanionTactics()
       _ = plan(
-        &planner, input(member: .tom), isCovered: { _ in hasCover })
+        &planner, input(member: .tom, points: []), isCovered: { _ in hasCover })
       var queries = 0
       for _ in 0..<10 {
         let result = plan(
-          &planner, input(member: .tom, dt: 0.01),
+          &planner, input(member: .tom, points: [], dt: 0.01),
           canFireAtBody: { _, _ in
             queries += 1
             return false
@@ -202,7 +209,7 @@ struct CompanionTacticsTests {
     // Rebuilding a specialist intent on cached steps used to swap it back to the sword.
     for _ in 0..<120 {
       let result = plan(
-        &planner, input(member: .laura, leader: .miki, stage: .coupling),
+        &planner, input(member: .laura, leader: .miki, stage: .active),
         canTraverse: { simd_distance($0, $1) < 0.01 }, canFire: { _, _, _ in false },
         canFireAtBody: { _, weapon in weapon == .shotgun })
       #expect(result.targetsBody && result.weapon == .shotgun && result.fire)
@@ -214,7 +221,7 @@ struct CompanionTacticsTests {
   func aHeldNonSpecialistCanFireOrdinarilyButGoAndDefendCannot() {
     var planner = CompanionTactics()
     let held = plan(
-      &planner, input(member: .tom, order: .holding([0, -6])),
+      &planner, input(member: .tom, order: .holding([0, -6]), points: []),
       canFireAtBody: { _, _ in true },
       isSpaced: { _ in
         Issue.record("Spacing must not override a Hold anchor")
@@ -276,7 +283,7 @@ struct CompanionTacticsTests {
   @Test
   func defendNeverAimsDrawsOrFiresAtAnyRoleOrStage() {
     for member in PartyMember.allCases {
-      for stage in [GuardStrategy.Phase.sensor, .coupling, .reactor] {
+      for stage in [GuardStrategy.Phase.active, .complete] {
         var planner = CompanionTactics()
         let result = plan(
           &planner,
@@ -453,7 +460,7 @@ struct CompanionTacticsTests {
         &planner,
         input(
           member: .tom, position: [0, -1], leaderPosition: .zero, baseTarget: base,
-          stance: stance),
+          stance: stance, points: []),
         isSpaced: { simd_length($0) >= CompanionTactics.minimumSpacing })
       let goal = try #require(result.position)
       #expect(simd_length(goal) >= CompanionTactics.minimumSpacing && simd_length(goal) <= 2.6)
@@ -462,7 +469,7 @@ struct CompanionTacticsTests {
         &planner,
         input(
           member: .tom, position: goal, leaderPosition: .zero, baseTarget: base, stance: stance,
-          dt: 0.31),
+          points: [], dt: 0.31),
         isSpaced: { simd_length($0) >= CompanionTactics.minimumSpacing })
       #expect(settled.position == goal && !settled.fire)
     }
@@ -511,11 +518,10 @@ struct CompanionTacticsTests {
     position: SIMD2<Float> = [0, -6], leaderPosition: SIMD2<Float> = [0, -6],
     baseTarget: SIMD2<Float>? = nil, order: GameSession.Order = .following,
     stance: GameSession.CombatStance = .attack, active: Bool = true,
-    phase: RobotGuard.Phase = .recovering, stage: GuardStrategy.Phase = .sensor,
+    phase: RobotGuard.Phase = .recovering, stage: GuardStrategy.Phase = .active,
     exposed: Bool = true, points: [GuardWeakpoint]? = nil, dt: Float = 1 / 60
   ) -> CompanionTactics.Input {
-    let part: GuardStrategy.Part =
-      stage == .sensor ? .sensor : stage == .coupling ? .coupling : .reactor
+    let part: GuardStrategy.Part = member == .laura ? .leg(0) : .eye
     return .init(
       member: member, leader: leader, position: position, leaderPosition: leaderPosition,
       baseTarget: baseTarget ?? position, order: order, stance: stance, active: active,

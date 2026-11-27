@@ -8,7 +8,7 @@ import simd
 struct CompanionAutonomyTests {
   #if DEBUG
     @Test
-    func defaultDefendPreventsCompanionAttacksEvenAfterThePlayerEngagesAndOpensTheSensor() throws {
+    func defaultDefendPreventsCompanionAttacksEvenAfterThePlayerDamagesTheGuard() throws {
       let world = GameWorld(level: BrooklynBridge.level)
       walk(world, to: [6.5, 10])
       update(world)
@@ -16,7 +16,7 @@ struct CompanionAutonomyTests {
       let before = world.playtestSnapshot.partyWeapons
       for _ in 0..<60 * 20 {
         let snapshot = world.playtestSnapshot
-        if snapshot.guardStrategy?.sensorDisabled == true { break }
+        if snapshot.damage.hits > 0 { break }
         let point = try #require(snapshot.guardPoints.first)
         let aim = Movement.stick(
           towards: point.ground - position(world, .miki), cameraOffset: world.level.cameraOffset)
@@ -24,12 +24,12 @@ struct CompanionAutonomyTests {
         try #require(!world.isRetrying)
         #expect(!world.playtestSnapshot.companionActivities.values.contains(.attacking))
       }
-      try #require(world.playtestSnapshot.guardStrategy?.sensorDisabled == true)
+      try #require(world.playtestSnapshot.damage.hits > 0)
       for _ in 0..<60 * 2 { update(world) }
       let after = world.playtestSnapshot
       #expect(after.combatStance == .defend && after.leader == .miki)
-      #expect(
-        after.guardStrategy?.couplingBreached == false && after.guardStrategy?.reactorDamage == 0)
+      #expect(after.guardStrategy?.detachedLegs.isEmpty == true)
+      #expect(after.guardStrategy?.swordHits.isEmpty == true)
       for member in [PartyMember.laura, .tom] {
         #expect(try #require(after.partyWeapons[member]).loaded >= #require(before[member]).loaded)
       }
@@ -46,7 +46,7 @@ struct CompanionAutonomyTests {
         drive(&preparation, in: world)
       }
       try #require(preparation.summary?.passed == true)
-      try #require(world.playtestSnapshot.guardStrategy?.couplingBreached == true)
+      try #require((world.playtestSnapshot.guardStrategy?.health ?? .max) < 1350)
       update(world, raw: InputRules.Raw(keyboardHold: true))
       update(world)
       try #require(!world.session.orders.isEmpty)
@@ -63,7 +63,7 @@ struct CompanionAutonomyTests {
       #expect(world.session.leader == .miki && !world.isRetrying)
       #expect(world.playtestSnapshot.guardStrategy?.health == stopped.guardStrategy?.health)
       #expect(
-        world.playtestSnapshot.guardStrategy?.reactorDamage == stopped.guardStrategy?.reactorDamage)
+        world.playtestSnapshot.guardStrategy?.detachedLegs == stopped.guardStrategy?.detachedLegs)
       for member in [PartyMember.laura, .tom] {
         #expect(
           try #require(world.playtestSnapshot.partyWeapons[member]).loaded
@@ -86,7 +86,7 @@ struct CompanionAutonomyTests {
         world.playtestSnapshot.weapon.loaded < playerLoaded, "Defend leaves player Fire available")
       #expect(world.session.combatStance == .defend && world.session.leader == .miki)
       #expect(
-        world.playtestSnapshot.guardStrategy?.reactorDamage == stopped.guardStrategy?.reactorDamage)
+        world.playtestSnapshot.guardStrategy?.detachedLegs == stopped.guardStrategy?.detachedLegs)
       #expect(!world.playtestSnapshot.companionActivities.values.contains(.attacking))
     }
 
@@ -105,7 +105,7 @@ struct CompanionAutonomyTests {
         let before = world.playtestSnapshot
         let raw = runner.input(before)
         #expect(!raw.controllerSwitch && !raw.keyboardSwitch && !raw.touchSwitch)
-        if before.guardStrategy?.sensorDisabled == true {
+        if before.damage.byMember[PartyMember.miki.rawValue, default: 0] > 0 {
           #expect(!raw.controllerFire && !raw.keyboardFire && !raw.touchFire)
         }
         update(world, raw: raw)
@@ -225,7 +225,8 @@ struct CompanionAutonomyTests {
       for _ in 0..<60 * 6 { update(world) }
       let before = world.playtestSnapshot
       #expect(before.robotPhase == .patrol && before.robotShots == 0)
-      #expect(before.guardStrategy?.sensorDisabled == false)
+      #expect(before.guardStrategy?.health == GuardStrategy.maximumHealth)
+      #expect(before.guardStrategy?.detachedLegs.isEmpty == true)
       #expect(!before.companionActivities.values.contains(.attacking))
       walk(world, to: [-6.5, -3])
       walk(world, to: [-8.5, -8])
@@ -284,7 +285,7 @@ struct CompanionAutonomyTests {
       #expect(
         simd_distance(position(world, .tom), try #require(anchors[.tom]))
           <= CompanionMotor.settleDistance)
-      #expect(world.playtestSnapshot.guardStrategy?.couplingBreached == false)
+      #expect(world.session.leader == .miki)
     }
 
     @Test
@@ -293,11 +294,11 @@ struct CompanionAutonomyTests {
       walk(world, to: [6.5, 10])
       attack(world)
       var runner = PlaytestRunner(steps: [.companionFight], name: "companion-pause")
-      for _ in 0..<60 * 25 where world.playtestSnapshot.guardStrategy?.sensorDisabled != true {
+      for _ in 0..<60 * 25 where world.playtestSnapshot.damage.hits == 0 {
         runner.tick(dt: 1 / 60)
         update(world, raw: runner.input(world.playtestSnapshot))
       }
-      #expect(world.playtestSnapshot.guardStrategy?.sensorDisabled == true)
+      #expect(world.playtestSnapshot.damage.hits > 0)
       pressPause(world)
       let before = world.playtestSnapshot
       let facings = Dictionary(
@@ -336,7 +337,7 @@ struct CompanionAutonomyTests {
   #endif
 
   @Test(arguments: [PartyMember.tom, .laura])
-  func ordinaryCompanionHitsDamageTheGuardWithoutUnlockingItsParts(member: PartyMember) throws {
+  func ordinaryCompanionBodyHitsDamageTheGuardWithoutDetachingLegs(member: PartyMember) throws {
     let range = try NativeRange()
     _ = range.fight.takeEvents()
     let before = range.strategy.health
@@ -352,8 +353,8 @@ struct CompanionAutonomyTests {
       hits.allSatisfy { $0.attacker == member && $0.effectiveness == .normal && $0.amount > 0 })
     #expect(hits.reduce(0) { $0 + $1.amount } == before - range.strategy.health)
     #expect(range.strategy.health < before)
-    #expect(!range.strategy.sensorDisabled && !range.strategy.couplingBreached)
-    #expect(range.strategy.reactorDamage == 0 && range.session.leader == .miki)
+    #expect(range.strategy.detachedLegs.isEmpty && range.strategy.swordHits.isEmpty)
+    #expect(range.session.leader == .miki)
     let loaded = range.fight.status(for: member).loaded
     let stoppedHealth = range.strategy.health
     range.session.setCombatStance(.defend)
@@ -365,7 +366,7 @@ struct CompanionAutonomyTests {
   @Test
   func defendRejectsStaleNativeCompanionFireUntilAttackIsExplicitlyRestored() throws {
     let range = try NativeRange()
-    try range.openCore()
+    try range.prepareEyeLane()
     range.session.setCombatStance(.defend)
     let before = range.strategy
     let loaded = range.fight.status(for: .tom).loaded
@@ -373,7 +374,7 @@ struct CompanionAutonomyTests {
       range.stepTom()
       #expect(!range.fight.shots.contains { $0.actor == .tom })
     }
-    #expect(range.strategy.reactorDamage == before.reactorDamage)
+    #expect(range.strategy.detachedLegs == before.detachedLegs)
     #expect(range.strategy.health == before.health)
     #expect(range.fight.status(for: .tom).loaded == loaded)
     range.session.setCombatStance(.attack)
@@ -383,7 +384,7 @@ struct CompanionAutonomyTests {
   @Test
   func aCompanionUsesItsOwnMagazineCadenceAndPausedWeaponClock() throws {
     let range = try NativeRange()
-    try range.openCore()
+    try range.prepareEyeLane()
     let mikiLoaded = range.fight.status(for: .miki).loaded
     _ = try #require(range.firstTomShot())
     #expect(range.fight.status(for: .tom).loaded == Weapon.minigun.capacity - 1)
@@ -413,7 +414,7 @@ struct CompanionAutonomyTests {
   @Test
   func aStaleCompanionIntentCannotFireTheNewPlayerLeader() throws {
     let range = try NativeRange()
-    try range.openCore()
+    try range.prepareEyeLane()
     _ = try #require(range.firstTomShot())
     let loaded = range.fight.status(for: .tom).loaded
     range.session.cycleLeader()
@@ -429,20 +430,21 @@ struct CompanionAutonomyTests {
   @Test
   func companionsMustActuallyTurnAndHaveUnobstructedRaysBeforeSpendingRounds() throws {
     let turning = try NativeRange()
-    try turning.openCore()
+    try turning.prepareEyeLane()
     for _ in 0..<120 { turning.stepTom(facingAway: true) }
     #expect(turning.fight.status(for: .tom).loaded == Weapon.minigun.capacity)
     #expect(try #require(turning.firstTomShot()).actor == .tom)
 
     let wall = Level.Box.box("cover", at: [6, 2, 0], size: [0.5, 4, 30])
     let covered = try NativeRange(boxes: [wall])
-    try covered.openCore()
+    try covered.prepareEyeLane()
+    let coveredHealth = covered.strategy.health
     for _ in 0..<120 {
       covered.stepTom(at: [9, 0])
       #expect(!covered.fight.shots.contains { $0.actor == .tom })
     }
     #expect(covered.fight.status(for: .tom).loaded == Weapon.minigun.capacity)
-    #expect(covered.strategy.reactorDamage == 0)
+    #expect(covered.strategy.health == coveredHealth && covered.strategy.detachedLegs.isEmpty)
     #expect(try #require(covered.firstTomShot()).actor == .tom)
   }
 
@@ -480,26 +482,13 @@ struct CompanionAutonomyTests {
       step()
     }
 
-    func openCore() throws {
-      for _ in 0..<120 * 20 where strategy.phase == .sensor {
-        guard let robot = fight.hostiles["guard"]?.robot,
-          let point = fight.weakpoints(for: "guard").first
-        else { continue }
-        figures[.miki] = robot.position + simd_normalize(point.ground - robot.position) * 8
-        step(playerFire: point.exposed)
+    func prepareEyeLane() throws {
+      for _ in 0..<120 * 3 where fight.companionGuard(near: figures[.miki] ?? .zero) == nil {
+        step()
       }
-      try #require(strategy.phase == .coupling)
-      for _ in 0..<120 * 5 where strategy.phase == .coupling {
-        guard let robot = fight.hostiles["guard"]?.robot,
-          let point = fight.weakpoints(for: "guard").max(by: { $0.ground.x < $1.ground.x })
-        else { continue }
-        figures[.laura] = robot.position + simd_normalize(point.ground - robot.position) * 2.65
-        step(intents: [
-          .laura: CompanionTactics.Intent(
-            lookAt: point.ground, weapon: .energySword, fire: true, activity: .attacking)
-        ])
-      }
-      try #require(strategy.phase == .reactor && strategy.windowRemaining > 0)
+      try #require(fight.companionGuard(near: figures[.miki] ?? .zero) != nil)
+      try #require(fight.weakpoints(for: "guard").contains { $0.part == .eye })
+      #expect(strategy.health == GuardStrategy.maximumHealth && strategy.detachedLegs.isEmpty)
       // The support shooter needs a clear lane, rather than firing through Laura's stance.
       figures[.laura] = [-7, 0]
     }
@@ -514,7 +503,7 @@ struct CompanionAutonomyTests {
 
     func stepTom(at origin: SIMD2<Float>? = nil, facingAway: Bool = false) {
       guard let robot = fight.hostiles["guard"]?.robot,
-        let point = fight.weakpoints(for: "guard").max(by: { $0.ground.x < $1.ground.x })
+        let point = fight.weakpoints(for: "guard").first(where: { $0.part == .eye })
       else { return }
       figures[.tom] = origin ?? robot.position + simd_normalize(point.ground - robot.position) * 3.5
       step(
@@ -537,7 +526,7 @@ struct CompanionAutonomyTests {
     }
 
     private func step(
-      playerFire: Bool = false, intents: [PartyMember: CompanionTactics.Intent] = [:],
+      intents: [PartyMember: CompanionTactics.Intent] = [:],
       facingAway: Bool = false
     ) {
       let leader = figures[session.leader] ?? .zero
@@ -553,7 +542,7 @@ struct CompanionAutonomyTests {
       if facingAway { facings[.tom] = -(facings[.tom] ?? [0, -1]) }
       _ = fight.step(
         dt: dt, leader: leader, facing: facings[session.leader] ?? [0, -1], aiming: true,
-        fireHeld: playerFire, firePressed: playerFire, figures: figures, session: session,
+        fireHeld: false, firePressed: false, figures: figures, session: session,
         companionIntents: intents, facings: facings)
     }
   }
