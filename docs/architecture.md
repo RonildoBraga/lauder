@@ -4,7 +4,7 @@
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
 
-The [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). Review, phone acceptance and delivery remain outstanding. The merged baseline, delivered preview and new branch remain distinguishable.
+The [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). The [build 34 preview](prototype-plan.md#build-34-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The merged baseline, delivered preview and new branch remain distinguishable.
 
 ## Decision and platform
 

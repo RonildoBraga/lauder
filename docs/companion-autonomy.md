@@ -1,7 +1,7 @@
 # Companion autonomy at the first tower
 
 **Date:** 26 November 2026\
-**Status:** Implemented on `codex/companion-autonomy`, with source and rendered Simulator results recorded in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). Review, phone acceptance and delivery remain outstanding. [TestFlight build 33](prototype-plan.md#build-33-testflight-preview) remains the delivered manual-control baseline.
+**Status:** Implemented on `codex/companion-autonomy`, with source and rendered Simulator results recorded in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). The [build 34 TestFlight preview](prototype-plan.md#build-34-testflight-preview) is delivered with explicit Attack/Defend controls; physical acceptance and merge remain separate gates. Build 33 is the earlier manual-control baseline.
 
 ## Maintainer direction
 

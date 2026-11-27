@@ -1,7 +1,7 @@
 # First-tower strategic guard
 
 **Date:** 26 November 2026\
-**Status:** The manual-control prototype was delivered as internal TestFlight **0.1.0 (33)** from `f67bd2c` through [PR #167](https://github.com/RonildoBraga/lauder/pull/167), before merge. Its checks and generic phone feedback are recorded in the [prototype plan](prototype-plan.md#build-33-testflight-preview). [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator verification in its [plan section](prototype-plan.md#companion-autonomy--in-development); review, phone acceptance and delivery remain outstanding. Build 32 and the [original C encounter](encounters/bridge-spider-bot.md) describe the earlier baseline; the preview does not imply a merge.
+**Status:** The manual-control prototype was delivered as internal TestFlight **0.1.0 (33)** from `f67bd2c` through [PR #167](https://github.com/RonildoBraga/lauder/pull/167), before merge. Its checks and generic phone feedback are recorded in the [prototype plan](prototype-plan.md#build-33-testflight-preview). [Companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator verification in its [plan section](prototype-plan.md#companion-autonomy--in-development); the [build 34 preview](prototype-plan.md#build-34-testflight-preview) is delivered, while physical acceptance and merge remain separate gates. Build 32 and the [original C encounter](encounters/bridge-spider-bot.md) describe the earlier baseline; the preview does not imply a merge.
 
 ## The gameplay question
 

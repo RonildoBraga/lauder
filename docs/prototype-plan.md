@@ -2,7 +2,7 @@
 
 **Updated:** 26 November 2026
 
-**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The strategic guard was delivered as the [build 33 reviewed preview](#build-33-testflight-preview). [Bounded companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with validation below. Review, phone acceptance and delivery remain outstanding. The player keeps direct control of the leader while companions may complete their own weakpoint contributions. Further scenes and mechanics require their own decision.
+**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The strategic guard was delivered as the [build 33 reviewed preview](#build-33-testflight-preview). [Bounded companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with validation below. The [build 34 preview](#build-34-testflight-preview) is delivered; physical acceptance and merge remain separate gates. The player keeps direct control of the leader while companions may complete their own weakpoint contributions. Further scenes and mechanics require their own decision.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
@@ -34,7 +34,7 @@ Clean rendered iPhone 17 / iOS 27.0 Simulator runs, through shared input:
 
 All three passed, including Restart. The new route explicitly ordered Attack, allowed the real sensor/coupling steps, issued Hold then Defend, observed three seconds with no companion damage or ammo spend while recalling, then issued Attack again and completed the core. Miki remained player-controlled. The observed state stayed Defend throughout the cease-fire and core damage stayed zero; the final accepted core count reached 12 only after the new Attack. The widest leader gaps were 3.44, 3.82 and 3.58 m respectively. The HUD showed the stance and Up/Down commands. A subsequent native Simulator UI check invoked the touch Formation control's exposed Squad Attack and Squad Defend actions and observed each HUD transition, ending in Defend.
 
-These are Simulator results; brief overlaps and the recorded frame maxima remain limitations, and the controller-hint strip remains dense. The touch-menu selection/clamping and cancellation tests passed, but the UI check used its accessibility actions rather than a physical ground-menu gesture. No new physical controller, multi-touch, sustained phone performance or enjoyment is established. Review and authorised delivery remain outstanding; TestFlight build 33 remains the delivered version.
+These are Simulator results; brief overlaps and the recorded frame maxima remain limitations, and the controller-hint strip remains dense. The touch-menu selection/clamping and cancellation tests passed, but the UI check used its accessibility actions rather than a physical ground-menu gesture. No new physical controller, multi-touch, sustained phone performance or enjoyment is established. The [build 34 delivery](#build-34-testflight-preview) is verified below; physical acceptance and merge remain separate gates.
 
 ### Earlier autonomous-engagement verification
 
@@ -86,6 +86,18 @@ All three routes passed, including the complete dismantling sequence and Restart
 Internal TestFlight **0.1.0 (33)** was delivered from `f67bd2c` through [PR #167](https://github.com/RonildoBraga/lauder/pull/167), using the explicit reviewed-preview path before merge. Its manual strategic guard builds on [PR #166](https://github.com/RonildoBraga/lauder/pull/166); followers in that build do not attack. The delivery record on PR #167 is the source for processing and existing-tester availability.
 
 The maintainer reported **“It worked nice”** in chat. Record this as general phone success only: no individual controller/touch checklist, readability measurement or sustained frame-pacing capture was supplied. It is not merge permission. The reviewed preview does not establish that either PR has merged into `main`. Remaining phone-specific checks and any merge/release require their applicable gates; the newer autonomy branch has its own verification above.
+
+### Build 34 TestFlight preview
+
+On 26 November 2026 the maintainer explicitly requested delivery of the Attack/Defend controls through TestFlight. Internal **0.1.0 (34)** was archived and uploaded from clean reviewed-preview source **`7d0d5cadae82d5da2e03020629be27732169240a`** on `codex/testflight-squad-commands`, through [PR #170](https://github.com/RonildoBraga/lauder/pull/170). App code is exactly [PR #169](https://github.com/RonildoBraga/lauder/pull/169)'s `1cdbcb0`; the only archive-source difference is the committed Debug/Release build number 33 → 34. This delivery did not merge the open preview PRs.
+
+- Discovered Lauder's own App Store Connect record by `com.ronildo.lauder` and checked accepted/processing uploads plus existing builds before selecting unused build 34; refreshed reservations before archive and upload.
+- Independent review verified the exact metadata-only source change. Automated review completed on the exact archive source with no findings, and [GitHub Check passed](https://github.com/RonildoBraga/lauder/actions/runs/45745307506) for that same commit.
+- The release workflow reran `./scripts/check` on that frozen tree: formatting, app build, hosted Swift Testing and all nine headless routes, 13 declaration-contract tests, 31 release-contract tests, 52 Blender extension tests and seven generated sounds. A successful receipt and log digest bind those checks to the archived commit. The preceding rendered Attack/Defend results remain recorded above; no app code changed afterward.
+- Verified Release archive identity/version/build, selected signing team, code signature and matching dSYM. Archive and upload used the existing API key with provisioning updates, not a saved-account login. Signing material, credentials and full receipts remain private.
+- Apple confirmed upload **COMPLETE**, processing **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, unexpired. Every intended existing internal group contains the build; group set and tester membership are unchanged. The en-AU test notes were written and read back exactly.
+
+The preview starts in Defend. D-pad Up permits companion attacks and weakpoint completion; Down stops their fire and recalls them via available cover. TestFlight availability is verified; phone download/installation, new physical D-pad/touch acceptance, sustained performance and enjoyment remain unverified. No uninstall, additional testers, pricing change or public App Store submission occurred. Build 33 remains a historical manual-control preview rather than the latest delivered build.
 
 ## Structural preparation
 
