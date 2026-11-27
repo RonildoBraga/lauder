@@ -600,6 +600,7 @@ final class EncounterSimulation {
       }
     }
     guard let encounter else {
+      settleDrones(dt: dt)
       fireLeader(
         leader: leader, aiming: aiming, facing: facing, motion: motion, fireHeld: fireHeld,
         inFight: false, session: session, outcome: &outcome)
@@ -1419,6 +1420,21 @@ final class EncounterSimulation {
         default: nil
         }
       return aim.map { simd_distance($0, point) < ScoutDrone.danger } ?? false
+    }
+  }
+
+  /// Once their fight is over, a downed drone still falls to the snow and one cleared by the
+  /// quiet exit keeps circling its guard, harmless: neither can attack again.
+  private func settleDrones(dt: Float) {
+    let guardian = specs.values.first(where: \.strategicGuard).flatMap { hostiles[$0.id] }
+    for id in hostiles.keys.sorted() {
+      guard var state = hostiles[id], let drone = state.drone,
+        drone.phase == .down || drone.phase == .cleared
+      else { continue }
+      _ = state.stepDrone(
+        dt: dt, centre: guardian?.position ?? drone.home, target: nil, mayAttack: false,
+        airspace: airspace)
+      hostiles[id] = state
     }
   }
 

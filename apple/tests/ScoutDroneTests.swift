@@ -332,6 +332,12 @@ struct ScoutDroneFightTests {
       #expect(range.fight.hostiles[id]?.isDown == true)
       #expect(range.fight.hostiles[id]?.drone?.isTargetable == false)
     }
+    // The fight is over, but each fall still finishes on the snow.
+    for _ in 0..<120 { range.step() }
+    for id in Range.drones {
+      let height = try #require(range.fight.hostiles[id]?.drone?.height)
+      #expect(abs(height - ScoutDrone.wreckHeight) < 0.001)
+    }
   }
 
   @Test
@@ -343,6 +349,19 @@ struct ScoutDroneFightTests {
       #expect(range.fight.hostiles[id]?.drone?.phase == .cleared)
       #expect(range.fight.hostiles[id]?.isTargetable == false)
     }
+    // With the encounter over, they keep circling and never fire again.
+    let before = Range.drones.map { range.fight.hostiles[$0]?.position ?? .zero }
+    for _ in 0..<(2 * 120) { range.step() }
+    for (index, id) in Range.drones.enumerated() {
+      let drone = try #require(range.fight.hostiles[id]?.drone)
+      #expect(drone.phase == .cleared && drone.height == ScoutDrone.cruiseHeight)
+      #expect(simd_distance(drone.position, before[index]) > 1)
+    }
+    #expect(
+      !range.events.contains {
+        if case .fired(_, _, false) = $0 { return true }
+        return false
+      })
   }
 
   @Test
