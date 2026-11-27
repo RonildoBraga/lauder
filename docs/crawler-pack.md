@@ -78,4 +78,4 @@ These are simple shapes, as [AGENTS.md](../AGENTS.md) asks.
 - **Tom's dome:** a crawler winds up within 2.5 m of its target, and the dome reaches 2.6 m. So a crawler aimed at Tom himself always sets off inside his dome, and the dome never shelters him from it. The playtest should judge whether the dome should also stop rams that start inside it.
 - **Followers on Defend:** with the whole pack the fight lasts longer. On Defend, followers stay close to the leader and take more drone dives and guard bursts, which the agreed rule for those two attacks doesn't step them out of. Before the route switched to Attack, it failed when Laura took three such hits; the phone playtest should judge it.
 - **What Simulator checks can't settle:** phone readability, audibility, balance, whether the busier fight is still enjoyable, and sustained frame rate.
-- **Merge:** merging needs the baseline-iPhone check that AGENTS.md asks of playable features.
+- **Phone check:** the baseline-iPhone check that AGENTS.md asks of playable features came from build 44: general success on the phone, not a measured check of each control, sound, balance or frame rate.
