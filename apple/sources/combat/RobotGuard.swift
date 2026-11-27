@@ -182,12 +182,18 @@ struct RobotGuard {
       aimingPoint = target
       turn(towards: target, dt: dt)
       if phase == .notice, elapsed >= Self.noticeTime { transition(.tracking) }
-      if phase == .tracking, elapsed >= pattern.trackingTime, distance <= Self.attackRange,
-        distance < 0.001 || simd_dot(offset / distance, facing) >= cos(5 * .pi / 180)
-      {
-        committedPoint = target
-        aimingPoint = target
-        transition(.committed)
+      if phase == .tracking, elapsed >= pattern.trackingTime {
+        if distance > Self.attackRange {
+          // A visible target can remain between detection and attack range indefinitely.
+          // End this completed warning so the encounter can acquire a reachable target.
+          transition(.searching)
+        } else if distance < 0.001
+          || simd_dot(offset / distance, facing) >= cos(5 * .pi / 180)
+        {
+          committedPoint = target
+          aimingPoint = target
+          transition(.committed)
+        }
       }
     case .committed:
       // Target is now a fixed point. Losing sight after commitment cannot make it home in.

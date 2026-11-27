@@ -991,7 +991,10 @@ final class GameWorld {
       return
     }
     if command == .hold {
-      session.holdAll()
+      guard session.holdAll() else { return }
+      // A new explicit position order replaces a temporary Formation/Follow request.
+      regrouping = false
+      regroupRemaining = 0
       pinHolds()
       showOrders()
       return
@@ -1050,19 +1053,21 @@ final class GameWorld {
     case .hold, .attack, .defend:
       break
     }
+    regrouping = false
+    regroupRemaining = 0
     showOrders()
   }
 
-  /// Up to `orderReach` ahead along the leader's facing, shortened by the first wall.
+  /// Up to `orderReach` ahead along the leader's facing, shortened by scenery or a live hull.
   private func pointAhead(of leader: SIMD2<Float>) -> SIMD2<Float> {
     let heading = Movement.facing(yaw: yaw[session.leader] ?? 0)
     let far = leader + heading * Self.orderReach
-    if motion.canTraverse(from: leader, to: far) { return far }
+    if canTraverseParty(from: leader, to: far) { return far }
     var clear: Float = 0
     var blocked = Self.orderReach
     for _ in 0..<12 {
       let middle = (clear + blocked) / 2
-      if motion.canTraverse(from: leader, to: leader + heading * middle) {
+      if canTraverseParty(from: leader, to: leader + heading * middle) {
         clear = middle
       } else {
         blocked = middle
@@ -1079,10 +1084,12 @@ final class GameWorld {
   /// The marked point, or the nearest place within `orderSnap` of it in the leader's area,
   /// out of doorways where there is a choice.
   private func reachable(near point: SIMD2<Float>, in region: Int32) -> SIMD2<Float>? {
-    if grid.isRoomy(point), grid.region(at: point) == region { return point }
+    if canStandParty(point), grid.isRoomy(point), grid.region(at: point) == region { return point }
     return grid.nearestWalkable(
-      to: point, within: Self.orderSnap, region: region, where: { grid.isRoomy($0) })
-      ?? grid.nearestWalkable(to: point, within: Self.orderSnap, region: region)
+      to: point, within: Self.orderSnap, region: region,
+      where: { grid.isRoomy($0) && canStandParty($0) })
+      ?? grid.nearestWalkable(
+        to: point, within: Self.orderSnap, region: region, where: { canStandParty($0) })
   }
 
   /// Two spots `spotSpacing` apart around a point: side by side across the line from the
@@ -1099,7 +1106,8 @@ final class GameWorld {
     let second = grid.nearestWalkable(
       to: point, within: Self.orderSnap + Self.spotSpacing, region: region,
       where: { simd_distance($0, point) >= Self.spotSpacing && fits($0, near: point, in: region) })
-    return second.map { [point, $0] }
+    guard fits(point, near: point, in: region), let second else { return nil }
+    return [point, second]
   }
 
   /// A spot `spotSpacing` beside another companion's point: on the named side of the line from
@@ -1132,7 +1140,7 @@ final class GameWorld {
   /// Somewhere a companion can stand, in the leader's area, reached straight from `origin`.
   private func fits(_ spot: SIMD2<Float>, near origin: SIMD2<Float>, in region: Int32) -> Bool {
     canStandParty(spot) && grid.region(at: spot) == region
-      && motion.canTraverse(from: origin, to: spot)
+      && canTraverseParty(from: origin, to: spot)
   }
 
   /// Show the cross where an order could not go, briefly: standing where the finger pressed,

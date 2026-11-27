@@ -24,6 +24,8 @@ Preserve conventional names: `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `LICEN
 
 Use a branch or fork and open a small, focused pull request. Describe the problem, the resulting change and the validation performed. Keep related documents consistent and avoid unrelated cleanup.
 
+Create extra Git worktrees under the repository's ignored `.local/worktrees/<name>/` directory.
+
 Keep each implementation PR to one milestone, phase or assignment, or smaller.
 
 Maintainers review and merge contributions. Be respectful and specific in feedback. AI-assisted work has the same expectations for correctness and provenance as any other contribution; the person submitting it remains responsible for reviewing it.
