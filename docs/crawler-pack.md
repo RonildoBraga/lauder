@@ -1,7 +1,7 @@
 # Crawler pack at the first tower
 
 **Date:** 27 November 2026  
-**Status:** Built under [issue #208](https://github.com/RonildoBraga/lauder/issues/208), on top of the [scout drones](scout-drones.md). TestFlight build 44 delivered it, and the maintainer answered “Feels right” after playing it. The [prototype plan](prototype-plan.md#crawler-pack--in-development) records what has been checked.
+**Status:** [Combined build 45](prototype-plan.md#build-45-combined-testflight-preview), frozen main/archive source `4db6dcc`, is available to the existing Lauder TestFlight testers after PR #212 merged, closing issues #208/#217. It includes the stable crawler warning-target correction and reviewed grenade/credit fixes; the prototype plan owns the source, release and passed independent pre/post-upload audit proof. Earlier [build 44](prototype-plan.md#build-44-testflight-preview) retains the maintainer’s general “Feels right” phone feedback; that does not verify physical controls, audio, balance or performance for build 45.
 
 ## The request
 
