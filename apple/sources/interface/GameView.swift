@@ -67,11 +67,24 @@ struct GameView: View {
             .allowsHitTesting(false)
           }
           if world.controls.touchControlsEnabled, !talking, !world.isPaused,
-            world.controls.status == .ready, world.session.combatStance == .defend,
+            world.controls.status == .ready, !world.controls.needsNeutralInput,
+            world.session.combatStance == .defend,
             let health = world.guardHealth, health > 0
           {
-            Text("Hold open ground, slide ↖ for Attack · ↗ for Defend")
+            Text("Hold ground · slide to Attack or Defend")
               .font(.caption2.weight(.medium))
+              .multilineTextAlignment(.center)
+              .frame(maxWidth: 230)
+              .padding(.horizontal, 10)
+              .padding(.vertical, 6)
+              .frostedPanel(cornerRadius: 8)
+              .allowsHitTesting(false)
+          }
+          if !world.showsPanel, !world.isPaused, world.controls.status == .ready,
+            world.controls.needsNeutralInput
+          {
+            Text(releaseGuidance)
+              .font(.caption.weight(.semibold))
               .multilineTextAlignment(.center)
               .frame(maxWidth: 230)
               .padding(.horizontal, 10)

@@ -127,11 +127,11 @@ enum Targeting {
   /// Distance from a projected body, in screen points, rather than world units or pixels.
   static let touchRadius: Float = 30
 
-  /// The nearest on-screen body to a tap. Projection and body heights come from the world;
+  /// The nearest on-screen body to a tap. Projection and body dimensions come from the world;
   /// this value-only query neither changes the lock nor decides whether a shot is allowed.
   static func touched(
     at point: SIMD2<Float>, viewHeight: Float, projection: CameraProjection,
-    candidates: [Candidate], height: (String) -> Float
+    candidates: [Candidate], height: (String) -> Float, radius: (String) -> Float = { _ in 0 }
   ) -> String? {
     let scale = SIMD2(projection.aspect * viewHeight, viewHeight)
     guard point.x.isFinite, point.y.isFinite,
@@ -139,19 +139,13 @@ enum Targeting {
       scale.x.isFinite, scale.y.isFinite, scale.x > 0, scale.y > 0
     else { return nil }
     return candidates.compactMap { candidate -> (id: String, distance: Float)? in
-      let height = height(candidate.id)
-      guard height.isFinite, height > 0,
-        let feet = projection.screen(ofGround: candidate.position),
-        let head = projection.screen(
-          ofWorld: [candidate.position.x, height, candidate.position.y]),
-        let segment = visibleSegment(from: feet, to: head)
+      guard
+        let bounds = bodyBounds(
+          candidate.position, height: height(candidate.id), radius: radius(candidate.id),
+          projection: projection)
       else { return nil }
-      let start = segment.0 * scale
-      let along = (segment.1 - segment.0) * scale
-      let offset = point * scale - start
-      let length = simd_length_squared(along)
-      let fraction = length > 0 ? min(1, max(0, simd_dot(offset, along) / length)) : 0
-      let distance = simd_length_squared(offset - along * fraction)
+      let outside = simd_max(simd_max(bounds.minimum - point, point - bounds.maximum), .zero)
+      let distance = simd_length_squared(outside * scale)
       guard distance.isFinite, distance <= touchRadius * touchRadius else { return nil }
       return (candidate.id, distance)
     }.min {
@@ -159,25 +153,34 @@ enum Targeting {
     }?.id
   }
 
-  /// Clip to the viewport, so a nearby but entirely off-screen body is not a tap target.
-  private static func visibleSegment(
-    from start: SIMD2<Float>, to end: SIMD2<Float>
-  ) -> (SIMD2<Float>, SIMD2<Float>)? {
-    let delta = end - start
-    var first: Float = 0
-    var last: Float = 1
-    for axis in 0..<2 {
-      if abs(delta[axis]) < 0.000001 {
-        guard (0...1).contains(start[axis]) else { return nil }
-      } else {
-        let low = -start[axis] / delta[axis]
-        let high = (1 - start[axis]) / delta[axis]
-        first = max(first, min(low, high))
-        last = min(last, max(low, high))
-        guard first <= last else { return nil }
+  /// Visibility uses the same complete body envelope as picking, including partially visible legs.
+  static func bodyIsOnScreen(
+    at point: SIMD2<Float>, height: Float, radius: Float, projection: CameraProjection
+  ) -> Bool {
+    bodyBounds(point, height: height, radius: radius, projection: projection) != nil
+  }
+
+  /// The generated ground radius encloses the moving legs. Project its box and full height,
+  /// then clip to the viewport before measuring the exterior tap tolerance in screen points.
+  private static func bodyBounds(
+    _ point: SIMD2<Float>, height: Float, radius: Float, projection: CameraProjection
+  ) -> (minimum: SIMD2<Float>, maximum: SIMD2<Float>)? {
+    guard height.isFinite, height > 0, radius.isFinite, radius >= 0 else { return nil }
+    var minimum = SIMD2<Float>(repeating: .infinity)
+    var maximum = SIMD2<Float>(repeating: -.infinity)
+    for y: Float in [0, height] {
+      for x in [-radius, radius] {
+        for z in [-radius, radius] {
+          guard let corner = projection.screen(ofWorld: [point.x + x, y, point.y + z]) else {
+            return nil
+          }
+          minimum = simd_min(minimum, corner)
+          maximum = simd_max(maximum, corner)
+        }
       }
     }
-    return (start + delta * first, start + delta * last)
+    guard minimum.x <= 1, minimum.y <= 1, maximum.x >= 0, maximum.y >= 0 else { return nil }
+    return (simd_max(minimum, .zero), simd_min(maximum, SIMD2(repeating: 1)))
   }
 
   static func target(

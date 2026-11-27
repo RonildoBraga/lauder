@@ -22,6 +22,41 @@ struct OrderPress {
     }
   }
 
+  /// One layout for the labels and their hit regions, in the capture surface's coordinates.
+  struct MenuLayout {
+    static let size = CGSize(width: 280, height: 168)
+    static let centre = CGPoint(x: 140, y: 84)
+    static let choices: [Choice] = [.both, .left, .right, .hold, .attack, .defend]
+    let frame: CGRect
+
+    init(at start: CGPoint, in bounds: CGRect? = nil) {
+      var origin = CGPoint(x: start.x - Self.centre.x, y: start.y - Self.centre.y)
+      if let bounds {
+        origin.x = max(bounds.minX, min(origin.x, bounds.maxX - Self.size.width))
+        origin.y = max(bounds.minY, min(origin.y, bounds.maxY - Self.size.height))
+      }
+      frame = CGRect(origin: origin, size: Self.size)
+    }
+
+    static func itemFrame(_ choice: Choice) -> CGRect {
+      let origin: CGPoint =
+        switch choice {
+        case .both: CGPoint(x: 98, y: 62)
+        case .left: CGPoint(x: 0, y: 62)
+        case .right: CGPoint(x: 196, y: 62)
+        case .hold: CGPoint(x: 98, y: 124)
+        case .attack: CGPoint(x: 0, y: 0)
+        case .defend: CGPoint(x: 196, y: 0)
+        }
+      return CGRect(origin: origin, size: CGSize(width: 84, height: 44))
+    }
+
+    func choice(at point: CGPoint) -> Choice? {
+      let local = CGPoint(x: point.x - frame.minX, y: point.y - frame.minY)
+      return Self.choices.first { Self.itemFrame($0).contains(local) }
+    }
+  }
+
   /// How long the finger holds still before the menu opens.
   static let holdTime: TimeInterval = 0.35
   /// How far the finger may drift, in points, before the menu opens.
@@ -37,6 +72,7 @@ struct OrderPress {
   private(set) var isCancelled = false
   /// What a release now would choose, once open.
   private(set) var choice: Choice?
+  private(set) var menuLayout: MenuLayout?
   private var exceededTapSlop = false
 
   init(at point: CGPoint, time: TimeInterval) {
@@ -45,9 +81,10 @@ struct OrderPress {
   }
 
   /// Opens the menu if the finger has held still long enough; true when it opens now.
-  mutating func open(at time: TimeInterval) -> Bool {
+  mutating func open(at time: TimeInterval, in bounds: CGRect? = nil) -> Bool {
     guard !isOpen, !isCancelled, time - began >= Self.holdTime - 0.001 else { return false }
     isOpen = true
+    menuLayout = MenuLayout(at: start, in: bounds)
     choice = .both
     return true
   }
@@ -62,9 +99,10 @@ struct OrderPress {
     let distance = hypot(offset.dx, offset.dy)
     if distance > Self.slop { exceededTapSlop = true }
     if isOpen {
-      // Clamping the menu's artwork must not change the finger's directions. Re-evaluate
-      // even near the start, so returning there clears a previously selected stance.
-      choice = Self.choice(for: offset)
+      // Returning to the original finger always clears the selection. Elsewhere the drawn
+      // item wins, including when the layout was clamped; directions fill only the gaps.
+      choice =
+        distance < Self.centre ? .both : menuLayout?.choice(at: point) ?? Self.choice(for: offset)
     } else if distance > Self.slop {
       isCancelled = true
     }
@@ -99,9 +137,8 @@ struct OrderPress {
   /// The order the finger's release gives, if any.
   var release: Choice? { isOpen && !isCancelled ? choice : nil }
 
-  /// The menu's item in the direction the finger slid: the companions' names to the left and
-  /// right, Hold below, and Attack/Defend on the two upper diagonals. The upper 60-degree
-  /// sector cancels; near-horizontal travel still selects a companion.
+  /// Directional fallback between and beyond the drawn items. Straight up cancels, while
+  /// near-horizontal travel still selects a companion.
   static func choice(for offset: CGVector) -> Choice? {
     guard hypot(offset.dx, offset.dy) >= centre else { return .both }
     if offset.dy < 0 {

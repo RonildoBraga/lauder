@@ -1359,20 +1359,40 @@ final class EncounterSimulation {
   }
 
   /// A tap chooses one native lock candidate by its projected body, rather than a component.
-  /// Empty ground cannot clear a valid lock; tapping the selected hostile deliberately does.
+  /// Empty ground clears an entirely offscreen lock, so touch can let go without chasing it.
+  /// A visible body's lock stays until that body, or another eligible enemy, is tapped.
   func tapLock(
     at point: SIMD2<Float>, viewHeight: Float, projection: CameraProjection,
     from leader: SIMD2<Float>
   ) {
     keepLock(from: leader)
+    guard point.x.isFinite, point.y.isFinite, (0...1).contains(point.x),
+      (0...1).contains(point.y), viewHeight.isFinite, viewHeight > 0,
+      (projection.aspect * viewHeight).isFinite, projection.aspect * viewHeight > 0,
+      projection.screen(ofWorld: projection.target) != nil
+    else { return }
     guard
       let selected = Targeting.touched(
         at: point, viewHeight: viewHeight, projection: projection,
         candidates: lockable(from: leader),
         height: {
           self.hostiles[$0]?.robot == nil ? PartyBody.height : RobotModelGeometry.halfHeight * 2
+        },
+        radius: {
+          self.hostiles[$0]?.robot == nil ? Aim.bodyRadius : RobotModelGeometry.navigationRadius
         })
-    else { return }
+    else {
+      if let lock, let state = hostiles[lock],
+        !Targeting.bodyIsOnScreen(
+          at: state.position,
+          height: state.robot == nil ? PartyBody.height : RobotModelGeometry.halfHeight * 2,
+          radius: state.robot == nil ? Aim.bodyRadius : RobotModelGeometry.navigationRadius,
+          projection: projection)
+      {
+        releaseLock()
+      }
+      return
+    }
     lockPressAge = nil
     lock = selected == lock ? nil : selected
   }

@@ -78,6 +78,8 @@ struct RobotGuard {
   private var repositionRemaining: Float = 0
   private var repositionGoal: SIMD2<Float>?
   private var gunOffsets = SIMD2<Float>.zero
+  /// After warning someone beyond gun range, wait for a reachable target before warning again.
+  private var needsAttackRange = false
 
   init(home: SIMD2<Float>, strategicPatterns: Bool = false) {
     self.home = home
@@ -147,6 +149,7 @@ struct RobotGuard {
     // An engaged guard can acknowledge a visible attacker on its flank. Actual line of
     // sight, range, finite body turning and the complete warning still apply.
     let sees = armed && hasSight && distance <= Self.detectionRange && (inCone || awareOfTarget)
+    let canAcquire = sees && (!needsAttackRange || distance <= Self.attackRange)
     if sees { lastSeen = target }
     let wantsBrace = [.notice, .tracking, .committed, .burst].contains(phase)
     let braceTarget: Float = wantsBrace ? (strategicPatterns && pattern == .precision ? 0.6 : 1) : 0
@@ -162,7 +165,8 @@ struct RobotGuard {
         let goal = repositionGoal ?? home
         move(towards: goal, dt: dt, obstacles: obstacles, party: party)
         if simd_distance(position, goal) < 0.1 { repositionRemaining = 0 }
-      } else if sees {
+      } else if canAcquire {
+        needsAttackRange = false
         aimingPoint = target
         transition(.notice)
       } else {
@@ -186,6 +190,7 @@ struct RobotGuard {
         if distance > Self.attackRange {
           // A visible target can remain between detection and attack range indefinitely.
           // End this completed warning so the encounter can acquire a reachable target.
+          needsAttackRange = true
           transition(.searching)
         } else if distance < 0.001
           || simd_dot(offset / distance, facing) >= cos(5 * .pi / 180)
@@ -223,7 +228,8 @@ struct RobotGuard {
       }
     case .searching:
       aimingPoint = lastSeen
-      if sees {
+      if canAcquire {
+        needsAttackRange = false
         aimingPoint = target
         transition(.notice)
       } else if elapsed >= Self.searchTime {
