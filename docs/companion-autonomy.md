@@ -1,11 +1,11 @@
 # Companion autonomy at the first tower
 
 **Date:** 27 November 2026\
-**Status:** Delivered [build 42](prototype-plan.md#build-42-testflight-preview), frozen main/archive source `4789ed0`, retains explicit Attack/Defend, persistent eye/leg preferences and the leg-break stagger, adding Miki/Tom’s safe current-stance body-shot fallback. Earlier checks retain their actual sources below. Phone acceptance, balance and sustained performance remain unverified; the separate drone preview is not included.
+**Status:** Delivered [build 43](prototype-plan.md#build-43-combined-testflight-preview), frozen main/archive source `a71a9f9`, combines the companion body-shot fallback, drone combat and fixed warning targets. Earlier source-specific checks remain below; acknowledged test limits persist, and combined phone controls/touch, audio, balance and sustained performance remain unverified.
 
 **Current delivered revision:** The maintainer assigned [companion body-shot fallback first](https://github.com/RonildoBraga/lauder/issues/200#issuecomment-7210709561), with Simulator tests and coordination with Claude. Original source/native and three rendered routes pass on `e764b30`. PR #204 merged before [PR #205](https://github.com/RonildoBraga/lauder/pull/205), whose `4789ed0` source is delivered in [build 42](prototype-plan.md#build-42-testflight-preview) after fresh archive-bound checks, packaged Simulator regression, signing/audits and Apple/notes verification. Claude’s actual post-merge review reported no finding; drones remain separate from this release.
 
-**Combined assignment:** The [build 43 preparation](prototype-plan.md#build-43-combined-testflight-preview) integrates Claude’s warning-target fix with native companion/drone coverage and the new rendered route. Full source/native and rendered checks pass on `4800560`, including a companion downing a drone before player damage while the guard remains alive. Final-head CI/review, merge and release remain pending; build 42 is still delivered. The guard-only touch route does not verify combined touch/drone play.
+**Combined revision — delivered:** [Build 43](prototype-plan.md#build-43-combined-testflight-preview) delivers Claude’s warning-target fix with the native companion/drone tests and rendered route, merged through PR #203 as `a71a9f9`. Original source/native and rendered checks pass on `4800560`, including real companion drone damage before player damage while the guard is alive; fresh source-bound release checks and Apple/notes readback also pass. Claude reported no blocking finding, with the specific remaining limits recorded in the plan. The guard-only touch route is not combined touch/drone verification.
 
 ## Maintainer direction
 
@@ -61,7 +61,7 @@ This changes only Miki/Tom’s guard-shot preference: Laura keeps her intact-leg
 
 The existing drone override remains subordinate to companion engagement, explicit Attack/Defend, movement orders and safety; the leader stays manual. A companion already engaging may use a real clear gun shot at a diving or recovering drone. Defend, a blocked shot or a control/lifecycle interruption must not invent fire, damage or replayed feedback. The guard-shot fallback retains its direct-eye-first rule and Laura’s leg role; no automatic grenade or shield is added.
 
-Four new native tests and the rendered `companion-drones` route pass on `4800560`, using real targets, weapon handling and vulnerable members. The route’s target/member accounting shows Tom downing `drone.2` before player damage or guard defeat; native tests separately cover orders/blockers, drone-caused injury/Retry and Pause/Resume and Restart state. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) owns exact source, route results and pending release gates. The guard-only touch regression is not combined touch/drone verification, and no new physical result is claimed.
+Four new native tests and the rendered `companion-drones` route pass on `4800560`, using real targets, weapon handling and vulnerable members. The route’s target/member accounting shows Tom downing `drone.2` before player damage or guard defeat; native tests separately cover orders/blockers, drone-caused injury/Retry and Pause/Resume and Restart state. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) owns exact sources, route results, delivered build 43 proof and remaining coverage limits. The guard-only touch regression is not combined touch/drone verification, and no new physical result is claimed.
 
 ## Verification gate
 

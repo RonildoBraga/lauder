@@ -1,7 +1,7 @@
 # Scout drones at the first tower
 
 **Date:** 27 November 2026  
-**Status:** The separate [build 41 preview](prototype-plan.md#build-41-testflight-preview) received general “Feels right” phone feedback. Claude’s [issue #207](https://github.com/RonildoBraga/lauder/issues/207) warning-target fix and Codex’s missing companion/drone coverage are integrated in `4800560`, with full source and rendered checks passed. PR #203 remains unmerged; the [combined build 43 preparation](prototype-plan.md#build-43-combined-testflight-preview) records pending final CI/review and release gates. Build 42 remains delivered without drones.
+**Status:** [Build 43](prototype-plan.md#build-43-combined-testflight-preview), frozen main/archive source `a71a9f9`, delivers the combined drones, fixed warning target and companion combat. PR #203 is merged and issues #201/#207 are closed. Source/Simulator checks and signed archive/Apple/notes verification pass; the [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) records remaining test and physical-phone limits. The separate build 41 “Feels right” report remains earlier general feedback, not acceptance of this revision.
 
 ## The request
 
@@ -67,7 +67,7 @@ These are simple shapes, as [AGENTS.md](../AGENTS.md) asks.
 - **The older tests:** the guard's own tests that the drones broke now run on `BrooklynBridge.guardOnly`, a debug copy of the bridge without the drones. Each keeps testing the guard alone, as it was written to.
 - **Routes:** the fourteen earlier playtest routes play the guard alone in the same way. The new **drone-fight** route plays the shipped fight: Miki shoots both drones down through the aim help, stepping out of their dives, and then the squad dismantles the guard.
 
-**New combined verification:** Full checks pass on `4800560`, including twenty drone tests, four new native companion/drone tests and all sixteen headless routes. The rendered `companion-drones` and `drone-fight` routes pass with actual vulnerable combat; the rendered touch route passes on the guard-only fixture. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) records exact results and pending release gates; earlier build 41 phone feedback does not verify this combined revision.
+**New combined verification:** Full checks pass on `4800560`, including twenty drone tests, four new native companion/drone tests and all sixteen headless routes. The rendered `companion-drones` and `drone-fight` routes pass with actual vulnerable combat; the rendered touch route passes on the guard-only fixture. The [prototype plan](prototype-plan.md#build-43-combined-testflight-preview) records exact results, delivered build 43 proof and acknowledged coverage limits; earlier build 41 phone feedback does not verify this combined revision.
 
 ## Limits
 
