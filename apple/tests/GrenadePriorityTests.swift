@@ -177,7 +177,22 @@ struct GrenadePriorityTests {
         shots +=
           events.filter { if case .fired(.minigun, _, true) = $0 { true } else { false } }.count
       }
-      #expect(!trial.world.session.inEncounter && shots > 0)
+      // Fire's fresh edge was consumed while the hold made combat unavailable. It cannot
+      // draw a holstered weapon later until the player releases and presses again.
+      #expect(!trial.world.session.inEncounter && shots == 0)
+      trial.frame(.init(keyboardGrenade: true))
+      control.frame()
+      for _ in 0..<84 {
+        let events = trial.frame(Source.keyboard.raw(fire: true, grenade: true))
+        let expected = control.frame(.init(keyboardFire: true))
+        expectSameWeapon(trial, control)
+        #expect(events == expected)
+        shots +=
+          events.filter {
+            if case .fired(.minigun, _, true) = $0 { true } else { false }
+          }.count
+      }
+      #expect(shots > 0)
       #expect(trial.world.playtestSnapshot.grenadeCooldown == 0)
       trial.frame()
       trial.frame(.init(keyboardGrenade: true))
