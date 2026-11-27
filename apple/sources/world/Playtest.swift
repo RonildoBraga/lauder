@@ -43,6 +43,8 @@
       case expectBeat(StoryBeat)
       case expectDefeated(Int)
       case expectHits(Int)
+      /// Check the whole party while the witnessed guard fight is still live.
+      case expectUnhurtParty
       case expectParty([PartyMember])
       case formation
       case expectFormation(GameSession.Formation)
@@ -684,6 +686,12 @@
           expect(
             snapshot.hitsTaken == count,
             "the leader had taken \(snapshot.hitsTaken) hit(s) instead of \(count)")
+        case .expectUnhurtParty:
+          expect(
+            snapshot.beat == .stranger && !snapshot.isRetrying && snapshot.defeated == 0
+              && (snapshot.guardStrategy?.health ?? 0) > 0 && !snapshot.party.isEmpty
+              && snapshot.party.allSatisfy { snapshot.partyHits[$0] == 0 },
+            "the live first burst injured a party member or lacked an active guard")
         }
       }
       finish()
@@ -1838,8 +1846,8 @@
         .waitForRobotPhase(.committed, seconds: 3), .mark("guard committed"), .dodgeGuard,
         .waitForRobotPhase(.burst, seconds: 2), .mark("guard burst"),
         .waitForRobotPhase(.recovering, seconds: 2), .expectRobotShots(atLeast: 3),
-        .mark("guard recovery"),
-        .dismantleGuard, .expectDefeated(1), .mark("guard disabled"), .expectHits(0),
+        .expectUnhurtParty, .mark("guard recovery"),
+        .dismantleGuard, .expectDefeated(1), .mark("guard disabled"),
         .wait(seconds: 1),
       ] + restartRun
 
@@ -1917,7 +1925,7 @@
     /// categories and bounded visible numbers must be observed through real input.
     private static let damageFeedback: [Step] =
       toTheStranger + [
-        .walk([6.5, 8]), .swap, .fireForDamage(.assaultRifle, seconds: 0.9, ordinary: true),
+        .walk([6.5, 8]), .swap, .fireForDamage(.assaultRifle, seconds: 2, ordinary: true),
         .mark("Ordinary damage numbers"),
         .swap, .dismantleGuard, .expectDefeated(1), .expectDamageFeedback,
         .mark("Guard defeated with normal and weak-point damage"),
