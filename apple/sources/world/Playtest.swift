@@ -1530,8 +1530,8 @@
     /// The phone's controls throughout: no controller buttons, keyboard or manual right stick.
     private static let touchFightRoute: [Step] =
       toTheStranger + [
-        .mark("Touch controls and order hint"),
-        .touchTarget, .expectLock(true), .mark("Guard selected by touch"),
+        .mark("Touch controls and order hint"), .wait(seconds: 1.5),
+        .touchTarget, .expectLock(true), .mark("Guard selected by touch"), .wait(seconds: 1.5),
         .touchTarget, .expectLock(false), .touchTarget, .expectLock(true),
         .touchPress(InputRules.Raw(touchSwap: true)),
         .touchPress(InputRules.Raw(touchSwap: true)),
@@ -1553,7 +1553,7 @@
         .expectCombatStance(.defend),
         .touchPress(InputRules.Raw(touchPause: true)), .wait(seconds: 0.5),
         .touchPress(InputRules.Raw(touchPanel: true)), .expectPanel(false),
-        .mark("Touch Pause with status hidden"),
+        .mark("Touch Pause with status hidden"), .wait(seconds: 1.5),
         .touchPress(InputRules.Raw(touchPanel: true)), .expectPanel(true),
         .touchPress(InputRules.Raw(touchPause: true)), .wait(seconds: 0.3),
         .touchPress(InputRules.Raw(touchPause: true)), .wait(seconds: 0.3),
