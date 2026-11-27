@@ -29,6 +29,8 @@ struct CompanionTactics {
     var lookAt: SIMD2<Float>? = nil
     var weapon: Weapon.Kind? = nil
     var targetsBody = false
+    /// A scout drone to shoot instead of the guard, chosen after planning (issue #201).
+    var drone: String? = nil
     var fire = false
     var activity: Activity
   }

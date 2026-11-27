@@ -36,6 +36,15 @@
       "apple/sources/content/models/miki.usdz": "7d3388cc7ee54e6c4ff7558c4fe67d4db2845666b43fd6fb7c1998711bba2742"
     }
   },
+  "models/scout-drone": {
+    "format": 1,
+    "made from": {
+      "blender/assets/scout-drone/scout-drone.blend": "cdca9694d2aec1d937641478e6cc4d503ffbcabbdc35c92240ee47768b2b47de"
+    },
+    "wrote": {
+      "apple/sources/content/models/scout-drone.usdz": "986bca97582b76ef95c99ceee55b7216fb523818f0cfdc7cfacf1ae5219c91ab"
+    }
+  },
   "models/spider-bot-heavy": {
     "format": 1,
     "made from": {

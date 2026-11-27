@@ -36,6 +36,8 @@ enum CombatEvent: Equatable, Sendable {
   case guardTargeted(PartyMember, at: SIMD2<Float>)
   /// A newly detached guard leg began a nonlethal stagger, once at its physical position.
   case guardLegBroken(at: SIMD2<Float>)
+  /// A scout drone starts its warning before a dive (issue #201).
+  case droneWarning(at: SIMD2<Float>)
   /// Enemy health actually changed, with the accepted amount and physical impact.
   case damaged(DamageHit)
 
@@ -44,7 +46,7 @@ enum CombatEvent: Equatable, Sendable {
     switch self {
     case .fired(_, let point, _), .spinUp(let point, _), .dome(_, let point),
       .struckBody(let point), .struckBlock(let point), .empty(let point), .leaderHit(let point),
-      .guardTargeted(_, let point), .guardLegBroken(let point):
+      .guardTargeted(_, let point), .guardLegBroken(let point), .droneWarning(let point):
       point
     case .damaged(let hit):
       SIMD2(hit.position.x, hit.position.z)

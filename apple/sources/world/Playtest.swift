@@ -14,12 +14,14 @@
       var hits = 0
       var grenade = 0
       var byMember: [String: Int] = [:]
+      var byTarget: [String: [String: Int]] = [:]
 
       mutating func record(_ hit: DamageHit) {
         if hit.effectiveness == .normal { normal += hit.amount } else { weakpoint += hit.amount }
         hits += 1
         if hit.weapon == nil { grenade += hit.amount }
         byMember[hit.attacker.rawValue, default: 0] += hit.amount
+        byTarget[hit.target, default: [:]][hit.attacker.rawValue, default: 0] += hit.amount
       }
     }
 
@@ -65,6 +67,12 @@
       case expectLegLoss
       /// Dismantle the guard through ordinary movement, leader/weapon switches and Fire.
       case dismantleGuard
+      /// Miki shoots down every scout drone with the aim help, stepping out of each dive and
+      /// rolling across the guard's committed bursts (issue #201).
+      case downDrones
+      /// Followers down a drone while the guard lives and the player never fires.
+      case companionDrones
+      case expectDronesDown(Int)
       case waitForRetry(seconds: Float)
       /// Miki stays under player control; Laura and Tom supply their own combat contributions.
       case companionFight
@@ -94,6 +102,7 @@
       let firedTriggers: Int
       let beat: StoryBeat
       let hitsTaken: Int
+      /// Hostiles down other than scout drones, which fall with their guard (issue #201).
       let defeated: Int
       let formation: GameSession.Formation
       let orders: [PartyMember: GameSession.Order]
@@ -125,6 +134,19 @@
       var showsPanel = true
       var grenadeCooldown: Float = 0
       var grenadeInFlight = false
+      /// Scout drones down, whether shot down or fallen with their guard.
+      var dronesDown = 0
+      /// Each scout drone as the route can see it: where it flies, what it is doing, the
+      /// member a warning drone watches and the point a diving drone has committed to.
+      var drones: [Drone] = []
+
+      struct Drone {
+        let id: String
+        let position: SIMD2<Float>
+        let phase: ScoutDrone.Phase
+        let watching: PartyMember?
+        let committedPoint: SIMD2<Float>?
+      }
     }
 
     struct Frame {
@@ -374,6 +396,13 @@
             "no leg detached through native sword contacts")
         case .dismantleGuard:
           if let raw = dismantleGuard(snapshot) { return raw }
+        case .downDrones:
+          if let raw = downDrones(snapshot) { return raw }
+        case .companionDrones:
+          if let raw = companionDrones(snapshot) { return raw }
+        case .expectDronesDown(let count):
+          expect(
+            snapshot.dronesDown == count, "\(snapshot.dronesDown) drone(s) were down, not \(count)")
         case .companionFight:
           if let raw = companionFight(snapshot) { return raw }
         case .companionPrerequisites:
@@ -720,7 +749,9 @@
 
     /// Native cooperation with no automatic leader switch or fire after Miki's opening hit.
     /// The script may reposition/roll Miki to keep the fight engaged, just as a player can.
-    private mutating func companionFight(_ snapshot: Snapshot) -> InputRules.Raw? {
+    private mutating func companionFight(
+      _ snapshot: Snapshot, allowLeaderFire: Bool = true
+    ) -> InputRules.Raw? {
       guard snapshot.leader == .miki else {
         failures.append("companion fight took control from Miki")
         advance()
@@ -799,7 +830,8 @@
         guardRelease = true
         return raw
       }
-      if snapshot.damage.byMember[PartyMember.miki.rawValue, default: 0] == 0,
+      if allowLeaderFire,
+        snapshot.damage.byMember[PartyMember.miki.rawValue, default: 0] == 0,
         let point = snapshot.guardPoints.first(where: { $0.part == .eye })
       {
         raw.aimStick = Movement.stick(
@@ -1186,6 +1218,117 @@
 
     /// A bounded player script, not a simulation shortcut: no teleports, state writes or
     /// damage immunity. It observes the same component markers that the player sees.
+    private mutating func downDrones(_ snapshot: Snapshot) -> InputRules.Raw? {
+      let flying = snapshot.drones.filter { $0.phase != .down }
+      if flying.isEmpty {
+        advance()
+        return nil
+      }
+      if snapshot.isRetrying || snapshot.beat != .stranger || stepTime > 60 {
+        failures.append(
+          "\(flying.count) drone(s) still flew or the fight retried at \(Self.seconds(elapsed))")
+        advance()
+        return nil
+      }
+      if guardRelease {
+        guardRelease = false
+        return InputRules.Raw()
+      }
+      if snapshot.leader != .miki {
+        guardRelease = true
+        return InputRules.Raw(controllerSwitch: true)
+      }
+      guard let at = snapshot.positions[.miki],
+        let target = flying.min(by: {
+          simd_distance($0.position, at) < simd_distance($1.position, at)
+        })
+      else { return InputRules.Raw() }
+      var raw = InputRules.Raw()
+      let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+      // A committed volley does not home in: roll across the guard's line, as dismantleGuard.
+      if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
+        let centre = snapshot.robotPosition, simd_distance(at, centre) > 0.1
+      {
+        let radial = at - centre
+        let tangent = simd_normalize(SIMD2(-radial.y, radial.x))
+        let side = movement.canTraverse(from: at, to: at + tangent * 3) ? tangent : -tangent
+        raw.stick = Movement.stick(towards: side, cameraOffset: snapshot.level.cameraOffset)
+        raw.controllerDodge = true
+        lastGuardDodge = elapsed
+        guardRelease = true
+        return raw
+      }
+      // Neither does a dive: once one commits near her, step across its line before it fires.
+      if let dive = flying.first(where: {
+        $0.phase == .diving
+          && ($0.committedPoint.map { simd_distance($0, at) < ScoutDrone.danger }
+            ?? false)
+      }) {
+        let line = at - dive.position
+        let across =
+          simd_length(line) > 0.01 ? simd_normalize(SIMD2(-line.y, line.x)) : SIMD2<Float>(1, 0)
+        let side = movement.canTraverse(from: at, to: at + across * 1.5) ? across : -across
+        raw.stick = Movement.stick(towards: side, cameraOffset: snapshot.level.cameraOffset)
+      }
+      // The aim help raises the round to the nearest drone; the route sets no lock.
+      let delta = target.position - at
+      if simd_length(delta) > 0.001 {
+        raw.aimStick = Movement.stick(towards: delta, cameraOffset: snapshot.level.cameraOffset)
+      }
+      raw.controllerFire = true
+      return raw
+    }
+
+    /// The leader supplies only movement, aim/lock and dodge input. Damage evidence must
+    /// name a drone and a follower; a guard death that drops its drones cannot pass this.
+    private mutating func companionDrones(_ snapshot: Snapshot) -> InputRules.Raw? {
+      guard !snapshot.isRetrying, snapshot.beat == .stranger,
+        (snapshot.guardStrategy?.health ?? 0) > 0, stepTime <= 60
+      else {
+        failures.append(
+          "companions did not down a drone before the guard died or the fight retried")
+        advance()
+        return nil
+      }
+      if snapshot.damage.byMember[PartyMember.miki.rawValue, default: 0] != 0 {
+        failures.append("the companion-drone route allowed player damage")
+        advance()
+        return nil
+      }
+      if snapshot.dronesDown > 0 {
+        let down = snapshot.drones.filter { $0.phase == .down }
+        let followerDamage = down.reduce(0) { total, drone in
+          total
+            + [PartyMember.tom, .laura].reduce(0) {
+              $0 + (snapshot.damage.byTarget[drone.id]?[$1.rawValue] ?? 0)
+            }
+        }
+        if followerDamage < ScoutDrone.health {
+          failures.append("no defeated drone had native follower-attributed damage")
+        }
+        recordGuardMark("companion drone down", snapshot: snapshot)
+        advance()
+        return nil
+      }
+      guard var raw = companionFight(snapshot, allowLeaderFire: false),
+        let at = snapshot.positions[.miki]
+      else { return nil }
+      if !raw.controllerDodge,
+        let dive = snapshot.drones.first(where: {
+          $0.phase == .diving
+            && ($0.committedPoint.map { simd_distance($0, at) < ScoutDrone.danger } ?? false)
+        })
+      {
+        let line = at - dive.position
+        let across =
+          simd_length(line) > 0.01 ? simd_normalize(SIMD2(-line.y, line.x)) : SIMD2<Float>(1, 0)
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let side = movement.canTraverse(from: at, to: at + across * 1.5) ? across : -across
+        raw.stick = Movement.stick(towards: side, cameraOffset: snapshot.level.cameraOffset)
+      }
+      return raw
+    }
+
     private mutating func dismantleGuard(_ snapshot: Snapshot) -> InputRules.Raw? {
       if snapshot.defeated > 0 {
         // The crossing/order scenarios begin as Miki. Return through the real cycle so later
@@ -1715,6 +1858,37 @@
         .mark("leg detached and guard down"), .wait(seconds: 1),
       ] + restartRun
 
+    /// The shipped first-tower fight, the guard with both scout drones (issue #201): Miki
+    /// shoots the drones down through the aim help, stepping out of their dives, and then the
+    /// squad dismantles the guard. The other routes play the guard alone (`level(for:)`).
+    private static let droneFight: [Step] =
+      toTheStranger + [
+        .downDrones, .expectDronesDown(BrooklynBridge.drones.count), .mark("both drones down"),
+        .dismantleGuard, .expectDefeated(1), .expectDronesDown(BrooklynBridge.drones.count),
+        .mark("guard down after its drones"), .wait(seconds: 1),
+      ] + restartRun
+
+    /// Companions execute real anti-drone fire before the player attacks; Defend and Pause
+    /// then interrupt the live combined encounter before the ordinary squad finish.
+    private static let companionDroneFight: [Step] =
+      toTheStranger + [
+        .order(.attack), .expectCombatStance(.attack), .companionDrones,
+        .order(.defend), .expectCombatStance(.defend), .mark("Defend with drones present"),
+        .pause, .wait(seconds: 0.5), .pause, .order(.attack),
+        .dismantleGuard, .expectDefeated(1), .expectDronesDown(BrooklynBridge.drones.count),
+        .mark("combined squad victory"), .wait(seconds: 1),
+      ] + restartRun
+
+    /// The routes that play the shipped encounter with its drones. The others were written for
+    /// the guard's own contract and play it alone, on `BrooklynBridge.guardOnly`.
+    static let droneScenarios: Set<String> = ["drone-fight", "companion-drones"]
+
+    /// The level a scenario runs on; with no scenario, the shipped bridge.
+    static func level(for scenario: String?) -> Level {
+      guard let scenario, !droneScenarios.contains(scenario) else { return BrooklynBridge.level }
+      return BrooklynBridge.guardOnly
+    }
+
     /// Every bridge scenario, by the name `apple/scripts/playtest` gives it.
     private static let scenarios: [(name: String, steps: [Step])] = [
       ("bridge-walk", bridgeWalk), ("first-fight", firstFight), ("fight-retry", fightRetry),
@@ -1723,6 +1897,8 @@
       ("cover-spacing", coverSpacing),
       ("damage-feedback", damageFeedback),
       ("touch-fight", touchFightRoute), ("robot-parts", robotParts),
+      ("drone-fight", droneFight),
+      ("companion-drones", companionDroneFight),
     ]
 
     static func steps(for scenario: String) -> [Step]? {

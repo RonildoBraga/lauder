@@ -39,7 +39,8 @@ Keep one app target and one hosted Swift Testing target, with ordinary feature f
 | GuardTargeting | Recent actual-attacker memory and stable member selection between strategic-guard cycles | Value state; EncounterSimulation supplies native attack evidence and real visibility/range, RobotGuard retains physical turning and commitment |
 | GuardStrategy / DamageHit | Shared health, persistent eye bonus and independent leg counters / resolved applied-damage evidence | Pure values; real contact is resolved by EncounterSimulation, and presentation cannot award damage |
 | Grenade | One committed arc, scenery contact, landing fuse and blast falloff | Value state; EncounterSimulation owns Tom eligibility, recharge and accepted enemy damage |
-| EncounterStage | Reusable hostile/weapon entities, robot joint presentation, target markers and shot effects | Presentation only; no damage or navigation authority |
+| ScoutDrone | A scout drone's circling, warning, committed dive, burst timing, low pass, fall and airspace (walls to go round, low cover to rise over) | Value state advanced by EncounterSimulation, which chooses its target and resolves its rounds and every hit on it; DronePresentation draws it ([issue #201](https://github.com/RonildoBraga/lauder/issues/201)) |
+| EncounterStage | Reusable hostile/weapon entities, robot joint and drone presentation, target markers and shot effects | Presentation only; no damage or navigation authority |
 | DamageFeedback / DamageNumbers | Bounded transient damage totals / projected noninteractive labels | Consumes the existing captured event batch; no health, input, weapon or target authority |
 | GameControls / InputRules | Device sampling, touch state, command edges, source arbitration and neutral gates | Intents only; no second pause/dialogue policy |
 | Content | Bridge layout, words, encounters, interactions, models and sounds | Typed definitions and bundle resources |

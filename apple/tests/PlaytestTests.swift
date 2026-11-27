@@ -10,15 +10,15 @@
   struct PlaytestTests {
     @Test(arguments: PlaytestRunner.scenarioNames)
     func scenarioPassesWhenDrivenWithoutRendering(name: String) throws {
-      // Use the app's world and ordinary input rules, including Pause and Restart.
-      let game = Game()
+      // Use the app's world and ordinary input rules, including Pause and Restart, on the
+      // level the route was written for, as the rendered run's launch argument chooses.
+      let world = GameWorld(level: PlaytestRunner.level(for: name))
       var runner = try #require(PlaytestRunner(scenario: name))
-      if name == "touch-fight" { game.world.controls.useTouchControls() }
+      if name == "touch-fight" { world.controls.useTouchControls() }
       var frames = 0
       while !runner.isFinished {
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
-        let world = game.world
         let raw = runner.input(world.playtestSnapshot)
         if name == "touch-fight" {
           try #require(!raw.hasControllerInput && !raw.hasKeyboardInput)
@@ -29,7 +29,7 @@
         let mode = world.session.mode
         world.update(
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
-        let after = game.world
+        let after = world
         runner.record(
           PlaytestRunner.Frame(
             dt: dt, leader: after.session.leader, positions: after.playtestSnapshot.positions,
@@ -42,6 +42,18 @@
       #expect(summary.passed, "\(name): \(summary.failures)")
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
+      if name == "companion-drones" {
+        let mark = try #require(summary.marks.first { $0.name == "companion drone down" })
+        let damage = try #require(mark.damage)
+        #expect((mark.health ?? 0) > 0)
+        #expect(damage.byMember[PartyMember.miki.rawValue, default: 0] == 0)
+        let followerDamage = damage.byTarget.filter { $0.key.hasPrefix("drone.") }
+          .values.reduce(0) { total, members in
+            total + members[PartyMember.tom.rawValue, default: 0]
+              + members[PartyMember.laura.rawValue, default: 0]
+          }
+        #expect(followerDamage >= ScoutDrone.health)
+      }
       if name == "robot-parts" {
         let opening = try #require(summary.legStagger)
         #expect(opening.completed && opening.staggeredSamples >= 2)

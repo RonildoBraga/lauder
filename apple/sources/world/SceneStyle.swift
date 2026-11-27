@@ -131,6 +131,11 @@ struct SceneStyle {
     figure("spider-bot-heavy")
   }
 
+  /// A scout drone (issue #201), from the `scout-drone` model, which DronePresentation flies.
+  func drone() -> Entity {
+    figure("scout-drone")
+  }
+
   /// A weapon, with its origin at the grip and its barrel ahead along -z. The simple shapes
   /// differ in length and weight; the same profile locates its visual and shot muzzle. Laura's
   /// blade glows in her colour, and Tom's shield is a small emitter on his arm (ADR 0021).

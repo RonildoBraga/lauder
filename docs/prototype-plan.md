@@ -2,7 +2,7 @@
 
 **Updated:** 27 November 2026
 
-**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The latest [build 40 preview](#build-40-testflight-preview) delivers a short leg-break stagger, mechanical reaction and fresh firing warning, retaining build 39’s impaired turning and slower gait and build 38’s eye criticals, independent sword-leg damage and Tom’s grenade. PR #198 merged before PR #202, whose frozen main/archive source is `9b5ec53`; issue #199 is closed. Earlier build records remain source-specific history. The player keeps direct control of the leader while companions contribute under Attack. Physical acceptance and measured performance remain separate gates; further scenes and mechanics require their own decision.
+**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The latest [build 42 preview](#build-42-testflight-preview) delivers Miki/Tom’s safe current-stance body-shot fallback before eye repositioning, retaining build 40’s stagger and preceding combat, squad and controls. PR #204 merged before PR #205; frozen main/archive source is `4789ed0`. Drones are excluded; their separate build 41 remains under TestFlight’s previous builds. Earlier build records retain their actual sources. Physical acceptance and measured performance remain unverified; further scenes and mechanics require their own decision.
 
 The [leg-break stagger](#leg-break-stagger--in-development), under closed [issue #199](https://github.com/RonildoBraga/lauder/issues/199), is merged in [PR #202](https://github.com/RonildoBraga/lauder/pull/202) and delivered in [build 40](#build-40-testflight-preview). Its original full local check and three final rendered encounters passed on `4e114bb`; the release reran source-bound checks on frozen main `9b5ec53` and verified the packaged Simulator routes separately. The preceding locomotion, ordinary damage, cover/spacing and retaliation checks retain their actual sources below. Generic phone feedback for build 39 and earlier previews does not establish controls, audibility, combat feel or sustained performance for build 40.
 
@@ -14,13 +14,37 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Build 43 combined TestFlight preview
+
+The maintainer requested **“Go ahead and use git issues to coordinate with Claude to fix #207 and add the missing companion tests, then check CI, merge PR #203 and deploy the combined build to my phone using TestFlight.”** (chat, 27 November 2026; [relayed assignment](https://github.com/RonildoBraga/lauder/issues/207#issuecomment-7211706369)). Claude [owns the fixed warning target and existing warning tests](https://github.com/RonildoBraga/lauder/issues/207#issuecomment-7211731957); Codex owns a new companion/drone native test file and rendered route. The starting baseline is PR #203 head `c7ce02b`; that PR remains open. This does not assign another enemy or any Blender changes.
+
+Fresh Lauder-specific discovery selected unused **0.1.0 (43)**, [reserved for this combined release](https://github.com/RonildoBraga/lauder/issues/207#issuecomment-7211768367). Claude’s warning-target fix `3e5d362` is integrated: a warning stays with its named member/last-seen point, and elapsed warning time cannot transfer to someone else. The installed Simulator build reports **0.1.0 (43)**.
+
+**Verified source: `48005603db05316d967e1dcf54dc0ba569abb05b`.** The full `./scripts/check` passes: **13 declaration contracts, 31 offline release contracts, 52 Blender tests, seventeen sound fingerprints**, strict formatting, app build and hosted Swift Testing, including **all sixteen headless routes**, twenty drone tests and the four new native companion/drone tests. The new coverage uses the production companion override, explicit orders, actual blockers, vulnerable drone-only injury/Retry and Pause/Resume and Restart state. Independent code/test review found no findings. Claude’s review of the new companion tests was requested; no reply is claimed yet. Cancellation of a drone warning queued before a same-frame death or Retry has not been verified.
+
+All three final rendered Simulator routes pass with **zero retries and zero party-stop diagnostics**:
+
+| Route | Completed steps | Duration | Peak injuries: Miki / Laura / Tom |
+|---|---:|---:|---:|
+| `companion-drones` | 30/30 | 66.950 s | 0 / 0 / 2 |
+| `drone-fight` | 23/23 | 67.763 s | 0 / 0 / 1 |
+| `touch-fight` | 52/52 | 57.483 s | 1 / 0 / 0 |
+
+At the `companion drone down` mark (**53.333 s**), the guard still has **1,500 HP**; Tom has applied **60** damage to `drone.2` through **twenty** native hits, while Miki has dealt **zero**. Target/member accounting establishes the companion contribution before player damage or guard defeat; the route then exercises Defend/Pause and the combined finish. The touch route records **zero non-touch input frames**, but runs on the guard-only fixture: it is a touch regression, not combined touch/drone verification. Recordings and traces are retained privately; Simulator pacing is not phone-performance evidence.
+
+**Release gates remain pending:** final-head CI/review, the #203 merge, source-bound archive/signature/dSYM checks, one upload, Apple processing, unchanged existing-tester access and exact en-AU notes/build readback. PR #203 remains unmerged. [Build 42](#build-42-testflight-preview) is the latest delivered fallback build without drones; the separate [build 41 record](#build-41-testflight-preview) retains its original source and general phone feedback. Neither proves physical acceptance of this combined revision. PR #206 remains unmerged; its verified build 42 record below is preserved without merging that documentation branch.
+
 ## Build 42 TestFlight preview
 
-The maintainer requested **“Go ahead and check CI and Claude’s feedback on PR #205, address anything outstanding, then merge PR #204 followed by PR #205 and deploy the updated build to my phone using TestFlight.”** (chat, 27 November 2026; no public permalink). This authorises the reviewed fallback merge and internal TestFlight delivery. PR #204 merged as `162ae8`; PR #205 remains unmerged. Its dependency integration `7d7f5af` preserves the complete tree of preceding head `235ad79`, whose automated review reported no findings. No Claude review response has been posted as of the fresh discussion read; a request is not a completed review.
+The maintainer requested **“Go ahead and check CI and Claude’s feedback on PR #205, address anything outstanding, then merge PR #204 followed by PR #205 and deploy the updated build to my phone using TestFlight.”** (chat, 27 November 2026; no public permalink). Fresh Lauder-specific discovery confirmed **0.1.0 (42)** was unreserved. [Build 41 was reserved separately for Claude’s PR #203 preview](https://github.com/RonildoBraga/lauder/pull/203#issuecomment-7211005454); this package excludes drones.
 
-Fresh Lauder-specific discovery confirms **0.1.0 (42)** is unreserved. [Build 41 is reserved for Claude’s separately authorised PR #203 preview](https://github.com/RonildoBraga/lauder/pull/203#issuecomment-7211005454), so the fallback package uses 42 and excludes drones. The prior gameplay verification below retains its actual source; it does not validate final release metadata or prove a combined drone integration.
+**Verified delivery:** Internal **0.1.0 (42)** is available to the existing Lauder TestFlight testers. PR #204 merged first as `162ae8`, then PR #205 as **`4789ed077c5267b8661acc52b86bcb47a7b5467d`**. This frozen main/archive source’s complete tree equals final reviewed package `33eb72d158eb7dfc0c905caf8af0335e763c9839`; **Check 151** passed at **2026-11-27 06:11:57 UTC**. Automated review reported no findings. [Claude’s actual post-merge review](https://github.com/RonildoBraga/lauder/pull/205#issuecomment-7211464238) confirmed orders, safety, Laura’s role and the integration boundary, with no further code change required.
 
-**Preparation in progress:** final-package CI/review and the #205 merge remain pending. A fresh source-bound full check, signed archive/identity/dSYM verification, one API-authenticated upload, successful Apple processing, unchanged existing-tester access and exact en-AU note/build readback are required before claiming delivery. [Build 40](#build-40-testflight-preview) remains the latest delivered version; source/Simulator success does not establish physical acceptance.
+A fresh full `./scripts/check` passed on frozen main at **2026-11-27 06:17:35 UTC**: **13 declaration contracts, 31 offline release contracts, 52 Blender tests, seventeen sound fingerprints**, strict formatting, app build and hosted Swift Testing including **all fourteen headless routes** and the native body-shot regressions. Packaged **0.1.0 (42)** passes rendered `companions` **32/32** in **83.03 s** and `touch-fight` **52/52** in **57.50 s**, with zero retries/party-stop diagnostics and zero non-touch frames for the touch route. Peak injuries are respectively **0 / 0 / 1** and **1 / 0 / 0** for Miki / Laura / Tom. These are encounter regression checks; the native fixture establishes blocked-eye/body-shot causality, as recorded below.
+
+The signed archive passed identity/version/build, configured-team signature and matching-dSYM verification. Independent pre/post-upload audits confirmed source/check-log binding, the unchanged archive fingerprint, internal export policy and all seventeen bundled sound resources. The single API-authenticated upload succeeded with exit code 0 at **2026-11-27 06:21:21 UTC**. At **2026-11-27 06:24:11 UTC**, fresh Apple readback confirmed **COMPLETE**, **zero errors**, **VALID**, **IN_BETA_TESTING**, **INTERNAL_ONLY**, an unexpired identity-confirmed build, every original internal group containing build 42 and unchanged group/tester membership. Exact **en-AU** notes readback passed at **06:24:07 UTC**; the related-build API response joined the notes to build 42 at **06:24:08 UTC**. The [shared delivery report](https://github.com/RonildoBraga/lauder/pull/205#issuecomment-7211502381) records the release.
+
+Choose **TestFlight → Lauder → Update**. The separate drone preview is available under previous build 41, not included here. Phone installation, controls/multi-touch, audio/haptics, combat feel and sustained performance remain unverified for build 42. No tester invitation, uninstall, store-availability change or public App Store submission occurred. Archive, symbols and private verification evidence are retained.
 
 ## Companion body-shot fallback — in development
 
@@ -40,7 +64,7 @@ The unchanged rendered Simulator routes pass with **zero retries and zero party-
 
 The touch route records **zero non-touch input frames**. These routes use ordinary shared inputs and native combat, without immunity, teleportation or a changed driver; their summaries do not prove that a particular hit used the fallback. The targeted native regressions establish that cause. Independent production review found no finding. A scratch three-way text merge with Claude’s PR #203 head `e788229` retains both `Intent.drone` and the new planner branch; this is not a combined drone playtest.
 
-This increment is unmerged and unuploaded; [build 40](#build-40-testflight-preview) remains the latest delivered version and does not contain it. Phone controls, sustained performance and combat feel remain unverified for this change. Other enemy/companion ideas remain separate work.
+This increment merged in PR #205 as `4789ed0` and is delivered in [build 42](#build-42-testflight-preview); the earlier build 40 does not contain it. Phone controls, sustained performance and combat feel remain unverified for this change. Other enemy/companion ideas remain separate work.
 
 ## Build 40 TestFlight preview
 
@@ -136,6 +160,31 @@ Choose **TestFlight → Lauder → Update**; the pause screen identifies **0.1.0
 ### Subsequent merge and phone feedback
 
 On 27 November 2026, after the delivery checkpoint above, the maintainer reported **“It worked”** and authorised **“merge PR #193 and the TestFlight release PR #195, then update the git issues”** (chat; no public permalink). PR #193 merged as **`8ae7e1723337d776a7a857c532700ea8b55fd008`**, whose tree matches checked feature head `a5fa434`. After the dependency merge, ancestry-only commit `265f2df` preserved PR #195’s delivered tree while retargeting it to main. [Check 134](https://github.com/RonildoBraga/lauder/actions/runs/45931744507) passed on that exact head at **2026-11-27 03:22:28 UTC**; fresh review-thread and finding checks found no outstanding finding. PR #195 then merged as **`35945ff7fa5a66c3610d2418a463f6dd68bca9c2`**. Main now contains build 38’s app sources; no additional upload occurred. This is basic phone feedback, not exhaustive controls or measured performance. The separate [locomotion follow-up](#leg-loss-locomotion--in-development) is not in the delivered archive. The original delivery proof and its pre-merge checkpoint above remain unchanged.
+
+## Scout drones — in development
+
+While Codex worked on the guard's leg stagger (#199), the maintainer asked for **“a different enemy”** and chose **“Scout drones”** **“With the first guard”** (chat, 27 November 2026; no public permalink). [Issue #201](https://github.com/RonildoBraga/lauder/issues/201) records Claude's claim and the files it avoids while #199 is active. The [drone contract](scout-drones.md) holds the starting rules: two drones circle the guard at 3 m, take turns to warn for 1 s and dive along a committed line with a three-round burst that hurts at most once, pass low enough for the sword, and fall with the guard. The [scout-drone model](../blender/assets/scout-drone/README.md) is simple shapes in the guard's colours.
+
+**Checks, on `5f4f266`, iPhone 13 Pro Max Simulator with iOS 27.0:**
+- **Full check:** `./scripts/check` passed: contracts, release, Blender and sound checks, strict formatting, the build and every Swift test.
+- **Headless routes:** all fifteen pass, the fourteen guard-only routes and **drone-fight**.
+- **Rendered drone-fight:** It passed in 69.4 s, 23/23 steps, with no retry; Laura took one hit. Miki downed both drones 9.4 s after the guard noticed the party, and the squad then dismantled the guard. Frame time averaged 16.8 ms (p99 16.8 ms, one frame of 185 ms), and the party update 1.5 ms. An earlier run on the preceding source also passed, in 70.2 s.
+- **Rendered robot-parts:** on the preceding source it passed on the guard-only bridge (61.7 s, 35/35 steps), which shows the guard-only routes launch on the right level.
+- **After #202 landed:** `main` was merged in as `b60f4b8`, and the full check passed on it. Codex's review then found that downed and cleared drones stopped moving once the fight ended. In `c204fb6` they keep falling and circling. The full check passed on it too. The rendered drone-fight passed again on it: 66.9 s, 23/23 steps, no retry, and Laura took one hit. Frame time averaged 16.7 ms (p99 16.8 ms, worst 62.4 ms), and the party update 1.5 ms.
+- **Not checked:** these are Simulator results, not phone evidence. Controls, readability, audibility, balance, enjoyment and sustained phone performance are unchecked.
+
+### Build 41 TestFlight preview
+
+After the checks above, the maintainer answered “Yes, upload it” to Claude's question “Upload the drones to TestFlight for you to try?” (Claude session, 27 November 2026; no public permalink). That authorises this internal preview from the unmerged `claude/scout-drones` branch. It does not authorise a merge. Discovery found builds up to 40 used, so the preview is **0.1.0 (41)**. The branch commits that number, as the preview branches for builds 33–35 did.
+
+**Delivered.**
+- **Archive:** `apple/scripts/testflight archive --reviewed-preview` archived `claude/scout-drones` at `42d6669`. Before archiving, its own full `./scripts/check` passed on the frozen source. It then verified the signed archive, and the API-key upload succeeded once.
+- **Apple:** at 05:57 UTC on 27 November 2026, Apple reported the build COMPLETE and VALID, internal only, in beta testing and unexpired. It is available to the existing internal testers, the internal group set and tester membership are unchanged, and the upload had no errors.
+- **What was not done:** no tester was invited, no TestFlight test notes were written, and nothing was submitted to the public App Store. The archive and its symbols are kept privately.
+- **The branch afterwards:** later commits change only documentation.
+- **Phone check:** the maintainer played build 41 and answered “Feels right” to Claude's question “How do the drones play in build 41?” (Claude session, 27 November 2026; no public permalink).
+  - **What it shows:** general success on the phone, not a measured check of each control, sound, balance or sustained frame rate.
+  - **The merge:** it clears the baseline-iPhone gate that AGENTS.md sets for playable features. PR #203 merges under Claude's standing authorisation once its checks pass.
 
 ## Eye, legs and grenades — in development
 

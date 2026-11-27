@@ -32,6 +32,9 @@ struct Level {
       case robot
       /// Runs at the leader at this speed, in metres per second.
       case charge(speed: Float)
+      /// A scout drone that circles its guard and dives at the party (issue #201). It starts
+      /// `orbit` radians round its circle, and `slot` orders its first dive after the others'.
+      case drone(orbit: Float, slot: Int)
     }
 
     let id: String
@@ -51,6 +54,11 @@ struct Level {
     var firstShotMisses = false
     /// Shown after that deliberate miss: how to answer it.
     var missLine: String?
+
+    var isDrone: Bool {
+      if case .drone = attack { return true }
+      return false
+    }
   }
 
   /// What happens at a moment after an encounter begins.

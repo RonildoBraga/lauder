@@ -117,10 +117,12 @@ struct CombatTests {
   func cuesPlayInTimeOrderOnce() {
     var director = StoryDirector()
     director.start(BrooklynBridge.strangerEncounter.cues)
-    #expect(director.step(dt: 0.01).count == 2)
+    // The guard and each scout drone appear and engage at once; then Miki's and Tom's lines.
+    #expect(director.step(dt: 0.01).count == 2 + 2 * BrooklynBridge.drones.count)
     #expect(director.step(dt: 0.5).isEmpty)
     #expect(director.step(dt: 0.2).count == 1)
     #expect(director.step(dt: 1).isEmpty)
+    #expect(director.step(dt: 2).count == 1)
     #expect(!director.isPlaying)
     #expect(director.step(dt: 10).isEmpty)
     director.start(BrooklynBridge.strangerEncounter.cues)
