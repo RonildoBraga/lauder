@@ -281,6 +281,55 @@ struct ScoutDroneFightTests {
     #expect(range.events.contains { if case .droneWarning = $0 { true } else { false } })
   }
 
+  /// Review finding #207: when the warned member ducks out of sight near the end of the
+  /// warning, the dive keeps their last-seen point instead of jumping to another member on the
+  /// old countdown. Another member is only ever targeted by a new, full warning.
+  @Test
+  func aWarningStaysWithItsMemberWhenTheyDuckOutOfSight() throws {
+    // A wide, tall wall behind the party: stepping behind it breaks every drone's sight.
+    let hidingPlace = SIMD2<Float>(0, 13.5)
+    let range = try Range(
+      party: [0, 8], boxes: [Level.Box(name: "wall", position: [0, 2, 12], size: [12, 4, 1])])
+    var drone: String?
+    var member: PartyMember?
+    var warningSteps = 0
+    var lastSeen: SIMD2<Float>?
+    var committed: SIMD2<Float>?
+    for _ in 0..<(40 * 120) where committed == nil {
+      if let member, lastSeen == nil, warningSteps >= Int((ScoutDrone.warningTime - 0.15) * 120) {
+        lastSeen = range.figures[member]
+        range.move(member, to: hidingPlace)
+      }
+      range.step()
+      guard let id = drone else {
+        for id in Range.drones where range.fight.hostiles[id]?.drone?.phase == .warning {
+          drone = id
+          member = range.fight.droneTarget(for: id)
+          break
+        }
+        continue
+      }
+      let flight = try #require(range.fight.hostiles[id]?.drone)
+      switch flight.phase {
+      case .warning:
+        warningSteps += 1
+        #expect(range.fight.droneTarget(for: id) == member)
+      case .diving:
+        committed = flight.committedPoint
+      default:
+        Issue.record("the warning ended without a dive: \(flight.phase)")
+        committed = .zero
+      }
+    }
+    let seen = try #require(lastSeen)
+    let point = try #require(committed)
+    #expect(simd_distance(point, seen) < 0.01)
+    // Nobody else stood there: the dive did not move to another member.
+    for other in PartyMember.allCases where other != member {
+      #expect(simd_distance(point, range.figures[other] ?? .zero) > 1)
+    }
+  }
+
   @Test
   func hittingADroneWakesItAndItsGuard() throws {
     // Beyond the guard's sight, so only the hit can start the fight.
@@ -387,9 +436,9 @@ struct ScoutDroneFightTests {
     let session: GameSession
     private(set) var hits: [DamageHit] = []
     private(set) var events: [CombatEvent] = []
-    private let figures: [PartyMember: SIMD2<Float>]
+    private(set) var figures: [PartyMember: SIMD2<Float>]
 
-    init(party point: SIMD2<Float>) throws {
+    init(party point: SIMD2<Float>, boxes: [Level.Box] = []) throws {
       figures = [.miki: point, .tom: point + [-1.5, 0.5], .laura: point + [1.5, 0.5]]
       let guardian = Level.Hostile(
         id: Self.guardID, name: "Guard", hiddenAt: .zero, standAt: .zero, hits: 6,
@@ -409,7 +458,7 @@ struct ScoutDroneFightTests {
         safeExit: .init(minimum: [30, 30], maximum: [35, 35]))
       let level = Level(
         id: "drone-range", ground: .box("floor", at: [0, -0.15, 0], size: [100, 0.3, 100]),
-        boxes: [], triggers: [], encounters: [encounter], party: [.miki, .tom, .laura],
+        boxes: boxes, triggers: [], encounters: [encounter], party: [.miki, .tom, .laura],
         spawns: figures, heading: [0, -1], cameraOffset: BrooklynBridge.cameraOffset,
         fieldOfView: 22, opening: "Range", objective: "Test", lookAround: "Range",
         restartNote: "Restart")
@@ -418,6 +467,8 @@ struct ScoutDroneFightTests {
       try #require(session.beginEncounter(encounter.beat))
       fight.begin(encounter)
     }
+
+    func move(_ member: PartyMember, to point: SIMD2<Float>) { figures[member] = point }
 
     /// One fixed step; with `fireAt`, Miki leads with her long rifle aimed at that hostile.
     func step(fireAt id: String? = nil) {

@@ -147,6 +147,14 @@ struct ScoutDrone {
   var isAttacking: Bool { phase == .warning || phase == .diving }
   /// Low enough for a sword swing.
   var isLow: Bool { height <= Self.swordHeight }
+  /// Where its rounds would go: the warned member's last-seen point, or the committed point.
+  var aimPoint: SIMD2<Float>? {
+    switch phase {
+    case .warning: lastSeen
+    case .diving: committedPoint
+    default: nil
+    }
+  }
   /// The middle of its body, where shots and swings meet it.
   var centre: SIMD3<Float> { [position.x, height, position.y] }
 
