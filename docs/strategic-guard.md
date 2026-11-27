@@ -1,7 +1,7 @@
 # First-tower strategic guard
 
 **Date:** 27 November 2026\
-**Status:** The current [eye, legs and grenade revision](robot-eye-legs-grenades.md) is being implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered verification remain pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). This revision is unmerged and not delivered; builds 33–37 below are historical evidence rather than validation of these new mechanics.
+**Status:** The current [eye, legs and grenade revision](robot-eye-legs-grenades.md) is implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). This revision is unmerged and not delivered; builds 33–37 below are historical evidence rather than validation of these new mechanics.
 
 The earlier build 34 command feedback, build 35 retaliation and build 36 shared-health authorisation remain recorded in the [prototype plan](prototype-plan.md). After build 37, the maintainer requested critical eye hits, repeated Laura sword strikes that detach an individual leg and slow the robot, and grenades, choosing **“Tom only; manual throws”**. The [robot contract](robot-eye-legs-grenades.md) records that assignment and separates it from prototype tuning choices; it does not change the trio's biographies.
 
@@ -51,7 +51,7 @@ Builds 36–37 replaced that mandatory gate with 1,500 shared health and optiona
 
 ## Verification boundary
 
-The earlier previews passed their recorded checks and deliveries, including the damage source `533f012`. They do not validate issue #192. New rule/native and rendered verification remains pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). The verification contract is:
+The earlier previews passed their recorded checks and deliveries, including the damage source `533f012`. They do not validate issue #192. Current rule/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). The verification contract is:
 
 1. Verify positive ordinary damage, repeated actual eye criticals with each gun, independent three-hit leg counters, translation penalties, grounded hull/eye/muzzle agreement, shared-health victory, truthful feedback and both attack patterns. Check player/companion equality and one health change per contact.
 2. Exercise the real control path in rendered Simulator: use eye shots and sword leg losses, switch leaders/weapons, throw as Tom with real cover and one ordinary blast per target, use cover/dodge, retreat, take the west bypass, retry, Pause/Resume and Restart. Check companion contributions, order priority and fresh input. The shield must still drop on a switch.

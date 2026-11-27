@@ -1,7 +1,7 @@
 # Bridge robot: eye, legs and grenades
 
 **Date:** 27 November 2026  
-**Status:** Bounded implementation under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), on `codex/robot-eye-legs-grenades`, based on the delivered [build 37 preview](prototype-plan.md#build-37-testflight-preview). New source/native and rendered verification remains pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). This source is not yet a TestFlight delivery or a merge.
+**Status:** Bounded implementation under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), on `codex/robot-eye-legs-grenades`, based on the delivered [build 37 preview](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). This source is not yet a TestFlight delivery or a merge.
 
 After testing build 37, the maintainer requested that hitting the eye be a critical hit and that repeated Laura sword strikes on one leg make it fall off and slow the robot. They also requested grenade throwing and selected **“Tom only; manual throws”** in the task clarification (chat; no public permalink). This authorises the bounded mechanic revision, not new characters, scenes, biographies, enemy families or a general ability system. Numeric values below are prototype tuning choices, not additional quoted maintainer decisions.
 

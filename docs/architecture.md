@@ -4,7 +4,7 @@
 
 **Status:** Bridge-only runtime before a gameplay revamp ([ADR 0017](decisions/0017-bridge-only-reset.md)). Swift, RealityKit and SwiftUI remain accepted. Historical experiment records describe retired code, not the current architecture.
 
-The current [eye, leg and Tom grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), builds on delivered [build 37](prototype-plan.md#build-37-testflight-preview). New source/native and rendered verification remains pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development); this revision is unmerged and not delivered. Its owners remain the existing simulation, input and presentation components below.
+The current [eye, leg and Tom grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), builds on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development); this revision is unmerged and not delivered. Its owners remain the existing simulation, input and presentation components below.
 
 **Historical preview lineage:** the [strategic first-tower guard](strategic-guard.md) was delivered as the [build 33 reviewed preview](prototype-plan.md#build-33-testflight-preview), before merge. [Companion autonomy](companion-autonomy.md) followed in [build 34](prototype-plan.md#build-34-testflight-preview), with source-specific results in the [prototype plan](prototype-plan.md#companion-autonomy--in-development). The merged baseline, delivered previews and current branch remain distinguishable.
 

@@ -1,7 +1,7 @@
 # Guard damage and feedback
 
 **Date:** 27 November 2026\
-**Status:** The current [eye/leg/grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), retains the shared-health and feedback pipeline while simplifying part bonuses. New source/native and rendered verification remains pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development); it is unmerged and not delivered. Earlier source `533f012` passed its recorded checks and was delivered in [build 36](prototype-plan.md#build-36-testflight-preview), then retained in [build 37](prototype-plan.md#build-37-testflight-preview). Those historical results do not validate these new mechanics or establish physical acceptance.
+**Status:** The current [eye/leg/grenade revision](robot-eye-legs-grenades.md), under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), retains the shared-health and feedback pipeline while simplifying part bonuses. Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development); it is unmerged and not delivered. Earlier source `533f012` passed its recorded checks and was delivered in [build 36](prototype-plan.md#build-36-testflight-preview), then retained in [build 37](prototype-plan.md#build-37-testflight-preview). Those historical results do not validate these new mechanics or establish physical acceptance.
 
 ## Maintainer direction
 

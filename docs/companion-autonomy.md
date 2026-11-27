@@ -1,7 +1,7 @@
 # Companion autonomy at the first tower
 
 **Date:** 27 November 2026\
-**Status:** The current [eye/leg preferences](robot-eye-legs-grenades.md) are being implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). New source/native and rendered verification is pending in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Earlier Attack/Defend, ordinary-attack and retaliation checks remain historical evidence below; they do not validate this revision or establish its phone behaviour, balance or performance.
+**Status:** The current [eye/leg preferences](robot-eye-legs-grenades.md) are implemented under [issue #192](https://github.com/RonildoBraga/lauder/issues/192), based on delivered [build 37](prototype-plan.md#build-37-testflight-preview). Source/native and rendered Simulator verification passed on `303617b`, recorded in the [prototype plan](prototype-plan.md#eye-legs-and-grenades--in-development). Earlier Attack/Defend, ordinary-attack and retaliation checks remain historical evidence below; they do not validate this revision or establish its phone behaviour, balance or performance.
 
 ## Maintainer direction
 
