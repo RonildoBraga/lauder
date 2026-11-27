@@ -2,7 +2,7 @@
 
 **Updated:** 26 November 2026
 
-**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The maintainer has now authorised the [strategic guard](strategic-guard.md) as the next small gameplay experiment. It is in development on `codex/strategic-bridge-guard`; local checks and rendered Simulator verification pass, while review, merge and delivery remain outstanding. Further scenes and mechanics require their own decision.
+**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The strategic guard was delivered as the [build 33 reviewed preview](#build-33-testflight-preview). [Bounded companion autonomy](companion-autonomy.md) is implemented on `codex/companion-autonomy`, with validation below. Review, phone acceptance and delivery remain outstanding. The player keeps direct control of the leader while companions may complete their own weakpoint contributions. Further scenes and mechanics require their own decision.
 
 The bridge concept and camera B remain selected. The maintainer accepted C's Blender form and walking/turning/shooting studies, then assigned its first-tower runtime integration and Simulator movement/shooting tests. The guard replaced the first human shooter; since 26 November the three meet it together, and it is the bridge's only fight. A stays a possible later different-weapon variant; B is unselected. This is a bounded prototype of the [first-tower encounter](encounters/bridge-spider-bot.md), not an assignment for additional scenes or enemy types.
 
@@ -12,11 +12,58 @@ On 26 November 2026 the maintainer asked for three changes to the controls: one 
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
 
+## Companion autonomy — in development
+
+The maintainer reported build 33 **“It worked nice”**, then asked for independent companions and chose **“Companions can complete the weakpoint steps too”**. This authorises the [bounded companion contract](companion-autonomy.md), not a generic AI framework or new scene. All three characters still contribute through their actual native weapons; changing leader is available but no longer mandatory for every step.
+
+The maintainer then clarified that companions should attack only after **Attack**, while **Defend** on the D-pad should make them seek cover and return. The squad now defaults to Defend. D-pad/arrow Up orders Attack; Down orders Defend, immediately revoking companion fire permission and clearing old position orders to recall them via nearby legal cover. Fire alone controls only the leader. The stance persists across leader switches; Retry/Restart returns to Defend. This correction has passed the checks below.
+
+With Attack permission and an engaged guard, companions choose nearby legal positions/cover and avoid committed fire where possible, with an initial 8 m leader leash. Hold anchors and Go destinations otherwise override autonomous movement, and subsequently issued position orders do not arm attacks. Formation/Follow retains its existing meaning and temporary regroup without changing stance; retreat suppresses attacks. Actual rays, armour, weapon readiness/ammunition/cadence and turn rates remain authoritative; companions gain no teleportation, immunity, automatic shields or signatures.
+
+### Explicit stance verification
+
+On 26 November 2026, `./scripts/check` passed after the correction: 13 declaration-contract tests, 31 release-contract tests, 52 Blender extension tests, seven generated sounds, strict Swift formatting, the app build and hosted Swift Testing, including all nine headless gameplay routes. No Swift source warnings remained. Added coverage verifies default Defend despite real player engagement, no companion damage/ammo spend after Defend even with stale fire intentions, recall replacing Hold without cycling formation, player Fire remaining available, Attack restored only by command, local returning cover, command priority, touch cancellation, Pause/dialogue and stance reset on Retry/Restart. Read-only implementation and input reviews found no remaining correctness blocker.
+
+Clean rendered iPhone 17 / iOS 27.0 Simulator runs, through shared input:
+
+| Route | Duration | Warning frames | Frame p99 / max | Party update mean / p99 | Body overlap frames |
+|---|---:|---:|---:|---:|---:|
+| `companions` | 54.9 s | 0 | 16.74 / 50.75 ms | 1.440 / 4.921 ms | 0.0% |
+| `first-fight` | 80.9 s | 0 | 16.72 / 33.34 ms | 1.941 / 7.054 ms | 0.7% |
+| `weapons` | 62.2 s | 0 | 16.73 / 37.78 ms | 1.698 / 5.094 ms | 1.2% |
+
+All three passed, including Restart. The new route explicitly ordered Attack, allowed the real sensor/coupling steps, issued Hold then Defend, observed three seconds with no companion damage or ammo spend while recalling, then issued Attack again and completed the core. Miki remained player-controlled. The observed state stayed Defend throughout the cease-fire and core damage stayed zero; the final accepted core count reached 12 only after the new Attack. The widest leader gaps were 3.44, 3.82 and 3.58 m respectively. The HUD showed the stance and Up/Down commands. A subsequent native Simulator UI check invoked the touch Formation control's exposed Squad Attack and Squad Defend actions and observed each HUD transition, ending in Defend.
+
+These are Simulator results; brief overlaps and the recorded frame maxima remain limitations, and the controller-hint strip remains dense. The touch-menu selection/clamping and cancellation tests passed, but the UI check used its accessibility actions rather than a physical ground-menu gesture. No new physical controller, multi-touch, sustained phone performance or enjoyment is established. Review and authorised delivery remain outstanding; TestFlight build 33 remains the delivered version.
+
+### Earlier autonomous-engagement verification
+
+The first autonomy source, `14193d5`, passed these checks on 26 November 2026 before the explicit stance correction:
+
+- `./scripts/check` passed on the final source: 13 declaration-contract tests, 31 offline release-contract tests, 52 Blender extension tests, seven generated sounds, strict Swift formatting, the shared app build and hosted Swift Testing suite. This includes 20 new companion tests and all nine headless gameplay routes, with no Swift source warnings in the final run.
+- Pure planner and native/world tests cover role weapons, closed components, real contact/cover/ally rays, draw/cadence/magazines, facing, awareness and player-contact activation, quiet bypass, local routes/leash, cached-target invalidation, threat avoidance, order priority, leader authority and Pause. The nine headless gameplay routes passed in the integrated run.
+- Read-only peer reviews found a formation-target feedback issue; separate fresh formation targets now prevent tactical targets feeding into the next base formation. Real sword contact activates support, and actual per-frame companion movement/turning drives spread. Re-review found no remaining correctness blocker.
+- A second world regression kept Tom under ordinary player control without firing: Miki disabled the sensor and Laura breached the coupling, while Tom retained a full magazine and the core stayed undamaged. Thus each companion's native contribution is covered without making the selected leader automatic.
+
+Rendered iPhone 17 / iOS 27.0 Simulator results, through ordinary shared input:
+
+| Route | Duration | Warning frames | Frame p99 | Party update mean / p99 | Body overlap frames |
+|---|---:|---:|---:|---:|---:|
+| `companions` | 49.0 s | 0 | 17.29 ms | 1.171 / 3.085 ms | 0.0% |
+| `first-fight` | 80.9 s | 0 | 16.73 ms | 1.417 / 3.493 ms | 0.7% |
+| `weapons` | 58.4 s | 0 | 16.82 ms | 1.216 / 3.699 ms | 1.3% |
+
+All three rendered routes passed, including Restart. In `companions`, Miki stayed under player control and supplied only the sensor shot; Laura breached the coupling and Tom supplied 12 accepted core rounds. The captured stage changed from sensor through coupling and reactor to complete, without another player Fire or leader switch. The widest leader gaps were 3.46, 4.10 and 3.23 m respectively. Short body overlaps on the other routes remain visible in the measurements. The runs use the ordinary roll defence, with no added immunity or teleportation. Frame maxima were 33.34, 180.37 and 33.33 ms, so the first-fight run includes an isolated hitch despite its low p99.
+
+The new activity line is readable in the Simulator captures; the bottom controller-hint strip remains dense. These are Mac Simulator results, not sustained phone frame-pacing, controller/touch acceptance or a judgment of enjoyment. The AI remains limited to this guard, and the player must still supply the currently controlled character's role. Review and the next authorised phone/release checkpoint remain outstanding; build 33 remains the delivered version.
+
 ## Strategic guard — in development
+
+This section records the manual-control implementation delivered in build 33 below; its heading remains a stable link for earlier PRs. Companion autonomy is the newer assignment above.
 
 The maintainer authorised an encounter that rewards manually directing all three existing characters. [Strategic guard](strategic-guard.md) records the branch's prototype rules: Miki's long rifle persistently disables the sensor, Laura's sword persistently breaches a side coupling, and Tom's minigun supplies 12 accepted reactor rounds across repeatable 4-second exposure windows opened by recovery. Ordinary armour damage and wrong-role weapons cannot skip those contributions. The guard alternates three precision rounds and a five-round fan cannon attack, with readable wind-ups and no exact red aim line. The west bypass stays open.
 
-L1 / LB, Q and touch Next still switch leader manually; followers follow or hold and do not attack automatically. Tom's dome drops on a leader switch. The branch also fixes sword strikes through solid cover and raises ground markers above baked tower shadows. Existing pawns, camera, scene, input authority and real shot geometry remain the basis of the experiment.
+In delivered build 33, L1 / LB, Q and touch Next switch leader manually; followers follow or hold without automatic attacks. Tom's dome drops on a leader switch. That preview also contains the fixes for sword strikes through solid cover and ground markers hidden by baked tower shadows. Existing pawns, camera, scene, input authority and real shot geometry remain the basis of the experiment.
 
 Verification on 26 November 2026:
 
@@ -34,7 +81,11 @@ Rendered iPhone 17 / iOS 27.0 Simulator results:
 
 All three routes passed, including the complete dismantling sequence and Restart. Captures show the front sensor, side coupling, closed/open core and countdown, both attack warnings, and ground markers above the tower shadows. These are Simulator measurements on the Mac, not phone performance results. Component spheres remain prototype targeting cues and the controller-hint strip remains dense.
 
-Remaining gates: source-bound PR review, the affected physical controls/readability/performance checkpoint before a playable-feature merge, and separate authorisation for merge and delivery. No new release, merged implementation or phone acceptance is claimed. Successful Simulator checks do not establish balance or enjoyment.
+### Build 33 TestFlight preview
+
+Internal TestFlight **0.1.0 (33)** was delivered from `f67bd2c` through [PR #167](https://github.com/RonildoBraga/lauder/pull/167), using the explicit reviewed-preview path before merge. Its manual strategic guard builds on [PR #166](https://github.com/RonildoBraga/lauder/pull/166); followers in that build do not attack. The delivery record on PR #167 is the source for processing and existing-tester availability.
+
+The maintainer reported **“It worked nice”** in chat. Record this as general phone success only: no individual controller/touch checklist, readability measurement or sustained frame-pacing capture was supplied. It is not merge permission. The reviewed preview does not establish that either PR has merged into `main`. Remaining phone-specific checks and any merge/release require their applicable gates; the newer autonomy branch has its own verification above.
 
 ## Structural preparation
 
@@ -54,7 +105,7 @@ The [walkthrough](gameplay-script.md#the-brooklyn-bridge-opening) follows Miki, 
 2. Meet the C robot at the first tower. Fight using the tower as cover, or take the west arch to its safe exit. Each committed burst can cause at most one injury; a third injury retries that fight.
 3. Cross the second tower together. Try Close/Spread/Column and move/hold orders, then gather at the Manhattan end.
 
-Only the bridge is available. Pause has Resume, Restart, Vibration and, with a controller or keyboard, Status panel. There is no alternate-scene selector, weapon bench, endless spawn, automatic combat cover, companion auto-fire, grenade, signature, elevation or salvage-repair system.
+Only the bridge is available. Pause has Resume, Restart, Vibration and, with a controller or keyboard, Status panel. There is no alternate-scene selector, weapon bench, endless spawn, automatic combat-cover controls, grenade, signature, elevation or salvage-repair system.
 
 ## Input and interaction contract
 
@@ -64,7 +115,9 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and, with a c
 | Look around, advance dialogue or confirm menu | Cross / A | Look, Continue, or Restart while paused | E |
 | Next leader, going round the party | L1 / LB | Next: name | Q |
 | Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
-| Both go / left member / right member / both hold | D-pad up / left / right / down | Hold on ground, then Both / a name / Hold | Arrow keys |
+| Permit companion attacks / cease fire and recall via cover | D-pad up / down | Hold on ground, slide upper-left Attack / upper-right Defend | Up / down arrows |
+| Send left / right member ahead | D-pad left / right | Hold on ground, then a name | Left / right arrows |
+| Both go / both hold | No direct binding | Hold on ground, then Both / Hold | G / H |
 | Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
 | [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
@@ -285,13 +338,13 @@ The build 26 tuning and measurements in [ADR 0016](decisions/0016-combat-balance
 
 ## Combat design review gate
 
-The preceding C first-tower prototype is implemented in the merged baseline, with its recorded source/Simulator checks. The maintainer has authorised the strategic revision above; complete and review that bounded experiment, then assess whether its loop is readable and enjoyable. Source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
+The preceding C first-tower prototype is implemented in the merged baseline, with its recorded source/Simulator checks. The strategic revision was delivered for phone testing in build 33; the maintainer has now authorised bounded companion autonomy above. Complete and review that revision, then assess whether cooperation makes the loop readable and enjoyable. Source tests and Simulator success do not settle balance or phone performance. New scenes, A's variant and releases remain separate work.
 
 The broader squad combat direction, [The Quiet Yard](encounters/the-quiet-yard.md) and later narrative plans remain reference rather than assignments. The removed S4 experiments stay retired.
 
 ## Outside the first playable
 
-Additional playable scenes, general tactical combat AI beyond the assigned guard, autonomous companion attacks, signature abilities, salvage-repair machinery, extra equipment, elevation, skill trees, health/hunger systems, multiplayer, crafting, branching dialogue, finished art, persistence, cloud services and App Store submission. The strategic guard does not assign those systems.
+Additional playable scenes, general tactical combat AI beyond the assigned guard and its bounded companion revision, signature abilities, salvage-repair machinery, extra equipment, elevation, skill trees, health/hunger systems, multiplayer, crafting, branching dialogue, finished art, persistence, cloud services and App Store submission. The strategic guard does not assign those systems.
 
 ## Later hardening
 

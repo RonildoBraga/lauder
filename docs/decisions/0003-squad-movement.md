@@ -6,6 +6,8 @@
 
 **Current scope:** The bridge-only reset retired the non-bridge experiments described here. Shared rules remain only where the bridge uses them; this record preserves the earlier decisions and measurements, not an assignment to restore deleted systems. See [ADR 0017](0017-bridge-only-reset.md) and the current [architecture](../architecture.md).
 
+**Control revision, 26 November 2026:** The maintainer's [explicit Attack/Defend direction](../companion-autonomy.md#attack-and-defend) supersedes the original up/down position bindings below. D-pad/arrow Up orders Attack and Down orders Defend, which stops companion fire and recalls them via nearby cover. Left/right retain individual positioning; keyboard G/H and the touch menu retain Both/Hold. The squad defaults to Defend. The [current input contract](../prototype-plan.md#input-and-interaction-contract) owns the complete mapping.
+
 ## Context
 
 The companions should behave **like a coordinated squad rather than just following the player**: one button cycles formations, directional commands position squad members, and companions keep formation, avoid obstacles and react to their surroundings instead of following the leader's exact path. On a phone the controls stay simple while still offering real tactical choices.

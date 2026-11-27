@@ -8,7 +8,11 @@ The **Brooklyn Bridge opening is the only playable scene**. On 22 November 2026 
 
 Miki, Tom and Laura cross the snowbound bridge together towards Manhattan, past the robot that guards the first tower, to the far end. The bridge keeps its movement, paired weapons, the first-tower guard fight, party switching, formations, orders, camera and controller/touch/keyboard inputs. Dialogue remains provisional. The [gameplay walkthrough](docs/gameplay-script.md) describes the current opening; the [prototype plan](docs/prototype-plan.md) records verification and the next gate.
 
-**In development, 26 November 2026:** The maintainer authorised a [strategic first-tower guard](docs/strategic-guard.md) on `codex/strategic-bridge-guard`. Miki disables its sensor with her long rifle, Laura breaches a side coupling with her sword, and Tom uses repeatable reactor openings with his minigun. This makes manual leader switching useful within the existing bridge encounter. The branch passes the standard check and rendered Simulator checks; review, merge and a new delivery remain pending. Build 32 remains the preceding playable baseline. The west-arch bypass stays available, and followers do not attack automatically.
+**Companion autonomy, 26 November 2026:** After playing the strategic guard in [TestFlight build 33](docs/prototype-plan.md#build-33-testflight-preview), the maintainer asked for independent companions and chose **“Companions can complete the weakpoint steps too”**. The [bounded revision](docs/companion-autonomy.md) is implemented on `codex/companion-autonomy`, with source and rendered Simulator verification recorded in the [prototype plan](docs/prototype-plan.md#companion-autonomy--in-development). The player retains the leader; nearby companions may supply their own native guard contributions once the fight is engaged, respecting orders, cover and retreat. Switching remains available, but is no longer required for every contribution. The west bypass stays available. Review, phone acceptance and delivery remain outstanding.
+
+**Delivered preview:** Internal TestFlight **0.1.0 (33)** came from `f67bd2c` through the reviewed-preview delivery in [PR #167](https://github.com/RonildoBraga/lauder/pull/167). It contains the strategic guard with manual role switching and followers that do not attack. The maintainer reported **“It worked nice”** on the phone; this is general feedback, not a per-control or performance measurement and not merge permission. The preview does not establish that PRs #166 or #167 have merged into `main`.
+
+**Explicit squad commands:** The maintainer clarified that companions attack only when ordered. The squad now starts in **Defend**. D-pad/arrow **Up** orders **Attack**; **Down** orders **Defend**, stopping companion fire and recalling them using nearby cover. The touch ground menu offers both stances too. Leader Fire does not arm companion attacks. The [prototype plan](docs/prototype-plan.md#companion-autonomy--in-development) distinguishes the previous checks from validation of this correction.
 
 Swift, RealityKit and SwiftUI remain the technical direction ([ADR 0001](docs/decisions/0001-engine.md)). Blender remains the source of the bridge and character models ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)). Use simple shapes and colours until a concrete gameplay need warrants art work.
 
@@ -34,7 +38,8 @@ The last build archived from `main` itself is **TestFlight 0.1.0 (29)**, app/arc
 - [Gameplay walkthrough](docs/gameplay-script.md): the retained bridge and the distinction between it and future design ideas.
 - [Architecture](docs/architecture.md): ownership, input, movement, weapons, encounters and lifecycle.
 - [Prototype plan](docs/prototype-plan.md): retained scope, controls, checks and the design gate.
-- [Strategic guard](docs/strategic-guard.md): the assigned dismantling encounter, verification and remaining gates.
+- [Strategic guard](docs/strategic-guard.md): the delivered dismantling prototype and its current revision.
+- [Companion autonomy](docs/companion-autonomy.md): the authorised independent-companion scope and verification gates.
 - [Touch controls](docs/touch-controls.md): the phone's controller-free input path.
 - [Visual direction](docs/visual-direction.md): the frozen minimalist low-poly reference.
 - [Art studies](art/README.md): the selected bridge and robot concept C, earlier references and alternatives, with prompts and source credits.
@@ -87,7 +92,7 @@ Manually maintained folders use lowercase names; Swift filenames use PascalCase.
 
 Open `apple/Lauder.xcodeproj` with the shared `Lauder` scheme. Use Simulator for daily iteration and `./scripts/check` before a focused pull request. Coding agents should also read [AGENTS.md](AGENTS.md).
 
-The focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md) are implemented in [PR #125](https://github.com/RonildoBraga/lauder/pull/125), with reproducible release tooling in [PR #126](https://github.com/RonildoBraga/lauder/pull/126). The assigned gameplay task is the strategic guard above, followed by its checks and a review of whether the bridge loop is enjoyable. Other story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
+The focused runtime/contract improvements in [ADR 0018](docs/decisions/0018-runtime-boundaries.md) are implemented in [PR #125](https://github.com/RonildoBraga/lauder/pull/125), with reproducible release tooling in [PR #126](https://github.com/RonildoBraga/lauder/pull/126). The assigned gameplay task is the bounded companion-autonomy revision above, followed by its checks and a review of whether cooperation makes the bridge loop more enjoyable. Other story proposals and historical plans are not implementation assignments. Further scenes, systems and art need an explicit task.
 
 ## Licence
 

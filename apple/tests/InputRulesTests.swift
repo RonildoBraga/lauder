@@ -449,20 +449,22 @@ struct InputRulesTests {
   private static let touchPoint = InputRules.ScreenPoint(x: 0.4, y: 0.6, aspect: 2)
 
   @Test(arguments: [
-    (InputRules.Raw(dpadUp: true), GameSession.Command.bothGo),
-    (InputRules.Raw(dpadDown: true), .hold),
+    (InputRules.Raw(dpadUp: true), GameSession.Command.attack),
+    (InputRules.Raw(dpadDown: true), .defend),
     (InputRules.Raw(dpadLeft: true), .leftGoes),
     (InputRules.Raw(dpadRight: true), .rightGoes),
-    (InputRules.Raw(arrowUp: true), .bothGo),
-    (InputRules.Raw(arrowDown: true), .hold),
+    (InputRules.Raw(arrowUp: true), .attack),
+    (InputRules.Raw(arrowDown: true), .defend),
     (InputRules.Raw(arrowLeft: true), .leftGoes),
     (InputRules.Raw(arrowRight: true), .rightGoes),
+    (InputRules.Raw(keyboardBothGo: true), .bothGo),
+    (InputRules.Raw(keyboardHold: true), .hold),
   ])
   func eachDirectionGivesItsOrderOnce(raw: InputRules.Raw, command: GameSession.Command) {
     var state = InputRules.State(needsNeutralInput: false)
     let pressed = sample(raw, state: &state)
     #expect(pressed.command == command)
-    #expect(pressed.commandPoint == nil, "the point lies ahead of the leader")
+    #expect(pressed.commandPoint == nil, "keyboard/controller commands need no touch point")
     #expect(sample(raw, state: &state).command == nil, "a held direction does not repeat")
     #expect(sample(.init(), state: &state).command == nil)
     #expect(sample(raw, state: &state).command == command)
@@ -472,6 +474,52 @@ struct InputRulesTests {
   func theArrowKeysAreKeyboardInputAndTheDpadIsNot() {
     #expect(InputRules.Raw(arrowRight: true).hasKeyboardInput)
     #expect(!InputRules.Raw(dpadRight: true).hasKeyboardInput)
+  }
+
+  @Test(arguments: [
+    InputRules.Raw(dpadUp: true), .init(dpadDown: true),
+    .init(keyboardBothGo: true), .init(keyboardHold: true),
+  ])
+  func combatAndPreservedSpatialCommandsRespectModesAndReleaseGates(raw: InputRules.Raw) {
+    var gated = InputRules.State()
+    #expect(sample(raw, state: &gated) == .neutral)
+    #expect(gated.needsNeutralInput)
+    _ = sample(.init(), state: &gated)
+    #expect(!gated.needsNeutralInput)
+    #expect(sample(raw, state: &gated).command != nil)
+    for mode in [GameSession.Mode.paused, .dialogue] {
+      var state = InputRules.State(needsNeutralInput: false)
+      #expect(sample(raw, mode: mode, state: &state).command == nil)
+      #expect(sample(raw, state: &state).command == nil, "unavailable presses are consumed")
+      _ = sample(.init(), state: &state)
+      #expect(sample(raw, state: &state).command != nil)
+    }
+    #expect(InputRules.Raw(keyboardBothGo: true).hasKeyboardInput)
+    #expect(InputRules.Raw(keyboardHold: true).hasKeyboardInput)
+  }
+
+  @Test(arguments: [GameSession.Command.attack, .defend])
+  func touchCombatStancesHaveNoSpatialPoint(command: GameSession.Command) {
+    var state = InputRules.State(needsNeutralInput: false)
+    for point: InputRules.ScreenPoint? in [nil, Self.touchPoint] {
+      let order = InputRules.TouchOrder(command: command, point: point)
+      let input = sample(.init(touchOrder: order), state: &state)
+      #expect(input.command == command && input.commandPoint == nil)
+      #expect(sample(.init(), state: &state).command == nil)
+    }
+  }
+
+  @Test
+  func stanceCommandsKeepActionDodgeAndPausePriority() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let input = sample(
+      .init(controllerAction: true, controllerDodge: true, dpadUp: true), state: &state)
+    #expect(input.command == .attack && !input.actionPressed && !input.dodgePressed)
+    _ = sample(.init(), state: &state)
+    let paused = sample(
+      .init(controllerPause: true, dpadDown: true), state: &state)
+    #expect(paused.pausePressed && paused.command == nil)
+    #expect(sample(.init(dpadDown: true), state: &state).command == nil)
   }
 
   @Test
@@ -493,9 +541,9 @@ struct InputRulesTests {
   }
 
   @Test
-  func holdComesFirstWhenTwoDirectionsArriveTogether() {
+  func defendComesFirstWhenTwoDirectionsArriveTogether() {
     var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(.init(dpadUp: true, dpadDown: true), state: &state).command == .hold)
+    #expect(sample(.init(dpadUp: true, dpadDown: true), state: &state).command == .defend)
     #expect(
       sample(.init(dpadUp: true, dpadDown: true, dpadLeft: true), state: &state).command
         == .leftGoes, "only the fresh direction counts")
@@ -506,7 +554,7 @@ struct InputRulesTests {
     var state = InputRules.State(needsNeutralInput: false)
     let both = sample(
       .init(controllerAction: true, controllerFormation: true, dpadUp: true), state: &state)
-    #expect(both.command == .bothGo)
+    #expect(both.command == .attack)
     #expect(both.formationPressed)
     #expect(!both.actionPressed)
     #expect(!sample(.init(controllerAction: true), state: &state).actionPressed)

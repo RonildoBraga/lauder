@@ -157,6 +157,7 @@ final class GameControls {
       keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
       keyboardDodge: pressed(.spacebar), keyboardLock: pressed(.keyO),
       keyboardSwap: pressed(.keyT),
+      keyboardBothGo: pressed(.keyG), keyboardHold: pressed(.keyH),
       arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
       aimUp: pressed(.keyI), aimDown: pressed(.keyK), aimLeft: pressed(.keyJ),

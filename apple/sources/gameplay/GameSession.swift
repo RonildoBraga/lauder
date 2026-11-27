@@ -58,12 +58,21 @@ final class GameSession {
 
   /// A squad command from the D-pad, the arrow keys or the touch menu (ADR 0003, phase S3).
   enum Command: Equatable, Sendable {
+    /// Permit the companions' own role-aware attacks until Defend is ordered.
+    case attack
+    /// Cease companion attacks and recall them using nearby cover.
+    case defend
     /// Both companions go to spots around the marked point.
     case bothGo
     /// The companion on that side goes to the marked point.
     case leftGoes, rightGoes
     /// Both companions hold where they stand.
     case hold
+  }
+
+  /// Permission to fight belongs to the squad, independently of the selected leader.
+  enum CombatStance: String, Sendable {
+    case attack, defend
   }
 
   /// Hits the leader can take in an encounter; the last one starts it again.
@@ -100,6 +109,8 @@ final class GameSession {
   private(set) var pauseChoice = PauseChoice.resume
   /// The squad's formation. It stays Close until there are two companions.
   private(set) var formation = Formation.close
+  /// Companions stay defensive until the player explicitly orders Attack.
+  private(set) var combatStance = CombatStance.defend
   /// Companions going to or holding a point; everyone else follows (ADR 0003, phase S3).
   private(set) var orders: [PartyMember: Order] = [:]
   /// Where Resume returns: exploring, or the conversation at its current line.
@@ -189,6 +200,15 @@ final class GameSession {
 
   func order(of member: PartyMember) -> Order {
     orders[member] ?? .following
+  }
+
+  /// Defend is also a recall: replace old position orders without cycling the formation.
+  @discardableResult
+  func setCombatStance(_ stance: CombatStance) -> Bool {
+    guard mode == .exploring, ordersAvailable else { return false }
+    combatStance = stance
+    if stance == .defend { orders = [:] }
+    return true
   }
 
   /// A companion goes to a point the world has checked they can reach, and holds there. False
@@ -327,6 +347,7 @@ final class GameSession {
     defeated = checkpoint.defeated
     hitsDealt = checkpoint.hitsDealt
     hits = [:]
+    combatStance = .defend
     self.checkpoint = nil
   }
 
@@ -356,6 +377,7 @@ final class GameSession {
     party = startingParty
     leader = startingParty[0]
     formation = .close
+    combatStance = .defend
     orders = [:]
     firedTriggers = []
     progress.restart()

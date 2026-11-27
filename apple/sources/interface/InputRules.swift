@@ -12,7 +12,8 @@ enum InputRules {
   /// A squad order from the touch menu, sent once when its finger lifts (ADR 0003, phase S3).
   struct TouchOrder: Equatable, Sendable {
     let command: GameSession.Command
-    let point: ScreenPoint
+    /// Attack and Defend have no terrain point.
+    let point: ScreenPoint?
   }
 
   struct Raw: Equatable, Sendable {
@@ -55,6 +56,9 @@ enum InputRules {
     var keyboardLock = false
     /// T: the leader's other weapon (ADR 0021).
     var keyboardSwap = false
+    /// G / H retain spatial Both Go / Hold independently of the combat stance arrows.
+    var keyboardBothGo = false
+    var keyboardHold = false
     /// The arrow keys, the Simulator keyboard's D-pad.
     var arrowUp = false
     var arrowDown = false
@@ -95,7 +99,7 @@ enum InputRules {
     var hasKeyboardInput: Bool {
       hasMovementKey || keyboardAction || keyboardPause || keyboardSwitch || keyboardFire
         || keyboardFormation || keyboardDodge || keyboardLock || keyboardSwap || hasArrowKey
-        || hasAimKey
+        || hasAimKey || keyboardBothGo || keyboardHold
     }
     /// Any of the controller's buttons, or either stick beyond the dead zone.
     var hasControllerInput: Bool {
@@ -125,6 +129,8 @@ enum InputRules {
     var dodgeWasPressed = false
     var lockWasPressed = false
     var swapWasPressed = false
+    var bothGoWasPressed = false
+    var holdWasPressed = false
   }
 
   struct Input: Equatable, Sendable {
@@ -213,6 +219,8 @@ enum InputRules {
     next.dodgeWasPressed = dodge
     next.lockWasPressed = lock
     next.swapWasPressed = swap
+    next.bothGoWasPressed = raw.keyboardBothGo
+    next.holdWasPressed = raw.keyboardHold
     if state.needsNeutralInput {
       let deadZone = Movement.deadZone
       next.needsNeutralInput =
@@ -258,15 +266,22 @@ enum InputRules {
       let switchEdge = cycle && !state.switchWasPressed
       let formationEdge = formation && !state.formationWasPressed
       // One order per sample. A touch order is already a single event; among fresh directions
-      // Hold comes first, then both, then one side, should two arrive together.
+      // Defend comes first, then Attack, spatial Hold/Both Go and the individual sides.
       var command: GameSession.Command?
       var commandPoint: ScreenPoint?
       if let order = raw.touchOrder {
         command = order.command
-        commandPoint = order.point
+        switch order.command {
+        case .attack, .defend: commandPoint = nil
+        default: commandPoint = order.point
+        }
       } else if down && !state.downWasPressed {
-        command = .hold
+        command = .defend
       } else if up && !state.upWasPressed {
+        command = .attack
+      } else if raw.keyboardHold && !state.holdWasPressed {
+        command = .hold
+      } else if raw.keyboardBothGo && !state.bothGoWasPressed {
         command = .bothGo
       } else if left && !state.leftWasPressed {
         command = .leftGoes

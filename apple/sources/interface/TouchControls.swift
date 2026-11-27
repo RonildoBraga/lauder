@@ -86,7 +86,7 @@ struct TouchControls: UIViewRepresentable {
       dodge.accessibilityHint =
         "Rolls a short way in the direction you move. Shots pass through you while you roll."
       formation.accessibilityHint =
-        "Changes the formation: Close, Spread, then Column. After an order, calls everyone back."
+        "Changes formation or calls everyone back. Hold the ground for squad orders, including Attack and Defend."
       vibration.accessibilityHint = "Turns vibration off, or on again."
       swap.accessibilityHint = "Brings the leader's other weapon into hand."
       stick.accessibilityLabel = "Move"
@@ -135,6 +135,16 @@ struct TouchControls: UIViewRepresentable {
         reset()
       }
       formation.setTitle(formationTitle)
+      formation.accessibilityCustomActions =
+        mode == .exploring && orderNames != nil
+        ? [
+          UIAccessibilityCustomAction(name: "Squad Attack") { [weak self] _ in
+            self?.sendStance(.attack) ?? false
+          },
+          UIAccessibilityCustomAction(name: "Squad Defend") { [weak self] _ in
+            self?.sendStance(.defend) ?? false
+          },
+        ] : nil
       if let orderNames {
         menu.setNames(left: orderNames.left, right: orderNames.right)
       }
@@ -241,7 +251,8 @@ struct TouchControls: UIViewRepresentable {
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
       guard let touch = pressing(touches) else { return }
-      press?.move(to: touch.location(in: self))
+      let centre = press?.isOpen == true ? menu.convert(menu.choiceCentre, to: self) : nil
+      press?.move(to: touch.location(in: self), menuCentre: centre)
       if press?.isOpen == true {
         menu.highlight(press?.choice)
       } else if press?.isCancelled == true {
@@ -268,10 +279,10 @@ struct TouchControls: UIViewRepresentable {
       guard press.open(at: began + OrderPress.holdTime) else { return }
       self.press = press
       let size = menu.bounds.size
-      // The menu opens with Both under the finger, kept on the screen.
+      // Centre Both under the finger where possible, then keep all six choices on the screen.
       menu.frame.origin = CGPoint(
         x: min(max(press.start.x - size.width / 2, 0), bounds.width - size.width),
-        y: min(max(press.start.y - 20, 0), bounds.height - size.height))
+        y: min(max(press.start.y - menu.choiceCentre.y, 0), bounds.height - size.height))
       menu.highlight(.both)
       menu.isHidden = false
       // The ground under the finger now is the point, even if the leader moves meanwhile.
@@ -285,10 +296,14 @@ struct TouchControls: UIViewRepresentable {
     private func endPress(sending: Bool) {
       pressTimer?.cancel()
       pressTimer = nil
-      if sending, let press, let choice = press.release, let point = screenPoint(press.start) {
-        controls.setTouchOrder(
-          InputRules.TouchOrder(command: choice.command, point: point),
-          generation: pressGeneration)
+      if sending, let press, let choice = press.release {
+        let stance = choice == .attack || choice == .defend
+        let point = stance ? nil : screenPoint(press.start)
+        if stance || point != nil {
+          controls.setTouchOrder(
+            InputRules.TouchOrder(command: choice.command, point: point),
+            generation: pressGeneration)
+        }
       }
       if press != nil {
         controls.setTouchButton(.ground, isPressed: false, generation: pressGeneration)
@@ -303,6 +318,15 @@ struct TouchControls: UIViewRepresentable {
       menu.highlight(nil)
     }
 
+    /// VoiceOver exposes the same non-spatial choices on the existing Formation control.
+    private func sendStance(_ command: GameSession.Command) -> Bool {
+      guard mode == .exploring, orderNames != nil else { return false }
+      let generation = controls.touchGeneration
+      endPress(sending: false)
+      controls.setTouchOrder(.init(command: command, point: nil), generation: generation)
+      return true
+    }
+
     /// A point in this view as a share of the whole window, which the game's view fills.
     private func screenPoint(_ point: CGPoint) -> InputRules.ScreenPoint? {
       guard let window, window.bounds.width > 0, window.bounds.height > 0 else { return nil }
@@ -315,25 +339,30 @@ struct TouchControls: UIViewRepresentable {
 }
 
 /// The order menu around the finger: Both in the middle, the companions to the left and
-/// right as the HUD orders them, and Hold below.
+/// right as the HUD orders them, Hold below, and Attack/Defend on the upper diagonals.
 @MainActor
 private final class OrderMenu: UIView {
   private let both = OrderMenu.item("Both")
   private let left = OrderMenu.item("")
   private let right = OrderMenu.item("")
   private let hold = OrderMenu.item("Hold")
+  private let attack = OrderMenu.item("↖ Attack")
+  private let defend = OrderMenu.item("Defend ↗")
+  var choiceCentre: CGPoint { CGPoint(x: 140, y: 84) }
 
   init() {
-    super.init(frame: CGRect(x: 0, y: 0, width: 280, height: 112))
+    super.init(frame: CGRect(x: 0, y: 0, width: 280, height: 168))
     isUserInteractionEnabled = false
     accessibilityElementsHidden = true
-    for label in [both, left, right, hold] { addSubview(label) }
+    for label in [both, left, right, hold, attack, defend] { addSubview(label) }
     let width: CGFloat = 84
-    let height: CGFloat = 40
-    both.frame = CGRect(x: 140 - width / 2, y: 0, width: width, height: height)
-    left.frame = CGRect(x: 0, y: 0, width: width, height: height)
-    right.frame = CGRect(x: 280 - width, y: 0, width: width, height: height)
-    hold.frame = CGRect(x: 140 - width / 2, y: 112 - height, width: width, height: height)
+    let height: CGFloat = 44
+    attack.frame = CGRect(x: 0, y: 0, width: width, height: height)
+    defend.frame = CGRect(x: 280 - width, y: 0, width: width, height: height)
+    both.frame = CGRect(x: 140 - width / 2, y: 62, width: width, height: height)
+    left.frame = CGRect(x: 0, y: 62, width: width, height: height)
+    right.frame = CGRect(x: 280 - width, y: 62, width: width, height: height)
+    hold.frame = CGRect(x: 140 - width / 2, y: 124, width: width, height: height)
   }
 
   required init?(coder: NSCoder) { nil }
@@ -346,6 +375,7 @@ private final class OrderMenu: UIView {
   func highlight(_ choice: OrderPress.Choice?) {
     let items: [(UILabel, OrderPress.Choice)] = [
       (both, .both), (left, .left), (right, .right), (hold, .hold),
+      (attack, .attack), (defend, .defend),
     ]
     // Frosted items with ink words; the chosen one turns ink with frosted words (the visual
     // direction's HUD).

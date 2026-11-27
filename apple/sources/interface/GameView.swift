@@ -265,6 +265,8 @@ struct GameView: View {
         }
       }
       .font(.caption)
+      Text(world.session.combatStance == .attack ? "Squad: Attack" : "Squad: Defend")
+        .font(.caption.weight(.semibold))
       if world.objectiveIsFresh {
         Text(world.objective).font(.subheadline.weight(.semibold))
       }
@@ -278,6 +280,9 @@ struct GameView: View {
       }
       if let hint = world.guardHint {
         Text(hint).font(.caption.weight(.semibold))
+      }
+      if !world.companionStatus.isEmpty {
+        Text(world.companionStatus).font(.caption)
       }
       if world.showsAmmo {
         Text(world.weaponStatus).font(.caption)
@@ -325,7 +330,10 @@ struct GameView: View {
     }
     if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
       // The D-pad's or arrow keys' orders, with the companions in their fixed order.
-      others.append("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Both · ▼ Hold")
+      others.append("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Attack · ▼ Defend")
+      if world.controls.sourceName == "Keyboard · WASD" {
+        others.append("G · Both go · H · Hold")
+      }
     }
     let symbol = Image(systemName: world.controls.actionSymbol ?? "a.circle")
     let rest = others.map { "     \($0)" }.joined()

@@ -66,5 +66,34 @@
       #expect(runner.summary?.failures.count == 1)
       #expect(runner.summary?.failures.first?.contains("retried") == true)
     }
+
+    @Test
+    func theCompanionRouteFailsRatherThanTakingOverAnotherLeader() {
+      let world = GameWorld(level: BrooklynBridge.level)
+      world.session.cycleLeader()
+      var runner = PlaytestRunner(steps: [.companionFight], name: "leader-authority-contract")
+      for _ in 0..<90 where !runner.isFinished {
+        let raw = runner.input(world.playtestSnapshot)
+        #expect(!raw.controllerSwitch && !raw.controllerFire)
+        runner.tick(dt: 1 / 60)
+      }
+      #expect(runner.summary?.passed == false)
+      #expect(runner.summary?.failures.first == "companion fight took control from Miki")
+      #expect(world.session.leader == .tom)
+    }
+
+    @Test
+    func theCompanionDriverCannotSilentlyChangeDefaultDefendToAttack() {
+      let world = GameWorld(level: BrooklynBridge.level)
+      var runner = PlaytestRunner(steps: [.companionFight], name: "explicit-attack-contract")
+      for _ in 0..<90 where !runner.isFinished {
+        let raw = runner.input(world.playtestSnapshot)
+        #expect(!raw.dpadUp && !raw.controllerFire)
+        runner.tick(dt: 1 / 60)
+      }
+      #expect(runner.summary?.passed == false)
+      #expect(runner.summary?.failures.first == "companion fight requires an explicit Attack order")
+      #expect(world.session.combatStance == .defend)
+    }
   }
 #endif

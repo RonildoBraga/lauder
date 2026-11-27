@@ -10,6 +10,46 @@ struct GameSessionTests {
     #expect(session.mode == .exploring)
     #expect(!session.isPaused)
     #expect(session.leader == .miki)
+    #expect(session.combatStance == .defend)
+  }
+
+  @Test
+  func defendRecallsOrderedCompanionsWithoutCyclingFormation() {
+    let session = GameSession(level: TestYard.level)
+    session.cycleFormation()
+    #expect(session.setCombatStance(.attack))
+    session.cycleLeader()
+    #expect(session.combatStance == .attack, "leadership does not change the standing stance")
+    session.holdAll()
+    #expect(session.setCombatStance(.defend))
+    #expect(session.orders.isEmpty && session.combatStance == .defend)
+    #expect(session.formation == .spread)
+    session.send(session.companions[0], to: [2, 3])
+    #expect(session.setCombatStance(.defend), "a repeated Defend press recalls new orders too")
+    #expect(session.orders.isEmpty && session.formation == .spread)
+  }
+
+  @Test
+  func stanceCommandsRespectPauseAndDialogueAndRestartDisarmsAttacks() {
+    let session = GameSession(level: BrooklynBridge.level)
+    #expect(session.setCombatStance(.attack))
+    session.togglePause()
+    #expect(!session.setCombatStance(.defend) && session.combatStance == .attack)
+    session.togglePause()
+    #expect(session.converse(.arrival))
+    #expect(!session.setCombatStance(.defend) && session.combatStance == .attack)
+    session.restart()
+    #expect(session.combatStance == .defend)
+  }
+
+  @Test
+  func encounterRetryRequiresAFreshAttackOrder() {
+    let session = GameSession(level: BrooklynBridge.level)
+    #expect(session.setCombatStance(.attack))
+    #expect(session.beginEncounter(.stranger))
+    #expect(session.combatStance == .attack)
+    session.retryEncounter()
+    #expect(!session.inEncounter && session.combatStance == .defend)
   }
 
   @Test
