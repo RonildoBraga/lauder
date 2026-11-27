@@ -17,6 +17,7 @@
       if name == "touch-fight" { world.controls.useTouchControls() }
       var frames = 0
       var coveredGrenadeSamples = 0
+      var arrivedSamples = 0
       while !runner.isFinished {
         let dt: Float = 1 / 60
         runner.tick(dt: dt)
@@ -31,6 +32,17 @@
         world.update(
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
         let after = world
+        if name == "opening", after.session.beat == .arrived {
+          let snapshot = after.playtestSnapshot
+          let leader = try #require(snapshot.positions[snapshot.leader])
+          #expect(snapshot.party == [.miki, .tom, .laura])
+          #expect(snapshot.firedTriggers == 5 && snapshot.defeated == 1)
+          for member in snapshot.party {
+            let point = try #require(snapshot.positions[member])
+            #expect(simd_distance(point, leader) <= 5)
+          }
+          arrivedSamples += 1
+        }
         if name == "robot-parts", after.playtestSnapshot.grenadeInFlight {
           let snapshot = after.playtestSnapshot
           if case .holding(let held) = after.session.order(of: .miki) {
@@ -57,6 +69,22 @@
       #expect(summary.passed, "\(name): \(summary.failures)")
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
+      if name == "weapons" {
+        #expect(summary.domeBlockedShots > 0)
+      }
+      if name == "opening" {
+        #expect(arrivedSamples > 0 && summary.retryCount == 0)
+        for name in ["all crawlers down", "both drones down"] {
+          let mark = try #require(summary.marks.first { $0.name == name })
+          #expect((mark.health ?? 0) > 0)
+        }
+        let restored = world.playtestSnapshot
+        #expect(restored.drones.count == BrooklynBridge.drones.count)
+        #expect(restored.crawlers.count == BrooklynBridge.crawlers.count)
+        #expect(restored.drones.allSatisfy { $0.phase == .hidden })
+        #expect(restored.crawlers.allSatisfy { $0.phase == .hidden })
+        #expect(restored.dronesDown == 0 && restored.crawlersDown == 0)
+      }
       if name == "companion-drones" {
         let mark = try #require(summary.marks.first { $0.name == "companion drone down" })
         let damage = try #require(mark.damage)

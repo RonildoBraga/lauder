@@ -36,6 +36,10 @@
       case expectRestarted
       case expectTriggers(Int)
       case fire(seconds: Float)
+      /// Require native guard damage, ammunition use and numbers in an isolated fire window.
+      case fireForDamage(Weapon.Kind, seconds: Float, ordinary: Bool = false)
+      /// Hold Tom's dome until native hostile rounds visibly stop on its boundary.
+      case shieldGuardBurst
       case expectBeat(StoryBeat)
       case expectDefeated(Int)
       case expectHits(Int)
@@ -138,6 +142,8 @@
       var showsPanel = true
       var grenadeCooldown: Float = 0
       var grenadeInFlight = false
+      var shieldRaised = false
+      var shieldStops = 0
       /// Scout drones down, whether shot down or fallen with their guard.
       var dronesDown = 0
       /// Each scout drone as the route can see it: where it flies, what it is doing, the
@@ -237,6 +243,7 @@
       var maximumDamageLabels = 0
       var nonTouchInputFrames: Int? = nil
       var legStagger: LegStagger? = nil
+      var domeBlockedShots = 0
     }
 
     static let scenarioNames = scenarios.map(\.name)
@@ -277,6 +284,10 @@
     private var peakPartyHits: [PartyMember: Int] = [:]
     private var retryCount = 0
     private var wasRetrying = false
+    private var fireBaseline: (health: Int, damage: DamageTally, loaded: Int)?
+    private var fireWindowLabels = 0
+    private var domeBaseline: (shots: Int, stops: Int, hits: [PartyMember: Int])?
+    private var domeBlockedShots = 0
     private var observedDamage = DamageTally()
     private var maximumDamageLabels = 0
     private var nonTouchInputFrames = 0
@@ -652,6 +663,13 @@
             return InputRules.Raw()
           }
           return InputRules.Raw(controllerFire: true)
+        case .fireForDamage(let weapon, let seconds, let ordinary):
+          if let raw = fireForDamage(snapshot, weapon: weapon, seconds: seconds, ordinary: ordinary)
+          {
+            return raw
+          }
+        case .shieldGuardBurst:
+          if let raw = shieldGuardBurst(snapshot) { return raw }
         case .expectBeat(let beat):
           expect(snapshot.beat == beat, "the story was at \(snapshot.beat) instead of \(beat)")
         case .expectDefeated(let count):
@@ -679,6 +697,68 @@
       if pressFrame == 1, let raw { return raw }
       advance()
       return InputRules.Raw()
+    }
+
+    private mutating func fireForDamage(
+      _ snapshot: Snapshot, weapon: Weapon.Kind, seconds: Float, ordinary: Bool
+    ) -> InputRules.Raw? {
+      guard snapshot.beat == .stranger, !snapshot.isRetrying,
+        snapshot.weapon.kind == weapon, let health = snapshot.guardStrategy?.health, health > 0,
+        let centre = snapshot.robotPosition, let at = snapshot.positions[snapshot.leader]
+      else {
+        failures.append("the \(weapon) fire window lost its live guard or selected weapon")
+        advance()
+        return nil
+      }
+      if fireBaseline == nil {
+        fireBaseline = (health, snapshot.damage, snapshot.weapon.loaded)
+      }
+      fireWindowLabels = max(fireWindowLabels, snapshot.damageLabelCount)
+      guard stepTime < seconds else {
+        if let baseline = fireBaseline {
+          let member = snapshot.leader.rawValue
+          let accepted = snapshot.damage.byTarget["stranger"]?[member, default: 0] ?? 0
+          let before = baseline.damage.byTarget["stranger"]?[member, default: 0] ?? 0
+          expect(
+            accepted > before && baseline.health - health == accepted - before
+              && (!ordinary || snapshot.damage.normal > baseline.damage.normal)
+              && snapshot.weapon.loaded < baseline.loaded && fireWindowLabels > 0,
+            "the \(weapon) fire window lacked native damage, ammo use or visible numbers")
+        }
+        return nil
+      }
+      return InputRules.Raw(
+        aimStick: Movement.stick(towards: centre - at, cameraOffset: snapshot.level.cameraOffset),
+        controllerFire: true)
+    }
+
+    private mutating func shieldGuardBurst(_ snapshot: Snapshot) -> InputRules.Raw? {
+      guard snapshot.leader == .tom, snapshot.weapon.kind == .shieldDome,
+        snapshot.beat == .stranger, !snapshot.isRetrying,
+        snapshot.positions[.tom] != nil
+      else {
+        failures.append("the dome check requires Tom defending the live guard fight")
+        advance()
+        return nil
+      }
+      if domeBaseline == nil {
+        domeBaseline = (snapshot.robotShots, snapshot.shieldStops, snapshot.partyHits)
+      }
+      if let baseline = domeBaseline,
+        snapshot.robotShots - baseline.shots >= 3, snapshot.shieldStops > baseline.stops
+      {
+        domeBlockedShots += snapshot.shieldStops - baseline.stops
+        expect(
+          snapshot.shieldRaised && snapshot.partyHits == baseline.hits,
+          "the party was injured during the dome's actual incoming rounds")
+        return nil
+      }
+      if stepTime > ShieldDome.duration - 0.5 {
+        failures.append("no actual guard burst stopped on Tom's raised dome")
+        advance()
+        return nil
+      }
+      return InputRules.Raw(controllerFire: true)
     }
 
     /// Records a failure, saying what was found and when, unless the expectation holds, then
@@ -1648,6 +1728,9 @@
       coverStableSince = nil
       coverStablePositions = [:]
       longestCoverHold = 0
+      fireBaseline = nil
+      fireWindowLabels = 0
+      domeBaseline = nil
     }
 
     /// Append the mark to marks.log as it happens, so `apple/scripts/playtest` can take a
@@ -1696,7 +1779,7 @@
           uniqueKeysWithValues: peakPartyHits.map { ($0.key.rawValue, $0.value) }),
         retryCount: retryCount, damage: observedDamage, maximumDamageLabels: maximumDamageLabels,
         nonTouchInputFrames: usesTouch ? nonTouchInputFrames : nil,
-        legStagger: legStagger)
+        legStagger: legStagger, domeBlockedShots: domeBlockedShots)
       summary = result
       write(result)
     }
@@ -1781,14 +1864,15 @@
       ] + restartRun
 
     /// Tom's two weapons in the first fight (ADR 0021): he raises his dome against the guard's
-    /// bursts and nobody is hurt. A short ordinary minigun burst damages the guard, then the
+    /// bursts without new injuries during the block. A short minigun burst damages the guard, then the
     /// optional weak-point route demonstrates the party's larger bonuses.
     private static let weapons: [Step] =
       toTheStranger + [
         .order(.hold),
-        .switchLeader, .swap, .wait(seconds: 0.3), .fire(seconds: 2.5), .mark("Tom's dome"),
-        .fire(seconds: 2), .expectHits(0), .swap, .wait(seconds: 0.3), .fire(seconds: 1),
-        .expectDefeated(0), .mark("ordinary minigun damage"), .formation, .dismantleGuard,
+        .switchLeader, .walk([6.5, 8]), .waitForRobotPhase(.tracking, seconds: 30),
+        .swap, .wait(seconds: 0.3), .shieldGuardBurst, .mark("Tom's dome"),
+        .swap, .wait(seconds: 0.3), .fireForDamage(.minigun, seconds: 1.2),
+        .expectDefeated(0), .mark("minigun damage"), .formation, .dismantleGuard,
         .expectDefeated(1), .mark("guard dismantled by the party"), .wait(seconds: 1),
       ] + restartRun
 
@@ -1833,7 +1917,8 @@
     /// categories and bounded visible numbers must be observed through real input.
     private static let damageFeedback: [Step] =
       toTheStranger + [
-        .walk([6.5, 8]), .swap, .fire(seconds: 0.9), .mark("Ordinary damage numbers"),
+        .walk([6.5, 8]), .swap, .fireForDamage(.assaultRifle, seconds: 0.9, ordinary: true),
+        .mark("Ordinary damage numbers"),
         .swap, .dismantleGuard, .expectDefeated(1), .expectDamageFeedback,
         .mark("Guard defeated with normal and weak-point damage"),
       ] + restartRun
@@ -1880,11 +1965,13 @@
         .walk([6.5, -206.15]), .walk([-7, -240]), .mark("beyond mid-span"),
       ]
 
-    /// The whole opening: the three from the Brooklyn end to the Manhattan end, through the
-    /// guard's fight, then the closing exchange, then a Restart that starts them together again.
+    /// The shipped opening, including the guard, drones and crawlers before the crossing,
+    /// closing exchange and an ordinary Restart.
     private static let opening: [Step] =
-      pastTheGuard + [
-        .walk([-7, -456.3]), .mark("second tower"), .walk([-7, -502.3]), .talk,
+      toTheStranger + clearPack + [
+        .order(.defend), .walk([6.5, -12]), .walk([6.5, -206.15]), .walk([-7, -240]),
+        .mark("beyond mid-span"), .walk([-7, -456.3]), .mark("second tower"),
+        .walk([-7, -502.3]), .awaitConversation(seconds: 45), .talk,
         .expectBeat(.arrived), .mark("Manhattan, together"), .expectTriggers(5),
         .wait(seconds: 0.5),
       ] + restartRun + [.expectParty([.miki, .tom, .laura]), .expectTriggers(0)]
@@ -1985,20 +2072,22 @@
     /// The shipped first-tower fight with the whole pack (issue #208), the squad on Attack: Miki
     /// and the companions down the crawlers as they close in, Miki rolling out of their rams,
     /// then Miki downs the drones and the squad dismantles the guard.
-    private static let crawlerFight: [Step] =
-      toTheStranger + [
-        .order(.attack), .expectCombatStance(.attack),
-        .downCrawlers, .expectCrawlersDown(BrooklynBridge.crawlers.count),
-        .mark("all crawlers down"), .downDrones, .expectDronesDown(BrooklynBridge.drones.count),
-        .mark("both drones down"), .dismantleGuard, .expectDefeated(1),
-        .mark("guard down after its pack"), .wait(seconds: 1),
-      ] + restartRun
+    private static let clearPack: [Step] = [
+      .order(.attack), .expectCombatStance(.attack),
+      .downCrawlers, .expectCrawlersDown(BrooklynBridge.crawlers.count),
+      .expectDefeated(0), .mark("all crawlers down"), .downDrones,
+      .expectDronesDown(BrooklynBridge.drones.count), .expectDefeated(0),
+      .mark("both drones down"), .dismantleGuard, .expectDefeated(1),
+      .mark("guard down after its pack"), .wait(seconds: 1),
+    ]
+
+    private static let crawlerFight = toTheStranger + clearPack + restartRun
 
     /// The routes written for the guard with its drones, before the crawlers joined; they play
     /// `BrooklynBridge.guardAndDrones`.
     static let droneScenarios: Set<String> = ["drone-fight", "companion-drones"]
     /// The routes that play the shipped fight with the whole pack.
-    static let packScenarios: Set<String> = ["crawler-fight"]
+    static let packScenarios: Set<String> = ["crawler-fight", "opening"]
 
     /// The level a scenario runs on; with no scenario, the shipped bridge. The others were
     /// written for the guard's own contract and play it alone, on `BrooklynBridge.guardOnly`.
