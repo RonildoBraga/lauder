@@ -208,6 +208,108 @@ struct CompanionTacticsTests {
   }
 
   @Test
+  func laurasRealMotorStopRecognizesCachedCoverWithoutExactCoordinates() throws {
+    let cover = SIMD2<Float>(0, -4.75)
+    let leader = SIMD2<Float>(1.5, -6)
+    let motion = PartyMotion(radius: PartyBody.radius, obstacles: TestYard.obstacles)
+    let grid = NavigationGrid(level: TestYard.level)
+    let dt: Float = 1 / 120
+    var position = SIMD2<Float>(0, -6)
+    var motor = CompanionMotor(for: .laura)
+    var planner = CompanionTactics()
+    func support(at point: SIMD2<Float>) -> CompanionTactics.Intent {
+      plan(
+        &planner,
+        input(
+          member: .laura, leader: .miki, position: point, leaderPosition: leader,
+          baseTarget: cover, dt: dt),
+        canStand: { motion.canTraverse(from: $0, to: $0) },
+        canTraverse: { motion.canTraverse(from: $0, to: $1) },
+        canFireAtBody: { _, _ in false },
+        isCovered: { simd_distance($0, cover) < 0.35 },
+        isSpaced: { simd_distance($0, leader) >= CompanionTactics.minimumSpacing })
+    }
+    for _ in 0..<360 where !motor.isSettled {
+      let target = try #require(support(at: position).position)
+      #expect(target == cover)
+      let requested = motor.step(
+        from: position,
+        context: .init(
+          target: target, leaderPosition: leader, leaderVelocity: .zero, others: [leader],
+          speed: PartyBody.speed, dt: dt, targetMoves: false),
+        grid: grid, isClear: { motion.canTraverse(from: $0, to: $1) })
+      let next = motion.resolve(start: position, delta: requested)
+      motor.absorb(next - position, dt: dt)
+      position = next
+    }
+    try #require(motor.isSettled && !motor.cannotReach)
+    let gap = simd_distance(position, cover)
+    try #require(gap > 0.0001 && gap < CompanionMotor.settleDistance)
+    let settled = support(at: position)
+    #expect(settled.position == cover && settled.activity == .waiting)
+    #expect(settled.engaged && settled.lookAt == .zero && settled.weapon == .shotgun)
+    #expect(!settled.fire)
+    let crawler = CompanionTactics.PackTarget(
+      kind: .crawler, id: "crawler.1", position: position + [0, -2], weapon: .shotgun)
+    let preferred = CompanionTactics.preferringPack(settled, stance: .attack) { crawler }
+    #expect(
+      preferred.crawler == crawler.id && preferred.fire && preferred.lookAt == crawler.position)
+    #expect(preferred.position == cover && preferred.weapon == .shotgun)
+
+    // The stopped motor also waits through a small goal drift. Support must remain ready
+    // until that same motor would actually move off, without exact-coordinate equality.
+    for drift: Float in [0.4, 0.8] {
+      let shifted = cover + SIMD2<Float>(drift, 0)
+      let next = plan(
+        &planner,
+        input(
+          member: .laura, leader: .miki, position: position, leaderPosition: leader,
+          baseTarget: shifted, dt: CompanionTactics.replanInterval),
+        canStand: { motion.canTraverse(from: $0, to: $0) },
+        canTraverse: { motion.canTraverse(from: $0, to: $1) },
+        canFireAtBody: { _, _ in false },
+        isCovered: { simd_distance($0, shifted) < 0.001 })
+      try #require(next.position == shifted)
+      let requested = motor.step(
+        from: position,
+        context: .init(
+          target: shifted, leaderPosition: leader, leaderVelocity: .zero, others: [leader],
+          speed: PartyBody.speed, dt: dt, targetMoves: false),
+        grid: grid, isClear: { motion.canTraverse(from: $0, to: $1) })
+      #expect(!next.fire)
+      if drift == 0.4 {
+        try #require(simd_distance(position, shifted) > CompanionMotor.settleDistance)
+        #expect(motor.isSettled && requested == .zero)
+        #expect(next.engaged && next.activity == .waiting)
+        #expect(CompanionTactics.preferringPack(next, stance: .attack) { crawler }.fire)
+      } else {
+        #expect(!motor.isSettled && !next.engaged && next.activity == .following)
+      }
+    }
+
+    for rejected in ["illegal", "unspaced", "threatened", "outside-close-radius"] {
+      let currentLeader = rejected == "outside-close-radius" ? cover + [0, 2.55] : leader
+      let unsafe = plan(
+        &planner,
+        input(
+          member: .laura, leader: .miki, position: position, leaderPosition: currentLeader,
+          baseTarget: cover, dt: 0.001),
+        canStand: { rejected != "illegal" || simd_distance($0, position) > 0.001 },
+        canTraverse: { motion.canTraverse(from: $0, to: $1) },
+        canFireAtBody: { _, _ in false },
+        isCovered: { rejected == "threatened" ? $0 == cover : simd_distance($0, cover) < 0.35 },
+        isThreatened: { rejected == "threatened" && simd_distance($0, position) < 0.001 },
+        isSpaced: { rejected != "unspaced" || simd_distance($0, position) > 0.001 })
+      #expect((!unsafe.engaged || unsafe.activity == .avoiding) && !unsafe.fire)
+      let unchanged = CompanionTactics.preferringPack(unsafe, stance: .attack) {
+        Issue.record("An unsafe support stance must not query the pack")
+        return crawler
+      }
+      #expect(unchanged == unsafe)
+    }
+  }
+
+  @Test
   func blockedShotsDoNotInventDamageAndCandidatesRespectLeaderLeash() {
     var planner = CompanionTactics()
     let result = plan(

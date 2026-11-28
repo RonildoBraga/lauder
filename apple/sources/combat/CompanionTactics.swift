@@ -384,7 +384,16 @@ struct CompanionTactics {
       }
       sincePlan = 0
     }
-    let settled = goal == input.position
+    // Match the motor's arrival and move-off thresholds so a safe, stopped stance remains
+    // useful when its cover target drifts slightly between replans.
+    let wasReady = goalActivity == .waiting || goalActivity == .attacking
+    let atGoal =
+      goal.map {
+        let gap = simd_distance($0, input.position)
+        return wasReady
+          ? gap <= CompanionMotor.reengageDistance : gap < CompanionMotor.settleDistance
+      } == true
+    let settled = close(input.position) && atGoal
     goalActivity = settled ? .waiting : .following
     return Intent(
       position: goal, lookAt: settled ? input.guardPosition : nil, engaged: settled,
