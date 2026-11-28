@@ -118,12 +118,15 @@ struct FormationTests {
     }
   }
 
-  @Test(arguments: zip(GameSession.Formation.allCases, PartyMember.allCases))
+  @Test(arguments: GameSession.Formation.allCases, [PartyMember.miki, .tom])
   func everyFormationSqueezesThroughTheOpeningAndReforms(
     formation: GameSession.Formation, leader: PartyMember
   ) throws {
     let world = GameWorld(level: TestYard.level)
-    while world.session.leader != leader { world.session.cycleLeader() }
+    for _ in 0..<PartyMember.allCases.count where world.session.leader != leader {
+      world.session.cycleLeader()
+    }
+    try #require(world.session.leader == leader)
     choose(formation, in: world)
     let inward: [SIMD2<Float>] = [[2.5, 3], [2.5, -4.5], [5, -4.5], [6.5, -3]]
     let outward: [SIMD2<Float>] = [[5, -4.5], [2.5, -4.5], [2.5, 6], [-4, 6]]

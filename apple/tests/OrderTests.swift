@@ -29,13 +29,13 @@ struct OrderTests {
 
   @Test
   func theSidesKeepTheSwitchingOrderForWhoeverLeads() {
-    // The party joins as Miki, Tom and Laura. Right is whoever Next would lead as.
+    // Directional orders retain both physical companions independently of leadership.
     let session = GameSession(level: TestRange.mikiAlone)
     session.recruit(.tom)
     #expect(session.leftCompanion == nil && session.rightCompanion == nil)
     session.recruit(.laura)
     let expected: [(PartyMember, PartyMember, PartyMember)] = [
-      (.miki, .laura, .tom), (.tom, .miki, .laura), (.laura, .tom, .miki),
+      (.miki, .laura, .tom), (.tom, .miki, .laura), (.miki, .laura, .tom),
     ]
     for (leader, left, right) in expected {
       #expect(session.leader == leader)
@@ -77,19 +77,19 @@ struct OrderTests {
     let session = GameSession(level: TestYard.level)
     // Everyone following: the old leader follows too.
     session.cycleLeader()
-    #expect(session.leader == .laura && session.orders.isEmpty)
+    #expect(session.leader == .tom && session.orders.isEmpty)
     // Everyone holding: the new leader's hold ends and the old leader holds where they stand.
     session.holdAll()
     session.cycleLeader()
-    #expect(session.leader == .tom)
-    #expect(session.order(of: .tom) == .following)
+    #expect(session.leader == .miki)
+    #expect(session.order(of: .miki) == .following)
     #expect(session.order(of: .laura) == .holding(nil))
-    #expect(session.order(of: .miki) == .holding(nil))
+    #expect(session.order(of: .tom) == .holding(nil))
     // Only the new leader had an order: nobody else holds, so the old leader follows.
     session.pressFormation()
-    session.send(.miki, to: [2, 2])
+    session.send(.tom, to: [2, 2])
     session.cycleLeader()
-    #expect(session.leader == .miki && session.orders.isEmpty)
+    #expect(session.leader == .tom && session.orders.isEmpty)
   }
 
   @Test

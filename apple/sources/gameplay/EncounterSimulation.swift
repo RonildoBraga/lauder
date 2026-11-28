@@ -418,7 +418,10 @@ final class EncounterSimulation {
     for member in active.subtracting(autonomousMembers) { lastMotion[member] = nil }
     autonomousMembers = active
     for member in active {
-      if let kind = intents[member]?.weapon,
+      // Laura's support role is ranged. Player-controlled weapon fixtures still execute the
+      // normal sword rules; an automatic intention cannot equip it or chase a leg.
+      let kind: Weapon.Kind? = member == .laura ? .shotgun : intents[member]?.weapon
+      if let kind,
         Weapon.pair(for: member).contains(where: { $0.kind == kind }),
         weapon(of: member).kind != kind
       {

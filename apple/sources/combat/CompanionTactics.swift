@@ -73,6 +73,7 @@ struct CompanionTactics {
 
   static let leaderLeash: Float = 8
   static let localRadius: Float = 3
+  static let supportRadius: Float = 2.6
   static let replanInterval: Float = 0.3
   static let minimumSpacing: Float = 1.2
 
@@ -125,8 +126,7 @@ struct CompanionTactics {
       return Intent(activity: .ordered)
     }
     let threatened = isThreatened(input.position) && !isCovered(input.position)
-    let assignment = Self.assignment(
-      member: input.member, position: input.position, points: input.weakpoints)
+    let assignment = Self.assignment(member: input.member)
     let next = Context(
       member: input.member, leader: input.leader, order: input.order, stance: input.stance,
       phase: input.phase, stage: input.stage, part: assignment?.part, threatened: threatened)
@@ -161,11 +161,12 @@ struct CompanionTactics {
         let toLeader = simd_distance(point, input.leaderPosition)
         let toBase = simd_distance(point, input.baseTarget)
         // Nearby real shelter can sit behind a formation slot that faces the guard.
-        let nearFormation = toLeader <= 2.6 && (toBase <= 1.5 || isCovered(point))
+        let nearFormation = toLeader <= Self.supportRadius && (toBase <= 1.5 || isCovered(point))
         return simd_distance(point, input.position) <= Self.localRadius
           && available(point)
           && (nearFormation || toBase < fromBase - 0.25)
-          && (fromLeader <= 2.6 ? toLeader <= 2.6 : toLeader < fromLeader - 0.25)
+          && (fromLeader <= Self.supportRadius
+            ? toLeader <= Self.supportRadius : toLeader < fromLeader - 0.25)
       }
       if sincePlan >= Self.replanInterval
         || goal.map({
@@ -205,6 +206,14 @@ struct CompanionTactics {
       activity: fallback)
     if case .holding = input.order {
       goal = nil
+      if input.member == .laura {
+        intent.weapon = .shotgun
+        intent.targetsBody = true
+        intent.engaged = canStand(input.position) && !threatened
+        intent.fire = intent.engaged && canFireAtBody(input.position, .shotgun)
+        intent.activity = intent.fire ? .attacking : .holding
+        return intent
+      }
       if let assignment, canStand(input.position),
         let point = points.first(where: { canFire(input.position, $0, assignment.weapon) })
       {
@@ -239,6 +248,11 @@ struct CompanionTactics {
       intent.activity = .avoiding
       return intent
     }
+    if input.member == .laura {
+      return supportAttack(
+        input: input, available: available, safe: safe,
+        canFireAtBody: canFireAtBody, isCovered: isCovered)
+    }
     if points.isEmpty {
       return ordinaryAttack(
         input: input, available: available, safe: safe, canStand: canStand,
@@ -263,7 +277,6 @@ struct CompanionTactics {
       canFireAtBody(input.position, Self.ordinaryWeapon(for: input.member))
     {
       // Take a useful shot from this safe stance before retaining an old eye orbit.
-      // Laura keeps approaching her assigned leg.
       return ordinaryAttack(
         input: input, available: available, safe: safe, canStand: canStand,
         canFireAtBody: canFireAtBody, isCovered: isCovered, isSpaced: isSpaced)
@@ -334,6 +347,48 @@ struct CompanionTactics {
     intent.position = goal
     intent.activity = goal == nil ? .following : goalActivity
     return intent
+  }
+
+  /// Laura supports from a close, legal place instead of finding a distant specialist angle.
+  /// A blocked shot never makes her leave shelter just to acquire a firing lane.
+  private mutating func supportAttack(
+    input: Input, available: (SIMD2<Float>) -> Bool, safe: (SIMD2<Float>) -> Bool,
+    canFireAtBody: (SIMD2<Float>, Weapon.Kind) -> Bool,
+    isCovered: (SIMD2<Float>) -> Bool
+  ) -> Intent {
+    func close(_ point: SIMD2<Float>) -> Bool {
+      simd_distance(point, input.leaderPosition) <= Self.supportRadius
+        && available(point) && safe(point)
+    }
+    if close(input.position), canFireAtBody(input.position, .shotgun) {
+      goal = input.position
+      goalActivity = .attacking
+      return Intent(
+        position: goal, lookAt: input.guardPosition, engaged: true, weapon: .shotgun,
+        targetsBody: true, fire: true, activity: .attacking)
+    }
+    if sincePlan >= Self.replanInterval || goal.map({ !close($0) }) != false {
+      let candidates = ([input.position, input.baseTarget] + Self.near(input.baseTarget)).filter {
+        simd_distance($0, input.position) <= Self.localRadius && close($0)
+      }
+      goal = candidates.filter(isCovered).min {
+        simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+      }
+      if goal == nil {
+        goal =
+          close(input.position)
+          ? input.position
+          : candidates.min {
+            simd_distance($0, input.baseTarget) < simd_distance($1, input.baseTarget)
+          }
+      }
+      sincePlan = 0
+    }
+    let settled = goal == input.position
+    goalActivity = settled ? .waiting : .following
+    return Intent(
+      position: goal, lookAt: settled ? input.guardPosition : nil, engaged: settled,
+      weapon: settled ? .shotgun : nil, targetsBody: settled, activity: goalActivity)
   }
 
   /// A specialist opportunity is preferred, but it never makes safe ordinary fire useless.
@@ -413,25 +468,13 @@ struct CompanionTactics {
     }
   }
 
-  private static func assignment(
-    member: PartyMember, position: SIMD2<Float>, points: [GuardWeakpoint]
-  ) -> (part: GuardStrategy.Part, weapon: Weapon.Kind, radii: [Float])? {
+  private static func assignment(member: PartyMember)
+    -> (part: GuardStrategy.Part, weapon: Weapon.Kind, radii: [Float])?
+  {
     switch member {
     case .miki: return (.eye, .longRifle, [6, 7])
     case .tom: return (.eye, .minigun, [3.5, 4])
-    case .laura:
-      let legs = points.filter {
-        if case .leg(let index) = $0.part { return (0..<GuardStrategy.legCount).contains(index) }
-        return false
-      }
-      guard
-        let leg = legs.min(by: {
-          let a = simd_distance_squared($0.ground, position)
-          let b = simd_distance_squared($1.ground, position)
-          return a == b ? $0.id < $1.id : a < b
-        })
-      else { return nil }
-      return (leg.part, .energySword, [2.65])
+    case .laura: return nil
     }
   }
 

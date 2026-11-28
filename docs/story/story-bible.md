@@ -1,6 +1,6 @@
 # Lauder — story bible, draft 0.8
 
-**Date:** 26 November 2026\
+**Date:** 28 November 2026\
 **Status:** Ensemble direction and exploration-led play with an armed, coordinated trio are approved, and the maintainer chose a frozen world on 20 November 2026. The combat identities below are agreed as the basis for designing the movement, formation and combat systems. Their tuning values remain starting points for playtests, and the encounter details remain a proposal. Biographies, exact relationships and enhancement histories remain open. The [README](../../README.md) and [prototype plan](../prototype-plan.md) own implementation status and next-step gates; this design document does not assign gameplay implementation. The game opens with Miki, Tom and Laura together on the Brooklyn Bridge ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)).
 
 **First-encounter revision, 23 November 2026:** The maintainer accepted C's dark armed form and motion, then assigned its integration in place of the first human shooter. The opening below uses the [first-tower guard](../encounters/bridge-spider-bot.md). The cause of the machine's continued patrol remains unexplained. Current implementation verification and tuning belong in the [prototype plan](../prototype-plan.md), not in this narrative outline.
@@ -19,11 +19,13 @@ The maintainer then clarified that companion combat requires an explicit Attack 
 
 **Scout drones, 27 November 2026:** The maintainer asked for a different enemy, **“We should in the mentime also create a different enemy while Codex is working”**, then chose **“Scout drones”** **“With the first guard”** (chat; no public permalink). Two small drones keep watch with the first-tower machine and fall with it, so its fight is still the bridge's only one. The [drone contract](../scout-drones.md) holds the rules; it settles nothing about who built either machine.
 
+**Two-leader pilot, 28 November 2026:** After proposing Miki and Tom as the controllable fighters with Laura as AI support, the maintainer said **“Ok proceed with your suggestion”** ([issue #225](https://github.com/RonildoBraga/lauder/issues/225); chat, no public permalink). The bounded first increment keeps all three in the story and world, toggles Miki ↔ Tom in travel and combat, and gives Laura safe ranged support under explicit Attack instead of remote sword-leg pursuit. Healing, altered leg damage and a meaningful scouting/salvage objective remain proposals. This changes control eligibility, not the trio’s unknown relationships or backgrounds; the [prototype plan](../prototype-plan.md#two-leader-party--in-development) owns implementation and verification status.
+
 ## Agreed direction
 
 - Belonging, trust and people becoming responsible for one another provide the emotional centre. Blood relationships are not required to explain the group.
 - Characters' lives intersect through encounters and the consequences of earlier actions. Their connections, histories and shared purpose emerge through play.
-- Three playable characters travel together, from the start of the game ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)). The player moves the active character; the others remain companions in the same world. A button switches control and leadership to another member. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
+- Three characters travel together from the start ([ADR 0004](../decisions/0004-brooklyn-bridge-opening.md)). The two-leader pilot selects Miki or Tom; the other fighter and Laura remain AI companions in the same world. One existing switch toggles Miki ↔ Tom. The [requested movement direction](../prototype-plan.md#combat-design-review-gate) is a coordinated squad that finds useful positions, rather than companions copying every footstep.
 - Each character has distinct capabilities that make different approaches useful, including agility and strength.
 - Chapter One begins with Miki, Tom and Laura crossing the Brooklyn Bridge together towards Manhattan. The transmitter repair at Relay House is kept as a later scene, not yet placed in the story.
 - The world is futuristic and devastated, resembling the aftermath of a world war. The opening is set in a post-apocalyptic New York. The cause and wider extent of the collapse remain uncertain.
@@ -35,7 +37,7 @@ The control description is understood as **one human player directing a party of
 
 ### What remains open
 
-Miki, Laura and Tom are the current prototype's playable trio; their biographies, exact relationships, enhancement histories, ages, further skills and signature-ability rules remain working choices. Their paired loadouts follow the maintainer's [quoted weapon assignment](../decisions/0021-paired-weapons.md#assignment). The [first-guard roles](../strategic-guard.md) are encounter-specific playtest choices, now an optional bonus route, and do not settle those story details. Nina is proposed as a supporting character outside that trio.
+Miki, Laura and Tom remain the story's trio; only Miki and Tom are selectable in the two-leader pilot. Their biographies, exact relationships, enhancement histories, ages, further skills and signature-ability rules remain working choices. The earlier paired loadouts follow the maintainer's [quoted weapon assignment](../decisions/0021-paired-weapons.md#assignment); the pilot retains Laura's authored equipment while using ranged AI support. The [first-guard roles](../strategic-guard.md) are encounter-specific playtest choices and do not settle those story details. Nina is proposed as a supporting character outside that trio.
 
 No family relationship among Miki, Laura, Tom and Nina is settled, and none should be assumed in a script. The opening no longer shows how the three came to travel together, or whether they were strangers; their backgrounds, motivations and relationships unfold gradually through play. Decide the underlying relationships as writers before scripting intimate memories or kinship-specific dialogue. Keeping a relationship unknown to the player is different from leaving it undecided during writing.
 
@@ -59,7 +61,7 @@ The longer story follows the commitment the three come to make. Homecoming can m
 
 All three remain people in the scene when control changes. Switching leadership represents whose abilities the player directs; it does not transfer memories, change personalities or turn followers into silent possessions of the leader.
 
-The active character leads movement and supplies their particular interaction capabilities. The other two remain involved in movement, defence and the story. Skills should be understandable at first use, even when their medical origins or personal histories remain unknown. Coordinated behaviour does not establish that they served together, received military training or share a hidden origin.
+The active fighter leads movement. The other fighter and Laura remain involved in movement, defence and the story. Laura's route-reading and access contributions below are narrative proposals, not implemented scouting interactions or a healing system. Skills should be understandable at first use, even when their medical origins or personal histories remain unknown. Coordinated behaviour does not establish that they served together, received military training or share a hidden origin.
 
 | Working character | Contribution | Example use | Personal tension |
 |---|---|---|---|
@@ -81,11 +83,11 @@ These distinctions are not complete identities. All three can observe, talk, hel
 
 **Weapons revision, 26 November 2026:** The maintainer gave each character two weapons to switch between ([ADR 0021](../decisions/0021-paired-weapons.md)). Miki has a long rifle and an assault rifle, Laura a shotgun and an energy sword, and Tom a minigun and a shield dome that protects him and those inside it. These replace the carbine, burst weapon and scatter weapon proposed below. The signatures below remain proposals, not built.
 
-Each character should be useful as leader and capable of ordinary weapon defence. Their distinctions concern range, exposure, positioning and the situation they can improve, rather than an obligatory sequence of three specialist actions. Keep ordinary travel comfortable under every leader; Tom should not make routine exploration slower simply because he has a stronger build.
+Each selectable fighter should be useful as leader and capable of ordinary weapon defence. Laura contributes as an AI companion, not an escort requiring a new support command. Their distinctions concern range, exposure, positioning and the situation they can improve, rather than an obligatory sequence of specialist actions. Keep ordinary travel comfortable under either leader; Tom should not make routine exploration slower simply because he has a stronger build.
 
 The first-tower guard's historical [dismantling route](../strategic-guard.md#earlier-mandatory-prototype) used three contributions in sequence: Miki disabled a sensor with the long rifle, Laura breached a side coupling with the sword, and Tom damaged an exposed reactor with the minigun over repeated recovery windows. Those first two results persisted for the attempt. That sequence is superseded by the [current eye, leg and grenade rules](../robot-eye-legs-grenades.md). It was an encounter-specific playtest choice, not a story foundation or a requirement that every fight use a fixed combination or implement the proposed signatures below. Build 33 kept companions following/holding without attacks. The autonomy assignment lets them complete their own native contributions under explicit Attack while respecting engagement, movement orders, a nearby leader leash and regrouping; switching away from Tom still drops his player-controlled shield. Automatic shields and signature abilities are not assigned.
 
-In the separate Quiet Yard proposal, companions would provide basic weapon support while the player triggers only the active character's signature ability. This remains unimplemented and is not the assigned guard's control model. They would not spend signatures automatically or require the player to manage three ability bars. Using another member's signature would mean switching to them first, and the controls and threats must allow for that:
+In the earlier three-leader Quiet Yard proposal, companions would provide basic weapon support while the player triggers only the active character's signature ability. That unimplemented control design below is historical proposal context, superseded by the two-leader pilot for current work. It does not assign signatures, Laura control or three ability bars:
 
 - Every member is at most two presses away: Next, on L1 / LB on a controller or as a button on touch, goes round the party.
 - A threat's wind-up lasts long enough to switch and act; about 1.5 seconds is a starting value for playtests.
@@ -163,7 +165,7 @@ The weapons make survival capability visible before the player learns where it c
 ## Nina — a life beyond the journey
 
 **Proposed age:** Eight.\
-**Role:** Supporting character at the coastal settlement, outside the playable trio.\
+**Role:** Supporting character at the coastal settlement, outside the travelling trio.\
 **Relationship to the party:** To be settled before detailed dialogue is rewritten.
 
 Nina has routines, friendships, responsibilities and things she wants for herself. She is not waiting alone to be rescued. Her connection with the travellers can carry warmth without declaring a blood relationship at the beginning.
@@ -244,7 +246,7 @@ The first tower retains the C robot; the supply-case interaction and recruitment
 **Party:** Miki, Tom and Laura, together from the start.\
 **Achievement:** The three reach Manhattan together.
 
-The merged baseline contains the whole opening, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Its strategic first-guard revision was delivered for phone testing in build 33. The new companion-autonomy revision remains in development; the maintainer's general phone feedback does not establish detailed controls, performance or merge approval. Final dialogue remains to be written; the game's lines are provisional.
+The delivered baseline contains the whole opening, as its [decision record](../decisions/0004-brooklyn-bridge-opening.md) sets out. Build 46 remains the comparison before the two-leader pilot; the [prototype plan](../prototype-plan.md#two-leader-party--in-development) records that pilot's pending checks. Earlier phone feedback does not establish detailed controls, performance or approval of the new revision. Final dialogue remains to be written; the game's lines are provisional.
 
 Keep the opening's lines short. They should reveal nothing about anyone's past beyond what the moment needs; backgrounds, motivations and relationships unfold through the journey. Settle the underlying relationships and enhancement histories before writing kinship-specific dialogue. Character details and new lines retain their proposal status.
 
@@ -278,7 +280,7 @@ They compare what each actually knows and head to Relay House. Dialogue establis
 
 The keeper explains the transmitter fault. Miki identifies compatible equipment. Tom remembers protected bays at the depot. Laura assesses the route from its last known access points, acknowledging that conditions may have changed.
 
-They agree to make the short salvage trip together. The keeper remains at the shelter. None of the playable trio is parked there as a stationary quest-giver.
+They agree to make the short salvage trip together. The keeper remains at the shelter. None of the three travellers is parked there as a stationary quest-giver.
 
 ### 3. What still serves someone
 

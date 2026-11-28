@@ -31,13 +31,11 @@ struct SwordCoverTests {
       id: "sword-cover-fixture",
       ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]),
       boxes: [.box("cover", at: coverPosition, size: coverSize)], triggers: [],
-      encounters: [encounter], party: [.miki, .tom, .laura],
+      encounters: [encounter], party: [.laura, .miki, .tom],
       spawns: [.miki: [-6, 6], .tom: [6, 6], .laura: leader], heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.")
     let session = GameSession(level: level)
-    session.cycleLeader()
-    session.cycleLeader()
     #expect(session.leader == .laura)
     let fight = EncounterSimulation(level: level)
     #expect(session.beginEncounter(encounter.beat))

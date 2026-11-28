@@ -116,9 +116,8 @@ struct ShootingTests {
   }
 
   @Test(arguments: PartyMember.allCases)
-  func everyLeaderAimsAndFiresTheirOwnWeapon(member: PartyMember) {
-    let world = GameWorld(level: TestRange.practice)
-    while world.session.leader != member { world.session.cycleLeader() }
+  func eachExplicitNativeActorAimsAndFiresTheirOwnWeapon(member: PartyMember) {
+    let world = GameWorld(level: levelStarting(with: member, from: TestRange.practice))
     world.advanceParty(movement: .zero, deltaTime: 1 / 60)
     #expect(world.session.leader == member && world.showsWeapon)
     let right = stick(world, towards: [1, 0])

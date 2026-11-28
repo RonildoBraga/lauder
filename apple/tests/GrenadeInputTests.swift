@@ -226,7 +226,7 @@ struct GrenadeSurfaceTests {
     mode: GameSession.Mode = .exploring, showsGrenade: Bool = true
   ) {
     surface.update(
-      actionTitle: "Look", nextLeaderName: "Laura", showsFire: true, swapTitle: "Shield",
+      actionTitle: "Look", nextLeaderName: "Miki", showsFire: true, swapTitle: "Shield",
       showsFormation: true, formationTitle: "Formation", orderNames: ("Miki", "Laura"),
       vibrationTitle: "Vibration: On", panelTitle: "Status panel: On", mode: mode,
       generation: controls.touchGeneration, grenadeTitle: "Grenade ready",

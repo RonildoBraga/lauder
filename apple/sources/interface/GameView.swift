@@ -314,14 +314,15 @@ struct GameView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                   .accessibilityHidden(true)
               }
-              Text(member.displayName)
+              Text(member == .laura ? "Laura · Support" : member.displayName)
                 .fontWeight(leading || targeted ? .semibold : .regular)
                 .underline(leading)
             }
             .foregroundStyle(targeted ? HUDStyle.threat : HUDStyle.ink)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(
-              targeted ? "\(member.displayName), guard target" : member.displayName)
+              (member == .laura ? "Laura, support companion" : member.displayName)
+                + (targeted ? ", guard target" : ""))
             if world.session.inEncounter, leading || targeted || world.session.hits(of: member) > 0
             {
               // The placeholder hit rule: three hits, shown below the name.

@@ -125,7 +125,6 @@ struct GrenadeIntegrationTests {
       world.session.cycleLeader()
       world.advanceParty(movement: .zero, deltaTime: 1 / 1000)
       world.session.cycleLeader()
-      world.session.cycleLeader()
       world.advanceParty(movement: .zero, deltaTime: 1 / 60)
       #expect(world.session.leader == .tom)
       #expect(

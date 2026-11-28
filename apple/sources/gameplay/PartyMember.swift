@@ -1,5 +1,5 @@
-/// The three playable characters. Who is in the party, and the switching order, belong to the
-/// session; a level can start with fewer than three.
+/// The three travellers. The session owns membership, formation order and the two-fighter
+/// leadership cycle; Laura remains an AI support companion.
 enum PartyMember: String, CaseIterable, Sendable {
   case miki, laura, tom
 
