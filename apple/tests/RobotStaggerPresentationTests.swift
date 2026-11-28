@@ -139,16 +139,20 @@ struct RobotStaggerPresentationTests {
     let belly = try part("belly plate", in: visual)
     robot.knockDown()
     show(robot, strategy: strategy, presenter: presenter, dt: 0)
+    let legless = lost == GuardStrategy.legCount
     for _ in 0..<120 {
       advance(&robot, strategy: strategy, dt: 1 / 120)
       show(robot, strategy: strategy, presenter: presenter, dt: 1 / 120)
       #expect(robot.isDown && robot.shotSerial == shots)
-      #expect(abs(robot.bodyDrop - drop) < 0.0001)
+      // A wreck never rises; a legless one keeps settling onto its belly (#200).
+      let settled = robot.bodyDrop - drop
+      #expect(legless ? settled >= -0.0001 : abs(settled) < 0.0001)
       for (entity, height) in zip(parts, heights) {
-        #expect(abs(entity.position(relativeTo: nil).y - height) < 0.001)
+        #expect(abs(entity.position(relativeTo: nil).y - (height - settled)) < 0.001)
       }
       #expect(belly.visualBounds(relativeTo: nil).min.y >= -0.001)
     }
+    if legless { #expect(abs(robot.bodyDrop - RobotGuard.groundedDrop) < 0.0001) }
     robot = ready()
     presenter.reset(position: robot.position, facing: robot.facing)
     #expect(robot.bodyDrop == 0)

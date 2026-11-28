@@ -155,6 +155,11 @@ struct HostileState {
 
   mutating func staggerRobot() -> Bool { robot?.stagger() ?? false }
 
+  /// A legless guard's wreck keeps settling after the fight (#200).
+  mutating func settleRobotWreck(dt: Float, grounded: Bool) {
+    robot?.settleWreck(dt: dt, grounded: grounded)
+  }
+
   mutating func stepRobot(
     dt: Float, target: SIMD2<Float>, hasSight: Bool, obstacles: [PartyMotion.Box],
     party: [SIMD2<Float>], awareOfTarget: Bool = false, speedMultiplier: Float = 1,

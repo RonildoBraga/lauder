@@ -1474,6 +1474,10 @@ final class EncounterSimulation {
           dt: dt, target: nil, engaged: false, mayWindUp: false, motion: crawlerMotion,
           guardian: nil, others: [])
         hostiles[id] = state
+      } else if let robot = state.robot, robot.isDown || robot.isCleared {
+        state.settleRobotWreck(
+          dt: dt, grounded: guardStrategies[id]?.detachedLegs.count == GuardStrategy.legCount)
+        hostiles[id] = state
       }
     }
   }
