@@ -82,7 +82,7 @@ Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario 
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the route result; the runner records trace/summary evidence. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The [camera comparison](docs/prototype-plan.md#camera-pitch-comparison--pending-verification) uses the same routes and three Debug-only pitches. The default 35° is a recommended candidate pending the maintainer's framing choice. To play manually, run `./apple/scripts/play --camera-pitch 35`. To record comparable defensive and boundary/focus moments:
+The [camera comparison](docs/prototype-plan.md#camera-pitch-comparison--verified-in-simulator) uses the same routes and three Debug-only pitches. The default 35° is a recommended candidate pending the maintainer's framing choice. To play manually, run `./apple/scripts/play --camera-pitch 35`. To record comparable defensive and boundary/focus moments:
 
 ```bash
 ./apple/scripts/playtest duel-defence duel-focus --camera-pitch 30.5
