@@ -1,5 +1,7 @@
 # Models
 
+These are preserved bridge assets and authoring studies. The active graybox duel uses Swift primitives and packages none of these model exports. Registrations and [reference exports](../reference-exports/README.md) remain checked for future reuse; no new art production is assigned.
+
 Each model is a Blender file of its own, in a folder named after it, `<model>/<model>.blend`, stored with Git LFS ([ADR 0002](../../docs/decisions/0002-blender-source-of-truth.md)). Levels link it, so a change to the model reaches every level that uses it. [Models](../../CONTRIBUTING.md#models) in CONTRIBUTING describes placing one in a level, changing it, and bringing one in from a file.
 
 A model's file follows the contract between Blender and the game:
@@ -10,8 +12,8 @@ A model's file follows the contract between Blender and the game:
 - **Its textures** are PNG or JPEG files in its folder, such as `textures/`, rather than packed into the Blender file. The [visual direction](../../docs/visual-direction.md) allows no textures apart from baked ambient occlusion.
 - **Its README.md** says where the model comes from and under which licence, as [CONTRIBUTING](../../CONTRIBUTING.md#assets-and-attribution) asks of every asset. `./scripts/check` fails without it.
 
-The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The runtime-spawned models are the party's `miki`, `tom` and `laura`, the C guard `spider-bot-heavy`, `scout-drone` and `crawler`. The `hostile` humanoid is also registered for native combat and presentation fixtures; it is not another enemy in the shipped bridge. Saving one of them also exports its own scene file, as [CONTRIBUTING](../../CONTRIBUTING.md#models) describes.
+The intake check, `check-model.py` or **Check Model** in Blender's Lauder tab, says what a model still needs. The bridge's registered reference models are the party's `miki`, `tom` and `laura`, the C guard `spider-bot-heavy`, `scout-drone` and `crawler`. The `hostile` humanoid is also registered for native combat and presentation fixtures; it was not another enemy in the shipped bridge. Saving one of them also exports its own scene file, as [CONTRIBUTING](../../CONTRIBUTING.md#models) describes.
 
 The [spider-bot](spider-bot/README.md) is a rejected authoring model and motion study, retained as historical reference. It is not registered as spawned or placed in a level, so saving it creates no runtime export. Its README records the reference-derived CC BY 4.0 licence, proportions, mesh budget and source-only motion. The other models keep their existing licences.
 
-The selected C [heavy walker](spider-bot-heavy/README.md) now has the assigned Blender motion studies and reusable linked leg/gun components, with reference-derived CC BY 4.0 source and renders. It is registered as a spawned runtime model for the first-tower guard. Its export preserves named joint transforms and generates source measurements for the runtime presenter. A remains a possible later different-weapon variant, not a current asset assignment.
+The selected C [heavy walker](spider-bot-heavy/README.md) now has the assigned Blender motion studies and reusable linked leg/gun components, with reference-derived CC BY 4.0 source and renders. It remains registered as a preserved spawned-model export for the historical first-tower guard. Its export preserves named joint transforms and generates source measurements for the runtime presenter. A remains a possible later different-weapon variant, not a current asset assignment.

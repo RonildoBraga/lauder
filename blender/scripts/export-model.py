@@ -1,5 +1,5 @@
-"""Export a model that the game creates itself, such as a member of the party or a hostile (ADR
-0002): its scene file, apple/sources/content/models/<model>.usdz, from its Blender file in
+"""Export a preserved bridge model, such as a member of the party or a hostile (ADR
+0002): its scene file, blender/reference-exports/models/<model>.usdz, from its Blender file in
 blender/assets.
 
 Run it with Blender in the background, from any folder:

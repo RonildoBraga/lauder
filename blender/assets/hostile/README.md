@@ -1,6 +1,8 @@
 # hostile
 
-The hostiles' stand-in: the party's shape in a dark red that reads as a threat. The game creates one for each hostile from its own scene file, `apple/sources/content/models/hostile.usdz`, which saving this file exports ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)).
+**Preserved bridge reference:** this model is not packaged by the active graybox duel. Its [reference export](../../reference-exports/README.md), authoring history and licence remain available. Descriptions below refer to the bridge prototype.
+
+The hostiles' stand-in: the party's shape in a dark red that reads as a threat. The game creates one for each hostile from its own scene file, `blender/reference-exports/models/hostile.usdz`, which saving this file exports ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)).
 
 - **Source:** Made for Lauder with Claude's assistance on 19 November 2026, from the sizes and colours that the game's code drew the stand-ins with until then (`SceneStyle`). No third-party models or textures were used.
 - **Licence:** The repository's [MIT licence](../../../LICENSE).

@@ -4,650 +4,124 @@ import Testing
 
 struct InputRulesTests {
   @Test
-  func opposingHeldKeysCannotClearTheReleaseGate() {
+  func opposingMovementKeysCannotClearNeutralGate() {
     var state = InputRules.State()
-    var raw = InputRules.Raw(up: true, down: true)
-    #expect(sample(raw, state: &state) == .neutral)
+    #expect(sample(.init(up: true, down: true), state: &state) == .neutral)
     #expect(state.needsNeutralInput)
-
-    raw.down = false
-    #expect(sample(raw, state: &state) == .neutral)
+    #expect(sample(.init(up: true), state: &state) == .neutral)
     #expect(state.needsNeutralInput)
-
-    raw.up = false
-    #expect(sample(raw, state: &state) == .neutral)
+    #expect(sample(.init(), state: &state) == .neutral)
     #expect(!state.needsNeutralInput)
-
-    raw.up = true
-    #expect(sample(raw, state: &state).movement == [0, 1])
+    #expect(sample(.init(up: true), state: &state).movement == [0, 1])
   }
 
   @Test
-  func heldControllerInputAfterResumeRequiresReleaseAndFreshInput() {
+  func centredTouchContactAndHeldGuardPreventResumeUntilRelease() {
     var state = InputRules.State()
-    let held = InputRules.Raw(stick: [1, 0], controllerAction: true)
-    #expect(sample(held, state: &state) == .neutral)
+    #expect(sample(.init(touchIsTouching: true), state: &state) == .neutral)
     #expect(state.needsNeutralInput)
-
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(!state.needsNeutralInput)
-
-    let fresh = sample(held, state: &state)
-    #expect(fresh.movement == [1, 0])
-    #expect(fresh.actionPressed)
-    #expect(!sample(held, state: &state).actionPressed)
-  }
-
-  @Test(arguments: [false, true])
-  func pauseHasPriorityAndRequiresReleaseBeforeAnotherPress(keyboard: Bool) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(
-      stick: [1, 0], controllerAction: true, controllerPause: !keyboard,
-      controllerSwitch: true, up: true, keyboardAction: true, keyboardPause: keyboard,
-      keyboardSwitch: true)
-    let pause = sample(held, state: &state)
-    #expect(pause.movement == .zero)
-    #expect(!pause.actionPressed)
-    #expect(pause.pausePressed)
-    #expect(!pause.switchPressed)
-    #expect(sample(held, mode: .paused, state: &state) == .neutral)
-
-    // The input owner re-arms the release gate when the session toggles Pause.
-    state = InputRules.State()
-    #expect(sample(held, state: &state) == .neutral)
+    #expect(sample(.init(touchGuard: true), state: &state) == .neutral)
     #expect(state.needsNeutralInput)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(!state.needsNeutralInput)
-    #expect(sample(held, mode: .paused, state: &state).pausePressed)
-  }
-
-  @Test
-  func keyboardMovementOverridesTheStickEvenWhenOpposingKeysCancel() {
-    var state = InputRules.State(needsNeutralInput: false)
-    var raw = InputRules.Raw(stick: [1, 0], up: true)
-    #expect(sample(raw, state: &state).movement == [0, 1])
-
-    raw.down = true
-    #expect(sample(raw, state: &state).movement == .zero)
-
-    raw.up = false
-    raw.down = false
-    #expect(sample(raw, state: &state).movement == [1, 0])
-  }
-
-  @Test(arguments: [false, true])
-  func simultaneousSwitchConsumesActionUntilAFreshPress(keyboard: Bool) {
-    var state = InputRules.State(needsNeutralInput: false)
-    var raw = InputRules.Raw(
-      stick: [0.5, 0], controllerAction: !keyboard, controllerSwitch: !keyboard,
-      keyboardAction: keyboard, keyboardSwitch: keyboard)
-    let switched = sample(raw, state: &state)
-    #expect(switched.switchPressed)
-    #expect(!switched.actionPressed)
-    #expect(switched.movement == [0.5, 0])
-
-    let held = sample(raw, state: &state)
-    #expect(!held.switchPressed)
-    #expect(!held.actionPressed)
-    #expect(!state.needsNeutralInput)
-
-    raw.controllerSwitch = false
-    raw.keyboardSwitch = false
-    #expect(!sample(raw, state: &state).actionPressed)
-    raw.controllerAction = false
-    raw.keyboardAction = false
-    #expect(!sample(raw, state: &state).actionPressed)
-    raw.keyboardAction = keyboard
-    raw.controllerAction = !keyboard
-    #expect(sample(raw, state: &state).actionPressed)
-  }
-
-  @Test
-  func switchingDoesNotReplayAnActionAlreadyHeld() {
-    var state = InputRules.State(needsNeutralInput: false)
-    var raw = InputRules.Raw(controllerAction: true)
-    #expect(sample(raw, state: &state).actionPressed)
-    raw.controllerSwitch = true
-    let switched = sample(raw, state: &state)
-    #expect(switched.switchPressed)
-    #expect(!switched.actionPressed)
-    raw.controllerSwitch = false
-    #expect(!sample(raw, state: &state).actionPressed)
-  }
-
-  @Test
-  func pausedSwitchAndActionAreConsumedRatherThanQueued() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(keyboardAction: true, keyboardSwitch: true)
-    // While paused the action confirms the menu's choice and the switch does nothing. Neither
-    // carries over into exploring.
-    let paused = sample(held, mode: .paused, state: &state)
-    #expect(paused.actionPressed)
-    #expect(!paused.switchPressed)
-    #expect(sample(held, state: &state) == .neutral)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(sample(.init(keyboardSwitch: true), state: &state).switchPressed)
-  }
-
-  @Test
-  func aConversationTakesFreshActionPressesAndNothingElse() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let raw = InputRules.Raw(stick: [1, 0], controllerAction: true, controllerSwitch: true)
-    let first = sample(raw, mode: .dialogue, state: &state)
-    #expect(first.actionPressed)
-    #expect(!first.switchPressed)
-    #expect(first.movement == .zero)
-    // A held action shows no further line, and the held switch never reaches exploring.
-    #expect(sample(raw, mode: .dialogue, state: &state) == .neutral)
-    let after = sample(raw, state: &state)
-    #expect(!after.switchPressed)
-    #expect(!after.actionPressed)
-  }
-
-  @Test(arguments: [false, true])
-  func thePauseMenuMovesOnFreshUpAndDownPresses(keyboard: Bool) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let down = keyboard ? InputRules.Raw(down: true) : InputRules.Raw(stick: [0, -1])
-    let up = keyboard ? InputRules.Raw(up: true) : InputRules.Raw(stick: [0, 1])
-    let moved = sample(down, mode: .paused, state: &state)
-    #expect(moved.menuMove == 1)
-    #expect(moved.movement == .zero)
-    #expect(sample(down, mode: .paused, state: &state).menuMove == 0)
-    #expect(sample(up, mode: .paused, state: &state).menuMove == -1)
-    #expect(sample(.init(), mode: .paused, state: &state).menuMove == 0)
-    // A sideways or shallow push does not move the choice.
-    #expect(sample(.init(stick: [0.9, -0.3]), mode: .paused, state: &state).menuMove == 0)
-  }
-
-  @Test
-  func aDirectionHeldWhenPausingDoesNotMoveTheMenu() {
-    var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(.init(controllerPause: true, down: true), state: &state).pausePressed)
-    #expect(sample(.init(down: true), mode: .paused, state: &state).menuMove == 0)
-  }
-
-  @Test
-  func theTouchRestartButtonActsOnlyInThePauseMenu() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let restart = InputRules.Raw(touchRestart: true)
-    #expect(sample(restart, state: &state) == .neutral)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(sample(restart, mode: .dialogue, state: &state) == .neutral)
-    #expect(sample(.init(), mode: .paused, state: &state) == .neutral)
-    #expect(sample(restart, mode: .paused, state: &state).restartPressed)
-    #expect(!sample(restart, mode: .paused, state: &state).restartPressed)
-  }
-
-  @Test
-  func touchInputRequiresEveryContactToReleaseBeforeFreshIntent() {
-    var state = InputRules.State()
-    var held = InputRules.Raw(
-      touchStick: [0.5, 0], touchIsTouching: true, touchAction: true)
-    #expect(sample(held, state: &state) == .neutral)
-    #expect(state.needsNeutralInput)
-
-    // Centring the knob and releasing a button does not lift the joystick finger.
-    held.touchStick = .zero
-    held.touchAction = false
-    #expect(sample(held, state: &state) == .neutral)
-    #expect(state.needsNeutralInput)
-    held.touchIsTouching = false
-    #expect(sample(held, state: &state) == .neutral)
-    #expect(!state.needsNeutralInput)
-
-    held.touchStick = [0.5, 0]
-    held.touchIsTouching = true
-    held.touchAction = true
-    let fresh = sample(held, state: &state)
-    #expect(fresh.movement == [0.5, 0])
-    #expect(fresh.actionPressed)
-    #expect(!sample(held, state: &state).actionPressed)
-  }
-
-  @Test(arguments: [
-    InputRules.Raw(touchStick: [1, 0]),
-    InputRules.Raw(touchStick: [.nan, 0]),
-    InputRules.Raw(touchStick: [0, .infinity]),
-    InputRules.Raw(touchStick: [-.infinity, 0]),
-  ])
-  func touchVectorCannotClearTheReleaseGateWithoutAContact(raw: InputRules.Raw) {
-    var state = InputRules.State()
-    #expect(sample(raw, state: &state) == .neutral)
-    #expect(state.needsNeutralInput)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(!state.needsNeutralInput)
-  }
-
-  @Test
-  func movementUsesHeldKeysThenAnActiveTouchStickThenTheController() {
-    var state = InputRules.State(needsNeutralInput: false)
-    var raw = InputRules.Raw(
-      stick: [1, 0], up: true, touchStick: [0, -0.5], touchIsTouching: true)
-    #expect(sample(raw, state: &state).movement == [0, 1])
-    raw.down = true
-    #expect(sample(raw, state: &state).movement == .zero)
-    raw.up = false
-    raw.down = false
-    #expect(sample(raw, state: &state).movement == [0, -0.5])
-    raw.touchStick = .zero
-    #expect(sample(raw, state: &state).movement == .zero)
-    raw.touchIsTouching = false
-    #expect(sample(raw, state: &state).movement == [1, 0])
-  }
-
-  @Test
-  func simultaneousTouchSwitchConsumesActionAndKeepsMovement() {
-    var state = InputRules.State(needsNeutralInput: false)
-    var raw = InputRules.Raw(
-      touchStick: [0.5, 0], touchIsTouching: true, touchAction: true, touchSwitch: true)
-    let switched = sample(raw, state: &state)
-    #expect(switched.movement == [0.5, 0])
-    #expect(switched.switchPressed)
-    #expect(!switched.actionPressed)
-    #expect(!state.needsNeutralInput)
-    #expect(!sample(raw, state: &state).switchPressed)
-
-    raw.touchSwitch = false
-    #expect(!sample(raw, state: &state).actionPressed)
-    raw.touchAction = false
-    #expect(!sample(raw, state: &state).actionPressed)
-    raw.touchAction = true
-    #expect(sample(raw, state: &state).actionPressed)
-  }
-
-  @Test
-  func touchPauseWinsAndRequiresReleaseBeforeResuming() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(
-      touchStick: [0.5, 0], touchIsTouching: true, touchAction: true,
-      touchPause: true, touchSwitch: true)
-    let pause = sample(held, state: &state)
-    #expect(pause.movement == .zero)
-    #expect(pause.pausePressed)
-    #expect(!pause.switchPressed)
-    #expect(!pause.actionPressed)
-    #expect(sample(held, mode: .paused, state: &state) == .neutral)
-
-    state = InputRules.State()
-    #expect(sample(held, mode: .paused, state: &state) == .neutral)
-    #expect(state.needsNeutralInput)
-    #expect(sample(.init(), mode: .paused, state: &state) == .neutral)
-    #expect(!state.needsNeutralInput)
-    #expect(sample(.init(touchPause: true), mode: .paused, state: &state).pausePressed)
-  }
-
-  @Test
-  func pausedTouchSwitchAndActionAreConsumedRatherThanQueued() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(
-      touchStick: [0.5, 0], touchIsTouching: true, touchAction: true, touchSwitch: true)
-    let paused = sample(held, mode: .paused, state: &state)
-    #expect(paused.actionPressed)
-    #expect(!paused.switchPressed)
-    #expect(paused.movement == .zero)
-    let resumed = sample(held, state: &state)
-    #expect(resumed.movement == [0.5, 0])
-    #expect(!resumed.actionPressed)
-    #expect(!resumed.switchPressed)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(sample(.init(touchSwitch: true), state: &state).switchPressed)
-  }
-
-  @Test(arguments: [
-    InputRules.Raw(controllerAction: true),
-    InputRules.Raw(controllerPause: true),
-    InputRules.Raw(controllerSwitch: true),
-    InputRules.Raw(keyboardAction: true),
-    InputRules.Raw(keyboardPause: true),
-    InputRules.Raw(keyboardSwitch: true),
-    InputRules.Raw(touchAction: true),
-    InputRules.Raw(touchPause: true),
-    InputRules.Raw(touchSwitch: true),
-    InputRules.Raw(touchRestart: true),
-    InputRules.Raw(controllerFormation: true),
-    InputRules.Raw(keyboardFormation: true),
-    InputRules.Raw(touchFormation: true),
-    InputRules.Raw(dpadUp: true),
-    InputRules.Raw(dpadDown: true),
-    InputRules.Raw(dpadLeft: true),
-    InputRules.Raw(dpadRight: true),
-    InputRules.Raw(arrowUp: true),
-    InputRules.Raw(arrowLeft: true),
-    InputRules.Raw(touchGround: true),
-    InputRules.Raw(touchVibration: true),
-    InputRules.Raw(touchPanel: true),
-    InputRules.Raw(touchTarget: .acquire),
-    InputRules.Raw(controllerLock: true),
-    InputRules.Raw(keyboardLock: true),
-    InputRules.Raw(controllerSwap: true),
-    InputRules.Raw(keyboardSwap: true),
-    InputRules.Raw(touchSwap: true),
-  ])
-  func everyGameplayButtonKeepsTheReleaseGateClosed(raw: InputRules.Raw) {
-    var state = InputRules.State()
-    #expect(sample(raw, state: &state) == .neutral)
-    #expect(state.needsNeutralInput)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(!state.needsNeutralInput)
-  }
-
-  // MARK: - The formation button (ADR 0003, phase S2)
-
-  @Test(arguments: [
-    InputRules.Raw(controllerFormation: true),
-    InputRules.Raw(keyboardFormation: true),
-    InputRules.Raw(touchFormation: true),
-  ])
-  func eachFormationPressCountsOnce(raw: InputRules.Raw) {
-    var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(raw, state: &state).formationPressed)
-    #expect(!sample(raw, state: &state).formationPressed, "a held button does not repeat")
-    #expect(!sample(.init(), state: &state).formationPressed)
-    #expect(sample(raw, state: &state).formationPressed)
-  }
-
-  @Test
-  func theFormationKeyIsKeyboardInput() {
-    #expect(InputRules.Raw(keyboardFormation: true).hasKeyboardInput)
-  }
-
-  @Test
-  func aFormationPressDiscardsAnActionInTheSameSample() {
-    var state = InputRules.State(needsNeutralInput: false)
-    var raw = InputRules.Raw(stick: [0.5, 0], controllerAction: true, controllerFormation: true)
-    let pressed = sample(raw, state: &state)
-    #expect(pressed.formationPressed)
-    #expect(!pressed.actionPressed)
-    #expect(pressed.movement == [0.5, 0])
-    // The held action does not act once the formation button lifts; it needs a fresh press.
-    raw.controllerFormation = false
-    #expect(!sample(raw, state: &state).actionPressed)
-    raw.controllerAction = false
-    #expect(!sample(raw, state: &state).actionPressed)
-    raw.controllerAction = true
-    #expect(sample(raw, state: &state).actionPressed)
-  }
-
-  @Test
-  func switchAndFormationPressedTogetherBothCount() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let both = sample(.init(keyboardSwitch: true, keyboardFormation: true), state: &state)
-    #expect(both.switchPressed)
-    #expect(both.formationPressed)
-  }
-
-  @Test(arguments: [GameSession.Mode.paused, .dialogue])
-  func pausedAndTalkingConsumeFormationPresses(mode: GameSession.Mode) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(controllerFormation: true)
-    #expect(!sample(held, mode: mode, state: &state).formationPressed)
-    // Still held when play resumes: it was consumed, not queued.
-    #expect(!sample(held, state: &state).formationPressed)
-    #expect(!sample(.init(), state: &state).formationPressed)
-    #expect(sample(held, state: &state).formationPressed)
-  }
-
-  // MARK: - Showing the controller
-
-  /// The controller's buttons and its stick show the controller as the source again; a stick
-  /// inside the dead zone, the keyboard and touch do not.
-  @Test
-  func theControllersButtonsAndStickAreControllerInput() {
-    for raw in [
-      InputRules.Raw(controllerAction: true), .init(controllerSwitch: true), .init(dpadUp: true),
-      .init(controllerLock: true), .init(stick: [0, 0.5]),
-    ] {
-      #expect(raw.hasControllerInput)
-    }
-    #expect(!InputRules.Raw(stick: [0.1, 0]).hasControllerInput)
-    #expect(!InputRules.Raw(keyboardSwitch: true).hasControllerInput)
-    #expect(!InputRules.Raw(keyboardLock: true).hasControllerInput)
-    #expect(InputRules.Raw(keyboardLock: true).hasKeyboardInput)
-    #expect(!InputRules.Raw(touchAction: true).hasControllerInput)
-  }
-
-  // MARK: - The weapon switch (ADR 0021)
-
-  /// R1, RB, T or the touch Swap button: one switch per press while exploring. Pause and a
-  /// conversation consume it rather than queueing it.
-  @Test(arguments: [
-    InputRules.Raw(controllerSwap: true), .init(keyboardSwap: true), .init(touchSwap: true),
-  ])
-  func eachSwitchPressCountsOnceWhileExploring(raw: InputRules.Raw) {
-    var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(raw, state: &state).swapPressed)
-    #expect(!sample(raw, state: &state).swapPressed, "a held press does not repeat")
-    for mode in [GameSession.Mode.paused, .dialogue] {
-      #expect(!sample(.init(), state: &state).swapPressed)
-      #expect(!sample(raw, mode: mode, state: &state).swapPressed)
-      #expect(!sample(raw, state: &state).swapPressed, "consumed, not queued")
-    }
-    #expect(InputRules.Raw(controllerSwap: true).hasControllerInput)
-    #expect(InputRules.Raw(keyboardSwap: true).hasKeyboardInput)
-    #expect(!InputRules.Raw(keyboardSwap: true).hasControllerInput)
-  }
-
-  // MARK: - The lock (ADR 0020)
-
-  /// R3, RS or O: one lock press per press while exploring. Pause and a conversation consume
-  /// it rather than queueing it.
-  @Test(arguments: [InputRules.Raw(controllerLock: true), InputRules.Raw(keyboardLock: true)])
-  func eachLockPressCountsOnceWhileExploring(raw: InputRules.Raw) {
-    var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(raw, state: &state).lockPressed)
-    #expect(!sample(raw, state: &state).lockPressed, "a held press does not repeat")
-    #expect(!sample(.init(), state: &state).lockPressed)
-    #expect(sample(raw, state: &state).lockPressed)
-    for mode in [GameSession.Mode.paused, .dialogue] {
-      #expect(!sample(.init(), state: &state).lockPressed)
-      #expect(!sample(raw, mode: mode, state: &state).lockPressed)
-      // Still held when play resumes: it was consumed, not queued.
-      #expect(!sample(raw, state: &state).lockPressed)
-    }
-  }
-
-  // MARK: - Squad orders (ADR 0003, phase S3)
-
-  private static let touchPoint = InputRules.ScreenPoint(x: 0.4, y: 0.6, aspect: 2)
-
-  @Test(arguments: [
-    (InputRules.Raw(dpadUp: true), GameSession.Command.attack),
-    (InputRules.Raw(dpadDown: true), .defend),
-    (InputRules.Raw(dpadLeft: true), .leftGoes),
-    (InputRules.Raw(dpadRight: true), .rightGoes),
-    (InputRules.Raw(arrowUp: true), .attack),
-    (InputRules.Raw(arrowDown: true), .defend),
-    (InputRules.Raw(arrowLeft: true), .leftGoes),
-    (InputRules.Raw(arrowRight: true), .rightGoes),
-    (InputRules.Raw(keyboardBothGo: true), .bothGo),
-    (InputRules.Raw(keyboardHold: true), .hold),
-  ])
-  func eachDirectionGivesItsOrderOnce(raw: InputRules.Raw, command: GameSession.Command) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let pressed = sample(raw, state: &state)
-    #expect(pressed.command == command)
-    #expect(pressed.commandPoint == nil, "keyboard/controller commands need no touch point")
-    #expect(sample(raw, state: &state).command == nil, "a held direction does not repeat")
-    #expect(sample(.init(), state: &state).command == nil)
-    #expect(sample(raw, state: &state).command == command)
-  }
-
-  @Test
-  func theArrowKeysAreKeyboardInputAndTheDpadIsNot() {
-    #expect(InputRules.Raw(arrowRight: true).hasKeyboardInput)
-    #expect(!InputRules.Raw(dpadRight: true).hasKeyboardInput)
-  }
-
-  @Test(arguments: [
-    InputRules.Raw(dpadUp: true), .init(dpadDown: true),
-    .init(keyboardBothGo: true), .init(keyboardHold: true),
-  ])
-  func combatAndPreservedSpatialCommandsRespectModesAndReleaseGates(raw: InputRules.Raw) {
-    var gated = InputRules.State()
-    #expect(sample(raw, state: &gated) == .neutral)
-    #expect(gated.needsNeutralInput)
-    _ = sample(.init(), state: &gated)
-    #expect(!gated.needsNeutralInput)
-    #expect(sample(raw, state: &gated).command != nil)
-    for mode in [GameSession.Mode.paused, .dialogue] {
-      var state = InputRules.State(needsNeutralInput: false)
-      #expect(sample(raw, mode: mode, state: &state).command == nil)
-      #expect(sample(raw, state: &state).command == nil, "unavailable presses are consumed")
-      _ = sample(.init(), state: &state)
-      #expect(sample(raw, state: &state).command != nil)
-    }
-    #expect(InputRules.Raw(keyboardBothGo: true).hasKeyboardInput)
-    #expect(InputRules.Raw(keyboardHold: true).hasKeyboardInput)
-  }
-
-  @Test(arguments: [GameSession.Command.attack, .defend])
-  func touchCombatStancesHaveNoSpatialPoint(command: GameSession.Command) {
-    var state = InputRules.State(needsNeutralInput: false)
-    for point: InputRules.ScreenPoint? in [nil, Self.touchPoint] {
-      let order = InputRules.TouchOrder(command: command, point: point)
-      let input = sample(.init(touchOrder: order), state: &state)
-      #expect(input.command == command && input.commandPoint == nil)
-      #expect(sample(.init(), state: &state).command == nil)
-    }
-  }
-
-  @Test
-  func stanceCommandsKeepActionDodgeAndPausePriority() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let input = sample(
-      .init(controllerAction: true, controllerDodge: true, dpadUp: true), state: &state)
-    #expect(input.command == .attack && !input.actionPressed && !input.dodgePressed)
     _ = sample(.init(), state: &state)
-    let paused = sample(
-      .init(controllerPause: true, dpadDown: true), state: &state)
-    #expect(paused.pausePressed && paused.command == nil)
-    #expect(sample(.init(dpadDown: true), state: &state).command == nil)
+    #expect(!state.needsNeutralInput)
+    #expect(sample(.init(touchGuard: true), state: &state).guardHeld)
   }
 
-  @Test
-  func aTouchOrderPassesOnceWithItsPoint() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let order = InputRules.TouchOrder(command: .leftGoes, point: Self.touchPoint)
-    let given = sample(.init(touchOrder: order), state: &state)
-    #expect(given.command == .leftGoes)
-    #expect(given.commandPoint == Self.touchPoint)
-    #expect(sample(.init(), state: &state).command == nil)
-  }
-
-  @Test(arguments: [GameSession.Mode.exploring, .paused, .dialogue])
-  func theMenuMarkPassesOnlyWhileExploring(mode: GameSession.Mode) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let marked = sample(.init(touchMark: Self.touchPoint), mode: mode, state: &state)
-    #expect(marked.markPoint == (mode == .exploring ? Self.touchPoint : nil))
-    #expect(sample(.init(), mode: mode, state: &state).markPoint == nil)
-  }
-
-  @Test
-  func defendComesFirstWhenTwoDirectionsArriveTogether() {
-    var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(.init(dpadUp: true, dpadDown: true), state: &state).command == .defend)
-    #expect(
-      sample(.init(dpadUp: true, dpadDown: true, dpadLeft: true), state: &state).command
-        == .leftGoes, "only the fresh direction counts")
-  }
-
-  @Test
-  func anOrderDiscardsAnActionInTheSameSampleButNotAFormationPress() {
-    var state = InputRules.State(needsNeutralInput: false)
-    let both = sample(
-      .init(controllerAction: true, controllerFormation: true, dpadUp: true), state: &state)
-    #expect(both.command == .attack)
-    #expect(both.formationPressed)
-    #expect(!both.actionPressed)
-    #expect(!sample(.init(controllerAction: true), state: &state).actionPressed)
-  }
-
-  @Test(arguments: [GameSession.Mode.paused, .dialogue])
-  func pausedAndTalkingConsumeOrders(mode: GameSession.Mode) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let held = InputRules.Raw(dpadLeft: true)
-    #expect(sample(held, mode: mode, state: &state).command == nil)
-    #expect(sample(held, state: &state).command == nil, "consumed, not queued")
-    let order = InputRules.TouchOrder(command: .bothGo, point: Self.touchPoint)
-    #expect(sample(.init(touchOrder: order), mode: mode, state: &state).command == nil)
-    #expect(sample(.init(), state: &state).command == nil)
-  }
-
-  @Test(arguments: [false, true])
-  func theDpadAndArrowKeysMoveThePauseMenu(keyboard: Bool) {
-    var state = InputRules.State(needsNeutralInput: false)
-    let down = keyboard ? InputRules.Raw(arrowDown: true) : InputRules.Raw(dpadDown: true)
-    let up = keyboard ? InputRules.Raw(arrowUp: true) : InputRules.Raw(dpadUp: true)
-    #expect(sample(down, mode: .paused, state: &state).menuMove == 1)
-    #expect(sample(down, mode: .paused, state: &state).menuMove == 0)
-    #expect(sample(up, mode: .paused, state: &state).menuMove == -1)
-  }
-
-  @Test
-  func aTouchOrderDuringTheReleaseGateIsDropped() {
+  @Test(arguments: [Float.nan, .infinity, -.infinity])
+  func invalidStickCannotClearNeutralGate(value: Float) {
     var state = InputRules.State()
-    let order = InputRules.TouchOrder(command: .hold, point: Self.touchPoint)
-    #expect(sample(.init(touchOrder: order), state: &state) == .neutral)
-    #expect(!state.needsNeutralInput, "an order alone is not a held control")
-    #expect(sample(.init(), state: &state).command == nil)
+    #expect(sample(.init(stick: [value, 0]), state: &state) == .neutral)
+    #expect(state.needsNeutralInput)
+    _ = sample(.init(touchStick: [0, value]), state: &state)
+    #expect(state.needsNeutralInput)
+    _ = sample(.init(), state: &state)
+    #expect(!state.needsNeutralInput)
   }
 
-  /// ADR 0008: the touch Vibration button acts only in the pause menu, once for each press,
-  /// and not while the release gate waits for a held finger to lift.
   @Test
-  func theTouchVibrationButtonActsOnlyInThePauseMenuOnceTheGateIsOpen() {
-    let press = InputRules.Raw(touchVibration: true)
-    var gated = InputRules.State()
-    #expect(!sample(press, mode: .paused, state: &gated).vibrationPressed)
-    #expect(gated.needsNeutralInput)
+  func keyboardMovementOverridesStickIncludingOpposingKeys() {
     var state = InputRules.State(needsNeutralInput: false)
-    #expect(sample(press, state: &state) == .neutral)
-    #expect(sample(.init(), state: &state) == .neutral)
-    #expect(sample(press, mode: .dialogue, state: &state) == .neutral)
-    #expect(sample(.init(), mode: .paused, state: &state) == .neutral)
-    let chosen = sample(press, mode: .paused, state: &state)
-    #expect(chosen.vibrationPressed && !chosen.actionPressed)
-    #expect(!sample(press, mode: .paused, state: &state).vibrationPressed)
+    #expect(sample(.init(stick: [1, 0], up: true), state: &state).movement == [0, 1])
+    #expect(sample(.init(stick: [1, 0], up: true, down: true), state: &state).movement == .zero)
+    #expect(sample(.init(stick: [1, 0]), state: &state).movement == [1, 0])
+    #expect(
+      sample(.init(stick: [1, 0], touchStick: [0, 1], touchIsTouching: true), state: &state)
+        .movement == [0, 1])
   }
 
-  /// Square, X, Space or the touch Roll button: one roll per press while exploring.
   @Test
-  func aDodgeIsOneFreshPressWhileExploring() {
+  func attackAndDodgeAreFreshEdgesButGuardRemainsHeld() {
     var state = InputRules.State(needsNeutralInput: false)
-    for raw in [
-      InputRules.Raw(controllerDodge: true), InputRules.Raw(keyboardDodge: true),
-      InputRules.Raw(touchDodge: true),
-    ] {
-      #expect(sample(raw, state: &state).dodgePressed)
-      #expect(!sample(raw, state: &state).dodgePressed, "holding it rolls once")
-      _ = sample(.init(), state: &state)
-    }
-    // Pressed while paused or talking and still held afterwards, it does not roll: the press
-    // was consumed there, not queued.
-    for mode in [GameSession.Mode.paused, .dialogue] {
-      _ = sample(.init(controllerDodge: true), mode: mode, state: &state)
-      #expect(!sample(.init(controllerDodge: true), state: &state).dodgePressed, "\(mode)")
-      _ = sample(.init(), state: &state)
-    }
-    // A switch in the same sample discards it.
-    let both = sample(.init(controllerSwitch: true, controllerDodge: true), state: &state)
-    #expect(both.switchPressed && !both.dodgePressed)
+    let raw = InputRules.Raw(controllerAttack: true, controllerGuard: true, controllerDodge: true)
+    let first = sample(raw, state: &state)
+    #expect(first.attackPressed && first.dodgePressed && first.guardHeld)
+    let held = sample(raw, state: &state)
+    #expect(!held.attackPressed && !held.dodgePressed && held.guardHeld)
+    _ = sample(.init(), state: &state)
+    let fresh = sample(raw, state: &state)
+    #expect(fresh.attackPressed && fresh.dodgePressed)
   }
 
-  /// A held Square, X or Roll keeps the release gate closed, as every other button does.
   @Test
-  func aHeldDodgeKeepsTheReleaseGateClosed() {
-    for raw in [InputRules.Raw(controllerDodge: true), InputRules.Raw(touchDodge: true)] {
-      var state = InputRules.State()
-      #expect(sample(raw, state: &state) == .neutral)
-      #expect(state.needsNeutralInput)
-      _ = sample(.init(), state: &state)
-      #expect(!state.needsNeutralInput)
-    }
+  func pauseHasPriorityAndConsumesSimultaneousCombatEdges() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let raw = InputRules.Raw(
+      controllerAttack: true, controllerGuard: true, controllerDodge: true,
+      controllerPause: true, up: true)
+    #expect(sample(raw, state: &state) == .init(pausePressed: true))
+    #expect(sample(raw, mode: .paused, state: &state) == .neutral)
+    // The world re-arms this gate whenever Pause changes the mode.
+    state = InputRules.State()
+    #expect(sample(raw, mode: .paused, state: &state) == .neutral)
+    #expect(state.needsNeutralInput)
+    _ = sample(.init(), mode: .paused, state: &state)
+    #expect(!state.needsNeutralInput)
+    #expect(sample(.init(controllerPause: true), mode: .paused, state: &state).pausePressed)
+  }
+
+  @Test
+  func pausedAttackAndDodgeDoNotReplayWhenPlayResumes() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let held = InputRules.Raw(keyboardAttack: true, keyboardDodge: true)
+    #expect(sample(held, mode: .paused, state: &state) == .neutral)
+    #expect(sample(held, state: &state) == .neutral)
+    _ = sample(.init(), state: &state)
+    #expect(sample(held, state: &state).attackPressed)
+  }
+
+  @Test
+  func pauseNavigationAndConfirmationAreFreshAndDoNotMoveTheHero() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let down = InputRules.Raw(controllerAction: true, down: true)
+    let first = sample(down, mode: .paused, state: &state)
+    #expect(first.menuMove == 1 && first.actionPressed && first.movement == .zero)
+    #expect(sample(down, mode: .paused, state: &state) == .neutral)
+    #expect(sample(.init(arrowUp: true), mode: .paused, state: &state).menuMove == -1)
+    _ = sample(.init(), mode: .paused, state: &state)
+    #expect(sample(.init(dpadDown: true), mode: .paused, state: &state).menuMove == 1)
+  }
+
+  @Test
+  func aFreshConfirmIsAvailableForOutcomeRetryWithoutBecomingAnAttack() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let first = sample(.init(keyboardAction: true), state: &state)
+    #expect(first.actionPressed && !first.attackPressed)
+    #expect(sample(.init(keyboardAction: true), state: &state) == .neutral)
+  }
+
+  @Test
+  func touchRestartIsPausedOnlyAndNotRepeatedByHolding() {
+    var state = InputRules.State(needsNeutralInput: false)
+    #expect(sample(.init(touchRestart: true), state: &state) == .neutral)
+    #expect(sample(.init(touchRestart: true), mode: .paused, state: &state) == .neutral)
+    _ = sample(.init(), mode: .paused, state: &state)
+    #expect(sample(.init(touchRestart: true), mode: .paused, state: &state).restartPressed)
+    #expect(sample(.init(touchRestart: true), mode: .paused, state: &state) == .neutral)
   }
 
   private func sample(
-    _ raw: InputRules.Raw, mode: GameSession.Mode = .exploring, state: inout InputRules.State
+    _ raw: InputRules.Raw, mode: GameSession.Mode = .exploring,
+    state: inout InputRules.State
   ) -> InputRules.Input {
     let result = InputRules.resolve(raw, mode: mode, state: state)
     state = result.state

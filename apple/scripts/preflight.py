@@ -8,30 +8,9 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-#: The Git LFS files the app and its tests need: the Brooklyn Bridge's scene file, the models the
-#: game creates and its combat sounds (ADR 0008).
+#: The only runtime payloads used by the primitive duel. Historical bridge/model exports
+#: remain outside the app resource tree in blender/reference-exports.
 ASSETS = (
-    "apple/sources/content/BrooklynBridge.usdz",
-    "apple/sources/content/models/crawler.usdz",
-    "apple/sources/content/models/hostile.usdz",
-    "apple/sources/content/models/laura.usdz",
-    "apple/sources/content/models/miki.usdz",
-    "apple/sources/content/models/scout-drone.usdz",
-    "apple/sources/content/models/spider-bot-heavy.usdz",
-    "apple/sources/content/models/tom.usdz",
-    "apple/sources/content/sounds/assault-rifle.wav",
-    "apple/sources/content/sounds/dome-break.wav",
-    "apple/sources/content/sounds/dome-down.wav",
-    "apple/sources/content/sounds/dome-low.wav",
-    "apple/sources/content/sounds/dome-ready.wav",
-    "apple/sources/content/sounds/dome-up.wav",
-    "apple/sources/content/sounds/guard-leg-break.wav",
-    "apple/sources/content/sounds/guard-warning.wav",
-    "apple/sources/content/sounds/long-rifle.wav",
-    "apple/sources/content/sounds/minigun-spin.wav",
-    "apple/sources/content/sounds/minigun.wav",
-    "apple/sources/content/sounds/rifle.wav",
-    "apple/sources/content/sounds/shotgun.wav",
     "apple/sources/content/sounds/strike-block.wav",
     "apple/sources/content/sounds/strike-body.wav",
     "apple/sources/content/sounds/sword-swing.wav",

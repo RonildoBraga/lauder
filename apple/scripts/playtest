@@ -7,7 +7,7 @@ live in apple/sources/world/Playtest.swift. Results go to .local/playtest/<time>
 root unless --output is given; that folder is ignored by Git.
 
     ./apple/scripts/playtest           # every scenario, one after another
-    ./apple/scripts/playtest first-fight weapons
+    ./apple/scripts/playtest duel-attack duel-defence
     ./apple/scripts/playtest --list
 """
 
@@ -32,13 +32,7 @@ from preflight import check_assets, iphone_simulator, mask  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
-SCENARIOS = [
-    "bridge-walk", "first-fight", "fight-retry", "opening", "formations", "orders", "lock-on",
-    "weapons", "companions", "retaliation", "cover-spacing", "damage-feedback", "touch-fight", "robot-parts",
-    "drone-fight",
-    "companion-drones",
-    "crawler-fight",
-]
+SCENARIOS = ["duel-attack", "duel-defence", "duel-recovery"]
 
 
 def say(message):
@@ -209,10 +203,11 @@ def report(summary, images):
         say(f"    - {failure}")
     frame, sim = summary["frameMilliseconds"], summary["simulationMilliseconds"]
     say(f"    frame time {frame['mean']:.1f} ms mean, {frame['p99']:.1f} ms p99, {frame['max']:.1f} ms max")
-    say(f"    party update {sim['mean']:.3f} ms mean, {sim['max']:.3f} ms max (Simulator, not phone)")
-    say(f"    bodies overlapping {summary['overlapFraction'] * 100:.1f}% of frames; "
-        f"within 0.6 m of slot while moving {summary['withinSlotWhileMoving'] * 100:.0f}%; "
-        f"widest leader gap {summary['worstLeaderGap']:.2f} m")
+    say(f"    simulation {sim['mean']:.3f} ms mean, {sim['max']:.3f} ms max (Simulator, not phone)")
+    say(f"    {summary['outcome']}; hero health {summary['heroHealth']:.0f}, "
+        f"enemy health {summary['enemyHealth']:.0f}, stamina {summary['stamina']:.0f}")
+    say(f"    hero hits {summary['heroHits']}, blocks {summary['blocks']}, "
+        f"evasions {summary['evasions']}, retries {summary['retries']}")
     for image in images:
         say(f"    still: {image.relative_to(ROOT) if image.is_relative_to(ROOT) else image}")
 

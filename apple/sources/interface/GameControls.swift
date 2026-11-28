@@ -6,8 +6,7 @@ import Observation
 @Observable
 final class GameControls {
   enum Status: Equatable {
-    case inactive
-    case ready
+    case inactive, ready
   }
 
   typealias Input = InputRules.Input
@@ -16,20 +15,9 @@ final class GameControls {
   private(set) var actionSymbol: String?
   private(set) var sourceName = "Touch controls"
   private(set) var pauseButtonName = "Pause"
-  /// The button that leads as the next member, going round the party.
-  private(set) var switchButtonName = "Switch"
-  private(set) var fireButtonName = "Fire"
-  /// What aims the active weapon apart from movement, such as the right stick; touch has nothing,
-  /// and Fire takes the assisted target (ADR 0007).
-  private(set) var aimControlName: String?
-  private(set) var formationButtonName = "Formation"
-  /// The button that makes the leader dodge-roll.
-  private(set) var dodgeButtonName = "Roll"
-  /// The press that locks the aim on a hostile, such as R3, or a touch on the enemy.
-  private(set) var lockButtonName: String?
-  /// The button that brings the leader's other weapon into hand (ADR 0021).
-  private(set) var swapButtonName = "Swap"
-  private(set) var grenadeButtonName = "Grenade"
+  private(set) var attackButtonName = "Attack"
+  private(set) var guardButtonName = "Guard"
+  private(set) var dodgeButtonName = "Dodge"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -38,14 +26,12 @@ final class GameControls {
   @ObservationIgnored private var isActive = false
   @ObservationIgnored private var inputState = InputRules.State()
   @ObservationIgnored private var touchInput = TouchInput()
-  /// Whether the player chose touch controls while a controller is attached.
   @ObservationIgnored private(set) var prefersTouch = false
   @ObservationIgnored private var controller: GCController?
   @ObservationIgnored private var gamepad: GCExtendedGamepad?
   @ObservationIgnored private var observations: [NotificationCenter.ObservationToken] = []
   #if DEBUG
-    /// Replaces hardware input while a Simulator playtest runs (Debug builds only). It still
-    /// passes through InputRules, so release gates, Pause and switch edges behave as for a player.
+    /// Scripted Simulator input still passes through the production rules and release gate.
     @ObservationIgnored var scriptedRaw: InputRules.Raw?
   #endif
 
@@ -68,12 +54,10 @@ final class GameControls {
     }
   }
 
-  /// The controller the player is playing with, which vibrates in their hands (ADR 0008); nil
-  /// with touch controls or without a controller.
   var activeController: GCController? { touchControlsEnabled ? nil : controller }
 
   func requireNeutralInput() {
-    // Preserve held fingers on Pause: even a centred stick contact must be released.
+    // Pause must retain centred-stick contacts until every finger lifts.
     inputState = InputRules.State()
     if !needsNeutralInput { needsNeutralInput = true }
   }
@@ -107,30 +91,11 @@ final class GameControls {
     touchInput.setButton(button, isPressed: isPressed, generation: generation)
   }
 
-  /// Where the touch order menu has opened, so the world can fix the point on the ground.
-  func setTouchMark(_ point: InputRules.ScreenPoint, generation: Int) {
-    guard isActive, touchControlsEnabled else { return }
-    touchInput.setMark(point, generation: generation)
-  }
-
-  /// The touch order menu's choice, at the point where its finger pressed the ground.
-  func setTouchOrder(_ order: InputRules.TouchOrder, generation: Int) {
-    guard isActive, touchControlsEnabled else { return }
-    touchInput.setOrder(order, generation: generation)
-  }
-
-  func setTouchTarget(_ target: InputRules.TargetCommand, generation: Int) {
-    guard isActive, touchControlsEnabled else { return }
-    touchInput.setTarget(target, generation: generation)
-  }
-
   private func cancelTouches() {
     touchInput.cancel()
     touchGeneration = touchInput.generation
   }
 
-  /// This frame's input. Buttons are fresh press intents; callers must not detect the same edges
-  /// again.
   func sample(mode: GameSession.Mode) -> Input {
     guard isActive, status == .ready else { return .neutral }
     let keyboard = GCKeyboard.coalesced?.keyboardInput
@@ -138,50 +103,24 @@ final class GameControls {
       keyboard?.button(forKeyCode: code)?.isPressed ?? false
     }
     let touch = touchControlsEnabled ? touchInput.sample() : InputRules.Raw()
-    // The controller counts only while the touch controls are off.
     let pad = touchControlsEnabled ? nil : gamepad
     var raw = InputRules.Raw(
       stick: SIMD2(pad?.leftThumbstick.xAxis.value ?? 0, pad?.leftThumbstick.yAxis.value ?? 0),
-      aimStick: SIMD2(
-        pad?.rightThumbstick.xAxis.value ?? 0, pad?.rightThumbstick.yAxis.value ?? 0),
-      controllerAction: pad?.buttonA.isPressed == true,
+      controllerAttack: pad?.rightShoulder.isPressed == true,
+      controllerGuard: pad?.leftShoulder.isPressed == true,
+      controllerDodge: pad?.buttonB.isPressed == true,
       controllerPause: pad?.buttonMenu.isPressed == true,
-      // One switch, going round the party; Circle / B throws a grenade.
-      controllerSwitch: pad?.leftShoulder.isPressed == true,
-      controllerFire: pad?.rightTrigger.isPressed == true,
-      controllerFormation: pad?.buttonY.isPressed == true,
-      controllerDodge: pad?.buttonX.isPressed == true,
-      controllerLock: pad?.rightThumbstickButton?.isPressed == true,
-      controllerSwap: pad?.rightShoulder.isPressed == true,
-      controllerGrenade: pad?.buttonB.isPressed == true,
+      controllerAction: pad?.buttonA.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
-      dpadLeft: pad?.dpad.left.isPressed == true, dpadRight: pad?.dpad.right.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
-      keyboardAction: pressed(.keyE), keyboardPause: pressed(.escape),
-      keyboardSwitch: pressed(.keyQ),
-      keyboardFire: pressed(.keyF), keyboardFormation: pressed(.keyR),
-      keyboardDodge: pressed(.spacebar), keyboardLock: pressed(.keyO),
-      keyboardSwap: pressed(.keyT),
-      keyboardGrenade: pressed(.keyC),
-      keyboardBothGo: pressed(.keyG), keyboardHold: pressed(.keyH),
-      arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
-      arrowLeft: pressed(.leftArrow), arrowRight: pressed(.rightArrow),
-      aimUp: pressed(.keyI), aimDown: pressed(.keyK), aimLeft: pressed(.keyJ),
-      aimRight: pressed(.keyL),
+      keyboardAttack: pressed(.keyF), keyboardGuard: pressed(.keyQ),
+      keyboardDodge: pressed(.spacebar), keyboardPause: pressed(.escape),
+      keyboardAction: pressed(.keyE), arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
-      touchAction: touch.touchAction, touchPause: touch.touchPause, touchSwitch: touch.touchSwitch,
-      touchRestart: touch.touchRestart,
-      touchVibration: touch.touchVibration,
-      touchPanel: touch.touchPanel,
-      touchFire: touch.touchFire,
-      touchFormation: touch.touchFormation,
-      touchDodge: touch.touchDodge,
-      touchSwap: touch.touchSwap,
-      touchGrenade: touch.touchGrenade,
-      touchGround: touch.touchGround,
-      touchMark: touch.touchMark, touchOrder: touch.touchOrder, touchTarget: touch.touchTarget
-    )
+      touchAttack: touch.touchAttack, touchGuard: touch.touchGuard,
+      touchDodge: touch.touchDodge, touchPause: touch.touchPause,
+      touchRestart: touch.touchRestart)
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
     #endif
@@ -195,8 +134,7 @@ final class GameControls {
     return resolve(raw, mode: mode)
   }
 
-  /// Resolve one raw sample with this owner's edge history and release gate. Headless tests
-  /// call it directly to drive the same rules without hardware.
+  /// Headless tests use the same edge history and neutral gate as hardware samples.
   func resolve(_ raw: InputRules.Raw, mode: GameSession.Mode) -> Input {
     let result = InputRules.resolve(raw, mode: mode, state: inputState)
     inputState = result.state
@@ -259,50 +197,41 @@ final class GameControls {
   private func showController(_ profile: GCExtendedGamepad) {
     if profile is GCDualSenseGamepad {
       showSource(
-        "PS5 controller", action: profile.buttonA.sfSymbolsName, pause: "Options", cycle: "L1",
-        fire: "R2", aim: "Right stick", formation: "Triangle", dodge: "Square", lock: "R3",
-        swap: "R1", grenade: "Circle")
+        "PS5 controller", action: profile.buttonA.sfSymbolsName,
+        pause: "Options", attack: "R1", guardAction: "L1", dodge: "Circle")
     } else if profile is GCXboxGamepad {
       showSource(
-        "Xbox controller", action: profile.buttonA.sfSymbolsName, pause: "Menu", cycle: "LB",
-        fire: "RT", aim: "Right stick", formation: "Y", dodge: "X", lock: "RS", swap: "RB",
-        grenade: "B")
+        "Xbox controller", action: profile.buttonA.sfSymbolsName,
+        pause: "Menu", attack: "RB", guardAction: "LB", dodge: "B")
     } else {
       showSource(
-        "Game controller", action: profile.buttonA.sfSymbolsName, pause: "Menu",
-        cycle: "Left shoulder", fire: "Right trigger", aim: "Right stick", formation: "Button Y",
-        dodge: "Button X", lock: "Right stick press", swap: "Right shoulder", grenade: "Button B")
+        "Game controller", action: profile.buttonA.sfSymbolsName,
+        pause: "Menu", attack: "Right shoulder", guardAction: "Left shoulder", dodge: "Button B")
     }
   }
 
   private func showKeyboard() {
     showSource(
-      "Keyboard · WASD", action: "e.square", pause: "Escape", cycle: "Q", fire: "F",
-      aim: "IJKL", formation: "R", dodge: "Space", lock: "O", swap: "T", grenade: "C")
+      "Keyboard · WASD", action: "e.square", pause: "Escape",
+      attack: "F", guardAction: "Q", dodge: "Space")
   }
 
   private func showTouch() {
     showSource(
-      "Touch controls", action: "hand.tap", pause: "Pause", cycle: "Switch", fire: "Fire",
-      aim: nil, formation: "Formation", dodge: "Roll", lock: "Tap enemy", swap: "Swap",
-      grenade: "Grenade")
+      "Touch controls", action: "hand.tap", pause: "Pause",
+      attack: "Attack", guardAction: "Guard", dodge: "Dodge")
   }
 
   private func showSource(
-    _ name: String, action: String?, pause: String, cycle: String, fire: String, aim: String?,
-    formation: String, dodge: String, lock: String?, swap: String, grenade: String
+    _ name: String, action: String?, pause: String, attack: String,
+    guardAction: String, dodge: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
     if pauseButtonName != pause { pauseButtonName = pause }
-    if switchButtonName != cycle { switchButtonName = cycle }
-    if fireButtonName != fire { fireButtonName = fire }
-    if aimControlName != aim { aimControlName = aim }
-    if formationButtonName != formation { formationButtonName = formation }
+    if attackButtonName != attack { attackButtonName = attack }
+    if guardButtonName != guardAction { guardButtonName = guardAction }
     if dodgeButtonName != dodge { dodgeButtonName = dodge }
-    if lockButtonName != lock { lockButtonName = lock }
-    if swapButtonName != swap { swapButtonName = swap }
-    if grenadeButtonName != grenade { grenadeButtonName = grenade }
   }
 
   isolated deinit {

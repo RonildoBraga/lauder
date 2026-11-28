@@ -3,7 +3,7 @@
 **Date:** 17 November 2026\
 **Status:** Proposed encounter for design review, not implemented or assigned for implementation. The character definitions it uses are agreed; the encounter itself remains a proposal, a future exercise beyond the opening.
 
-Read the proposed [combat identities](../story/story-bible.md#combat-identities), the current [gameplay walkthrough](../gameplay-script.md) and the [combat design review gate](../prototype-plan.md#combat-design-review-gate) alongside this scene. Character histories, final dialogue, control bindings and combat tuning remain proposals.
+Read the proposed [combat identities](../story/story-bible.md#combat-identities), the current [gameplay walkthrough](../gameplay-script.md) and the [combat design review gate](../bridge-prototype-plan.md#combat-design-review-gate) alongside this scene. Character histories, final dialogue, control bindings and combat tuning remain proposals.
 
 ## Place in the journey
 
@@ -116,4 +116,4 @@ Health is not designed yet. So that exposure and retreat can be tested, the firs
 - Is switching to the right person under a telegraph quick enough on a phone, and does the HUD cue make the choice clear?
 - Does the placeholder hit rule make exposure matter without making a retreat feel like a failure?
 
-Formations and squad orders are built ([ADR 0003](../decisions/0003-squad-movement.md), phases S2 and S3). Regroup and the signature button remain proposed controls, not settled bindings; the gameplay script's [proposed input budget](../gameplay-script.md#future-squad-and-combat-design) is the starting point. Their design should serve these decisions rather than require a control for every behaviour. Beyond the placeholder hit rule, health, ammunition, cooldown, upgrade and enhancement-resource systems are not settled by this screenplay. No implementation, build, device run or performance result is claimed.
+Formations and squad orders are built ([ADR 0003](../decisions/0003-squad-movement.md), phases S2 and S3). Regroup and the signature button remain proposed controls, not settled bindings; the gameplay script's [proposed input budget](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/docs/gameplay-script.md#future-squad-and-combat-design) is the starting point. Their design should serve these decisions rather than require a control for every behaviour. Beyond the placeholder hit rule, health, ammunition, cooldown, upgrade and enhancement-resource systems are not settled by this screenplay. No implementation, build, device run or performance result is claimed.

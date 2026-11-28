@@ -1,6 +1,8 @@
 # tom
 
-Tom's pawn: a tapering eight-sided body with shoulders in his colour, a round head in the party's skin tone, and a dark beanie with a turned-up fold and a snow-white pompom. The beanie sits square on his head, so it is his lean as he walks, rather than his head, that shows which way he faces. The game creates it from its own scene file, `apple/sources/content/models/tom.usdz`, which saving this file exports ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)). The Brooklyn Bridge shows it in its Preview collection, at his start. It has no rig: the game moves the whole figure as he walks and rolls.
+**Preserved bridge reference:** this model is not packaged by the active graybox duel. Its [reference export](../../reference-exports/README.md), authoring history and licence remain available. Descriptions below refer to the bridge prototype.
+
+Tom's pawn: a tapering eight-sided body with shoulders in his colour, a round head in the party's skin tone, and a dark beanie with a turned-up fold and a snow-white pompom. The beanie sits square on his head, so it is his lean as he walks, rather than his head, that shows which way he faces. The game creates it from its own scene file, `blender/reference-exports/models/tom.usdz`, which saving this file exports ([ADR 0002](../../../docs/decisions/0002-blender-source-of-truth.md)). The Brooklyn Bridge shows it in its Preview collection, at his start. It has no rig: the game moves the whole figure as he walks and rolls.
 
 - **Source:** Made for Lauder with Claude's assistance on 25 November 2026 from primitive shapes, to the pawn of the [mock-up sheet](../../../art/party/README.md) that the maintainer chose and confirmed ([issue #142](https://github.com/RonildoBraga/lauder/issues/142)). It replaces his stand-in of 19 November 2026. No third-party models or textures were used.
 - **Licence:** The repository's [MIT licence](../../../LICENSE).

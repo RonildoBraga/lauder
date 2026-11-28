@@ -32,15 +32,17 @@ class LevelFile:
     scene: str
 
 
+#: Preserved authoring registrations. These export outside the active app resource tree;
+#: the graybox duel creates its scenery and actors in Swift and loads none of these outputs.
 LEVELS = {
     "brooklyn-bridge": LevelFile(
         key="brooklyn-bridge",
         title="Brooklyn Bridge",
         blend="blender/levels/brooklyn-bridge.blend",
-        layout="apple/sources/content/BrooklynBridgeLayout.swift",
+        layout="blender/reference-exports/BrooklynBridgeLayout.swift",
         owner="BrooklynBridge",
-        story="apple/sources/content/BrooklynBridge.swift",
-        scene="apple/sources/content/BrooklynBridge.usdz",
+        story="blender/reference-exports/BrooklynBridge.swift",
+        scene="blender/reference-exports/BrooklynBridge.usdz",
     ),
 }
 
@@ -54,15 +56,14 @@ ROLES = ("ground", "box", "area", "marker")
 ASSETS = "blender/assets"
 #: A model's name, which is also its folder's, its file's and its collection's.
 MODEL_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
-#: The models that the game creates itself while it plays, rather than a level placing them: the
-#: party and the hostiles (ADR 0002). Each gets a scene file of its own in
-#: SPAWNED_SCENES, named after it, which the game loads by the model's name.
+#: The bridge's preserved runtime-spawned models (ADR 0002). Their separate scene files remain
+#: available for authoring/export verification without being packaged by the current duel.
 SPAWNED = ("crawler", "hostile", "laura", "miki", "scout-drone", "spider-bot-heavy", "tom")
-SPAWNED_SCENES = "apple/sources/content/models"
+SPAWNED_SCENES = "blender/reference-exports/models"
 #: The robot's geometry values travel with its static, articulated scene file.
-MODEL_METADATA = {"spider-bot-heavy": "apple/sources/content/RobotModelGeometry.swift"}
+MODEL_METADATA = {"spider-bot-heavy": "blender/reference-exports/RobotModelGeometry.swift"}
 #: Human-readable credit exported alongside the applicable runtime model.
-MODEL_ACKNOWLEDGEMENTS = {"spider-bot-heavy": "apple/sources/content/acknowledgements.txt"}
+MODEL_ACKNOWLEDGEMENTS = {"spider-bot-heavy": "blender/reference-exports/acknowledgements.txt"}
 
 #: The script that builds the game and opens it in the iOS Simulator.
 PLAY_SCRIPT = "apple/scripts/play"

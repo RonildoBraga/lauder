@@ -1,10 +1,10 @@
 # ADR 0021 — Paired weapons
 
-**Status:** Accepted, with starting values to tune in play; implemented in the [paired weapons](../prototype-plan.md#paired-weapons) pass, [PR #158](https://github.com/RonildoBraga/lauder/pull/158). Played on the phone in TestFlight build 32, where the maintainer said the weapons and controls feel right ([playtest](../prototype-plan.md#build-32-playtest)).
+**Status:** Accepted, with starting values to tune in play; implemented in the [paired weapons](../bridge-prototype-plan.md#paired-weapons) pass, [PR #158](https://github.com/RonildoBraga/lauder/pull/158). Played on the phone in TestFlight build 32, where the maintainer said the weapons and controls feel right ([playtest](../bridge-prototype-plan.md#build-32-playtest)).
 
 **Date:** 26 November 2026
 
-**Damage revision, 27 November 2026:** The authorised [guard damage and feedback](../damage-feedback.md) revision retunes the weapon damage below and uses shared guard health with optional weak-point bonuses. The tables and consequences here retain PR #158's original starting values for comparison. The paired loadouts, controls, magazines, sword deflection and dome remain the basis of the implementation. [Explicit companion Attack/Defend](../companion-autonomy.md#attack-and-defend) supersedes the original leader-only firing consequence. Current source and verification belong to the [prototype plan](../prototype-plan.md#guard-damage-and-feedback--in-development).
+**Damage revision, 27 November 2026:** The authorised [guard damage and feedback](../damage-feedback.md) revision retunes the weapon damage below and uses shared guard health with optional weak-point bonuses. The tables and consequences here retain PR #158's original starting values for comparison. The paired loadouts, controls, magazines, sword deflection and dome remain the basis of the implementation. [Explicit companion Attack/Defend](../companion-autonomy.md#attack-and-defend) supersedes the original leader-only firing consequence. Current source and verification belong to the [prototype plan](../bridge-prototype-plan.md#guard-damage-and-feedback--in-development).
 
 ## Assignment
 
@@ -57,7 +57,7 @@ This replaces the native weapons of [ADR 0010](0010-squad-weapons.md) and the [s
 - **Lock-on and aim:** the lock of [ADR 0020](0020-lock-on.md), the right stick and assisted aim work with every gun. The lock turns Laura towards her target for the sword.
 - **Presentation:**
   - Each weapon has its own simple shape. Laura's blade glows in her colour, and Tom's dome is see-through in his colour, so no colour joins the palette.
-  - **Sounds** ([weapon sounds](../prototype-plan.md#weapon-sounds--in-development), [issue #162](https://github.com/RonildoBraga/lauder/issues/162)). In PR #158 each weapon borrowed the nearest existing sound and a swing was silent. Now each has its own generated sound:
+  - **Sounds** ([weapon sounds](../bridge-prototype-plan.md#weapon-sounds--in-development), [issue #162](https://github.com/RonildoBraga/lauder/issues/162)). In PR #158 each weapon borrowed the nearest existing sound and a swing was silent. Now each has its own generated sound:
     - the long rifle, a hard crack and a long echo;
     - the assault rifle, a short punchy round;
     - the shotgun, a deep blast with the hiss of its pellets;
@@ -77,4 +77,4 @@ This replaces the native weapons of [ADR 0010](0010-squad-weapons.md) and the [s
 
 ## Verification
 
-Recorded in the prototype plan under [Paired weapons](../prototype-plan.md#paired-weapons).
+Recorded in the prototype plan under [Paired weapons](../bridge-prototype-plan.md#paired-weapons).

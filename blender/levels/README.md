@@ -1,6 +1,8 @@
 # Levels
 
-Each Blender file here is a level's source ([ADR 0002](../../docs/decisions/0002-blender-source-of-truth.md)). Saving it in Blender, with the Lauder extension, exports the files the game reads, as [Editing a level in Blender](../../CONTRIBUTING.md#editing-a-level-in-blender) describes.
+These are preserved bridge-authoring sources. The active graybox duel creates its scenery in Swift and loads none of these exports. Saving in Blender keeps the [reference exports](../reference-exports/README.md) current; **Play** launches the current duel, not this historical bridge. The [checkpoint record](../../docs/milestones/bridge-prototype.md) explains how to run the bridge version.
+
+Each Blender file here is a level's source ([ADR 0002](../../docs/decisions/0002-blender-source-of-truth.md)). [Editing a level in Blender](../../CONTRIBUTING.md#editing-a-level-in-blender) describes the retained authoring tools.
 
 ## brooklyn-bridge.blend
 
@@ -11,7 +13,7 @@ The original environment pass preserved the six tower collision boxes, markers, 
 - **Made** for Lauder on 19 November 2026, by the Lauder extension's Load, from the hand-kept layout and palette files that it replaces. Codex authored the environment pass directly in Blender through MCP on 23 November 2026. It has linked no exported [models](../assets/README.md) since the snow buried its vehicles on 20 November 2026; linked party models remain preview-only. It holds no third-party assets or textures.
 - **Licence:** the repository's MIT licence.
 - **Size:** about 130 KiB, stored with Git LFS. A copy without its payload is a small pointer file; run `git lfs pull`.
-- **Exports:** `apple/sources/content/BrooklynBridge.usdz`, about 46 KiB, and `apple/sources/content/BrooklynBridgeLayout.swift`. Saving queues the standard background exporter; `blender/level-exports.json` records the fingerprints of both and of the level file.
+- **Exports:** `blender/reference-exports/BrooklynBridge.usdz`, about 46 KiB, and `blender/reference-exports/BrooklynBridgeLayout.swift`. Saving queues the standard background exporter; `blender/level-exports.json` records the fingerprints of both and of the level file.
 - **Current visual budget:** 22 mesh objects, 2,804 triangles, six materials and 39 used object/material partitions in the whole exported scene. The original environment pass had 19 meshes and 2,724 triangles, before the supply case and two cover blocks. The runtime layout retains two suns, one casting shadows. Partitions are an authoring measure, not measured GPU draw calls or a phone performance result.
 
 The C integration adds one nonblocking `bridge-supply-case` Visual mesh at game coordinates `[-8.5, -8]`, its `supply.case` marker, an outgoing west-side search area and `robot.exit` area. Tom's spawn marker moves to `[2, -3]` for the case/ambush framing. The six tower blockers, ground, camera B and lights are unchanged. The C guard is spawned by gameplay from its own model export, so it is not duplicated as bridge scenery.

@@ -1,476 +1,204 @@
 import GameController
 import RealityKit
 import SwiftUI
-import UIKit
 
 @MainActor
 struct GameView: View {
   @Environment(\.scenePhase) private var scenePhase
-  @State private var viewport: CGSize = .zero
   let world: GameWorld
 
   var body: some View {
-    let talking = world.session.mode == .dialogue
-    ZStack(alignment: .top) {
+    ZStack {
       HUDStyle.snow.ignoresSafeArea()
       RealityView { [world] content in
         content.camera = .virtual
         content.add(world.root)
         world.attach(
-          content.subscribe(to: SceneEvents.Update.self) {
-            [weak world] event in
-            guard let world else { return }
-            world.step(deltaTime: event.deltaTime)
-            // Do not restart feedback after the world has stopped.
-            guard world.isActive else { return }
-            Self.playFeedback(for: world)
-          }
-        )
+          content.subscribe(to: SceneEvents.Update.self) { [weak world] event in
+            world?.step(deltaTime: event.deltaTime)
+          })
       }
       .realityViewCameraControls(.none)
       .ignoresSafeArea()
-      .onGeometryChange(for: CGSize.self) {
-        $0.size
-      } action: {
-        viewport = $0
+
+      VStack(spacing: 10) {
+        topBar
+        Spacer(minLength: 0)
+        if !world.isPaused && world.simulation.outcome == .fighting {
+          Text(world.observation)
+            .font(.caption.weight(.medium))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frostedPanel()
+            .frame(maxWidth: 300)
+            .allowsHitTesting(false)
+        }
+      }
+      .padding(16)
+
+      if world.isPaused {
+        Color.black.opacity(0.3).ignoresSafeArea().allowsHitTesting(false)
+        pauseMenu
+      } else if world.simulation.outcome != .fighting {
+        outcomePanel
       }
 
-      if world.session.mode == .exploring, world.isActive, world.fade == 0,
-        viewport.width > 0, viewport.height > 0
-      {
-        DamageNumbers(
-          labels: world.damageFeedback.labels,
-          projection: world.projection(aspect: Float(viewport.width / viewport.height))
+      if world.controls.needsNeutralInput {
+        Text("Release all controls to continue")
+          .font(.caption.weight(.semibold))
+          .padding(10)
+          .frostedPanel()
+          .frame(maxHeight: .infinity, alignment: .top)
+          .padding(.top, 112)
+          .allowsHitTesting(false)
+      }
+
+      if world.controls.touchControlsEnabled {
+        // Never unmount on Pause: every captured finger must lift to clear the neutral gate.
+        TouchControls(
+          controls: world.controls, generation: world.controls.touchGeneration,
+          mode: world.session.mode
         )
         .ignoresSafeArea()
       }
-
-      HStack(alignment: .top, spacing: 8) {
-        if world.showsPanel {
-          status(talking: talking)
-            .layoutPriority(1)
-        }
-        Spacer(minLength: 0)
-        VStack(spacing: 6) {
-          if let compass = world.compass, !world.isPaused {
-            compassChip(compass)
-          }
-          if !world.showsPanel, let target = world.guardTarget, !world.isPaused {
-            Label(
-              "Guard targeting \(target.displayName)", systemImage: "exclamationmark.triangle.fill"
-            )
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(HUDStyle.threat)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frostedPanel(cornerRadius: 8)
-            .allowsHitTesting(false)
-          }
-          if world.controls.touchControlsEnabled, !talking, !world.isPaused,
-            world.controls.status == .ready, !world.controls.needsNeutralInput,
-            world.session.combatStance == .defend,
-            let health = world.guardHealth, health > 0
-          {
-            Text("Hold ground · slide to Attack or Defend")
-              .font(.caption2.weight(.medium))
-              .multilineTextAlignment(.center)
-              .frame(maxWidth: 230)
-              .padding(.horizontal, 10)
-              .padding(.vertical, 6)
-              .frostedPanel(cornerRadius: 8)
-              .allowsHitTesting(false)
-          }
-          if !world.showsPanel, !world.isPaused, world.controls.status == .ready,
-            world.controls.needsNeutralInput
-          {
-            Text(releaseGuidance)
-              .font(.caption.weight(.semibold))
-              .multilineTextAlignment(.center)
-              .frame(maxWidth: 230)
-              .padding(.horizontal, 10)
-              .padding(.vertical, 6)
-              .frostedPanel(cornerRadius: 8)
-              .allowsHitTesting(false)
-          }
-        }
-        Spacer(minLength: 0)
-        VStack(alignment: .trailing, spacing: 10) {
-          if world.controls.touchControlsEnabled {
-            // The touch surface owns Pause/Resume in this top-right space.
-            Color.clear.frame(width: 100, height: 44).allowsHitTesting(false)
-          } else {
-            Text("\(world.controls.pauseButtonName) · Pause").font(.caption2)
-              .padding(.horizontal, 10)
-              .padding(.vertical, 6)
-              .frostedPanel(cornerRadius: 8)
-          }
-          if world.controls.hasController {
-            Button {
-              if world.controls.touchControlsEnabled {
-                world.controls.useController()
-              } else {
-                world.controls.useTouchControls()
-              }
-            } label: {
-              Text(world.controls.touchControlsEnabled ? "Use controller" : "Use touch controls")
-                .font(.caption)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .frostedPanel(cornerRadius: 22)
-            }
-            .buttonStyle(.plain)
-          }
-        }
-        .fixedSize(horizontal: true, vertical: false)
-      }
-      .padding()
-
-      if !world.controls.touchControlsEnabled && !talking && !world.isPaused
-        && world.controls.status == .ready
-      {
-        hints
-      }
-
-      if let line = world.session.currentLine {
-        // Pause keeps the conversation at this line; Resume returns to it.
-        VStack(alignment: .leading, spacing: 6) {
-          Text(line.speaker).font(.headline)
-          Text(line.text).fixedSize(horizontal: false, vertical: true)
-          if !world.controls.touchControlsEnabled {
-            Label("Continue", systemImage: world.controls.actionSymbol ?? "a.circle")
-              .font(.caption).foregroundStyle(HUDStyle.muted)
-          }
-        }
-        .frame(maxWidth: 400, alignment: .leading)
-        .padding(14)
-        .frostedPanel(cornerRadius: 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .padding(.bottom, 20)
-        .allowsHitTesting(false)
-      }
-
-      if world.fade > 0 {
-        // An encounter starting again after the last allowed hit.
-        Color.black.opacity(Double(world.fade)).ignoresSafeArea().allowsHitTesting(false)
-      }
-
-      if world.controls.status != .ready {
-        Color.black.opacity(0.35).ignoresSafeArea().allowsHitTesting(false)
-        VStack(spacing: 12) {
-          Text(world.controls.sourceName).font(.title2.bold())
-        }
-        .padding(28)
-        .frostedPanel(cornerRadius: 18)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(false)
-      } else if world.isPaused {
-        Color.black.opacity(0.35).ignoresSafeArea().allowsHitTesting(false)
-        GeometryReader { geometry in
-          pauseMenu(compact: geometry.size.height < 440)
-        }
-      }
-
-      if world.controls.touchControlsEnabled {
-        TouchControls(
-          controls: world.controls, generation: world.controls.touchGeneration,
-          actionTitle: touchActionTitle,
-          nextLeaderName: world.session.nextLeader?.displayName,
-          showsFire: world.showsWeapon,
-          swapTitle: world.otherWeaponName,
-          showsFormation: world.session.formationsAvailable,
-          formationTitle: formationAction,
-          orderNames: orderNames,
-          vibrationTitle: vibrationTitle,
-          panelTitle: world.showsPanel ? "Status panel: On" : "Status panel: Off",
-          mode: world.session.mode,
-          grenadeTitle: world.grenadeStatus, showsGrenade: world.session.leader == .tom)
-      }
     }
     .handlesGameControllerEvents(matching: .gamepad)
-    // The app keeps the screen awake while the game is in the foreground; this world only
-    // follows whether it is active.
     .onChange(of: scenePhase, initial: true) { _, phase in
-      world.setApplicationActive(phase == .active)
-      if phase != .active { CombatFeedback.shared.suspend() }
+      world.setActive(phase == .active)
     }
-    .onDisappear {
-      world.stop()
-      CombatFeedback.shared.suspend()
-    }
+    .onDisappear { world.stop() }
   }
 
-  /// Keep release guidance readable on small landscapes; touch buttons own their captures.
-  private func pauseMenu(compact: Bool) -> some View {
-    VStack(spacing: compact ? 6 : 14) {
-      Text("Paused").font(compact ? .title3.bold() : .title2.bold())
-      if world.controls.touchControlsEnabled {
-        Text(
-          "Tap Resume to continue or Restart to begin a new run."
-        )
-      } else {
-        // The minimal pause menu: it opens on Resume; up or down chooses, action confirms.
-        VStack(spacing: compact ? 4 : 6) {
-          ForEach(world.session.availablePauseChoices, id: \.self) { choice in
-            let chosen = choice == world.session.pauseChoice
-            Text(pauseChoiceName(choice))
-              .font(.headline)
-              .lineLimit(1)
-              .minimumScaleFactor(0.75)
-              .frame(width: 250, height: compact ? 28 : 36)
-              .background(
-                chosen ? HUDStyle.ink.opacity(0.1) : .clear,
-                in: RoundedRectangle(cornerRadius: 8)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                  .stroke(chosen ? HUDStyle.ink.opacity(0.6) : .clear)
-              )
-          }
+  private var topBar: some View {
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 6) {
+        Text("GRAYBOX DUEL").font(.caption2.weight(.semibold))
+        HStack(spacing: 14) {
+          meter(
+            "Health", value: world.simulation.hero.health,
+            maximum: DuelSimulation.heroMaxHealth, tint: HUDStyle.threat)
+          meter(
+            "Stamina", value: world.simulation.hero.stamina,
+            maximum: DuelSimulation.maxStamina, tint: HUDStyle.stamina)
         }
-        Text(world.level.restartNote).font(compact ? .caption2 : .caption)
-        HStack(spacing: compact ? 8 : 12) {
-          Text(compact ? "↑ / ↓ Choose" : "Up or down to choose").font(.caption2)
-          Label("Confirm", systemImage: world.controls.actionSymbol ?? "a.circle")
-            .font(.caption)
-          Text("\(world.controls.pauseButtonName) · Resume").font(.caption)
-        }
-        .foregroundStyle(HUDStyle.muted)
+        meter(
+          "Enemy", value: world.simulation.enemy.health,
+          maximum: DuelSimulation.enemyMaxHealth, tint: HUDStyle.ink)
+        Text(enemyIntent).font(.caption2.weight(.semibold))
       }
-      if world.controls.needsNeutralInput {
-        Text(releaseGuidance).font(.caption2).lineLimit(2)
-      }
-      // Which build this is, as TestFlight lists it, so a tester knows what they play.
-      Text("Lauder \(AppVersion.current)").font(.caption2).foregroundStyle(HUDStyle.muted)
-    }
-    .padding(compact ? 16 : 28)
-    .frostedPanel(cornerRadius: 18)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .allowsHitTesting(false)
-  }
-
-  /// Plays this frame's events from the current camera target, with vibration on the selected
-  /// input device and the trigger armed only while the leader can fire.
-  private static func playFeedback(for world: GameWorld) {
-    let device: CombatFeedback.Device =
-      !world.vibrationEnabled
-      ? .none
-      : world.controls.touchControlsEnabled
-        ? .phone : world.controls.activeController.map { .controller($0) } ?? .none
-    CombatFeedback.shared.play(
-      world.takeCombatEvents(), listener: world.listenerPoint, right: world.screenRight,
-      device: device, triggerWeapon: world.weaponKind)
-  }
-
-  /// What the pause menu calls each choice.
-  private func pauseChoiceName(_ choice: GameSession.PauseChoice) -> String {
-    switch choice {
-    case .resume: "Resume"
-    case .restart: "Restart"
-    case .vibration: vibrationTitle
-    case .statusPanel: world.panelHidden ? "Status panel: Hidden" : "Status panel: Shown"
-    }
-  }
-
-  /// The pause menu's Vibration choice, as it now stands (ADR 0008).
-  private var vibrationTitle: String {
-    world.vibrationEnabled ? "Vibration: On" : "Vibration: Off"
-  }
-
-  /// Where to go: an arrow turned towards the story's current goal, its name and how far away
-  /// it is, in a small chip at the top centre, so the white plain still shows the way.
-  private func compassChip(_ compass: GameWorld.Compass) -> some View {
-    HStack(spacing: 6) {
-      Image(systemName: "location.north.fill")
-        .rotationEffect(.radians(Double(compass.angle)))
-        .fixedSize()
-      Text("\(compass.name) · \(compass.metres) m")
-        .lineLimit(2)
-        .truncationMode(.tail)
-    }
-    .font(.footnote.weight(.semibold))
-    .padding(.horizontal, 12)
-    .padding(.vertical, 6)
-    .frostedPanel(cornerRadius: 14)
-    .frame(maxWidth: 280)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel("Goal: \(compass.name), \(compass.metres) metres")
-    .allowsHitTesting(false)
-  }
-
-  /// The status panel, small and with just the essentials: who leads, marked, and who follows,
-  /// with the leader's hits during a fight and the squad's
-  /// formation. A new objective or line shows for a few seconds; a threat, the weapon's rounds,
-  /// a warning or the release guidance only while they matter. The panel button hides it, and
-  /// shows it again.
-  private func status(talking: Bool) -> some View {
-    VStack(alignment: .leading, spacing: 3) {
-      HStack(alignment: .top, spacing: 10) {
-        ForEach(world.session.party, id: \.self) { member in
-          let leading = member == world.session.leader
-          let targeted = member == world.guardTarget
-          VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 2) {
-              if targeted {
-                Image(systemName: "exclamationmark.triangle.fill")
-                  .accessibilityHidden(true)
-              }
-              Text(member.displayName)
-                .fontWeight(leading || targeted ? .semibold : .regular)
-                .underline(leading)
-            }
-            .foregroundStyle(targeted ? HUDStyle.threat : HUDStyle.ink)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(
-              targeted ? "\(member.displayName), guard target" : member.displayName)
-            if world.session.inEncounter, leading || targeted || world.session.hits(of: member) > 0
-            {
-              // The placeholder hit rule: three hits, shown below the name.
-              Text(hitPips(of: member)).foregroundStyle(HUDStyle.threat)
-            }
-          }
-          .fixedSize(horizontal: true, vertical: false)
-        }
-      }
-      .font(.caption)
-      if world.session.formationsAvailable {
-        // Keep formation text out of the names' row, including when a companion is threatened.
-        Text("\(world.session.formation.name) · \(world.session.squadState)")
-          .font(.caption).foregroundStyle(HUDStyle.muted)
-      }
-      Text(world.session.combatStance == .attack ? "Squad: Attack" : "Squad: Defend")
-        .font(.caption.weight(.semibold))
-      if world.objectiveIsFresh {
-        Text(world.objective).font(.subheadline.weight(.semibold))
-      }
-      // During a conversation its panel carries the words; the result of the step appears here
-      // once the conversation ends.
-      if !talking && world.lineIsFresh {
-        Text(world.observation).font(.caption)
-      }
-      if let threat = world.threat {
-        Text(threat).font(.caption.bold()).foregroundStyle(HUDStyle.threat)
-      }
-      if let health = world.guardHealth {
-        VStack(alignment: .leading, spacing: 3) {
-          HStack {
-            Text("Guard")
-            Spacer(minLength: 4)
-            Text("\(health)/\(GuardStrategy.maximumHealth)").monospacedDigit()
-          }
-          .font(.caption.weight(.semibold))
-          ProgressView(value: Double(health), total: Double(GuardStrategy.maximumHealth))
-            .tint(HUDStyle.ink)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Guard health")
-        .accessibilityValue("\(health) of \(GuardStrategy.maximumHealth)")
-      }
-      if let hint = world.guardHint {
-        Text(hint).font(.caption.weight(.semibold))
-      }
-      if !world.companionStatus.isEmpty {
-        Text(world.companionStatus).font(.caption)
-      }
-      if world.showsAmmo {
-        Text(world.weaponStatus).font(.caption)
-      }
-      if let diagnostic = world.diagnostic {
-        Text(diagnostic).font(.caption).foregroundStyle(HUDStyle.warning)
-      }
-      if world.controls.status == .ready && world.controls.needsNeutralInput
-        && !world.isPaused
-      {
-        Text(releaseGuidance).font(.caption)
-      }
-    }
-    .frame(maxWidth: 220, alignment: .leading)
-    .padding(.horizontal, 10)
-    .padding(.vertical, 7)
-    .frostedPanel()
-    .allowsHitTesting(false)
-  }
-
-  /// A controller's or keyboard's controls that apply now, in one small strip at the bottom
-  /// left, out of the way of the scene. Touch shows its own buttons instead.
-  private var hints: some View {
-    let look = "Look around"
-    var others: [String] = []
-    if world.showsWeapon {
-      others.append("\(world.controls.fireButtonName) · Fire")
-      if world.session.leader == .tom {
-        others.append("\(world.controls.grenadeButtonName) · \(world.grenadeStatus)")
-      }
-      // The other of the leader's two weapons (ADR 0021).
-      others.append("\(world.controls.swapButtonName) · \(world.otherWeaponName)")
-      others.append("\(world.controls.dodgeButtonName) · Roll")
-      if let lock = world.controls.lockButtonName, world.lockedHostile != nil {
-        // The lock aims, so the stick does not until it lets go (ADR 0020).
-        others.append("\(lock) · Next target")
-        others.append("\(lock) twice · Let go")
-      } else {
-        if let aim = world.controls.aimControlName { others.append("\(aim) · Aim") }
-        if let lock = world.controls.lockButtonName { others.append("\(lock) · Lock on") }
-      }
-    }
-    if let next = world.session.nextLeader {
-      others.append("\(world.controls.switchButtonName) · Lead as \(next.displayName)")
-    }
-    if world.session.formationsAvailable {
-      others.append("\(world.controls.formationButtonName) · \(formationAction)")
-    }
-    if let left = world.session.leftCompanion, let right = world.session.rightCompanion {
-      // The D-pad's or arrow keys' orders, with the companions in their fixed order.
-      others.append("◀ \(left.displayName) · \(right.displayName) ▶ · ▲ Attack · ▼ Defend")
-      if world.controls.sourceName == "Keyboard · WASD" {
-        others.append("G · Both go · H · Hold")
-      }
-    }
-    let symbol = Image(systemName: world.controls.actionSymbol ?? "a.circle")
-    let rest = others.map { "     \($0)" }.joined()
-    return Text("\(symbol) \(look)\(rest)")
-      .font(.caption2)
-      .foregroundStyle(HUDStyle.muted)
-      .padding(.horizontal, 10)
-      .padding(.vertical, 6)
-      .frostedPanel(cornerRadius: 8)
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-      .padding()
+      .padding(10)
+      .frostedPanel()
       .allowsHitTesting(false)
-  }
-
-  /// The touch action button: Restart in the pause menu, Continue in a conversation, otherwise
-  /// the leader's action here or Look.
-  private var touchActionTitle: String {
-    switch world.session.mode {
-    case .paused: "Restart"
-    case .dialogue: "Continue"
-    case .exploring: "Look"
+      Spacer(minLength: 0)
+      VStack(alignment: .trailing, spacing: 6) {
+        Text(world.controls.sourceName).font(.caption2)
+        if world.controls.hasController {
+          Button {
+            if world.controls.touchControlsEnabled {
+              world.controls.useController()
+            } else {
+              world.controls.useTouchControls()
+            }
+          } label: {
+            Text(world.controls.touchControlsEnabled ? "Use controller" : "Use touch controls")
+              .font(.caption2.weight(.medium))
+              .padding(.horizontal, 12)
+              .frame(minHeight: 44)
+              .frostedPanel()
+          }
+          .buttonStyle(.plain)
+        }
+        if !world.controls.touchControlsEnabled {
+          Text("\(world.controls.pauseButtonName) · Pause")
+            .font(.caption2)
+          Text(
+            "\(world.controls.attackButtonName) Attack · \(world.controls.guardButtonName) Guard"
+          )
+          .font(.caption2)
+          Text("\(world.controls.dodgeButtonName) Dodge")
+            .font(.caption2)
+        } else {
+          Text("Keyboard: WASD · F Attack\nQ Guard · Space Dodge · Esc Pause")
+            .font(.caption2)
+            .multilineTextAlignment(.trailing)
+            .allowsHitTesting(false)
+        }
+      }
+      .padding(8)
+      .frostedPanel()
+      // The native touch Pause/Restart targets own the far-right column.
+      .padding(.trailing, world.controls.touchControlsEnabled ? 110 : 0)
     }
   }
 
-  /// The formation button calls companions back after an order (ADR 0003).
-  private var formationAction: String {
-    return world.session.orders.isEmpty ? "Formation" : "Follow"
+  private func meter(_ name: String, value: Float, maximum: Float, tint: Color) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text("\(name) \(Int(max(0, value).rounded(.up)))")
+        .font(.caption2.monospacedDigit())
+      ProgressView(value: Double(min(1, max(0, value / maximum))))
+        .tint(tint)
+    }
+    .frame(width: 108)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(name)
+    .accessibilityValue("\(Int(max(0, value))) of \(Int(maximum))")
   }
 
-  /// The companions the touch order menu offers on its left and right, once orders are offered.
-  private var orderNames: (left: String, right: String)? {
-    guard world.session.ordersAvailable, let left = world.session.leftCompanion,
-      let right = world.session.rightCompanion
-    else { return nil }
-    return (left.displayName, right.displayName)
+  private var enemyIntent: String {
+    guard let action = world.simulation.enemy.action else {
+      return world.simulation.outcome == .fighting ? "Watch the enemy's weapon" : "Duel complete"
+    }
+    let name = action.kind == .thrust ? "Thrust" : "Sweep"
+    switch action.phase {
+    case .windup: return "\(name) · preparing"
+    case .active: return "\(name) · striking"
+    case .recovery: return "Recovering · your opening"
+    }
   }
 
-  /// A member's hits left in this encounter, then those taken.
-  private func hitPips(of member: PartyMember) -> String {
-    let taken = min(world.session.hits(of: member), GameSession.hitsAllowed)
-    return String(repeating: "●", count: GameSession.hitsAllowed - taken)
-      + String(repeating: "○", count: taken)
+  private var pauseMenu: some View {
+    VStack(spacing: 10) {
+      Text("Paused").font(.title3.bold())
+      if world.controls.touchControlsEnabled {
+        Text("Use Resume or Restart at the top right.").font(.caption)
+      } else {
+        ForEach(world.session.availablePauseChoices, id: \.self) { choice in
+          Text(choice == .resume ? "Resume" : "Restart")
+            .font(.headline)
+            .frame(width: 190, height: 36)
+            .background(
+              world.session.pauseChoice == choice ? HUDStyle.ink.opacity(0.1) : .clear,
+              in: RoundedRectangle(cornerRadius: 8))
+        }
+        Label("Confirm · Up/Down chooses", systemImage: world.controls.actionSymbol ?? "a.circle")
+          .font(.caption)
+      }
+      Text("Release Guard to turn freely and regain stamina.")
+        .font(.caption2)
+    }
+    .padding(18)
+    .frostedPanel(cornerRadius: 14)
+    .allowsHitTesting(false)
   }
 
-  private var releaseGuidance: String {
-    world.controls.touchControlsEnabled
-      ? "Lift your fingers and release all keys to continue."
-      : "Centre the stick and release all buttons and keys to continue."
+  private var outcomePanel: some View {
+    VStack(spacing: 12) {
+      Text(world.simulation.outcome == .won ? "Duel won" : "Try another approach")
+        .font(.title3.bold())
+      Text("Read the preparation. Defend, then answer.")
+        .font(.caption)
+      Button("Retry") { world.retry() }
+        .font(.headline)
+        .buttonStyle(.borderedProminent)
+        .tint(HUDStyle.ink)
+        .frame(minHeight: 44)
+      if !world.controls.touchControlsEnabled {
+        Label("Retry", systemImage: world.controls.actionSymbol ?? "a.circle")
+          .font(.caption)
+      }
+    }
+    .padding(20)
+    .frostedPanel(cornerRadius: 14)
   }
 }

@@ -5,10 +5,6 @@ import simd
 enum Movement {
   /// Stick or touch movement smaller than this counts as none.
   static let deadZone: Float = 0.15
-  /// How fast the leader turns, in radians a second: two full turns, quick but never a snap
-  /// (ADR 0008). Companions turn a little slower.
-  static let leaderTurnRate: Float = 4 * .pi
-  static let companionTurnRate: Float = 3 * .pi
 
   /// The turn from `current` towards `wanted`, by at most `limit` radians either way.
   static func turn(from current: Float, towards wanted: Float, limit: Float) -> Float {
@@ -27,13 +23,6 @@ enum Movement {
     let strength = (min(magnitude, 1) - deadZone) / (1 - deadZone)
     let ground = (right * input.x + forward * input.y) / magnitude * strength
     return SIMD3(ground.x, 0, ground.y)
-  }
-
-  /// The direction on the ground, as a unit vector, that the right stick aims under the camera,
-  /// whatever its tilt beyond the dead zone (ADR 0007).
-  static func aim(for input: SIMD2<Float>, cameraOffset: SIMD3<Float>) -> SIMD2<Float> {
-    let (forward, right) = axes(cameraOffset: cameraOffset)
-    return simd_normalize(right * input.x + forward * input.y)
   }
 
   /// The full-tilt stick input that moves the leader along a direction on the ground: the

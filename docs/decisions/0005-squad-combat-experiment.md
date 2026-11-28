@@ -19,9 +19,9 @@ The maintainer's goals stand:
 - **“Occasional combat; exploration and salvage lead”**.
 - Companions who **“behave like a coordinated squad of soldiers rather than just following the player”**, with **“simple controls that still provide meaningful tactical depth”**.
 
-The prototype plan's [combat design review gate](../prototype-plan.md#combat-design-review-gate) asks that the open design choices be settled with the maintainer before any combat beyond the opening. A bounded greybox experiment then needs its own assignment.
+The prototype plan's [combat design review gate](../bridge-prototype-plan.md#combat-design-review-gate) asks that the open design choices be settled with the maintainer before any combat beyond the opening. A bounded greybox experiment then needs its own assignment.
 
-The working design is in three places: the characters' [combat identities](../story/story-bible.md#combat-identities), the [future squad and combat design](../gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](../encounters/the-quiet-yard.md). Several questions there were still open, among them four from the 17 November review of that design: how signatures work, switching leader under pressure, the failure rule and the input budget. On 21 November 2026, after choosing the combat design review as the next track, the maintainer settled the four that most shape a first experiment:
+The working design is in three places: the characters' [combat identities](../story/story-bible.md#combat-identities), the [future squad and combat design](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/docs/gameplay-script.md#future-squad-and-combat-design) and [The Quiet Yard](../encounters/the-quiet-yard.md). Several questions there were still open, among them four from the 17 November review of that design: how signatures work, switching leader under pressure, the failure rule and the input budget. On 21 November 2026, after choosing the combat design review as the next track, the maintainer settled the four that most shape a first experiment:
 
 | Question | The maintainer's choice |
 |---|---|
@@ -86,7 +86,7 @@ While Miki leads, a hostile's wind-up within reach and in her clear sight can be
 | Signature | Square / X | A **Signature** button, shown in a fight | A key of its own |
 | Previous leader | L1 / LB | None: **Next** cycles | A key of its own |
 
-Every other control stays as the [input contract](../prototype-plan.md#input-and-interaction-contract) has it. Tapping a companion's name to lead is left out. Both new intents go through InputRules, and session authority and command priority hold as before.
+Every other control stays as the [input contract](../bridge-prototype-plan.md#input-and-interaction-contract) has it. Tapping a companion's name to lead is left out. Both new intents go through InputRules, and session authority and command priority hold as before.
 
 ### 8. Ammunition
 

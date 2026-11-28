@@ -1,9 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// The HUD's look in the frozen world (the visual direction): small, light frosted panels with
-/// ink text and few lines, so the snow and the party stay the subject. The colours are the
-/// palette's.
+/// Restrained prototype panels keep health, stamina and combat poses easy to read.
 enum HUDStyle {
   /// The palette's ink, for words and outlines.
   static let ink = Color(red: 54 / 255, green: 65 / 255, blue: 75 / 255)
@@ -15,6 +13,8 @@ enum HUDStyle {
   static let warning = Color(red: 166 / 255, green: 90 / 255, blue: 67 / 255)
   /// The palette's snow, behind the scene.
   static let snow = Color(red: 236 / 255, green: 233 / 255, blue: 226 / 255)
+
+  static let stamina = Color(red: 0.58, green: 0.4, blue: 0.08)
 
   /// The ink for the touch controls, which UIKit draws.
   static let inkForTouch = UIColor(ink)

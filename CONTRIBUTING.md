@@ -1,6 +1,6 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. The Brooklyn Bridge opening is playable in a Swift/RealityKit greybox; the README's [project status](README.md#project-status) has the current status.
+People and AI-assisted contributors are welcome. The current Swift/RealityKit greybox is a single-hero duel; the README's [current prototype](README.md#current-prototype) has the status.
 
 ## Before working
 
@@ -67,21 +67,21 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 ```
 
 ```bash
-./apple/scripts/playtest first-fight lock-on
+./apple/scripts/playtest duel-attack duel-defence duel-recovery
 ```
 
-It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and reports pass/fail with reasons, frame times, party-update cost, body overlaps, slot keeping and the widest gap. It saves marked screenshots, video, traces and summaries under `.local/playtest/<time>/`, which Git ignores, or under `--output`.
+It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and reports pass/fail with reasons, frame/simulation times, health/stamina, actual contacts, blocks, evasions and Retry. It saves marked screenshots, video, traces and summaries under `.local/playtest/<time>/`, which Git ignores, or under `--output`.
 
 Use `./apple/scripts/playtest --list` for the current scenario names. The scenario families cover:
 
-- The three-character bridge opening, its guard fight, companion contributions, paired weapons, lock-on and Restart.
-- Formations, squad orders and refused destinations.
+- A native defensive win, directional blocking and timed dodge contact.
+- Pause/release/resume, fresh movement and native Restart.
 
-Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-and-performance), rather than maintaining a second scenario list here.
+Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-status), rather than maintaining a second scenario list here.
 
-Scenario input passes through the ordinary controls and input rules. The HUD shows the step/result and small discs mark companion destinations. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
+Scenario input passes through the ordinary controls and input rules. The HUD shows the route result; the runner records trace/summary evidence. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The bridge is the only playable level. Its pause menu offers **Resume**, **Restart**, **Vibration** and **Status panel** with controller, keyboard or touch input; touch exposes those choices directly, including status-panel visibility. There is no level selector or weapon bench. Small test-only levels in `apple/tests/support` exercise collision and weapons; they are not app content. The [leg-break stagger](docs/robot-eye-legs-grenades.md#leg-break-stagger-follow-up) is implemented; the [prototype plan](docs/prototype-plan.md#leg-break-stagger--in-development) records its source-specific verification and delivery status.
+The duel is the only playable scene. Pause offers **Resume** and **Restart**; the outcome panel offers immediate Retry. There is no level selector, party switch or weapon bench. Test-only historical collision geometry is retained without the removed bridge policy. The [prototype plan](docs/prototype-plan.md) records current scope and verification; [bridge history](docs/bridge-prototype-plan.md) retains the earlier evidence.
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.
 
@@ -91,10 +91,12 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
-Each level is a Blender file in the repository, the level's source ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)): for the Brooklyn Bridge, `blender/levels/brooklyn-bridge.blend`, stored with Git LFS. Saving it in Blender exports the two files the game reads:
+The current graybox duel creates its actors and arena in Swift. The tools below preserve bridge authoring and write to [blender/reference-exports](blender/reference-exports/README.md), outside the app bundle. **Play** launches the current duel; use a [bridge checkpoint](docs/milestones/bridge-prototype.md) in a separate worktree to play the historical level. No Blender or new artwork is needed to iterate on the duel.
 
-- `apple/sources/content/BrooklynBridge.usdz`, the scene file: everything the player sees;
-- `apple/sources/content/BrooklynBridgeLayout.swift`, the layout file: where everything that plays stands, and the lights and camera.
+Each level is a Blender file in the repository, the level's source ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)): for the Brooklyn Bridge, `blender/levels/brooklyn-bridge.blend`, stored with Git LFS. Saving it in Blender exports two historical reference files:
+
+- `blender/reference-exports/BrooklynBridge.usdz`, the historical bridge scene;
+- `blender/reference-exports/BrooklynBridgeLayout.swift`, the historical layout, lights and camera.
 
 Never edit those two by hand; change the level in Blender instead.
 
@@ -120,8 +122,8 @@ Never edit those two by hand; change the level in Blender instead.
 
    The towers cast no live shadow in the game, since a tower fades to a ghost while it hides the party and its shadow must stay. Their shadows are parts of Visual, `tower-shadow-brooklyn` and `tower-shadow-manhattan`, in the palette's shadow material, and each names the parts whose shadow it is, separated by commas, in its `lauder_shadow_of` property, under **Object Properties › Custom Properties**. After turning the sun that casts the shadow, or moving or resizing a tower, press **Bake Shadows**: it lays every such shadow again where that sun throws its parts. `./scripts/check` fails while a tower's shadow lies anywhere else.
 7. Press ⌘S. Saving checks the game's rules: if one fails, it explains what to fix, and only the Blender file is saved. Otherwise it exports, in a Blender of its own in the background, in about two seconds, and the Lauder tab says when it is done. **Export** does the same for a file you have not changed, for example after a pull.
-8. Press **Play** to see the level in the game. It saves the level, exports it if needed, then builds the app and opens it in the iOS Simulator through `./apple/scripts/play`, which can also be run on its own. The first build takes a few minutes; later ones take a few seconds.
-9. Run `./scripts/check`. Tests that check the layout, such as the cover near the stranger, may need updating to match what you moved.
+8. Press **Play** to refresh the reference exports and launch the current app through `./apple/scripts/play`. This launches the duel; the preserved bridge is not its active scene. Use the bridge checkpoint for the old playable level.
+9. Run `./scripts/check`. Export fingerprint and authoring contract tests must still match the preserved sources and outputs.
 
 To change a level without Blender's interface, for example with a script in a background Blender, export it afterwards, giving the path of your Blender:
 
@@ -152,7 +154,7 @@ A model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, st
 
   It takes Blender files, and the glTF, FBX, OBJ and USD files that Blender imports. It makes the model's folder: the model's Blender file, holding what the file shows, without its lights and cameras; a copy of every texture it uses; and a `README.md`. From a Blender file it takes what the first scene shows, and each instance of a collection becomes copies of its parts. Fill in the README's **Source** and **Licence** lines before committing, as [Assets and attribution](#assets-and-attribution) asks, then open the model in Blender to look at it.
 
-The game creates some models at runtime rather than placing them in a level: the party's `miki`, `tom` and `laura`, the `spider-bot-heavy` guard, `scout-drone` and `crawler`. The `hostile` humanoid remains registered for native combat and presentation fixtures. The extension's `SPAWNED` list is the authoritative registry. Saving such a model also exports its own scene file, `apple/sources/content/models/<model>.usdz`, which the game loads by the model's name. Play exports any that no longer match, and so does `export-model.py` with the model's name:
+The preserved bridge registry contains miki, tom, laura, spider-bot-heavy, scout-drone, crawler and hostile. The extension's SPAWNED list remains authoritative for these authoring references. Saving a registered model exports blender/reference-exports/models/<model>.usdz; the active duel neither packages nor loads it. Play refreshes reference exports before launching the current duel; export-model.py can refresh one model directly:
 
 ```bash
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-model.py -- miki
@@ -168,7 +170,7 @@ TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid 
 
 An existing App Store Connect API upload key can authenticate both archive and export/upload. Pass `-authenticationKeyPath "$LAUDER_ASC_KEY_PATH"`, `-authenticationKeyID "$LAUDER_ASC_KEY_ID"`, `-authenticationKeyIssuerID "$LAUDER_ASC_ISSUER_ID"` and `-allowProvisioningUpdates`; these variables refer to private local values, never committed credentials. Identify the existing authorised key rather than choosing arbitrarily if several exist. API authentication does not depend on Xcode's saved Apple-account session or a connected phone; signing material must still match the selected team. Keep keys, JWTs and full signing logs private.
 
-Discover Lauder's own App Store Connect record by bundle ID, and inspect both build records and accepted/processing build uploads before selecting and committing a number. Record the source commit and verify the signed archive's bundle ID, version/build, team and symbols. A previous archive is reusable only when its source is correct and its number remains unused. Upload for internal TestFlight testing using Lauder's distribution settings; preserve existing tester membership. Completion requires successful Apple processing and verified availability to the existing intended groups, not only a successful upload command. An explicit assignment may authorise a sequence of reviewed merges and TestFlight deliveries; do not request the same approval at every milestone or treat Simulator delivery as physical-playtest evidence. The [current prototype plan](docs/prototype-plan.md) and [bridge-only reset](docs/decisions/0017-bridge-only-reset.md) define the active scope.
+Discover Lauder's own App Store Connect record by bundle ID, and inspect both build records and accepted/processing build uploads before selecting and committing a number. Record the source commit and verify the signed archive's bundle ID, version/build, team and symbols. A previous archive is reusable only when its source is correct and its number remains unused. Upload for internal TestFlight testing using Lauder's distribution settings; preserve existing tester membership. Completion requires successful Apple processing and verified availability to the existing intended groups, not only a successful upload command. An explicit assignment may authorise a sequence of reviewed merges and TestFlight deliveries; do not request the same approval at every milestone or treat Simulator delivery as physical-playtest evidence. The [current prototype plan](docs/prototype-plan.md) and [duel decision](docs/decisions/0022-single-hero-graybox-duel.md) define the active scope.
 
 ### Reproducible release command
 
@@ -255,11 +257,11 @@ Submit original material or material you are entitled to contribute. For third-p
 
 Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. A [model](#models) keeps its Blender file, textures and `README.md` in its own folder in `blender/assets`; each level's scene file is its export. Keep generated build products and caches out of source control.
 
-The supported path makes levels and models in Blender, exports each level's look as a USDZ that the game loads directly, and composes the rest in Swift. See the [engine decision](docs/decisions/0001-engine.md) and [ADR 0002](docs/decisions/0002-blender-source-of-truth.md).
+The active duel uses Swift primitives. The preserved bridge authoring path makes levels/models in Blender and exports USDZ references outside the app bundle. See the [engine decision](docs/decisions/0001-engine.md), historical [ADR 0002](docs/decisions/0002-blender-source-of-truth.md) and current [duel decision](docs/decisions/0022-single-hero-graybox-duel.md).
 
 ### Sounds
 
-The 16 combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates them with Python's standard library, from filtered noise and simple tones, under the project's MIT licence ([ADR 0008](docs/decisions/0008-weapon-feel-and-combat-plan.md)). They are 16-bit mono WAV files at 44.1 kHz, about 714 KB in all, stored with Git LFS. The original `guard-warning.wav` is a short two-note acquisition cue. The 0.42 s `guard-leg-break.wav` combines a dry joint crack, low clonk and brief metallic ring. Both are synthesised by the same script without voice recordings or third-party samples. After changing the script, run it from the repository root and commit the files it writes:
+The three active combat sounds in `apple/sources/content/sounds` are original: [`apple/scripts/make-sounds.py`](apple/scripts/make-sounds.py) generates `sword-swing`, `strike-body` and `strike-block` with Python's standard library, under the project's MIT licence. They reuse the bridge prototype's deterministic samples unchanged as placeholder swing/body/block feedback. They are 16-bit mono WAV files at 44.1 kHz, stored with Git LFS. The thirteen retired weapon/robot WAVs remain in [blender/reference-exports/sounds](blender/reference-exports/sounds) and are not packaged. After changing the script, run it from the repository root and commit the files it writes:
 
 ```sh
 python3 apple/scripts/make-sounds.py
