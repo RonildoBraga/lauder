@@ -32,7 +32,7 @@ from preflight import check_assets, iphone_simulator, mask  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
-SCENARIOS = ["duel-attack", "duel-defence", "duel-recovery"]
+SCENARIOS = ["duel-attack", "duel-defence", "duel-recovery", "duel-focus"]
 
 
 def say(message):

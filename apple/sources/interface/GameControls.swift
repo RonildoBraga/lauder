@@ -18,6 +18,7 @@ final class GameControls {
   private(set) var attackButtonName = "Attack"
   private(set) var guardButtonName = "Guard"
   private(set) var dodgeButtonName = "Dodge"
+  private(set) var focusButtonName = "Focus"
   private(set) var needsNeutralInput = true
   private(set) var touchControlsEnabled = true
   private(set) var hasController = false
@@ -109,17 +110,19 @@ final class GameControls {
       controllerAttack: pad?.rightShoulder.isPressed == true,
       controllerGuard: pad?.leftShoulder.isPressed == true,
       controllerDodge: pad?.buttonB.isPressed == true,
+      controllerFocus: pad?.rightThumbstickButton?.isPressed == true,
       controllerPause: pad?.buttonMenu.isPressed == true,
       controllerAction: pad?.buttonA.isPressed == true,
       dpadUp: pad?.dpad.up.isPressed == true, dpadDown: pad?.dpad.down.isPressed == true,
       left: pressed(.keyA), right: pressed(.keyD),
       up: pressed(.keyW), down: pressed(.keyS),
       keyboardAttack: pressed(.keyF), keyboardGuard: pressed(.keyQ),
-      keyboardDodge: pressed(.spacebar), keyboardPause: pressed(.escape),
+      keyboardDodge: pressed(.spacebar), keyboardFocus: pressed(.tab),
+      keyboardPause: pressed(.escape),
       keyboardAction: pressed(.keyE), arrowUp: pressed(.upArrow), arrowDown: pressed(.downArrow),
       touchStick: touch.touchStick, touchIsTouching: touch.touchIsTouching,
       touchAttack: touch.touchAttack, touchGuard: touch.touchGuard,
-      touchDodge: touch.touchDodge, touchPause: touch.touchPause,
+      touchDodge: touch.touchDodge, touchFocus: touch.touchFocus, touchPause: touch.touchPause,
       touchRestart: touch.touchRestart)
     #if DEBUG
       if let scriptedRaw { raw = scriptedRaw }
@@ -198,33 +201,34 @@ final class GameControls {
     if profile is GCDualSenseGamepad {
       showSource(
         "PS5 controller", action: profile.buttonA.sfSymbolsName,
-        pause: "Options", attack: "R1", guardAction: "L1", dodge: "Circle")
+        pause: "Options", attack: "R1", guardAction: "L1", dodge: "Circle", focus: "R3")
     } else if profile is GCXboxGamepad {
       showSource(
         "Xbox controller", action: profile.buttonA.sfSymbolsName,
-        pause: "Menu", attack: "RB", guardAction: "LB", dodge: "B")
+        pause: "Menu", attack: "RB", guardAction: "LB", dodge: "B", focus: "Right stick click")
     } else {
       showSource(
         "Game controller", action: profile.buttonA.sfSymbolsName,
-        pause: "Menu", attack: "Right shoulder", guardAction: "Left shoulder", dodge: "Button B")
+        pause: "Menu", attack: "Right shoulder", guardAction: "Left shoulder", dodge: "Button B",
+        focus: "Right stick click")
     }
   }
 
   private func showKeyboard() {
     showSource(
       "Keyboard · WASD", action: "e.square", pause: "Escape",
-      attack: "F", guardAction: "Q", dodge: "Space")
+      attack: "F", guardAction: "Q", dodge: "Space", focus: "Tab")
   }
 
   private func showTouch() {
     showSource(
       "Touch controls", action: "hand.tap", pause: "Pause",
-      attack: "Attack", guardAction: "Guard", dodge: "Dodge")
+      attack: "Attack", guardAction: "Guard", dodge: "Dodge", focus: "Focus")
   }
 
   private func showSource(
     _ name: String, action: String?, pause: String, attack: String,
-    guardAction: String, dodge: String
+    guardAction: String, dodge: String, focus: String
   ) {
     if sourceName != name { sourceName = name }
     if actionSymbol != action { actionSymbol = action }
@@ -232,6 +236,7 @@ final class GameControls {
     if attackButtonName != attack { attackButtonName = attack }
     if guardButtonName != guardAction { guardButtonName = guardAction }
     if dodgeButtonName != dodge { dodgeButtonName = dodge }
+    if focusButtonName != focus { focusButtonName = focus }
   }
 
   isolated deinit {

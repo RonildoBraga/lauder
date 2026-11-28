@@ -62,6 +62,59 @@ struct InputRulesTests {
     #expect(fresh.attackPressed && fresh.dodgePressed)
   }
 
+  @Test(arguments: ["controller", "keyboard", "touch"])
+  func focusCountsAsHeldInputAndRequiresAFreshEdgeAfterNeutrality(source: String) {
+    var raw = InputRules.Raw()
+    switch source {
+    case "controller":
+      raw.controllerFocus = true
+      #expect(raw.hasControllerInput)
+    case "keyboard":
+      raw.keyboardFocus = true
+      #expect(raw.hasKeyboardInput)
+    case "touch":
+      raw.touchFocus = true
+      #expect(raw.hasTouchInput)
+    default:
+      Issue.record("Unrecognised input source")
+      return
+    }
+    var state = InputRules.State()
+    #expect(sample(raw, state: &state) == .neutral)
+    #expect(state.needsNeutralInput)
+    #expect(sample(raw, state: &state) == .neutral)
+    #expect(state.needsNeutralInput)
+    _ = sample(.init(), state: &state)
+    #expect(!state.needsNeutralInput)
+    #expect(sample(raw, state: &state).focusPressed)
+    #expect(!sample(raw, state: &state).focusPressed)
+    _ = sample(.init(), state: &state)
+    #expect(sample(raw, state: &state).focusPressed)
+  }
+
+  @Test
+  func pauseConsumesFocusAndAPausedFocusCannotReplayOnResume() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let simultaneous = InputRules.Raw(controllerFocus: true, controllerPause: true)
+    #expect(sample(simultaneous, state: &state) == .init(pausePressed: true))
+    #expect(sample(.init(controllerFocus: true), state: &state) == .neutral)
+    _ = sample(.init(), state: &state)
+    #expect(sample(.init(keyboardFocus: true), mode: .paused, state: &state) == .neutral)
+    #expect(sample(.init(keyboardFocus: true), state: &state) == .neutral)
+    _ = sample(.init(), state: &state)
+    #expect(sample(.init(keyboardFocus: true), state: &state).focusPressed)
+  }
+
+  @Test
+  func coreReceivesSimultaneousFocusAndCombatRequestsToOwnTheirPriority() {
+    var state = InputRules.State(needsNeutralInput: false)
+    let input = sample(
+      .init(
+        controllerAttack: true, controllerGuard: true, controllerDodge: true,
+        controllerFocus: true), state: &state)
+    #expect(input.focusPressed && input.attackPressed && input.guardHeld && input.dodgePressed)
+  }
+
   @Test
   func pauseHasPriorityAndConsumesSimultaneousCombatEdges() {
     var state = InputRules.State(needsNeutralInput: false)

@@ -22,6 +22,7 @@ final class GameWorld {
   @ObservationIgnored private var accumulated: Float = 0
   @ObservationIgnored private var pendingAttack = false
   @ObservationIgnored private var pendingDodge = false
+  @ObservationIgnored private var pendingFocus = false
   @ObservationIgnored private var lastGeneration = 0
   @ObservationIgnored private var wasReady = false
   #if DEBUG
@@ -35,6 +36,9 @@ final class GameWorld {
     root.name = "graybox-duel"
     root.addChild(stage.root)
     camera.attach(to: root)
+    camera.reset(
+      hero: simulation.hero.position, enemy: simulation.enemy.position,
+      isFocused: simulation.isFocused)
     stage.present(simulation, deltaTime: 0)
   }
 
@@ -70,6 +74,9 @@ final class GameWorld {
     observation = "A fresh duel. Read, defend, punish."
     cancelPending()
     controls.requireNeutralInput()
+    camera.reset(
+      hero: simulation.hero.position, enemy: simulation.enemy.position,
+      isFocused: simulation.isFocused)
     stage.present(simulation, deltaTime: 0)
   }
 
@@ -77,6 +84,7 @@ final class GameWorld {
     accumulated = 0
     pendingAttack = false
     pendingDodge = false
+    pendingFocus = false
     wasReady = false
     simulation.interrupt()
     _ = simulation.takeEvents()
@@ -150,8 +158,15 @@ final class GameWorld {
       return
     }
     wasReady = true
-    pendingAttack = pendingAttack || input.attackPressed
-    pendingDodge = pendingDodge || input.dodgePressed
+    if input.focusPressed {
+      pendingFocus = true
+      pendingAttack = false
+      pendingDodge = false
+    }
+    if !pendingFocus {
+      pendingAttack = pendingAttack || input.attackPressed
+      pendingDodge = pendingDodge || input.dodgePressed
+    }
     let direction = Movement.direction(for: input.movement, cameraOffset: WorldCamera.offset)
     accumulated += min(deltaTime, 1 / 15)
     while accumulated >= DuelSimulation.fixedStep && simulation.outcome == .fighting {
@@ -159,12 +174,16 @@ final class GameWorld {
       simulation.step(
         DuelCommand(
           movement: [direction.x, direction.z], attackPressed: pendingAttack,
-          guardHeld: input.guardHeld, dodgePressed: pendingDodge),
+          guardHeld: input.guardHeld, dodgePressed: pendingDodge, focusPressed: pendingFocus),
         deltaTime: DuelSimulation.fixedStep)
       pendingAttack = false
       pendingDodge = false
+      pendingFocus = false
     }
     let events = simulation.takeEvents()
+    camera.update(
+      hero: simulation.hero.position, enemy: simulation.enemy.position,
+      isFocused: simulation.isFocused, deltaTime: min(deltaTime, 1 / 15))
     stage.present(simulation, deltaTime: min(deltaTime, 1 / 15))
     if isActive { stage.play(events) }
     for event in events {

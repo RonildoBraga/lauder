@@ -7,6 +7,7 @@ enum InputRules {
     var controllerAttack = false
     var controllerGuard = false
     var controllerDodge = false
+    var controllerFocus = false
     var controllerPause = false
     var controllerAction = false
     var dpadUp = false
@@ -18,6 +19,7 @@ enum InputRules {
     var keyboardAttack = false
     var keyboardGuard = false
     var keyboardDodge = false
+    var keyboardFocus = false
     var keyboardPause = false
     var keyboardAction = false
     var arrowUp = false
@@ -28,20 +30,24 @@ enum InputRules {
     var touchAttack = false
     var touchGuard = false
     var touchDodge = false
+    var touchFocus = false
     var touchPause = false
     var touchRestart = false
 
     var hasMovementKey: Bool { left || right || up || down }
     var hasKeyboardInput: Bool {
-      hasMovementKey || keyboardAttack || keyboardGuard || keyboardDodge || keyboardPause
+      hasMovementKey || keyboardAttack || keyboardGuard || keyboardDodge || keyboardFocus
+        || keyboardPause
         || keyboardAction || arrowUp || arrowDown
     }
     var hasControllerInput: Bool {
       !Self.isNeutral(stick) || controllerAttack || controllerGuard || controllerDodge
+        || controllerFocus
         || controllerPause || controllerAction || dpadUp || dpadDown
     }
     var hasTouchInput: Bool {
       touchIsTouching || !Self.isNeutral(touchStick) || touchAttack || touchGuard || touchDodge
+        || touchFocus
         || touchPause || touchRestart
     }
 
@@ -55,6 +61,7 @@ enum InputRules {
     var needsNeutralInput = true
     var attackWasPressed = false
     var dodgeWasPressed = false
+    var focusWasPressed = false
     var pauseWasPressed = false
     var actionWasPressed = false
     var restartWasPressed = false
@@ -66,6 +73,7 @@ enum InputRules {
     var attackPressed = false
     var guardHeld = false
     var dodgePressed = false
+    var focusPressed = false
     var pausePressed = false
     var actionPressed = false
     var menuMove = 0
@@ -80,6 +88,7 @@ enum InputRules {
     let attack = raw.controllerAttack || raw.keyboardAttack || raw.touchAttack
     let guardHeld = raw.controllerGuard || raw.keyboardGuard || raw.touchGuard
     let dodge = raw.controllerDodge || raw.keyboardDodge || raw.touchDodge
+    let focus = raw.controllerFocus || raw.keyboardFocus || raw.touchFocus
     let pause = raw.controllerPause || raw.keyboardPause || raw.touchPause
     let action = raw.controllerAction || raw.keyboardAction
     let movement =
@@ -95,7 +104,7 @@ enum InputRules {
     // Consume every raw edge, including when Pause or a release gate suppresses it.
     var next = State(
       needsNeutralInput: state.needsNeutralInput,
-      attackWasPressed: attack, dodgeWasPressed: dodge,
+      attackWasPressed: attack, dodgeWasPressed: dodge, focusWasPressed: focus,
       pauseWasPressed: pause, actionWasPressed: action,
       restartWasPressed: raw.touchRestart, menuDirection: direction)
     if state.needsNeutralInput {
@@ -118,6 +127,7 @@ enum InputRules {
       Input(
         movement: movement, attackPressed: attack && !state.attackWasPressed,
         guardHeld: guardHeld, dodgePressed: dodge && !state.dodgeWasPressed,
+        focusPressed: focus && !state.focusWasPressed,
         actionPressed: action && !state.actionWasPressed), next
     )
   }

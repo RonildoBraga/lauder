@@ -32,6 +32,20 @@ struct TouchInputTests {
     #expect(guardOnly.touchGuard && !guardOnly.touchIsTouching)
   }
 
+  @Test
+  func aQuickFocusTapSurvivesOnceWithoutReleasingTheMovementFinger() {
+    var touch = TouchInput()
+    touch.setStick([0.5, 0], isTouching: true, generation: 0)
+    touch.setButton(.focus, isPressed: true, generation: 0)
+    touch.setButton(.focus, isPressed: false, generation: 0)
+    let first = touch.sample()
+    #expect(first.touchFocus && first.touchIsTouching && first.touchStick == [0.5, 0])
+    let next = touch.sample()
+    #expect(!next.touchFocus && next.touchIsTouching && next.touchStick == [0.5, 0])
+    touch.setStick(.zero, isTouching: false, generation: 0)
+    #expect(touch.sample() == .init())
+  }
+
   @Test(arguments: TouchInput.Button.allCases)
   func quickTapsSurviveBetweenUpdatesOnce(button: TouchInput.Button) {
     var touch = TouchInput()
@@ -62,24 +76,35 @@ struct TouchInputTests {
 
   @MainActor
   @Test
-  func surfaceHasThreeCombatActionsAndSeparatePauseRestartTargets() throws {
-    let controls = GameControls()
-    let surface = TouchControls.Surface(controls: controls)
-    surface.frame = CGRect(x: 0, y: 0, width: 844, height: 390)
-    surface.update(mode: .exploring, generation: controls.touchGeneration)
-    surface.layoutIfNeeded()
-    let visible = surface.subviews.filter { !$0.isHidden }
-    #expect(
-      Set(visible.compactMap(\.accessibilityLabel)) == [
-        "Move", "Attack", "Guard", "Dodge", "Pause",
-      ])
-    #expect(visible.allSatisfy { $0.bounds.width >= 44 && $0.bounds.height >= 44 })
-    #expect(surface.hitTest(CGPoint(x: 422, y: 195), with: nil) == nil)
-    surface.update(mode: .paused, generation: controls.touchGeneration)
-    let paused = surface.subviews.filter { !$0.isHidden }
-    #expect(Set(paused.compactMap(\.accessibilityLabel)) == ["Move", "Resume", "Restart"])
-    let restart = try #require(paused.first { $0.accessibilityLabel == "Restart" })
-    let resume = try #require(paused.first { $0.accessibilityLabel == "Resume" })
-    #expect(!restart.frame.intersects(resume.frame))
+  func focusHasItsOwnAccessibleTargetWithoutOverlappingCombatOrPause() throws {
+    for size in [CGSize(width: 844, height: 390), CGSize(width: 568, height: 320)] {
+      let controls = GameControls()
+      let surface = TouchControls.Surface(controls: controls)
+      surface.frame = CGRect(origin: .zero, size: size)
+      surface.update(mode: .exploring, generation: controls.touchGeneration)
+      surface.layoutIfNeeded()
+      let visible = surface.subviews.filter { !$0.isHidden }
+      #expect(
+        Set(visible.compactMap(\.accessibilityLabel)) == [
+          "Move", "Attack", "Guard", "Dodge", "Focus", "Pause",
+        ])
+      #expect(visible.allSatisfy { $0.bounds.width >= 44 && $0.bounds.height >= 44 })
+      for first in visible.indices {
+        for second in visible.indices where first < second {
+          #expect(!visible[first].frame.intersects(visible[second].frame))
+        }
+      }
+      #expect(surface.hitTest(CGPoint(x: size.width / 2, y: size.height / 2), with: nil) == nil)
+      let focus = try #require(visible.first { $0.accessibilityLabel == "Focus" })
+      #expect(focus.accessibilityValue == "Off")
+      surface.update(mode: .exploring, generation: controls.touchGeneration, isFocused: true)
+      #expect(focus.accessibilityLabel == "Unfocus" && focus.accessibilityValue == "On")
+      surface.update(mode: .paused, generation: controls.touchGeneration, isFocused: true)
+      let paused = surface.subviews.filter { !$0.isHidden }
+      #expect(Set(paused.compactMap(\.accessibilityLabel)) == ["Move", "Resume", "Restart"])
+      let restart = try #require(paused.first { $0.accessibilityLabel == "Restart" })
+      let resume = try #require(paused.first { $0.accessibilityLabel == "Resume" })
+      #expect(!restart.frame.intersects(resume.frame))
+    }
   }
 }
