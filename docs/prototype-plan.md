@@ -4,33 +4,43 @@
 
 ## Duel readability follow-up — in progress
 
-[Issue #241](https://github.com/RonildoBraga/lauder/issues/241) tracks the maintainer-assigned subset of the [review triage](https://github.com/RonildoBraga/lauder/issues/240): compare parallel projection, reduce projected fighter overlap, make committed enemy preparation clearer and let a free slash follow movement aim. Work starts from decision/documentation checkpoint **16a202e6d4c97eef115701d2f3719f4ea9a4bc00**; the source-bound 83b79e7 comparison and build47 delivery below remain historical evidence. Their successful checks do not validate this changed source.
+[PR #242](https://github.com/RonildoBraga/lauder/pull/242), tracked by [issue #241](https://github.com/RonildoBraga/lauder/issues/241), implements the maintainer-assigned subset of the [review triage](https://github.com/RonildoBraga/lauder/issues/240): compare parallel projection, reduce projected fighter overlap, make committed enemy preparation clearer and let a free slash follow movement aim. Work starts from decision/documentation checkpoint **16a202e6d4c97eef115701d2f3719f4ea9a4bc00**; the source-bound 83b79e7 comparison and build47 delivery below remain historical evidence. Their successful checks do not validate this changed source.
 
-### Current candidate
+### Working preview
 
-- **Camera:** preserve the selected 35° downward pitch, 45° yaw, smooth hero/focused-pair following and approximately 10.1% centred 1.85 m actor height. The current Release candidate uses orthographic projection with an approximately **14.998 m full vertical world span** at 35°. Debug can compare that with the preceding 24° vertical-FOV perspective view through `--camera-projection perspective|orthographic`; the 30.5°/35°/40° pitch comparisons remain available. Projection selection changes no combat or input rule. The final projection choice awaits actual rendered comparison, not just projection maths.
+- **Camera:** preserve the selected 35° downward pitch, 45° yaw, smooth hero/focused-pair following and approximately 10.1% centred 1.85 m actor height. Orthographic is the working preview after rendered comparison, including its Release configuration, with an approximately **14.998 m full vertical world span** at 35°. Debug can compare that with the preceding 24° vertical-FOV perspective view through `--camera-projection perspective|orthographic`; the 30.5°/35°/40° pitch comparisons remain available. Projection selection changes no combat or input rule. This preview choice awaits human evaluation on the phone.
 - **Enemy approach:** try a short screen-lateral approach near attack range with a latched side, preferring a collision-clear route. A blocked route or a 1.25 s attempt limit restores direct engagement rather than indefinite circling. Existing fighter separation, swept scenery collision, leash, acceptance conditions and sweep/thrust timings remain.
 - **Preparation cues:** cache a broad sweep mesh and narrow thrust mesh with subtle amber fill/outline. Their origin and orientation come from the accepted action; they do not independently follow the hero. Profile reach and half-angle include the same target-disc range/angular margin as contact. A 0.6 m centre cutout preserves feet/focus-ring visibility inside ordinary body separation. These are full-action warning envelopes, not exact hit maps: active timing, movement and scenery remain authoritative. Hide them during active/recovery, Pause/interruption, reset and outcome; resume presents only the current wind-up.
 - **Free-slash aim:** valid movement at the fresh press supplies an unfocused slash's requested direction, including a late buffered request. With no valid movement, retain current facing. Snap the visible facing only when accepting the slash, then preserve its committed direction. Focused slashes retain the existing bounded facing at acceptance. Guard, dodge, stamina, buffer lifetime and shared input priority remain unchanged.
 
 No extra enemy, art asset, target selector, orbit/zoom control, new input stick or combat authority is introduced. The [walkthrough](gameplay-script.md) describes the encounter and [architecture](architecture.md) identifies the owners.
 
-### Verification and review — pending
+### Verification and review
 
-The current implementation has no completed source-bound check/render/review record yet. Planned verification is:
+**Verified application/test/tooling source:** 0e57b6d6ca4e4e7afa098ea6405e953cc43b0dd5. The complete `./scripts/check` passed on 28 November 2026. Native tests cover action-direction and bounded-approach regressions; parallel projection/rays and actual renderer agreement; warning reach, angle, orientation, geometry reuse and phase cleanup; and world-level Pause/resume/Retry cleanup. Independent source reviews found no blocking issue in the core AI/aim or camera/stage/world integration.
 
-- Run the complete `./scripts/check` on frozen source, including native action-direction and bounded-approach regressions; orthographic projection/ray/render agreement; warning mesh reach, angle, orientation, reuse and phase cleanup; and world-level Pause/resume/Retry cleanup.
-- Run all four ordinary rendered routes. The defence route now requires both warning kinds and disappearance during active/recovery. The focus route retains its movement, committed-facing, boundary and outcome assertions.
-- Capture matched perspective/orthographic encounter phases at 35°, compare feet, weapons, ring, warning shapes and HUD, then record the chosen projection and actual source. Summaries report actual projection, optional vertical world span, pitch, offset and observed warning kinds. Separate asynchronous captures need not show identical poses.
-- Obtain fresh review and CI for the exact source intended for delivery. Earlier Claude comments and independent reviews below apply only to their recorded revisions; no fresh Claude review or new CI success is claimed here.
+Six recorded Simulator runs on that source pass, all at 35° and health100 with no failures. The orthographic runs use the default without a projection override; perspective is the Debug comparison.
 
-Simulator results will establish rule execution and rendered evidence, not physical control comfort, phone performance or enjoyment.
+| Projection | Route | Result | Actual evidence |
+| --- | --- | --- | --- |
+| Orthographic | duel-attack | 2/2, 18.9 s, 1,106 frames | Victory, seven sword contacts, six blocks, no Retry |
+| Orthographic | duel-defence | 2/2, 4.7 s, 261 frames | One block and one timed evasion |
+| Orthographic | duel-recovery | 4/4, 2.7 s, 138 frames | Pause/release/resume, fresh movement, one native Restart |
+| Orthographic | duel-focus | 5/5, 21.6 s, 1,256 frames | Boundary retreat/strafe, seven contacts/seven blocks, victory, focus released |
+| Perspective | duel-defence | 2/2, 4.6 s, 262 frames | One block and one timed evasion |
+| Perspective | duel-focus | 5/5, 21.5 s, 1,254 frames | Boundary retreat/strafe, seven contacts/seven blocks, victory, focus released |
+
+Summaries report actual projection, pitch/offset and the orthographic span, approximately 14.998 m, which is absent for perspective. Both warning kinds were observed on the attack, defence and focus runs; native stage/world tests establish active/recovery disappearance and interruption/reset cleanup. Matched sweep-preparation and orthographic boundary captures were inspected: parallel lines, consistent depth scale, feet, ring, weapons, warnings and HUD remain clear. Orthographic at 35° is the working preview for TestFlight evaluation, not claimed maintainer acceptance. Separate asynchronous captures show comparable phases, not identical poses. Recordings, screenshots, traces, summaries and the check receipt remain outside Git.
+
+Core tests cover free-stick flicks and buffered aim; there is no dedicated rendered gesture or physical-control proof for those cases. Simulator p99 frame intervals are approximately 33.2–33.3 ms on five routes and 144.3 ms on the short recovery route, including startup/scheduling. This is not phone performance, touch/controller comfort or enjoyment evidence.
+
+Fresh CI and external review of the delivery source still require verification on PR #242. Claude has been asked; no new response, automatic-review conclusion or CI success is claimed here. Earlier reviews and checks below remain tied to their recorded sources. TestFlight processing and existing-tester availability remain unverified for build48.
 
 ### Build 48 candidate — not uploaded
 
 The maintainer explicitly authorised TestFlight delivery for this follow-up; merge is not authorised by that request. Local Apple discovery found **0.1.0 (48)** unused, making it the current candidate. Recheck accepted/processing reservations before archive/upload; discovery alone does not reserve the number or make a build available.
 
-After checks, rendered comparison and exact-source review, use the [reviewed-preview release workflow](../CONTRIBUTING.md#reproducible-release-command) from the clean named branch. Bind the frozen reviewed commit and full check receipt to the signed Release archive, verify Lauder bundle/version/build/team, symbols and internal-only export, then upload using the existing authorised API credentials. Completion requires successful Apple processing and verified access for the existing intended TestFlight testers. No upload, processing completion, tester availability, phone acceptance or new review is claimed yet; the delivered build remains **47** until a new delivery record proves otherwise.
+After exact-source CI/review verification, use the [reviewed-preview release workflow](../CONTRIBUTING.md#reproducible-release-command) from the clean named branch. Bind the frozen reviewed commit and full check receipt to the signed Release archive, verify Lauder bundle/version/build/team, symbols and internal-only export, then upload using the existing authorised API credentials. Completion requires successful Apple processing and verified access for the existing intended TestFlight testers. No upload, processing completion, tester availability, phone acceptance or new external review is claimed yet; the delivered build remains **47** until a new delivery record proves otherwise.
 
 ## Camera and enemy-focus follow-up — in progress
 
@@ -180,4 +190,4 @@ The routes drive real shared input, not injected damage or outcomes. The origina
 
 A short human session should establish whether preparation is readable, block/dodge/repositioning offer distinct choices, damage feels fair and Retry invites another attempt. Physical touch/controller comfort and sustained phone performance require a separately arranged milestone.
 
-The three-angle comparison selected 35°; #241 now owns the assigned projection/readability follow-up. Complete its source-bound check, rendered comparison and review, then deliver the authorised internal TestFlight preview and verify Apple processing/tester access. Merge remains a separate instruction. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel.
+The three-angle comparison selected 35°; #241 now has passing source-bound checks and a rendered projection comparison. Verify fresh CI/external review, deliver the authorised internal TestFlight preview and verify Apple processing/tester access. Merge remains a separate instruction. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel.

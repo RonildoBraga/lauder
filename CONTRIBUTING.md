@@ -74,7 +74,7 @@ It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records 
 
 Use `./apple/scripts/playtest --list` for the current scenario names. The scenario families cover:
 
-- A native defensive win, directional blocking and timed dodge contact; the defence route also checks both committed wind-up warnings and their disappearance during active/recovery.
+- A native defensive win, directional blocking and timed dodge contact; the defence route also checks that both wind-up warning kinds were shown. Native stage/world tests verify phase disappearance and interruption/reset cleanup.
 - Pause/release/resume, fresh movement and native Restart.
 - Enemy focus, retreat while facing the opponent and focus reset (the fourth route).
 
@@ -82,7 +82,7 @@ Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario 
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the route result; the runner records trace/summary evidence. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The [earlier camera comparison](docs/prototype-plan.md#camera-pitch-comparison--verified-in-simulator) selected the 35° downward pitch. The [readability follow-up](docs/prototype-plan.md#duel-readability-follow-up--in-progress) compares perspective and orthographic projection at that same pitch, yaw and approximately 10.1% centred actor height. Its Release candidate is orthographic; visual comparison and verification remain pending. To compare manually:
+The [earlier camera comparison](docs/prototype-plan.md#camera-pitch-comparison--verified-in-simulator) selected the 35° downward pitch. The [readability follow-up](docs/prototype-plan.md#duel-readability-follow-up--in-progress) compares perspective and orthographic projection at that same pitch, yaw and approximately 10.1% centred actor height. Orthographic is the working preview after six passing recorded runs and visual inspection; this does not establish human phone acceptance. To compare manually:
 
 ```bash
 ./apple/scripts/play --camera-projection perspective
@@ -96,7 +96,7 @@ To record comparable defensive and boundary/focus moments:
 ./apple/scripts/playtest duel-defence duel-focus --camera-projection orthographic
 ```
 
-Both scripts accept only `perspective` or `orthographic`, forwarding the Debug-only `-LauderCameraProjection` argument. They also retain `--camera-pitch 30.5`, `35` or `40`, forwarding `-LauderCameraPitch`. Release ignores both overrides and uses the candidate's fixed orthographic 35° view. The perspective comparison uses a 24° vertical FOV; orthographic uses a full vertical world span of approximately 14.998 m at 35°. Both retain 45° yaw, matching follow/focus behaviour and centred actor size. Projection selection changes no input or combat rule. Compare corresponding marked phases with their recorded timestamps: screenshot capture is asynchronous, so separate runs do not promise identical poses. No orbit, user zoom or new scene is added.
+Both scripts accept only `perspective` or `orthographic`, forwarding the Debug-only `-LauderCameraProjection` argument. They also retain `--camera-pitch 30.5`, `35` or `40`, forwarding `-LauderCameraPitch`. Release ignores both overrides and uses the working preview's fixed orthographic 35° view. The perspective comparison uses a 24° vertical FOV; orthographic uses a full vertical world span of approximately 14.998 m at 35°. Both retain 45° yaw, matching follow/focus behaviour and centred actor size. Projection selection changes no input or combat rule. Compare corresponding marked phases with their recorded timestamps: screenshot capture is asynchronous, so separate runs do not promise identical poses. No orbit, user zoom or new scene is added.
 
 The duel is the only playable scene. Pause offers **Resume** and **Restart**; the outcome panel offers immediate Retry. There is no level selector, party switch or weapon bench. Test-only historical collision geometry is retained without the removed bridge policy. The [prototype plan](docs/prototype-plan.md) records current scope and verification; [bridge history](docs/bridge-prototype-plan.md) retains the earlier evidence.
 
