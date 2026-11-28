@@ -3,6 +3,9 @@ import simd
 /// Continuous exclusion from a living guard's hull. The world still resolves stone and other
 /// movement blockers; this query never pushes an overlapping traveller to an unrequested spot.
 enum GuardCollision {
+  /// How near a pawn's centre may come to a living guard's centre: the two bodies' radii.
+  static let pawnClearance = RobotModelGeometry.bodyRadius + PartyBody.radius
+
   static func resolve(
     start: SIMD2<Float>, delta: SIMD2<Float>, centre: SIMD2<Float>, radius: Float
   ) -> SIMD2<Float> {

@@ -33,7 +33,7 @@ These values and the guard's health are prototype tuning, not settled balance. T
 
 ## Eye and leg opportunities
 
-The eye remains available for later criticals; there is no disabled-sensor prerequisite, coupling breach or timed reactor window. The existing coarse body collision is refined only for a real front-eye ray, retaining scenery, allies and other enemies as blockers. The [robot contract](robot-eye-legs-grenades.md) records the measured target and collision approximation.
+The eye remains available for later criticals; there is no disabled-sensor prerequisite, coupling breach or timed reactor window. The existing coarse body collision is refined only for a ray from within 60° of the guard's facing, retaining scenery and other enemies as blockers, and allies for companion fire. The leader's own shots don't treat allies as blockers. The [robot contract](robot-eye-legs-grenades.md) records the measured target and collision approximation.
 
 Laura's first two sword contacts damage a leg and the third detaches that individual leg, while every accepted contact also removes normal shared health once. Distinct leg counters, missing target volumes and progressive translation penalties replace the old coupling progress. Retry and Restart restore the counters and health; retreat within the encounter preserves them. No part chain is required before a kill.
 

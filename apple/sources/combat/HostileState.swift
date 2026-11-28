@@ -59,6 +59,11 @@ struct HostileState {
 
   var isVisible: Bool { phase != .hidden }
   var isDown: Bool { phase == .down }
+  /// Whether this is a living strategic guard, whose hull the party can't walk through. A downed
+  /// or cleared guard's wreck doesn't block: the maintainer kept walking through it on #226.
+  var blocksParty: Bool {
+    spec.strategicGuard && isVisible && !isDown && robot.map { !$0.isCleared } == true
+  }
   /// Before the stranger opens fire, the party does not know that he is hostile.
   var isTargetable: Bool {
     robot.map(\.isTargetable) ?? drone.map(\.isTargetable) ?? crawler.map(\.isTargetable)
