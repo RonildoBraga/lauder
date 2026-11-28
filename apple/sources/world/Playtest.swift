@@ -142,6 +142,8 @@
       var coveredMembers: Set<PartyMember> = []
       var damage = DamageTally()
       var damageLabelCount = 0
+      /// Rises whenever a new damage number appears.
+      var damageLabelSerial: UInt64 = 0
       var showsPanel = true
       var grenadeCooldown: Float = 0
       var grenadeInFlight = false
@@ -288,8 +290,7 @@
     private var peakPartyHits: [PartyMember: Int] = [:]
     private var retryCount = 0
     private var wasRetrying = false
-    private var fireBaseline: (health: Int, damage: DamageTally, loaded: Int)?
-    private var fireWindowLabels = 0
+    private var fireBaseline: (health: Int, damage: DamageTally, loaded: Int, labels: UInt64)?
     private var domeBaseline: (shots: Int, stops: Int, hits: [PartyMember: Int])?
     private var domeBlockedShots = 0
     private var observedDamage = DamageTally()
@@ -729,9 +730,8 @@
         return nil
       }
       if fireBaseline == nil {
-        fireBaseline = (health, snapshot.damage, snapshot.weapon.loaded)
+        fireBaseline = (health, snapshot.damage, snapshot.weapon.loaded, snapshot.damageLabelSerial)
       }
-      fireWindowLabels = max(fireWindowLabels, snapshot.damageLabelCount)
       guard stepTime < seconds else {
         if let baseline = fireBaseline {
           let member = snapshot.leader.rawValue
@@ -740,7 +740,9 @@
           expect(
             accepted > before && baseline.health - health == accepted - before
               && (!ordinary || snapshot.damage.normal > baseline.damage.normal)
-              && snapshot.weapon.loaded < baseline.loaded && fireWindowLabels > 0,
+              && snapshot.weapon.loaded < baseline.loaded
+              // A number left from damage before the window doesn't count: one must appear.
+              && snapshot.damageLabelSerial > baseline.labels,
             "the \(weapon) fire window lacked native damage, ammo use or visible numbers")
         }
         return nil
@@ -1747,7 +1749,6 @@
       coverStablePositions = [:]
       longestCoverHold = 0
       fireBaseline = nil
-      fireWindowLabels = 0
       domeBaseline = nil
     }
 

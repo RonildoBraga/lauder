@@ -408,7 +408,7 @@ struct ScoutDroneFightTests {
     }
     #expect(
       !range.events.contains {
-        if case .fired(_, _, false) = $0 { return true }
+        if case .hostileFired = $0 { return true }
         return false
       })
   }

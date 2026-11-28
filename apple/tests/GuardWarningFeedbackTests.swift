@@ -12,7 +12,9 @@ struct GuardWarningFeedbackTests {
     #expect(event.position == position)
     #expect(CombatSound.of(event) == .guardWarning)
     #expect(HapticCue.of(event) == nil)
-    #expect(CombatSound.of(.fired(.rifle, at: position, byLeader: false)) == .rifle)
+    #expect(CombatSound.of(.hostileFired(.rifle, at: position)) == .rifle)
+    #expect(CombatSound.of(.hostileFired(.shotgun, at: position)) == .shotgun)
+    #expect(HapticCue.of(.hostileFired(.rifle, at: position)) == nil)
   }
 
   @Test

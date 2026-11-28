@@ -13,7 +13,7 @@ struct PackWarningLifecycleTests {
   }
 
   enum Interruption: CaseIterable, Sendable {
-    case pause, restart, inactive
+    case pause, restart, inactive, quietExit
   }
 
   @Test(arguments: Kind.allCases)
@@ -38,6 +38,13 @@ struct PackWarningLifecycleTests {
       trial.world.setApplicationActive(false)
       trial.world.setApplicationActive(true)
       trial.frame()
+    case .quietExit:
+      // The leader steps into the quiet exit, which leaves the pack harmless, before the
+      // feedback drains: the member that warned has gone quiet (#227).
+      for _ in 0..<60 * 5 where trial.world.session.inEncounter {
+        trial.world.advanceParty(movement: stick(trial.world, towards: [1, 0]), deltaTime: 1 / 60)
+      }
+      #expect(!trial.world.session.inEncounter)
     }
     #expect(warnings(in: trial.world.takeCombatEvents()) == 0)
   }
@@ -79,7 +86,9 @@ struct PackWarningLifecycleTests {
         cues: [
           (0, .reveal("guard")), (0, .engage("guard")), (0, .reveal(pack.id)),
           (0, .engage(pack.id)),
-        ])
+        ],
+        // A step to the leader's right leaves the guard by its quiet exit.
+        safeExit: .init(minimum: [1.5, 7], maximum: [4, 11]))
       let level = Level(
         id: "pack-warning-lifecycle",
         ground: .box("floor", at: [0, -0.15, 0], size: [40, 0.3, 40]),

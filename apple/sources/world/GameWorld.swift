@@ -363,9 +363,12 @@ final class GameWorld {
       case .guardLegBroken:
         return legBreakGeneration == controls.touchGeneration && session.mode == .exploring
           && !controls.needsNeutralInput && !isRetrying
-      case .droneWarning, .crawlerWarning:
-        // A pack member's warning, like the guard's, is not heard once its moment has passed.
-        return session.mode == .exploring && !controls.needsNeutralInput && !isRetrying
+      case .droneWarning(let id, _), .crawlerWarning(let id, _):
+        // A pack member's warning, like the guard's, is not heard once its moment has passed,
+        // nor once that member is down or gone quiet.
+        let live = fight.hostiles[id].map { $0.drone?.isTargetable ?? $0.crawler?.isTargetable }
+        return live == true && session.mode == .exploring && !controls.needsNeutralInput
+          && !isRetrying
       default:
         return true
       }
@@ -1694,7 +1697,8 @@ final class GameWorld {
         partyHits: Dictionary(
           uniqueKeysWithValues: session.party.map { ($0, session.hits(of: $0)) }),
         companionTargets: companionTargets, coveredMembers: covered,
-        damage: damageTally, damageLabelCount: damageFeedback.labels.count, showsPanel: showsPanel,
+        damage: damageTally, damageLabelCount: damageFeedback.labels.count,
+        damageLabelSerial: damageFeedback.serial, showsPanel: showsPanel,
         grenadeCooldown: fight.grenadeCooldown, grenadeInFlight: fight.grenade != nil,
         shieldRaised: fight.shieldIsUp, shieldStops: shieldStops,
         dronesDown: session.defeated.filter { fight.hostiles[$0]?.drone != nil }.count,

@@ -600,7 +600,8 @@ final class EncounterSimulation {
       updateTarget(leader: leader, aiming: aiming, facing: facing)
       return outcome
     }
-    for cue in director.step(dt: dt) {
+    let due = director.step(dt: dt)
+    cues: for (index, cue) in due.enumerated() {
       switch cue {
       case .reveal(let id): hostiles[id]?.reveal()
       case .engage(let id): hostiles[id]?.engage()
@@ -609,18 +610,24 @@ final class EncounterSimulation {
         guard let from = figures[member], let state = hostiles[id], !state.isDown else { break }
         // This fight has no cinematic damage shortcut: only actual damaging contacts count.
         guard guardStrategies[id] == nil else { break }
+        // Only a takedown the session counts knocks the hostile down.
+        guard session.defeat(id) else { break }
         let path = ShotPath(start: from, end: state.position, strike: .body(id))
         shots.append(Shot(path: path, side: .party))
         handling[slot(of: member)]?.draw()
         weaponPoses[member]?.fired()
         report(path, firedBy: weapon(of: member).kind, byLeader: false)
         rock(member, awayFrom: state.position, at: from)
-        session.defeat(id)
         knockDown(id, from: from)
         let offset = state.position - from
         if simd_length(offset) > 0.001 { outcome.shooter = (member, simd_normalize(offset)) }
         outcome.line = "\(state.spec.name) is down."
-      case .talk(let conversation): _ = session.converse(conversation)
+      case .talk(let conversation):
+        // A conversation holds the simulation, so the step's later cues wait until it ends.
+        if session.converse(conversation) {
+          director.holdBack(due.count - index - 1)
+          break cues
+        }
       }
     }
     let party = figures.filter { session.party.contains($0.key) }
@@ -1203,8 +1210,19 @@ final class EncounterSimulation {
     if session.takeHit(member) { outcome.retry = true }
   }
 
+  /// A party member's shot, then what it struck.
   private func report(_ path: ShotPath, firedBy kind: Weapon.Kind, byLeader: Bool) {
     events.append(.fired(kind, at: path.start, byLeader: byLeader))
+    reportStrike(of: path)
+  }
+
+  /// A hostile's shot, then what it struck.
+  private func reportHostileShot(_ path: ShotPath, firedBy kind: Weapon.Kind) {
+    events.append(.hostileFired(kind, at: path.start))
+    reportStrike(of: path)
+  }
+
+  private func reportStrike(of path: ShotPath) {
     switch path.strike {
     case .body: events.append(.struckBody(at: path.end))
     case .scenery: events.append(.struckBlock(at: path.end))
@@ -1321,8 +1339,7 @@ final class EncounterSimulation {
       Shot(
         path: trace.path, side: .hostile,
         muzzle: [discharge.origin.x, discharge.origin.z], trace: trace, gun: discharge.gun))
-    report(
-      trace.path, firedBy: discharge.pattern == .fan ? .shotgun : .rifle, byLeader: false)
+    reportHostileShot(trace.path, firedBy: discharge.pattern == .fan ? .shotgun : .rifle)
     if case .body(let id) = trace.strike, let member = PartyMember(rawValue: id),
       state.acceptRobotBurstHit()
     {
@@ -1345,7 +1362,7 @@ final class EncounterSimulation {
     let muzzle = WeaponPose.muzzle(
       from: start, facing: enemyHandling[id]?.facing ?? discharge.direction, kind: .rifle)
     shots.append(Shot(path: trace.path, side: .hostile, muzzle: muzzle, trace: trace))
-    report(trace.path, firedBy: .rifle, byLeader: false)
+    reportHostileShot(trace.path, firedBy: .rifle)
     hostileJolts[id, default: BodyJolt()].push(towards: -discharge.direction, by: BodyJolt.recoil)
     if case .body(let body) = trace.strike, let member = PartyMember(rawValue: body) {
       hurt(
@@ -1403,7 +1420,7 @@ final class EncounterSimulation {
     }
     guard let now = state.drone else { return }
     if now.phase == .warning, drone.phase != .warning {
-      events.append(.droneWarning(at: now.position))
+      events.append(.droneWarning(spec.id, at: now.position))
     }
     switch now.phase {
     case .warning:
@@ -1438,7 +1455,7 @@ final class EncounterSimulation {
       Shot(
         path: trace.path, side: .hostile, muzzle: [discharge.origin.x, discharge.origin.z],
         trace: trace))
-    report(trace.path, firedBy: .rifle, byLeader: false)
+    reportHostileShot(trace.path, firedBy: .rifle)
     if case .body(let id) = trace.strike, let member = PartyMember(rawValue: id),
       state.acceptDroneBurstHit()
     {
@@ -1594,7 +1611,7 @@ final class EncounterSimulation {
     guard let now = state.crawler else { return }
     // Only a wind-up on the leader is heard: the light shows every one.
     if now.phase == .windingUp, before != .windingUp, watched == session.leader {
-      events.append(.crawlerWarning(at: now.position))
+      events.append(.crawlerWarning(spec.id, at: now.position))
     }
     switch now.phase {
     case .windingUp:

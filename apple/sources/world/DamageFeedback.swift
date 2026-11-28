@@ -26,6 +26,8 @@ struct DamageFeedback: Equatable, Sendable {
 
   private(set) var labels: [Label] = []
   private var nextID: UInt64 = 0
+  /// How many numbers have appeared so far: it rises whenever a new one shows.
+  var serial: UInt64 { nextID }
 
   mutating func receive(_ hit: DamageHit) {
     guard hit.amount > 0, hit.position.indices.allSatisfy({ hit.position[$0].isFinite })

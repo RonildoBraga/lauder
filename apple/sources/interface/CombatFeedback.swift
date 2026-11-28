@@ -79,7 +79,7 @@ enum CombatSound: String, CaseIterable, Sendable {
   /// through its changes, not as a shot. A hit on the leader is heard as the strike on her body.
   static func of(_ event: CombatEvent) -> CombatSound? {
     switch event {
-    case .fired(let kind, _, _):
+    case .fired(let kind, _, _), .hostileFired(let kind, _):
       switch kind {
       case .longRifle: .longRifle
       case .assaultRifle: .assaultRifle
