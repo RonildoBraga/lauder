@@ -1,5 +1,6 @@
 import RealityKit
 import Testing
+import UIKit
 import simd
 
 @testable import Lauder
@@ -8,19 +9,21 @@ import simd
 struct CameraRigTests {
   @Test
   func theHeroFollowingViewProjectsBothSpawnedActorsAndTheirFeet() throws {
-    let rig = CameraRig(
-      offset: WorldCamera.offset, fieldOfView: WorldCamera.fieldOfView, over: DuelArena.heroSpawn)
-    let view = rig.projection(aspect: 19.5 / 9)
-    for point in [DuelArena.heroSpawn, DuelArena.enemySpawn] {
-      let feet = try #require(view.screen(ofGround: point))
-      let head = try #require(view.screen(ofWorld: [point.x, 1.85, point.y]))
-      #expect(feet.x > 0.1 && feet.x < 0.9 && feet.y > 0.1 && feet.y < 0.9)
-      #expect(head.x > 0.1 && head.x < 0.9 && head.y > 0.1 && head.y < 0.9)
-      #expect(
-        feet.y - head.y > 0.095,
-        "the common-size comparison keeps spawned figures near 10% of viewport height")
+    for height: Float? in [nil, WorldCamera.orthographicHeight(forPitch: WorldCamera.pitchDegrees)]
+    {
+      let rig = CameraRig(
+        offset: WorldCamera.offset, fieldOfView: WorldCamera.fieldOfView,
+        over: DuelArena.heroSpawn, orthographicHeight: height)
+      let view = rig.projection(aspect: 19.5 / 9)
+      for point in [DuelArena.heroSpawn, DuelArena.enemySpawn] {
+        let feet = try #require(view.screen(ofGround: point))
+        let head = try #require(view.screen(ofWorld: [point.x, 1.85, point.y]))
+        #expect(feet.x > 0.1 && feet.x < 0.9 && feet.y > 0.1 && feet.y < 0.9)
+        #expect(head.x > 0.1 && head.x < 0.9 && head.y > 0.1 && head.y < 0.9)
+        #expect(feet.y - head.y > 0.095, "both projections retain readable spawned figures")
+      }
+      #expect(rig.eye == rig.target + WorldCamera.offset)
     }
-    #expect(rig.eye == rig.target + WorldCamera.offset)
   }
 
   @Test
@@ -28,13 +31,17 @@ struct CameraRigTests {
     var heights: [Float] = []
     for pitch: Float in [30.5, 35, 40] {
       let offset = WorldCamera.offset(forPitch: pitch)
-      let rig = CameraRig(offset: offset, fieldOfView: WorldCamera.fieldOfView, over: .zero)
-      let view = rig.projection(aspect: 19.5 / 9)
-      let feet = try #require(view.screen(ofGround: .zero))
-      let head = try #require(view.screen(ofWorld: [0, 1.85, 0]))
-      let height = feet.y - head.y
-      heights.append(height)
-      #expect(abs(height - 0.1010415) < 0.00001)
+      for span: Float? in [nil, WorldCamera.orthographicHeight(forPitch: pitch)] {
+        let rig = CameraRig(
+          offset: offset, fieldOfView: WorldCamera.fieldOfView, over: .zero,
+          orthographicHeight: span)
+        let view = rig.projection(aspect: 19.5 / 9)
+        let feet = try #require(view.screen(ofGround: .zero))
+        let head = try #require(view.screen(ofWorld: [0, 1.85, 0]))
+        let height = feet.y - head.y
+        heights.append(height)
+        #expect(abs(height - 0.1010415) < 0.00001)
+      }
       let actualPitch = atan2(offset.y, simd_length(SIMD2(offset.x, offset.z))) * 180 / .pi
       #expect(abs(actualPitch - pitch) < 0.0001)
       #expect(offset.x == offset.z, "all three views retain a 45° diagonal orientation")
@@ -64,21 +71,46 @@ struct CameraRigTests {
   ])
   func focusedNearAndOppositeCornerPairsFitTheSameLens(hero: SIMD2<Float>) throws {
     for pitch: Float in [30.5, 35, 40] {
-      var rig = CameraRig(
-        offset: WorldCamera.offset(forPitch: pitch), fieldOfView: WorldCamera.fieldOfView,
-        over: DuelArena.heroSpawn)
-      let enemy = -hero
-      rig.reset(hero: hero, enemy: enemy, isFocused: true)
-      let view = rig.projection(aspect: 19.5 / 9)
-      for point in [hero, enemy] {
-        for height: Float in [0, 1.85] {
-          let screen = try #require(view.screen(ofWorld: [point.x, height, point.y]))
-          #expect(screen.x > 0.01 && screen.x < 0.99, "\(pitch)° view")
-          #expect(screen.y > 0.01 && screen.y < 0.99, "\(pitch)° view")
+      for span: Float? in [nil, WorldCamera.orthographicHeight(forPitch: pitch)] {
+        var rig = CameraRig(
+          offset: WorldCamera.offset(forPitch: pitch), fieldOfView: WorldCamera.fieldOfView,
+          over: DuelArena.heroSpawn, orthographicHeight: span)
+        let enemy = -hero
+        rig.reset(hero: hero, enemy: enemy, isFocused: true)
+        let view = rig.projection(aspect: 19.5 / 9)
+        for point in [hero, enemy] {
+          for height: Float in [0, 1.85] {
+            let screen = try #require(view.screen(ofWorld: [point.x, height, point.y]))
+            #expect(screen.x > 0.01 && screen.x < 0.99, "\(pitch)° view")
+            #expect(screen.y > 0.01 && screen.y < 0.99, "\(pitch)° view")
+          }
         }
+        #expect(rig.target == [0, 0.85, 0])
       }
-      #expect(rig.target == [0, 0.85, 0])
     }
+  }
+
+  @Test
+  func parallelFiguresAndGroundDirectionsStayTheSameSizeAtEveryDepth() throws {
+    let rig = CameraRig(
+      offset: WorldCamera.offset, fieldOfView: WorldCamera.fieldOfView, over: .zero,
+      orthographicHeight: WorldCamera.orthographicHeight(forPitch: WorldCamera.pitchDegrees))
+    let view = rig.projection(aspect: 19.5 / 9)
+    var groundSteps: [SIMD2<Float>] = []
+    for point: SIMD2<Float> in [[6.6, 4.6], [-6.6, -4.6], .zero] {
+      let feet = try #require(view.screen(ofGround: point))
+      let head = try #require(view.screen(ofWorld: [point.x, 1.85, point.y]))
+      #expect(abs(feet.y - head.y - 0.1010415) < 0.00001)
+      groundSteps.append(try #require(view.screen(ofGround: point + [1, 0])) - feet)
+    }
+    #expect(simd_distance(groundSteps[0], groundSteps[1]) < 0.00001)
+    #expect(simd_distance(groundSteps[0], groundSteps[2]) < 0.00001)
+  }
+
+  @Test
+  func enemyApproachAndCameraMovementUseTheSameScreenRightAxis() {
+    let right = Movement.direction(for: [1, 0], cameraOffset: WorldCamera.offset)
+    #expect(simd_distance(SIMD2(right.x, right.z), DuelArena.screenRight) < 0.00001)
   }
 
   @Test
@@ -152,22 +184,46 @@ struct CameraRigTests {
 
   @Test
   func renderedCameraAndGroundProjectionUseTheSameTransformAndVerticalLens() throws {
-    let camera = WorldCamera()
-    let root = Entity()
-    camera.attach(to: root)
-    let entity = try #require(root.findEntity(named: "duel.camera") as? PerspectiveCamera)
-    for shouldReset in [false, true] {
-      if shouldReset {
-        camera.reset(hero: [4, 3], enemy: [-2, -1], isFocused: true)
+    for height: Float? in [nil, WorldCamera.orthographicHeight(forPitch: WorldCamera.pitchDegrees)]
+    {
+      let camera = WorldCamera(orthographicHeight: height)
+      let view = ARView(
+        frame: CGRect(x: 0, y: 0, width: 1000, height: 500), cameraMode: .nonAR,
+        automaticallyConfigureSession: false)
+      let root = AnchorEntity(world: .zero)
+      camera.attach(to: root)
+      view.scene.addAnchor(root)
+      let entity = try #require(root.findEntity(named: "duel.camera"))
+      if let height {
+        let component = try #require(entity.components[OrthographicCameraComponent.self])
+        #expect(component.scale == height / 2)
+        #expect(component.scaleDirection == .vertical)
+        #expect(entity.components[PerspectiveCameraComponent.self] == nil)
       } else {
-        camera.update(hero: [4, 3], enemy: [-2, -1], isFocused: true, deltaTime: 0.1)
+        let component = try #require(entity.components[PerspectiveCameraComponent.self])
+        #expect(component.fieldOfViewInDegrees == WorldCamera.fieldOfView)
+        #expect(component.fieldOfViewOrientation == .vertical)
+        #expect(entity.components[OrthographicCameraComponent.self] == nil)
       }
-      let view = camera.projection(aspect: 19.5 / 9)
-      #expect(simd_distance(entity.position, view.eye) < 0.00001)
-      let renderedForward = entity.orientation.act(SIMD3<Float>(0, 0, -1))
-      #expect(simd_distance(renderedForward, simd_normalize(view.target - view.eye)) < 0.00001)
-      #expect(entity.camera.fieldOfViewInDegrees == view.fieldOfView)
-      #expect(entity.camera.fieldOfViewOrientation == .vertical)
+      for shouldReset in [false, true] {
+        if shouldReset {
+          camera.reset(hero: [4, 3], enemy: [-2, -1], isFocused: true)
+        } else {
+          camera.update(hero: [4, 3], enemy: [-2, -1], isFocused: true, deltaTime: 0.1)
+        }
+        let projection = camera.projection(aspect: 2)
+        #expect(simd_distance(entity.position, projection.eye) < 0.00001)
+        let renderedForward = entity.orientation.act(SIMD3<Float>(0, 0, -1))
+        #expect(
+          simd_distance(renderedForward, simd_normalize(projection.target - projection.eye))
+            < 0.00001)
+        for point: SIMD3<Float> in [[0, 0, 0], [0, 1.85, 0], [3, 0, -2]] {
+          let rendered = try #require(view.project(point))
+          let expected = try #require(projection.screen(ofWorld: point))
+          let actual = SIMD2<Float>(Float(rendered.x / 1000), Float(rendered.y / 500))
+          #expect(simd_distance(actual, expected) < 0.0001)
+        }
+      }
     }
   }
 }

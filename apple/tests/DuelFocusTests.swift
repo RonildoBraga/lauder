@@ -40,7 +40,8 @@ struct DuelFocusTests {
     duel.step(.init(focusPressed: true), deltaTime: DuelSimulation.fixedStep)
     advance(&duel, seconds: 0.25, command: .init(movement: [0, 1]))
     #expect(!duel.isFocused)
-    #expect(alignment(duel) < -0.99)
+    #expect(simd_dot(Movement.facing(yaw: duel.hero.yaw), SIMD2<Float>(0, 1)) > 0.99)
+    #expect(alignment(duel) < 0, "free movement follows travel even as the enemy moves sideways")
   }
 
   @Test func aSlowFrameConsumesOneFocusEdgeAndNoCombatResource() {

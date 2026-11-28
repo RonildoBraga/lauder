@@ -2,7 +2,55 @@
 
 **Updated:** 28 November 2026. **Tracking:** [issue #236](https://github.com/RonildoBraga/lauder/issues/236).
 
+## Duel readability follow-up — in progress
+
+[PR #242](https://github.com/RonildoBraga/lauder/pull/242), tracked by [issue #241](https://github.com/RonildoBraga/lauder/issues/241), implements the maintainer-assigned subset of the [review triage](https://github.com/RonildoBraga/lauder/issues/240): compare parallel projection, reduce projected fighter overlap, make committed enemy preparation clearer and let a free slash follow movement aim. Work starts from decision/documentation checkpoint **16a202e6d4c97eef115701d2f3719f4ea9a4bc00**; the source-bound 83b79e7 comparison and build47 delivery below remain historical evidence. Their successful checks do not validate this changed source.
+
+**Delivery status:** internal TestFlight **0.1.0 (48)** is available to the existing testers. Implementation and delivery are complete; #241 remains open for Claude's requested feedback and human phone evaluation. Merge is not authorised by this delivery.
+
+### Working preview
+
+- **Camera:** preserve the selected 35° downward pitch, 45° yaw, smooth hero/focused-pair following and approximately 10.1% centred 1.85 m actor height. Orthographic is the working preview after rendered comparison, including its Release configuration, with an approximately **14.998 m full vertical world span** at 35°. Debug can compare that with the preceding 24° vertical-FOV perspective view through `--camera-projection perspective|orthographic`; the 30.5°/35°/40° pitch comparisons remain available. Projection selection changes no combat or input rule. This preview choice awaits human evaluation on the phone.
+- **Enemy approach:** try a short screen-lateral approach near attack range with a latched side, preferring a collision-clear route. A blocked route or a 1.25 s attempt limit restores direct engagement rather than indefinite circling. Existing fighter separation, swept scenery collision, leash, acceptance conditions and sweep/thrust timings remain.
+- **Preparation cues:** cache a broad sweep mesh and narrow thrust mesh with subtle amber fill/outline. Their origin and orientation come from the accepted action; they do not independently follow the hero. Profile reach and half-angle include the same target-disc range/angular margin as contact. A 0.6 m centre cutout preserves feet/focus-ring visibility inside ordinary body separation. These are full-action warning envelopes, not exact hit maps: active timing, movement and scenery remain authoritative. Hide them during active/recovery, Pause/interruption, reset and outcome; resume presents only the current wind-up.
+- **Free-slash aim:** valid movement at the fresh press supplies an unfocused slash's requested direction, including a late buffered request. With no valid movement, retain current facing. Snap the visible facing only when accepting the slash, then preserve its committed direction. Focused slashes retain the existing bounded facing at acceptance. Guard, dodge, stamina, buffer lifetime and shared input priority remain unchanged.
+
+No extra enemy, art asset, target selector, orbit/zoom control, new input stick or combat authority is introduced. The [walkthrough](gameplay-script.md) describes the encounter and [architecture](architecture.md) identifies the owners.
+
+### Verification and review
+
+**Verified application/test/tooling source:** 0e57b6d6ca4e4e7afa098ea6405e953cc43b0dd5. The complete `./scripts/check` passed on 28 November 2026. Native tests cover action-direction and bounded-approach regressions; parallel projection/rays and actual renderer agreement; warning reach, angle, orientation, geometry reuse and phase cleanup; and world-level Pause/resume/Retry cleanup. Independent source reviews found no blocking issue in the core AI/aim or camera/stage/world integration.
+
+Six recorded Simulator runs on that source pass, all at 35° and health100 with no failures. The orthographic runs use the default without a projection override; perspective is the Debug comparison.
+
+| Projection | Route | Result | Actual evidence |
+| --- | --- | --- | --- |
+| Orthographic | duel-attack | 2/2, 18.9 s, 1,106 frames | Victory, seven sword contacts, six blocks, no Retry |
+| Orthographic | duel-defence | 2/2, 4.7 s, 261 frames | One block and one timed evasion |
+| Orthographic | duel-recovery | 4/4, 2.7 s, 138 frames | Pause/release/resume, fresh movement, one native Restart |
+| Orthographic | duel-focus | 5/5, 21.6 s, 1,256 frames | Boundary retreat/strafe, seven contacts/seven blocks, victory, focus released |
+| Perspective | duel-defence | 2/2, 4.6 s, 262 frames | One block and one timed evasion |
+| Perspective | duel-focus | 5/5, 21.5 s, 1,254 frames | Boundary retreat/strafe, seven contacts/seven blocks, victory, focus released |
+
+Summaries report actual projection, pitch/offset and the orthographic span, approximately 14.998 m, which is absent for perspective. Both warning kinds were observed on the attack, defence and focus runs; native stage/world tests establish active/recovery disappearance and interruption/reset cleanup. Matched sweep-preparation and orthographic boundary captures were inspected: parallel lines, consistent depth scale, feet, ring, weapons, warnings and HUD remain clear. Orthographic at 35° is the working preview for TestFlight evaluation, not claimed maintainer acceptance. Separate asynchronous captures show comparable phases, not identical poses. Recordings, screenshots, traces, summaries and the check receipt remain outside Git.
+
+Core tests cover free-stick flicks and buffered aim; there is no dedicated rendered gesture or physical-control proof for those cases. Simulator p99 frame intervals are approximately 33.2–33.3 ms on five routes and 144.3 ms on the short recovery route, including startup/scheduling. This is not phone performance, touch/controller comfort or enjoyment evidence.
+
+Delivery source **aa1cb30d25fa2078424136b4d3886abd91f5dc1a** has identical application/test/tooling content to 0e57b6d; the later change records documentation. [Check 238](https://github.com/RonildoBraga/lauder/actions/runs/46129594495) passed on that exact delivery source, and independent source/documentation review found no blocking issue. Hosted Codex app review completed without findings on 0e57b6d; PR #242 comments and review threads had no outstanding findings in the pre-upload check. Claude has been asked, with no response claimed. Earlier reviews and checks below remain tied to their recorded sources.
+
+### Internal TestFlight build 48 — available
+
+The maintainer explicitly authorised TestFlight delivery for this follow-up. Internal **0.1.0 (48)** is available from frozen reviewed source **aa1cb30d25fa2078424136b4d3886abd91f5dc1a**, using the [reviewed-preview release workflow](../CONTRIBUTING.md#reproducible-release-command) on the clean named branch before merge. Apple discovery checked accepted/processing uploads and confirmed the number was unused before archive/upload.
+
+The archive workflow reran the complete standard check and bound its receipt to the frozen source. Bundle/version/build/team, signature/provisioning, matching dSYM, unchanged archive fingerprint and internal-only export policy passed verification. Independent pre-upload and post-upload audits passed.
+
+The single API-authenticated upload finished **COMPLETE** with **zero upload errors**. Apple readback at **09:33:19 UTC on 28 November 2026** confirmed the build **VALID**, unexpired, **INTERNAL_ONLY**, **IN_BETA_TESTING** and available to the existing intended internal groups. Group/build/tester joins passed, with unchanged group and tester membership. Exact **en-AU** testing notes and their actual related-build readback were verified. Private archive, symbols, receipts and audit evidence remain outside Git.
+
+Choose **TestFlight → Lauder → Update** to evaluate camera readability, side approaches, warnings, free-slash aiming, defence, Pause and Retry. Tester availability is verified; physical installation, controls, phone performance and enjoyment are not. No app was uninstalled, no tester invited and no public App Store submission or change to public pricing/availability was made. Build47 remains the earlier duel comparison; merge and Claude/human feedback remain separate.
+
 ## Camera and enemy-focus follow-up — in progress
+
+**Earlier source record:** this section preserves the focus and three-angle perspective work through checkpoint 16a202e. The readability follow-up above owns current changes and delivery status.
 
 The maintainer requested a camera closer to Eitr's framing and a way to retreat without turning away from the enemy (chat, 28 November 2026; no public permalink). [Issue #238](https://github.com/RonildoBraga/lauder/issues/238) tracks this follow-up in [PR #239](https://github.com/RonildoBraga/lauder/pull/239), stacked on [PR #237](https://github.com/RonildoBraga/lauder/pull/237).
 
@@ -47,9 +95,9 @@ Hosted [Check235](https://github.com/RonildoBraga/lauder/actions/runs/4612484432
 
 ### Review follow-ups
 
-Claude’s review correctly identifies perspective convergence and occasional projected body overlap as remaining differences/readability risks. Current matched scale is approximately 10.1%; the review’s earlier scale comparison predates this calibration. The 35° view improves separation but does not guarantee that one fighter can never obscure the other.
+At checkpoint 16a202e, Claude’s review identified perspective convergence and occasional projected body overlap as remaining differences/readability risks. Matched scale at that revision was approximately 10.1%; the review’s earlier scale comparison predates its calibration. The 35° view improved separation without guaranteeing that one fighter could never obscure the other.
 
-Orthographic/longer-lens comparisons, side-approach enemy movement, attack-area indicators and stick-directed free slashes are separate proposals, coordinated through [issue #240](https://github.com/RonildoBraga/lauder/issues/240). They are not silently included in the framing selection. Free slashes still use bounded current facing and their committed direction; Focus assists tracking while directional Guard, stamina and guard-break rules remain.
+Orthographic/longer-lens comparisons, side-approach enemy movement, attack-area indicators and stick-directed free slashes were triaged as separate proposals through [issue #240](https://github.com/RonildoBraga/lauder/issues/240), outside that framing selection. The authorised subset is now implemented for validation in #241 above. At the earlier revision, free slashes still used bounded current facing; those historical results do not describe the new movement-directed request.
 
 ### Initial focus implementation — verified on earlier source
 
@@ -66,7 +114,7 @@ Fresh rendered Simulator runs on that exact application/test/tooling source pass
 
 Before/after captures, videos, traces and summaries remain in the ignored local verification folders. Actual frames were inspected for diagonal scenery, upright fighters, focus ring, weapons, HUD and near-wall foot visibility. This exposed foreground walls hiding feet; the two foreground wall visuals now use 0.18m curbs while the flat collision boxes remain unchanged. Independent Codex source review found no blocking issue; its pending-focus/Pause and first-fixed-tick acquisition coverage suggestions were addressed. At that checkpoint, Claude/external review and human framing acceptance remained open; the later choice and review record above supersede that status.
 
-No new TestFlight upload has been made: build47 remains the delivered earlier revision. Scripted raw commands and native touch tests do not establish physical R3/Tab delivery, real multi-touch comfort, sustained phone performance or enjoyment. Existing source-bound results below retain their original revisions.
+At this checkpoint, no new TestFlight upload had been made: build47 remained the delivered earlier revision. Scripted raw commands and native touch tests do not establish physical R3/Tab delivery, real multi-touch comfort, sustained phone performance or enjoyment. Existing source-bound results below retain their original revisions; the #241 entry above owns subsequent delivery status.
 
 ## Internal TestFlight build 47 — available
 
@@ -148,4 +196,4 @@ The routes drive real shared input, not injected damage or outcomes. The origina
 
 A short human session should establish whether preparation is readable, block/dodge/repositioning offer distinct choices, damage feels fair and Retry invites another attempt. Physical touch/controller comfort and sustained phone performance require a separately arranged milestone.
 
-The three-angle comparison is complete and the 35° framing is selected. Review the selected camera/focus calibration before expanding the duel. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel. Merge and TestFlight publication retain their own go-ahead.
+The three-angle comparison selected 35°; #241 now has passing source-bound checks, a rendered projection comparison and verified internal TestFlight build 48 delivery. Gather Claude's requested feedback and the maintainer's phone evaluation before expanding the duel. Merge remains a separate instruction. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel.

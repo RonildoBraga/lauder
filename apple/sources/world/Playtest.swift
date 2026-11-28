@@ -59,6 +59,9 @@
       let focused: Bool
       let cameraPitch: Float
       let cameraOffset: [Float]
+      let cameraProjection: String
+      let orthographicHeight: Float?
+      let warningsShown: [String]
       let marks: [Mark]
     }
 
@@ -78,6 +81,7 @@
     private var movementStart = SIMD2<Float>.zero
     private var retreating = false
     private var seenThreats: Set<String> = []
+    private var seenWarnings: Set<String> = []
     private var folder: URL?
     private var orientation = "unknown"
 
@@ -362,6 +366,11 @@
         action.phaseProgress > 0.2
       {
         let name = action.kind == .thrust ? "thrust wind-up" : "sweep wind-up"
+        if !world.isPaused, !world.controls.needsNeutralInput,
+          world.root.findEntity(named: "duel.attack-warning")?.isEnabled == true
+        {
+          seenWarnings.insert(action.kind == .thrust ? "thrust" : "sweep")
+        }
         if seenThreats.insert(name).inserted { mark(name) }
       }
       if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
@@ -422,6 +431,9 @@
         focused: simulation.isFocused,
         cameraPitch: WorldCamera.pitchDegrees,
         cameraOffset: [WorldCamera.offset.x, WorldCamera.offset.y, WorldCamera.offset.z],
+        cameraProjection: WorldCamera.projectionKind,
+        orthographicHeight: WorldCamera.orthographicHeight,
+        warningsShown: seenWarnings.sorted(),
         marks: marks)
       if let folder, let summary {
         do {

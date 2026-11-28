@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BUNDLE = "com.ronildo.lauder"
 SCENARIOS = ["duel-attack", "duel-defence", "duel-recovery", "duel-focus"]
 CAMERA_PITCHES = ["30.5", "35", "40"]
+CAMERA_PROJECTIONS = ["perspective", "orthographic"]
 
 
 def say(message):
@@ -44,8 +45,9 @@ def run(command, **options):
     return subprocess.run(command, capture_output=True, text=True, **options)
 
 
-def camera_arguments(pitch):
-    return ["-LauderCameraPitch", pitch] if pitch else []
+def camera_arguments(pitch, projection=None):
+    return ((["-LauderCameraPitch", pitch] if pitch else [])
+            + (["-LauderCameraProjection", projection] if projection else []))
 
 
 def simulator():
@@ -154,7 +156,7 @@ def capture(device, mark, number, scenario, folder):
     return path if result.returncode == 0 else None
 
 
-def play(device, scenario, folder, timeout, camera_pitch=None):
+def play(device, scenario, folder, timeout, camera_pitch=None, camera_projection=None):
     run(["xcrun", "simctl", "terminate", device, BUNDLE])
     results = documents(device) / scenario
     shutil.rmtree(results, ignore_errors=True)
@@ -164,7 +166,7 @@ def play(device, scenario, folder, timeout, camera_pitch=None):
     say(f"Playing {scenario}.")
     try:
         launched = run(["xcrun", "simctl", "launch", device, BUNDLE, "-LauderPlaytest", scenario,
-                        *camera_arguments(camera_pitch)])
+                        *camera_arguments(camera_pitch, camera_projection)])
         if launched.returncode:
             raise SystemExit(f"Launch failed: {launched.stderr.strip()}")
         summary_file = results / "summary.json"
@@ -215,6 +217,7 @@ def report(summary, images):
     say(f"    hero hits {summary['heroHits']}, blocks {summary['blocks']}, "
         f"evasions {summary['evasions']}, retries {summary['retries']}")
     say(f"    camera pitch {summary['cameraPitch']} degrees; offset {summary['cameraOffset']}")
+    say(f"    projection {summary['cameraProjection']}; wind-up indicators {summary['warningsShown']}")
     for image in images:
         say(f"    still: {image.relative_to(ROOT) if image.is_relative_to(ROOT) else image}")
 
@@ -227,6 +230,8 @@ def main():
     parser.add_argument("--list", action="store_true", help="list scenarios and exit")
     parser.add_argument("--camera-pitch", choices=CAMERA_PITCHES,
                         help="Debug-only camera comparison; default is 35 degrees")
+    parser.add_argument("--camera-projection", choices=CAMERA_PROJECTIONS,
+                        help="Debug-only matched-scale projection comparison")
     options = parser.parse_args()
     if options.list:
         print("\n".join(SCENARIOS))
@@ -247,7 +252,8 @@ def main():
             raise SystemExit("Install failed.")
     passed = True
     for scenario in options.scenarios:
-        summary, images = play(device, scenario, folder, options.timeout, options.camera_pitch)
+        summary, images = play(device, scenario, folder, options.timeout, options.camera_pitch,
+                               options.camera_projection)
         report(summary, images)
         passed = passed and summary["passed"]
     shown = folder.relative_to(ROOT) if folder.is_relative_to(ROOT) else folder

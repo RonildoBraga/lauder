@@ -14,9 +14,9 @@ struct CameraProjectionTests {
   @Test
   func theMiddleOfTheScreenLooksAtTheTarget() throws {
     let camera = Self.camera
-    let direction = try #require(camera.direction(atScreen: [0.5, 0.5]))
+    let ray = try #require(camera.ray(atScreen: [0.5, 0.5]))
     let wanted = simd_normalize(camera.target - camera.eye)
-    #expect(simd_distance(simd_normalize(direction), wanted) < 0.0001)
+    #expect(simd_distance(simd_normalize(ray.direction), wanted) < 0.0001)
     // The ground behind the target, on the same line from the camera.
     let ground = try #require(camera.ground(atScreen: [0.5, 0.5]))
     #expect(abs(ground.x + 7) < 0.001 && ground.y < -270)
@@ -54,11 +54,11 @@ struct CameraProjectionTests {
   @Test
   func aRayEntersABoxAtItsNearFace() throws {
     let camera = CameraProjection(eye: [0, 1, 10], target: [0, 1, 0], fieldOfView: 42, aspect: 2)
-    let direction = try #require(camera.direction(atScreen: [0.5, 0.5]))
+    let ray = try #require(camera.ray(atScreen: [0.5, 0.5]))
     let entry = try #require(
-      camera.entry(along: direction, minimum: [-1, 0, -1], maximum: [1, 2, 1]))
-    #expect(abs((camera.eye + direction * entry).z - 1) < 0.0001)
-    #expect(camera.entry(along: direction, minimum: [3, 0, -1], maximum: [4, 2, 1]) == nil)
+      camera.entry(along: ray, minimum: [-1, 0, -1], maximum: [1, 2, 1]))
+    #expect(abs((ray.origin + ray.direction * entry).z - 1) < 0.0001)
+    #expect(camera.entry(along: ray, minimum: [3, 0, -1], maximum: [4, 2, 1]) == nil)
   }
 
   @Test
@@ -68,8 +68,9 @@ struct CameraProjectionTests {
     let screen = try #require(camera.screen(ofWorld: point))
     let ground = try #require(camera.screen(ofGround: [point.x, point.z]))
     #expect(screen.y < ground.y - 0.01)
-    let ray = try #require(camera.direction(atScreen: screen))
-    #expect(simd_distance(simd_normalize(ray), simd_normalize(point - camera.eye)) < 0.0001)
+    let ray = try #require(camera.ray(atScreen: screen))
+    #expect(
+      simd_distance(simd_normalize(ray.direction), simd_normalize(point - ray.origin)) < 0.0001)
     let middle = try #require(camera.screen(ofWorld: camera.target))
     #expect(simd_distance(middle, [0.5, 0.5]) < 0.0001)
   }
@@ -83,5 +84,56 @@ struct CameraProjectionTests {
     #expect(far.x > 1, "the overlay hides an offscreen hit instead of pinning it over the controls")
     let degenerate = CameraProjection(eye: .zero, target: .zero, fieldOfView: 42, aspect: 2)
     #expect(degenerate.screen(ofWorld: [1, 1, 1]) == nil)
+  }
+
+  @Test(arguments: [Float(1), 1.5, 2.16])
+  func parallelGroundProjectionRoundTripsWithShiftedRayOrigins(aspect: Float) throws {
+    let camera = CameraProjection(
+      eye: [18, 15.85, 18], target: [0, 0.85, 0], fieldOfView: 24, aspect: aspect,
+      orthographicHeight: 15)
+    let centre = try #require(camera.ray(atScreen: [0.5, 0.5]))
+    for point: SIMD2<Float> in [[0, 0], [4, 2], [-5, -3], [-2, 4]] {
+      let screen = try #require(camera.screen(ofGround: point))
+      let back = try #require(camera.ground(atScreen: screen))
+      let ray = try #require(camera.ray(atScreen: screen))
+      #expect(simd_distance(back, point) < 0.0001)
+      #expect(simd_distance(ray.direction, centre.direction) < 0.00001)
+      #expect(simd_distance(ray.origin, centre.origin) > 0.01)
+    }
+  }
+
+  @Test
+  func parallelBoxEntryUsesTheSelectedRayOrigin() throws {
+    let camera = CameraProjection(
+      eye: [0, 1, 10], target: [0, 1, 0], fieldOfView: 24, aspect: 2,
+      orthographicHeight: 10)
+    let ray = try #require(camera.ray(atScreen: [0.75, 0.5]))
+    #expect(simd_distance(ray.origin, [5, 1, 10]) < 0.0001)
+    let distance = try #require(
+      camera.entry(along: ray, minimum: [4, 0, -1], maximum: [6, 2, 1]))
+    #expect(simd_distance(ray.origin + ray.direction * distance, [5, 1, 1]) < 0.0001)
+    #expect(camera.entry(along: ray, minimum: [-1, 0, -1], maximum: [1, 2, 1]) == nil)
+    #expect(camera.entry(along: ray, minimum: [4, 0, 9], maximum: [6, 2, 11]) == nil)
+    #expect(
+      camera.entry(
+        along: .init(origin: [.nan, 0, 1], direction: [0, 0, -1]),
+        minimum: [-1, 0, -1], maximum: [1, 2, 1]) == nil)
+  }
+
+  @Test
+  func parallelProjectionRejectsInvalidSpansAndDegenerateRays() {
+    for height: Float in [0, -1, .nan, .infinity] {
+      let camera = CameraProjection(
+        eye: [0, 3, 10], target: .zero, fieldOfView: 24, aspect: 2,
+        orthographicHeight: height)
+      #expect(camera.ray(atScreen: [0.5, 0.5]) == nil)
+      #expect(camera.ground(atScreen: [0.5, 0.5]) == nil)
+      #expect(camera.screen(ofWorld: .zero) == nil)
+    }
+    let camera = CameraProjection(
+      eye: [0, 0, 10], target: .zero, fieldOfView: 24, aspect: 2, orthographicHeight: 10)
+    #expect(camera.ground(atScreen: [0.5, 0.5]) == nil)
+    #expect(camera.ray(atScreen: [.nan, 0.5]) == nil)
+    #expect(camera.screen(ofWorld: [0, 0, 11]) == nil)
   }
 }
