@@ -142,7 +142,7 @@ struct PartyMotionTests {
     [-2.4376667, 1.8600595], [7.8554177, 0.060019918], [9.618896, -7.4354496],
   ])
   func everyReportedFrozenPositionHasAnOutwardEscape(start: SIMD2<Float>) {
-    let motion = PartyMotion(radius: PartyBody.radius, obstacles: TestYard.obstacles)
+    let motion = PartyMotion(radius: radius, obstacles: TestYard.obstacles)
     var escapes = 0
     for index in 0..<16 {
       let angle = Float(index) * .pi / 8

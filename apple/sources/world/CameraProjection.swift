@@ -1,9 +1,7 @@
 import simd
 
-/// The game camera's mapping between the screen and the ground, so a touch
-/// order can mark the ground, or a block, under the finger (ADR 0003, phase S3). The camera
-/// looks at `target` from `eye` with world up as its up, and a vertical field of view, as
-/// GameWorld places it.
+/// Perspective mapping between the screen and world geometry. Projection stays independent
+/// of scene entities, actor selection and combat rules.
 struct CameraProjection {
   let eye: SIMD3<Float>
   let target: SIMD3<Float>
@@ -39,33 +37,31 @@ struct CameraProjection {
     return SIMD2(hit.x, hit.z)
   }
 
-  /// What the ray from the camera through a point on the screen meets first: one of these
-  /// blocks, or the ground; nil when it meets neither.
-  func firstHit(
-    atScreen point: SIMD2<Float>, blocks: [(centre: SIMD3<Float>, size: SIMD3<Float>)]
-  ) -> SIMD3<Float>? {
-    guard let direction = direction(atScreen: point) else { return nil }
-    var nearest = ground(along: direction) ?? .infinity
-    for block in blocks {
-      if let distance = entry(
-        along: direction, minimum: block.centre - block.size / 2,
-        maximum: block.centre + block.size / 2),
-        distance < nearest
-      {
-        nearest = distance
-      }
-    }
-    return nearest.isFinite ? eye + direction * nearest : nil
-  }
-
   /// How far along `direction` from the camera a ray enters a box; nil when it misses, or the
   /// camera is inside it.
   func entry(
     along direction: SIMD3<Float>, minimum: SIMD3<Float>, maximum: SIMD3<Float>
   ) -> Float? {
-    let near = LineOfSight.entry(
-      from: eye, along: direction, minimum: minimum, maximum: maximum, limit: .infinity)
-    return near.flatMap { $0 > 0 ? $0 : nil }
+    guard
+      eye.indices.allSatisfy({
+        eye[$0].isFinite && direction[$0].isFinite && minimum[$0].isFinite
+          && maximum[$0].isFinite && minimum[$0] <= maximum[$0]
+      })
+    else { return nil }
+    var near = -Float.infinity
+    var far = Float.infinity
+    for axis in 0..<3 {
+      if abs(direction[axis]) < 0.000001 {
+        guard eye[axis] >= minimum[axis], eye[axis] <= maximum[axis] else { return nil }
+      } else {
+        let first = (minimum[axis] - eye[axis]) / direction[axis]
+        let last = (maximum[axis] - eye[axis]) / direction[axis]
+        near = max(near, min(first, last))
+        far = min(far, max(first, last))
+        if near > far { return nil }
+      }
+    }
+    return near > 0 && near.isFinite ? near : nil
   }
 
   /// How far along `direction` from the camera a ray comes down to the ground; nil when it

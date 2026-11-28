@@ -8,7 +8,7 @@ The maintainer asked to keep this repository and mark the old project so it rema
 | --- | --- | --- |
 | [milestone/bridge-main-2026-11-28](https://github.com/RonildoBraga/lauder/tree/milestone/bridge-main-2026-11-28) | 0f4eb819ae2b794f713ca67b2211bc53766a28ee | Merged bridge prototype, including Claude's fixes in PRs #229–#233. |
 | [milestone/two-leader-pilot-2026-11-28](https://github.com/RonildoBraga/lauder/tree/milestone/two-leader-pilot-2026-11-28) | 99131065a388cf3cf655b816ec60697d15691b61 | Unmerged [PR #228](https://github.com/RonildoBraga/lauder/pull/228), implementing the two-leader/support experiment. It does not contain the subsequent main cleanup. |
-| Delivered TestFlight 0.1.0 (46) | e025cc6c938ea72fbd8f1143c86a3ef46c6b5ece | Last delivery recorded in the [prototype plan](../prototype-plan.md#build-46-maintenance-testflight-preview). Neither checkpoint is a claim that a new binary has shipped. |
+| Delivered TestFlight 0.1.0 (46) | e025cc6c938ea72fbd8f1143c86a3ef46c6b5ece | Last delivery recorded in the [prototype plan](../bridge-prototype-plan.md#build-46-maintenance-testflight-preview). Neither checkpoint is a claim that a new binary has shipped. |
 
 Main and the pilot diverge. Neither tag is the combined tree of both branches. Both tags preserve authored source, story/design documents, art provenance, Blender sources and runtime resources tracked at their respective commits. The tags are named references, not access-controlled immutable backups; do not move them when new work lands.
 

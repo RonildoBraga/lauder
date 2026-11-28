@@ -1,12 +1,12 @@
 # Eitr research and a gameplay-first reset proposal
 
-**Date:** 28 November 2026. **Agent:** Codex, researcher and repository auditor. **Status:** proposal for maintainer agreement, tracked in [issue #234](https://github.com/RonildoBraga/lauder/issues/234).
+**Date:** 28 November 2026. **Agent:** Codex, researcher and repository auditor. **Status:** research retained; first duel assigned in [issue #236](https://github.com/RonildoBraga/lauder/issues/236), broader proposals tracked in [issue #234](https://github.com/RonildoBraga/lauder/issues/234).
 
 ## Recommendation and scope
 
 Keep this repository, preserve the bridge at the [named checkpoints](../milestones/bridge-prototype.md), and build toward a single controlled hero with deliberate close combat. Keep Swift/RealityKit and the Apple development pipeline initially. Test one enjoyable duel before committing to a campaign, character art, elaborate environments or progression systems.
 
-The maintainer authorised research, a reuse audit and a roadmap before implementation, and explicitly changed the initial fork idea to keeping this repository. The single-hero design, specific mechanics, controls and phases below are recommendations, not approved changes to the [story bible](../story/story-bible.md), [architecture](../architecture.md) or implemented [bridge walkthrough](../gameplay-script.md). No game source or assets are changed or removed by this proposal. The two-leader pilot is preserved separately rather than merged just to archive it.
+The initial assignment authorised research, a reuse audit and a roadmap before implementation, explicitly retaining this repository. The maintainer subsequently assigned the first duel experiment in issue #236. The [current plan](../prototype-plan.md) owns that implementation; later phases below remain gated recommendations. The research itself changed no game source or assets, and the anonymous prototype hero does not rewrite the preserved story foundations. The two-leader pilot is preserved separately rather than merged just to archive it.
 
 Eitr should be a close mechanical reference, not a promise of an identical finished game: no released build or complete specification is available to us. Its [official Steam listing](https://store.steampowered.com/app/350050/EITR/) remains unavailable, unlisted at the publisher's request, and marked Coming soon. Neither cancellation nor current active development was established. A developer [2019 reply](https://steamcommunity.com/app/350050/discussions/0/1644290549110684004/) says Eitr was shown too early and had undergone several major revisions. Dates matter.
 
@@ -68,12 +68,12 @@ Audit baseline: clean merged main at 0f4eb819ae2b794f713ca67b2211bc53766a28ee. T
 
 Concrete boundaries already worth keeping:
 
-- [InputRules](../../apple/sources/interface/InputRules.swift) owns command priority and readiness; [GameControls](../../apple/sources/interface/GameControls.swift) owns source changes. Route new actions through them rather than adding a second combat input policy.
-- [Movement](../../apple/sources/world/Movement.swift), [PartyMotion](../../apple/sources/world/PartyMotion.swift) and [CameraRig](../../apple/sources/world/CameraRig.swift) provide useful geometry/projection. PartyMotion's collision math is reusable even if its party-oriented name later changes. It currently supplies flat movement and boxes, not a complete 3D terrain/navigation system.
-- [EncounterStage](../../apple/sources/world/EncounterStage.swift) separates scene entities from value-only simulation. Preserve that principle, not every current presenter.
-- [The check command](../../scripts/check), [Simulator runner](../../apple/scripts/playtest) and [release tooling](../../apple/scripts/testflight_release.py) already bind validation and delivery to actual sources. Retain the source/signing/Apple-processing/tester-access checks when a future release is authorised.
+- [InputRules](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/interface/InputRules.swift) owns command priority and readiness; [GameControls](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/interface/GameControls.swift) owns source changes. Route new actions through them rather than adding a second combat input policy.
+- [Movement](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/world/Movement.swift), [PartyMotion](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/world/PartyMotion.swift) and [CameraRig](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/world/CameraRig.swift) provide useful geometry/projection. PartyMotion's collision math is reusable even if its party-oriented name later changes. It currently supplies flat movement and boxes, not a complete 3D terrain/navigation system.
+- [EncounterStage](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/world/EncounterStage.swift) separates scene entities from value-only simulation. Preserve that principle, not every current presenter.
+- [The check command](../../scripts/check), [Simulator runner](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/scripts/playtest) and [release tooling](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/scripts/testflight_release.py) already bind validation and delivery to actual sources. Retain the source/signing/Apple-processing/tester-access checks when a future release is authorised.
 
-The current sword hits immediately when ready inside its range/arc in [EncounterSimulation](../../apple/sources/gameplay/EncounterSimulation.swift); the drawn sword can passively deflect frontal shots. [Weapon](../../apple/sources/combat/Weapon.swift) also models a rechargeable area shield. [PawnMotion](../../apple/sources/world/PawnMotion.swift) supplies a roll, while [GameWorld](../../apple/sources/world/GameWorld.swift) excludes the rolling leader from hostile shot targeting. There is no stamina economy or general player startup/contact/recovery state. A sword-and-shield prototype needs new authoritative combat rules, not simply new models or tuned gun damage.
+The current sword hits immediately when ready inside its range/arc in [EncounterSimulation](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/gameplay/EncounterSimulation.swift); the drawn sword can passively deflect frontal shots. [Weapon](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/combat/Weapon.swift) also models a rechargeable area shield. [PawnMotion](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/world/PawnMotion.swift) supplies a roll, while [GameWorld](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources/world/GameWorld.swift) excludes the rolling leader from hostile shot targeting. There is no stamina economy or general player startup/contact/recovery state. A sword-and-shield prototype needs new authoritative combat rules, not simply new models or tuned gun damage.
 
 ### Architecture and workflow improvements
 
@@ -94,7 +94,7 @@ Workflow priorities, in order:
 
 1. Provide a direct duel/retry entry, avoiding repeated traversal of the long bridge for every tuning experiment. Keep one small current plan with acceptance gates; move release history to linked records after agreement rather than continuing to grow the front page.
 2. Keep input/lifecycle/collision/reset regressions. When old production features leave, retire their active tests and scenario requirements together; retain the checkpoint history. Do not keep dormant squad code just to satisfy old tests.
-3. Adapt the asset declarations, exporters, preflight and drift checks together. Folder-synchronised resources under [apple/sources](../../apple/sources) are bundled: unused USDZ/WAV files there still ship. Authored art can remain outside runtime resources; do not disable safeguards to hide obsolete content.
+3. Adapt the asset declarations, exporters, preflight and drift checks together. Folder-synchronised resources under [apple/sources](https://github.com/RonildoBraga/lauder/blob/milestone/bridge-main-2026-11-28/apple/sources) are bundled: unused USDZ/WAV files there still ship. Authored art can remain outside runtime resources; do not disable safeguards to hide obsolete content.
 4. Measure validation phases before optimising CI. [PR #228 CI 213](https://github.com/RonildoBraga/lauder/actions/runs/46095812456) succeeded, but validation took 17m24s and logged an Apple Simulator service timeout. Portable checks took about six seconds and formatting eleven; most time was Xcode/hosted Simulator work. This does not isolate build/test costs. Consider a fast value-rule check and cached local iteration only if measurement justifies them; retain the complete release check.
 5. Profile the smaller loop before introducing pooling, caching or concurrency. [Issue #227](https://github.com/RonildoBraga/lauder/issues/227) records a deferred phone HUD measurement, not a demonstrated performance regression or a new measurement assignment. Simulator timings do not establish iPhone performance.
 
@@ -102,7 +102,7 @@ Do not replace the engine during research. A tiny RealityKit prototype can test 
 
 ## Proposed first playable and roadmap
 
-All phases below require agreement/assignment before implementation. They are experiments with stop gates, not promises of a full Eitr feature set or calendar estimates.
+The maintainer assigned Phase 1 in issue #236 after this research. Later phases retain the gates below; they are not promises of a full Eitr feature set or calendar estimates. This document preserves the original proposal and evidence; the current prototype plan owns implementation status.
 
 ### Phase 0 — agree the reference and preserve the bridge
 
@@ -154,4 +154,4 @@ At that point, execute an approved active-code/resource cleanup, update the acce
 - **Mobile burden:** do not require precision target switching and four simultaneous gestures. First test three combat actions; parry/charged attacks are optional depth after comfortable basics.
 - **Scope relapse:** the old bridge accumulated many interacting features before the central activity became satisfying. Make further scope contingent on the duel and short-route gates. If even sword/shield/dodge is hard to read, temporarily compare attack plus dodge alone before adding another system.
 
-The immediate decision is whether this small, single-hero sword/shield experiment is the right next test. Approval of the research document alone is not a claim that its mechanics, lore or roadmap are already implemented.
+The maintainer selected the small single-hero sword/shield experiment as the next test in issue #236. Its source/check and human acceptance status belong to the current plan; that assignment does not establish that the later roadmap or lore is implemented.

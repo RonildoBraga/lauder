@@ -1,7 +1,9 @@
 # Crawler pack at the first tower
 
+> Historical bridge contract, preserved at the [checkpoint](milestones/bridge-prototype.md). The [current duel](prototype-plan.md) does not include this system.
+
 **Date:** 27 November 2026  
-**Status:** [Combined build 45](prototype-plan.md#build-45-combined-testflight-preview), frozen main/archive source `4db6dcc`, is available to the existing Lauder TestFlight testers after PR #212 merged, closing issues #208/#217. It includes the stable crawler warning-target correction and reviewed grenade/credit fixes; the prototype plan owns the source, release and passed independent pre/post-upload audit proof. Earlier [build 44](prototype-plan.md#build-44-testflight-preview) retains the maintainer’s general “Feels right” phone feedback; that does not verify physical controls, audio, balance or performance for build 45.
+**Status:** [Combined build 45](bridge-prototype-plan.md#build-45-combined-testflight-preview), frozen main/archive source `4db6dcc`, is available to the existing Lauder TestFlight testers after PR #212 merged, closing issues #208/#217. It includes the stable crawler warning-target correction and reviewed grenade/credit fixes; the prototype plan owns the source, release and passed independent pre/post-upload audit proof. Earlier [build 44](bridge-prototype-plan.md#build-44-testflight-preview) retains the maintainer’s general “Feels right” phone feedback; that does not verify physical controls, audio, balance or performance for build 45.
 
 ## The request
 

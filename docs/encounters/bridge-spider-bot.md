@@ -4,7 +4,7 @@
 
 **Status:** The maintainer accepted C's form and motion, then assigned replacing the first human shooter and testing movement/shooting in Simulator. Runtime integration is implemented; the standard check and three rendered Simulator routes pass. This is one prototype encounter, with initial tuning rather than settled balance. A's different-weapon variant remains future reference, and camera B is unchanged.
 
-**Reading this record:** The sections below preserve the original C integration, its initial timings, six-hit toughness and historical verification. The current [strategic guard](../strategic-guard.md), [companion autonomy](../companion-autonomy.md), [retaliation](../guard-retaliation.md), [cover/spacing](../bridge-cover-spacing.md) and authorised [health/damage revision](../damage-feedback.md) build on that baseline. The [prototype plan](../prototype-plan.md#guard-damage-and-feedback--in-development) distinguishes their current source, verification and delivery; the original six-hit/single-pattern values and solo Miki references below are historical, rather than the new damage candidate.
+**Reading this record:** The sections below preserve the original C integration, its initial timings, six-hit toughness and historical verification. The current [strategic guard](../strategic-guard.md), [companion autonomy](../companion-autonomy.md), [retaliation](../guard-retaliation.md), [cover/spacing](../bridge-cover-spacing.md) and authorised [health/damage revision](../damage-feedback.md) build on that baseline. The [prototype plan](../bridge-prototype-plan.md#guard-damage-and-feedback--in-development) distinguishes their current source, verification and delivery; the original six-hit/single-pattern values and solo Miki references below are historical, rather than the new damage candidate.
 
 ## Goal and placement
 
@@ -47,7 +47,7 @@ A small **nonblocking supply case** at **[-8.5, -8]** once held six rounds and a
 
 ## Verification and playtest questions
 
-The standard check passes, including source/export contracts, the app build and Swift Testing. Rendered Simulator routes pass: first fight **35/35**, retry **15/15** and the full opening **56/56**, with no failures or companion warnings. First-fight marks record actual phases and six emitted enemy shots across two bursts before defeat. [Verification details](../prototype-plan.md#c-robot-on-the-bridge) distinguish these results from phone evidence. Coverage includes:
+The standard check passes, including source/export contracts, the app build and Swift Testing. Rendered Simulator routes pass: first fight **35/35**, retry **15/15** and the full opening **56/56**, with no failures or companion warnings. First-fight marks record actual phases and six emitted enemy shots across two bursts before defeat. [Verification details](../bridge-prototype-plan.md#c-robot-on-the-bridge) distinguish these results from phone evidence. Coverage includes:
 
 - Loaded model joints, grounded feet, mirrored components and barrel/ray alignment through movement, turning, bracing and recoil.
 - Full-footprint movement around the existing piers, finite facing and no banked or through-stone shots.

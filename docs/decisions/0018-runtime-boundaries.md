@@ -56,5 +56,5 @@ findings. Rendered opening and orders routes passed on unchanged app, Swift-test
 sources. The source-bound check and signed archive verification also passed on integrated
 source. At 2026-11-22 08:38:25 UTC, Apple confirmed build 0.1.0 (28) processed and available to
 the existing internal testers, with membership unchanged. The
-[prototype plan](../prototype-plan.md#verification-and-performance) records exact commits,
+[prototype plan](../bridge-prototype-plan.md#verification-and-performance) records exact commits,
 CI, Simulator and delivery results. No new physical-phone or enjoyment result is claimed.

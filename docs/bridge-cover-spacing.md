@@ -1,7 +1,9 @@
 # Bridge cover and companion spacing
 
+> Historical bridge contract, preserved at the [checkpoint](milestones/bridge-prototype.md). The [current duel](prototype-plan.md) does not include this system.
+
 **Date:** 27 November 2026\
-**Status:** Implemented and source/Simulator verified on `codex/bridge-cover-spacing`, in [PR #175](https://github.com/RonildoBraga/lauder/pull/175) for [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The [prototype plan](prototype-plan.md#bridge-cover-and-spacing--in-development) records the original source and results and owns current release gates and delivery evidence; the comparison below retains its original baseline.
+**Status:** Implemented and source/Simulator verified on `codex/bridge-cover-spacing`, in [PR #175](https://github.com/RonildoBraga/lauder/pull/175) for [issue #174](https://github.com/RonildoBraga/lauder/issues/174). The [prototype plan](bridge-prototype-plan.md#bridge-cover-and-spacing--in-development) records the original source and results and owns current release gates and delivery evidence; the comparison below retains its original baseline.
 
 ## Assignment and comparison
 
@@ -11,7 +13,7 @@ The question is whether useful separate shelter and less crowded companion desti
 
 ## Two simple shelters
 
-The bridge's [Blender source](../blender/levels/brooklyn-bridge.blend) remains authoritative. Its generated [layout](../apple/sources/content/BrooklynBridgeLayout.swift) and scene must come from the normal export workflow.
+The bridge's [Blender source](../blender/levels/brooklyn-bridge.blend) remains authoritative. Its generated [layout](../blender/reference-exports/BrooklynBridgeLayout.swift) and scene must come from the normal export workflow.
 
 | Gameplay box | Size across / up / along | Purpose |
 |---|---|---|
@@ -36,4 +38,4 @@ Explicit Go/Hold positioning keeps priority over autonomous spacing. The player 
 
 Check the authored shelter from both real muzzles, accessible separate places, the centre/east/west lanes and clearance around the guard. Exercise reservation conflicts, immediate cache invalidation, stable settling, Hold/Go priority, switching and reset. Native weapon, collision, actual ray and injury rules must remain in control.
 
-Use ordinary-input headless and rendered Simulator routes for Attack, Defend, return to cover, spacing, dismantling, quiet bypass and Restart. Record actual injuries/retries, useful cover and separation over time rather than claiming every frame keeps an ideal gap. The [prototype plan](prototype-plan.md#bridge-cover-and-spacing--in-development) owns the exact completed results when available. Source tests and Simulator recordings do not establish physical-phone controls, audibility, sustained performance or enjoyment.
+Use ordinary-input headless and rendered Simulator routes for Attack, Defend, return to cover, spacing, dismantling, quiet bypass and Restart. Record actual injuries/retries, useful cover and separation over time rather than claiming every frame keeps an ideal gap. The [prototype plan](bridge-prototype-plan.md#bridge-cover-and-spacing--in-development) owns the exact completed results when available. Source tests and Simulator recordings do not establish physical-phone controls, audibility, sustained performance or enjoyment.

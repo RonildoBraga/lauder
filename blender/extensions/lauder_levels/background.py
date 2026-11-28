@@ -102,9 +102,9 @@ def _again(repository, step):
 def _finished(step):
     """What a background step says when it finishes well."""
     if step[0] == "export":
-        return f"Exported {LEVELS[step[3]].title}. The game shows it from the next build."
+        return f"Exported {LEVELS[step[3]].title}. The preserved reference export is up to date."
     if step[0] == "export model":
-        return f"Exported the {step[3]} model. The game shows it from the next build."
+        return f"Exported the {step[3]} model. The preserved reference export is up to date."
     return "The game is running in the Simulator."
 
 

@@ -12,7 +12,7 @@ After build 22, Codex recommended one coherent exploration-and-salvage mission: 
 
 This assigns **Relay Run**, level `relay-run`, as a standalone greybox prototype. The walkthrough (historical walkthrough, retained in Git history) describes its player experience. Its location in the journey, dialogue and character implications remain provisional. It does not place [Relay House](../story/story-bible.md#later-scene--relay-house) on the map, change the bridge opening or assign the full [Quiet Yard](../encounters/the-quiet-yard.md) screenplay.
 
-The mission details below are engineering defaults within that assignment, not additional quotations or permanent character canon. Existing Simulator-first development and TestFlight delivery continue; physical results and subjective judgement remain in the [deferred checklist](../prototype-plan.md#deferred-phone-and-playtest-checks).
+The mission details below are engineering defaults within that assignment, not additional quotations or permanent character canon. Existing Simulator-first development and TestFlight delivery continue; physical results and subjective judgement remain in the [deferred checklist](../bridge-prototype-plan.md#deferred-phone-and-playtest-checks).
 
 ## Decisions
 
@@ -66,7 +66,7 @@ Restart starts a fresh run: close the gate, reshuffle the cabinets, clear the ba
 
 ## Verification and delivery
 
-Source `2199ad7` passed the full standard check, all fifteen headless scenarios and focused mission tests. Rendered safe/guarded journeys passed 105/105 and 104/104 steps; the prior combat/salvage regressions passed 113/113 and 106/106 through the extended cycle. Automatic and independent source reviews have no outstanding findings. A fresh signed Release archive was verified and uploaded with API authentication. Apple confirmed **0.1.0 (23)** as **VALID**, **IN_BETA_TESTING** and available to the existing internal testers with membership unchanged. The [prototype plan](../prototype-plan.md#verification-and-performance) records the measurements and remaining limits. Physical-phone performance, controller/touch behaviour and the maintainer's judgement remain unverified; story placement and dialogue remain provisional.
+Source `2199ad7` passed the full standard check, all fifteen headless scenarios and focused mission tests. Rendered safe/guarded journeys passed 105/105 and 104/104 steps; the prior combat/salvage regressions passed 113/113 and 106/106 through the extended cycle. Automatic and independent source reviews have no outstanding findings. A fresh signed Release archive was verified and uploaded with API authentication. Apple confirmed **0.1.0 (23)** as **VALID**, **IN_BETA_TESTING** and available to the existing internal testers with membership unchanged. The [prototype plan](../bridge-prototype-plan.md#verification-and-performance) records the measurements and remaining limits. Physical-phone performance, controller/touch behaviour and the maintainer's judgement remain unverified; story placement and dialogue remain provisional.
 
 ## Scope kept for later
 

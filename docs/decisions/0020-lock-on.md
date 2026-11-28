@@ -1,10 +1,10 @@
 # ADR 0020 — Lock-on
 
-**Status:** Accepted, with starting values to tune in play; implemented in the [controls pass](../prototype-plan.md#controls-pass), [PR #156](https://github.com/RonildoBraga/lauder/pull/156). Played on the phone in TestFlight build 32, where the maintainer said the weapons and controls feel right ([playtest](../prototype-plan.md#build-32-playtest)).
+**Status:** Accepted, with starting values to tune in play; implemented in the [controls pass](../bridge-prototype-plan.md#controls-pass), [PR #156](https://github.com/RonildoBraga/lauder/pull/156). Played on the phone in TestFlight build 32, where the maintainer said the weapons and controls feel right ([playtest](../bridge-prototype-plan.md#build-32-playtest)).
 
 **Date:** 26 November 2026
 
-**Touch-parity follow-up, 27 November 2026:** [Issue #186](https://github.com/RonildoBraga/lauder/issues/186) records the maintainer's request to revisit touch targeting and action coverage. The subsequent instruction **“Also please address the Claude comments on git issues”** authorises the bounded follow-up (maintainer chat, no public permalink). The maintainer chose a short contextual touch hint for discovering squad orders. Tapping the selected enemy again to release, adding Status panel to touch Pause and retaining the gameplay button positions are implementation choices under that assignment. The [prototype plan](../prototype-plan.md#touch-parity--in-development) owns implementation and verification status; build 36 is the earlier delivered baseline.
+**Touch-parity follow-up, 27 November 2026:** [Issue #186](https://github.com/RonildoBraga/lauder/issues/186) records the maintainer's request to revisit touch targeting and action coverage. The subsequent instruction **“Also please address the Claude comments on git issues”** authorises the bounded follow-up (maintainer chat, no public permalink). The maintainer chose a short contextual touch hint for discovering squad orders. Tapping the selected enemy again to release, adding Status panel to touch Pause and retaining the gameplay button positions are implementation choices under that assignment. The [prototype plan](../bridge-prototype-plan.md#touch-parity--in-development) owns implementation and verification status; build 36 is the earlier delivered baseline.
 
 ## Assignment
 
@@ -51,6 +51,6 @@ The initial omission of touch lock-on was the implementer's reading of that cont
 
 ## Verification
 
-Recorded in the prototype plan under [Controls pass](../prototype-plan.md#controls-pass).
+Recorded in the prototype plan under [Controls pass](../bridge-prototype-plan.md#controls-pass).
 
-The [touch-parity follow-up](../prototype-plan.md#touch-parity--in-development) records the new tap, accessibility, authority and touch-only Simulator checks. Earlier controller-driven captures with the touch layout visible do not verify touch input. Simulator and source checks do not establish real touch, multi-touch, VoiceOver usability or phone acceptance. The [touch-control contract](../touch-controls.md) describes drawn-item selection and the remaining extreme-top cancellation limit.
+The [touch-parity follow-up](../bridge-prototype-plan.md#touch-parity--in-development) records the new tap, accessibility, authority and touch-only Simulator checks. Earlier controller-driven captures with the touch layout visible do not verify touch input. Simulator and source checks do not establish real touch, multi-touch, VoiceOver usability or phone acceptance. The [touch-control contract](../touch-controls.md) describes drawn-item selection and the remaining extreme-top cancellation limit.

@@ -21,18 +21,18 @@ class ContractTests(unittest.TestCase):
         self.root = Path(folder.name)
         for name in (
             "apple/scripts/playtest", "apple/scripts/preflight.py", "apple/scripts/make-sounds.py",
-            "apple/sources/world/Playtest.swift", "apple/sources/interface/CombatFeedback.swift",
-            "apple/sources/world/SceneStyle.swift", "apple/sources/gameplay/PartyMember.swift",
+            "apple/sources/world/Playtest.swift", "apple/sources/world/DuelStage.swift",
             "blender/extensions/lauder_levels/common.py", "blender/level-exports.json",
         ):
             target = self.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(contracts.ROOT / name, target)
-        for source in (contracts.ROOT / "apple/sources/content").rglob("*"):
-            if source.is_file() and source.suffix in (".usdz", ".wav"):
-                target = self.root / source.relative_to(contracts.ROOT)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.touch()  # These tests check declarations; preflight checks payloads.
+        for folder in ("apple/sources", "blender/reference-exports"):
+            for source in (contracts.ROOT / folder).rglob("*"):
+                if source.is_file() and source.suffix in (".usdz", ".wav"):
+                    target = self.root / source.relative_to(contracts.ROOT)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.touch()  # These tests check declarations; preflight checks payloads.
 
     def change(self, path, before, after):
         file = self.root / path
@@ -47,14 +47,14 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(contracts.problems(contracts.ROOT), [])
 
     def test_renamed_and_reordered_script_scenarios_are_rejected(self):
-        self.change("apple/scripts/playtest", '"bridge-walk", "first-fight"',
-                    '"first-fight", "bridge-walk"')
+        self.change("apple/scripts/playtest", '"duel-attack", "duel-defence"',
+                    '"duel-defence", "duel-attack"')
         self.refuses("Python playtest scenarios/order")
-        self.change("apple/scripts/playtest", '"orders",', '"new-orders",')
+        self.change("apple/scripts/playtest", '"duel-recovery"', '"unknown-recovery"')
         self.refuses("Python playtest scenarios/order")
 
     def test_missing_preflight_registration_is_rejected(self):
-        self.change("apple/scripts/preflight.py", "models/miki.usdz", "models/missing.usdz")
+        self.change("apple/scripts/preflight.py", "sounds/sword-swing.wav", "sounds/missing.wav")
         self.refuses("Preflight assets")
 
     def test_unregistered_packaged_resource_is_rejected(self):
@@ -64,8 +64,8 @@ class ContractTests(unittest.TestCase):
         self.refuses("Generated sounds")
 
     def test_swift_sound_raw_name_must_match_its_file(self):
-        self.change("apple/sources/interface/CombatFeedback.swift", 'case rifle\n',
-                    'case rifle = "different-rifle"\n')
+        self.change("apple/sources/world/DuelStage.swift", 'case strikeBody = "strike-body"',
+                    'case strikeBody = "different-body"')
         self.refuses("CombatSound raw names")
 
     def test_missing_model_export_registration_is_rejected(self):
@@ -75,10 +75,26 @@ class ContractTests(unittest.TestCase):
         self.refuses("Blender SPAWNED models")
         self.refuses("Export manifest record names")
 
-    def test_swift_figure_reference_must_have_an_exported_model(self):
-        self.change("apple/sources/world/SceneStyle.swift", 'figure("hostile")',
-                    'figure("unknown-hostile")')
-        self.refuses("Game figure names")
+    def test_reference_exports_cannot_write_back_into_the_active_app(self):
+        self.change("blender/extensions/lauder_levels/common.py",
+                    'SPAWNED_SCENES = "blender/reference-exports/models"',
+                    'SPAWNED_SCENES = "apple/sources/content/models"')
+        self.refuses("Preserved Blender exports")
+
+    def test_reference_export_path_traversal_is_rejected(self):
+        self.change("blender/extensions/lauder_levels/common.py",
+                    'SPAWNED_SCENES = "blender/reference-exports/models"',
+                    'SPAWNED_SCENES = "blender/reference-exports/../../apple/sources/content/models"')
+        self.refuses("Preserved Blender exports")
+
+    def test_unregistered_runtime_model_outside_content_is_rejected(self):
+        (self.root / "apple/sources/world/retired.usdz").touch()
+        self.refuses("Preflight assets")
+
+    def test_missing_reference_model_is_rejected(self):
+        (self.root / "blender/reference-exports/models/miki.usdz").unlink()
+        self.refuses("Blender SPAWNED models")
+        self.refuses("Blender USDZ outputs")
 
     def test_export_manifest_output_paths_must_match_the_exporter(self):
         self.change("blender/level-exports.json", "models/miki.usdz", "models/old-miki.usdz")
@@ -86,8 +102,8 @@ class ContractTests(unittest.TestCase):
 
     def test_model_acknowledgement_declaration_must_match_the_export_manifest(self):
         self.change("blender/extensions/lauder_levels/common.py",
-                    "apple/sources/content/acknowledgements.txt",
-                    "apple/sources/content/other-acknowledgements.txt")
+                    "blender/reference-exports/acknowledgements.txt",
+                    "blender/reference-exports/other-acknowledgements.txt")
         self.refuses("Export manifest output paths")
 
     def test_model_acknowledgement_cannot_be_omitted_from_the_export_manifest(self):
@@ -106,14 +122,15 @@ class ContractTests(unittest.TestCase):
             contracts.problems(self.root)
 
     def test_unread_scenario_expression_fails_closed(self):
-        self.change("apple/sources/world/Playtest.swift", '("orders", orders)',
-                    '("orders", Routes.orders)')
+        self.change("apple/sources/world/Playtest.swift", '("duel-defence", defence)',
+                    '("duel-defence", Routes.defence)')
         with self.assertRaisesRegex(ValueError, "expected named scenarios"):
             contracts.problems(self.root)
 
-    def test_late_swift_enum_case_cannot_escape_resource_validation(self):
-        self.change("apple/sources/gameplay/PartyMember.swift", '\n}', '\n  case newMember\n}')
-        self.refuses("Game figure names")
+    def test_extra_swift_sound_case_cannot_escape_resource_validation(self):
+        self.change("apple/sources/world/DuelStage.swift", 'case strikeBody = "strike-body"',
+                    'case strikeBody = "strike-body"\n  case extraSound')
+        self.refuses("CombatSound raw names")
 
     def test_duplicate_python_registry_definition_fails_closed(self):
         path = self.root / "apple/scripts/playtest"

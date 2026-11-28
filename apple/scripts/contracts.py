@@ -77,14 +77,14 @@ def problems(root=ROOT):
          ordered=True)
 
     content = root / "apple/sources/content"
-    packaged = [str(path.relative_to(root)) for path in content.rglob("*")
+    packaged = [str(path.relative_to(root)) for path in (root / "apple/sources").rglob("*")
                 if path.is_file() and path.suffix in (".usdz", ".wav")]
     same("Preflight assets versus packaged resources",
          literal(root, "apple/scripts/preflight.py", "ASSETS"), packaged)
 
     wavs = [path.stem for path in (content / "sounds").glob("*.wav")]
     same("CombatSound raw names versus WAV resources",
-         swift_cases(root, "apple/sources/interface/CombatFeedback.swift", "CombatSound"), wavs)
+         swift_cases(root, "apple/sources/world/DuelStage.swift", "CombatSound"), wavs)
     sounds = assignment(root, "apple/scripts/make-sounds.py", "SOUNDS")
     if not isinstance(sounds, ast.Dict):
         raise ValueError("make-sounds.py: expected the SOUNDS dictionary; update its contract reader.")
@@ -93,12 +93,9 @@ def problems(root=ROOT):
 
     common = "blender/extensions/lauder_levels/common.py"
     spawned = literal(root, common, "SPAWNED")
-    models = [path.stem for path in (content / "models").glob("*.usdz")]
-    same("Blender SPAWNED models versus model resources", spawned, models)
-    figures = re.findall(r'\bfigure\("([^"]+)"\)',
-                         (root / "apple/sources/world/SceneStyle.swift").read_text())
-    party = swift_cases(root, "apple/sources/gameplay/PartyMember.swift", "PartyMember")
-    same("Game figure names versus exported models", set(party + figures), models)
+    model_folder = literal(root, common, "SPAWNED_SCENES")
+    models = [path.stem for path in (root / model_folder).glob("*.usdz")]
+    same("Blender SPAWNED models versus reference models", spawned, models)
 
     levels = assignment(root, common, "LEVELS")
     if not isinstance(levels, ast.Dict):
@@ -113,7 +110,6 @@ def problems(root=ROOT):
         if set(outputs) != {"scene", "layout"}:
             raise ValueError(f"{common}: each LevelFile needs scene and layout output paths.")
         level_outputs.extend(outputs.values())
-    model_folder = literal(root, common, "SPAWNED_SCENES")
     metadata = literal(root, common, "MODEL_METADATA")
     acknowledgements = literal(root, common, "MODEL_ACKNOWLEDGEMENTS")
     exports = (level_outputs + [f"{model_folder}/{name}.usdz" for name in spawned]
@@ -122,9 +118,12 @@ def problems(root=ROOT):
     same("Export manifest record names", list(records), level_keys + [f"models/{n}" for n in spawned])
     recorded = [path for record in records.values() for path in record.get("wrote", {})]
     same("Export manifest output paths", recorded, exports)
-    same("Blender USDZ outputs versus packaged resources",
+    reference = root / "blender/reference-exports"
+    same("Blender USDZ outputs versus reference resources",
          [path for path in exports if path.endswith(".usdz")],
-         [path for path in packaged if path.endswith(".usdz")])
+         [str(path.relative_to(root)) for path in reference.rglob("*.usdz")])
+    if any(not (root / path).resolve().is_relative_to(reference.resolve()) for path in exports):
+        failures.append("Preserved Blender exports must stay outside active app sources.")
     return failures
 
 
@@ -138,7 +137,7 @@ def main():
         print("Source contracts drifted; update the related declarations together:", file=sys.stderr)
         print("\n".join(f"- {failure}" for failure in failures), file=sys.stderr)
         return 1
-    print("Playtest, runtime asset, sound and Blender export declarations agree.")
+    print("Duel scenarios, active resources, sounds and preserved Blender export declarations agree.")
     return 0
 
 
