@@ -18,8 +18,11 @@ enum CombatEvent: Equatable, Sendable {
     case recharged
   }
 
-  /// A weapon fired; `byLeader` when the player fired it.
+  /// A party member's weapon fired; `byLeader` when the player fired it, else a companion or a
+  /// scripted shot.
   case fired(Weapon.Kind, at: SIMD2<Float>, byLeader: Bool)
+  /// A hostile's weapon fired: the guard's guns, or a drone's or a shooter's rifle.
+  case hostileFired(Weapon.Kind, at: SIMD2<Float>)
   /// A minigun began to spin up as Fire was held; `byLeader` when the player holds it.
   case spinUp(at: SIMD2<Float>, byLeader: Bool)
   /// Tom's dome changed; only the leader holds it up.
@@ -34,20 +37,20 @@ enum CombatEvent: Equatable, Sendable {
   case guardTargeted(PartyMember, at: SIMD2<Float>)
   /// A newly detached guard leg began a nonlethal stagger, once at its physical position.
   case guardLegBroken(at: SIMD2<Float>)
-  /// A scout drone starts its warning before a dive (issue #201).
-  case droneWarning(at: SIMD2<Float>)
-  /// A pack crawler starts winding up a ram at the leader (issue #208).
-  case crawlerWarning(at: SIMD2<Float>)
+  /// This scout drone starts its warning before a dive (issue #201).
+  case droneWarning(String, at: SIMD2<Float>)
+  /// This pack crawler starts winding up a ram at the leader (issue #208).
+  case crawlerWarning(String, at: SIMD2<Float>)
   /// Enemy health actually changed, with the accepted amount and physical impact.
   case damaged(DamageHit)
 
   /// Where it happened.
   var position: SIMD2<Float> {
     switch self {
-    case .fired(_, let point, _), .spinUp(let point, _), .dome(_, let point),
-      .struckBody(let point), .struckBlock(let point), .leaderHit(let point),
-      .guardTargeted(_, let point), .guardLegBroken(let point), .droneWarning(let point),
-      .crawlerWarning(let point):
+    case .fired(_, let point, _), .hostileFired(_, let point), .spinUp(let point, _),
+      .dome(_, let point), .struckBody(let point), .struckBlock(let point),
+      .leaderHit(let point), .guardTargeted(_, let point), .guardLegBroken(let point),
+      .droneWarning(_, let point), .crawlerWarning(_, let point):
       point
     case .damaged(let hit):
       SIMD2(hit.position.x, hit.position.z)

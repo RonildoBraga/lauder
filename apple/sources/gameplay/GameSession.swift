@@ -317,11 +317,14 @@ final class GameSession {
     return true
   }
 
-  /// A scripted takedown, such as Tom's shot: the hostile is down.
-  func defeat(_ hostile: String) {
-    guard mode == .exploring else { return }
+  /// A scripted takedown, such as Tom's shot: the hostile is down. Only while exploring: false,
+  /// with nothing changed, otherwise.
+  @discardableResult
+  func defeat(_ hostile: String) -> Bool {
+    guard mode == .exploring else { return false }
     hitsDealt[hostile] = nil
     defeated.insert(hostile)
+    return true
   }
 
   /// A conversation that a scene starts, rather than an action: true if it began.

@@ -30,4 +30,10 @@ struct StoryDirector {
     }
     return due
   }
+
+  /// Puts back the last `count` cues that `step` returned, to come due again at the next step.
+  /// A conversation that began among them holds the rest until it ends.
+  mutating func holdBack(_ count: Int) {
+    next = max(0, next - max(0, count))
+  }
 }

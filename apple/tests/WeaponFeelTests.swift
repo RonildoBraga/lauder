@@ -291,7 +291,7 @@ struct WeaponFeelTests {
     #expect(world.session.hitsTaken > hits)
     #expect(
       events.contains {
-        if case .fired(let kind, _, false) = $0 {
+        if case .hostileFired(let kind, _) = $0 {
           kind == .rifle || kind == .shotgun
         } else {
           false
@@ -341,7 +341,8 @@ struct WeaponFeelTests {
     #expect(CombatSound.of(.dome(.lowered, at: point)) == .domeDown)
     #expect(CombatSound.of(.dome(.collapsed, at: point)) == .domeBreak)
     #expect(CombatSound.of(.dome(.recharged, at: point)) == .domeReady)
-    #expect(CombatSound.of(.fired(.rifle, at: point, byLeader: false)) == .rifle)
+    #expect(CombatSound.of(.hostileFired(.rifle, at: point)) == .rifle)
+    #expect(CombatSound.of(.hostileFired(.shotgun, at: point)) == .shotgun)
     #expect(CombatSound.of(.struckBody(at: point)) == .strikeBody)
     #expect(CombatSound.of(.struckBlock(at: point)) == .strikeBlock)
     #expect(CombatSound.of(.leaderHit(at: point)) == nil)
@@ -358,7 +359,8 @@ struct WeaponFeelTests {
     #expect(HapticCue.of(.fired(.shotgun, at: point, byLeader: false)) == nil)
     #expect(HapticCue.of(.fired(.energySword, at: point, byLeader: false)) == nil)
     #expect(HapticCue.of(.spinUp(at: point, byLeader: false)) == nil)
-    #expect(HapticCue.of(.fired(.rifle, at: point, byLeader: false)) == nil)
+    #expect(HapticCue.of(.hostileFired(.rifle, at: point)) == nil)
+    #expect(HapticCue.of(.hostileFired(.shotgun, at: point)) == nil)
     #expect(HapticCue.of(.leaderHit(at: point)) == .leaderHit)
     #expect(HapticCue.of(.struckBody(at: point)) == nil)
     for cue in HapticCue.allCases { #expect((try? cue.pattern()) != nil) }
