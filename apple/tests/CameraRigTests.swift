@@ -16,9 +16,33 @@ struct CameraRigTests {
       let head = try #require(view.screen(ofWorld: [point.x, 1.85, point.y]))
       #expect(feet.x > 0.1 && feet.x < 0.9 && feet.y > 0.1 && feet.y < 0.9)
       #expect(head.x > 0.1 && head.x < 0.9 && head.y > 0.1 && head.y < 0.9)
-      #expect(feet.y - head.y > 0.11, "upright figures remain readable on the phone")
+      #expect(
+        feet.y - head.y > 0.095,
+        "the common-size comparison keeps spawned figures near 10% of viewport height")
     }
     #expect(rig.eye == rig.target + WorldCamera.offset)
+  }
+
+  @Test
+  func comparisonPitchesKeepTheSameCharacterScaleAndDiagonalOrientation() throws {
+    var heights: [Float] = []
+    for pitch: Float in [30.5, 35, 40] {
+      let offset = WorldCamera.offset(forPitch: pitch)
+      let rig = CameraRig(offset: offset, fieldOfView: WorldCamera.fieldOfView, over: .zero)
+      let view = rig.projection(aspect: 19.5 / 9)
+      let feet = try #require(view.screen(ofGround: .zero))
+      let head = try #require(view.screen(ofWorld: [0, 1.85, 0]))
+      let height = feet.y - head.y
+      heights.append(height)
+      #expect(abs(height - 0.1010415) < 0.00001)
+      let actualPitch = atan2(offset.y, simd_length(SIMD2(offset.x, offset.z))) * 180 / .pi
+      #expect(abs(actualPitch - pitch) < 0.0001)
+      #expect(offset.x == offset.z, "all three views retain a 45° diagonal orientation")
+    }
+    let largest = try #require(heights.max())
+    let smallest = try #require(heights.min())
+    #expect(largest - smallest < 0.00001)
+    #expect(WorldCamera.offset(forPitch: .nan) == WorldCamera.offset(forPitch: 35))
   }
 
   @Test
@@ -39,19 +63,22 @@ struct CameraRigTests {
     SIMD2<Float>(1, 1), [3, 0], [0, 3], [6.6, 4.6], [-6.6, 4.6],
   ])
   func focusedNearAndOppositeCornerPairsFitTheSameLens(hero: SIMD2<Float>) throws {
-    var rig = CameraRig(
-      offset: WorldCamera.offset, fieldOfView: WorldCamera.fieldOfView, over: DuelArena.heroSpawn)
-    let enemy = -hero
-    rig.reset(hero: hero, enemy: enemy, isFocused: true)
-    let view = rig.projection(aspect: 19.5 / 9)
-    for point in [hero, enemy] {
-      for height: Float in [0, 1.85] {
-        let screen = try #require(view.screen(ofWorld: [point.x, height, point.y]))
-        #expect(screen.x > 0.01 && screen.x < 0.99)
-        #expect(screen.y > 0.01 && screen.y < 0.99)
+    for pitch: Float in [30.5, 35, 40] {
+      var rig = CameraRig(
+        offset: WorldCamera.offset(forPitch: pitch), fieldOfView: WorldCamera.fieldOfView,
+        over: DuelArena.heroSpawn)
+      let enemy = -hero
+      rig.reset(hero: hero, enemy: enemy, isFocused: true)
+      let view = rig.projection(aspect: 19.5 / 9)
+      for point in [hero, enemy] {
+        for height: Float in [0, 1.85] {
+          let screen = try #require(view.screen(ofWorld: [point.x, height, point.y]))
+          #expect(screen.x > 0.01 && screen.x < 0.99, "\(pitch)° view")
+          #expect(screen.y > 0.01 && screen.y < 0.99, "\(pitch)° view")
+        }
       }
+      #expect(rig.target == [0, 0.85, 0])
     }
-    #expect(rig.target == [0, 0.85, 0])
   }
 
   @Test

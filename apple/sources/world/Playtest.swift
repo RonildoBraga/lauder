@@ -57,6 +57,8 @@
       let evasions: Int
       let retries: Int
       let focused: Bool
+      let cameraPitch: Float
+      let cameraOffset: [Float]
       let marks: [Mark]
     }
 
@@ -418,6 +420,8 @@
         stamina: simulation.hero.stamina, heroHits: simulation.hitsLanded,
         blocks: simulation.blocks, evasions: simulation.evasions, retries: world.retries,
         focused: simulation.isFocused,
+        cameraPitch: WorldCamera.pitchDegrees,
+        cameraOffset: [WorldCamera.offset.x, WorldCamera.offset.y, WorldCamera.offset.z],
         marks: marks)
       if let folder, let summary {
         do {
