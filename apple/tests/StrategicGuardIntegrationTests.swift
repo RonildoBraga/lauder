@@ -9,7 +9,7 @@ import simd
 struct StrategicGuardIntegrationTests {
   @Test(arguments: [Weapon.Kind.longRifle, .assaultRifle, .shotgun, .minigun])
   func eachGunCanCriticallyHitTheActualEyeRepeatedlyWithoutAStageWindow(kind: Weapon.Kind) throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: Trial.member(for: kind))
     for _ in 0..<120 * 20 {
       trial.step(weapon: kind, front: true)
       if trial.hits.filter({ $0.effectiveness == .weakpoint }).count >= 2 { break }
@@ -27,7 +27,7 @@ struct StrategicGuardIntegrationTests {
 
   @Test(arguments: [Weapon.Kind.longRifle, .assaultRifle, .shotgun, .energySword, .minigun])
   func everyWeaponCanStillWinThroughRealOrdinaryBodyContacts(kind: Weapon.Kind) throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: Trial.member(for: kind))
     for _ in 0..<120 * 100 where trial.strategy.phase != .complete {
       trial.step(weapon: kind, front: false)
     }
@@ -40,7 +40,7 @@ struct StrategicGuardIntegrationTests {
 
   @Test
   func threeNativeSwordContactsRemoveOnlyThatLegAndThreeMoreCanRemoveAnother() throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: .laura)
     for leg in [0, 2] {
       let before = trial.hits.count
       for _ in 0..<120 * 8 {
@@ -65,7 +65,7 @@ struct StrategicGuardIntegrationTests {
 
   @Test
   func onlyTheThirdNonlethalSwordContactStartsOneStaggerAndPauseDoesNotReplayIt() throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: .laura)
     for wanted in 1...3 {
       for _ in 0..<120 * 5 {
         trial.step(weapon: .energySword, leg: 0)
@@ -95,14 +95,23 @@ struct StrategicGuardIntegrationTests {
 
   @Test
   func aLethalThirdLegContactDefeatsInsteadOfStartingAReaction() throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: .laura)
     for _ in 0..<120 * 8 {
       trial.step(weapon: .energySword, leg: 0)
       if trial.strategy.swordHits[0] == 2 { break }
     }
     try #require(trial.strategy.swordHits[0] == 2 && trial.legBreaks.isEmpty)
+    // Keep the explicit Laura-first native fixture on the same actor. One ordinary rear
+    // sword contact and real shotgun rounds leave a positive lethal-third-contact window.
+    let beforePreparation = trial.hits.count
+    for _ in 0..<120 * 5 {
+      trial.step(weapon: .energySword, front: false)
+      if trial.hits.count > beforePreparation { break }
+    }
+    try #require(trial.hits.count == beforePreparation + 1)
+    try #require(trial.strategy.swordHits[0] == 2 && trial.legBreaks.isEmpty)
     for _ in 0..<120 * 80 {
-      trial.step(weapon: .minigun, front: false)
+      trial.step(weapon: .shotgun, front: false)
       if trial.strategy.health <= Weapon.energySword.damage { break }
     }
     try #require(trial.strategy.health > 0 && trial.strategy.health <= Weapon.energySword.damage)
@@ -117,7 +126,7 @@ struct StrategicGuardIntegrationTests {
 
   @Test
   func nativeSwordLegLossAlsoReducesTheRealHostilesTurnRate() throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: .laura)
     let rates: [Float] = [0.52, 0.32, 0.16, 0.08]
     for leg in 0..<4 {
       for _ in 0..<120 * 8 {
@@ -195,7 +204,7 @@ struct StrategicGuardIntegrationTests {
 
   @Test
   func pauseAndRetreatPreserveEyeLegProgressWhileResetRestoresEveryLeg() throws {
-    let trial = try Trial()
+    let trial = try Trial(initialActor: .laura)
     for _ in 0..<120 * 8 {
       trial.step(weapon: .energySword, leg: 1)
       if trial.strategy.detachedLegs.contains(1) { break }
@@ -227,7 +236,7 @@ struct StrategicGuardIntegrationTests {
     var strategy: GuardStrategy { fight.guardStrategies[Self.id] ?? GuardStrategy() }
     var robot: RobotGuard? { fight.hostiles[Self.id]?.robot }
 
-    init(boxes: [Level.Box] = []) throws {
+    init(initialActor: PartyMember = .miki, boxes: [Level.Box] = []) throws {
       let hostile = Level.Hostile(
         id: Self.id, name: "Guard", hiddenAt: .zero, standAt: .zero, hits: 6,
         attack: .robot, strategicGuard: true, range: 12)
@@ -237,7 +246,8 @@ struct StrategicGuardIntegrationTests {
         cues: [(0, .reveal(Self.id)), (0, .engage(Self.id))])
       level = Level(
         id: "eye-leg-fixture", ground: .box("floor", at: [0, -0.15, 0], size: [100, 0.3, 100]),
-        boxes: boxes, triggers: [], encounters: [encounter], party: [.miki, .tom, .laura],
+        boxes: boxes, triggers: [], encounters: [encounter],
+        party: [initialActor] + PartyMember.allCases.filter { $0 != initialActor },
         spawns: figures, heading: [0, -1], cameraOffset: BrooklynBridge.cameraOffset,
         fieldOfView: 22, opening: "Range", objective: "Test", lookAround: "Range",
         restartNote: "Restart")
@@ -245,20 +255,26 @@ struct StrategicGuardIntegrationTests {
       session = GameSession(level: level)
       try #require(session.beginEncounter(encounter.beat))
       fight.begin(encounter)
-      step(weapon: .longRifle, fire: false)
+      step(weapon: Weapon.pair(for: initialActor)[0].kind, fire: false)
+    }
+
+    static func member(for weapon: Weapon.Kind) -> PartyMember {
+      switch weapon {
+      case .longRifle, .assaultRifle: .miki
+      case .shotgun, .energySword: .laura
+      default: .tom
+      }
     }
 
     func step(
       weapon: Weapon.Kind, front: Bool = true, leg: Int? = nil, fire: Bool = true,
       distance: Float? = nil, fixedOrigin: SIMD2<Float>? = nil
     ) {
-      let member: PartyMember =
-        switch weapon {
-        case .longRifle, .assaultRifle: .miki
-        case .shotgun, .energySword: .laura
-        default: .tom
-        }
-      while session.leader != member { session.cycleLeader() }
+      let member = Self.member(for: weapon)
+      for _ in 0..<PartyMember.allCases.count where session.leader != member {
+        session.cycleLeader()
+      }
+      #expect(session.leader == member, "The fixture must start Laura explicitly for her weapons")
       if fight.weapon(of: member).kind != weapon { fight.swapWeapon(for: member) }
       let robot = self.robot ?? RobotGuard(home: .zero)
       let reach = distance ?? (weapon == .energySword ? 2.65 : weapon == .shotgun ? 3.5 : 6)

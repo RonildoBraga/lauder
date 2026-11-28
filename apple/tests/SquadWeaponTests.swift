@@ -7,10 +7,9 @@ import simd
 @MainActor
 struct SquadWeaponTests {
   @Test(arguments: PartyMember.allCases)
-  func everyLeaderFiresTheWeaponInHand(member: PartyMember) throws {
-    let level = range()
+  func eachExplicitNativeActorFiresTheWeaponInHand(member: PartyMember) throws {
+    let level = levelStarting(with: member, from: range())
     let session = GameSession(level: level)
-    while session.leader != member { session.cycleLeader() }
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     let shot = try #require(fireOnce(fight, session: session, level: level))
@@ -30,11 +29,11 @@ struct SquadWeaponTests {
 
   @Test
   func laurasShotgunBlastIsOneShotThatDealsThreeHits() throws {
-    let level = range(
-      target: [0, 1], hits: 3, spawns: [.miki: [-2, 3], .tom: [2, 3], .laura: [0, 2]])
+    let level = levelStarting(
+      with: .laura,
+      from: range(
+        target: [0, 1], hits: 3, spawns: [.miki: [-2, 3], .tom: [2, 3], .laura: [0, 2]]))
     let session = GameSession(level: level)
-    session.cycleLeader()
-    session.cycleLeader()
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     let shot = try #require(fireOnce(fight, session: session, level: level))
@@ -43,25 +42,23 @@ struct SquadWeaponTests {
   }
 
   @Test
-  func switchingAwayAndBackCannotRefillLaurasMagazineOrShortenHerInterval() throws {
+  func switchingAwayAndBackCannotRefillMikisMagazineOrShortenHerInterval() throws {
     let level = range()
     let session = GameSession(level: level)
-    session.cycleLeader()
-    session.cycleLeader()
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     _ = try #require(fireOnce(fight, session: session, level: level))
-    let loaded = fight.status(for: .laura).loaded
-    for _ in 0..<3 {
+    let loaded = fight.status(for: .miki).loaded
+    for _ in 0..<2 {
       session.cycleLeader()
       step(fight, session: session, level: level)
     }
-    #expect(session.leader == .laura && fight.status(for: .laura).loaded == loaded)
-    for _ in 0..<30 {
+    #expect(session.leader == .miki && fight.status(for: .miki).loaded == loaded)
+    for _ in 0..<20 {
       step(fight, session: session, level: level, fire: true)
       #expect(!fight.shots.contains { if case .party = $0.side { true } else { false } })
     }
-    #expect(fight.status(for: .laura).loaded == loaded)
+    #expect(fight.status(for: .miki).loaded == loaded)
   }
 
   @Test
@@ -73,13 +70,13 @@ struct SquadWeaponTests {
     try begin(fight, session: session, level: level)
     try fireUntilReload(fight, session: session, level: level)
     let remaining = fight.status(for: .tom).reloadRemaining
-    for _ in 0..<3 {
+    for _ in 0..<2 {
       session.cycleLeader()
       step(fight, session: session, level: level)
     }
     let after = fight.status(for: .tom)
     #expect(after.loaded == 0 && after.reloadRemaining > 0)
-    #expect(abs(after.reloadRemaining - (remaining - 3 / 120)) < 0.001)
+    #expect(abs(after.reloadRemaining - (remaining - 2 / 120)) < 0.001)
     for _ in 0..<400 { step(fight, session: session, level: level) }
     #expect(fight.status(for: .tom).loaded == Weapon.minigun.capacity)
     #expect(fight.status(for: .tom).reloadRemaining == 0)

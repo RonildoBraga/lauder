@@ -70,16 +70,14 @@ final class EncounterSimulation {
     return guardStrategies[id]?.health
   }
 
-  /// Persistent, short guidance alongside the current enemy warning. Switching never erases
-  /// a component already broken; only Retry/Restart restores the machine.
+  /// Short guidance for the selectable fighters alongside the current enemy warning.
   var guardHint: String? {
     guard let id = encounter?.hostiles.first(where: { $0.strategicGuard })?.id,
       let strategy = guardStrategies[id], let robot = hostiles[id]?.robot,
       !robot.isDown, !robot.isCleared
     else { return nil }
     guard strategy.health > 0 else { return nil }
-    let lost = strategy.detachedLegs.count
-    return "Eye hits: critical · Sword: break a leg (3 hits) · \(lost)/4 legs lost"
+    return "Eye hits: critical · Body hits: normal damage"
   }
 
   var isDrawn: Bool { handling[slot(of: weaponLeader)]?.isDrawn == true }
@@ -418,7 +416,10 @@ final class EncounterSimulation {
     for member in active.subtracting(autonomousMembers) { lastMotion[member] = nil }
     autonomousMembers = active
     for member in active {
-      if let kind = intents[member]?.weapon,
+      // Laura's support role is ranged. Player-controlled weapon fixtures still execute the
+      // normal sword rules; an automatic intention cannot equip it or chase a leg.
+      let kind: Weapon.Kind? = member == .laura ? .shotgun : intents[member]?.weapon
+      if let kind,
         Weapon.pair(for: member).contains(where: { $0.kind == kind }),
         weapon(of: member).kind != kind
       {

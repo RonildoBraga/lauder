@@ -51,6 +51,7 @@
       case order(GameSession.Command)
       case touchOrder(GameSession.Command, at: SIMD2<Float>)
       case switchLeader
+      case expectLeader(PartyMember)
       case expectOrder(PartyMember, String)
       case awaitConversation(seconds: Float)
       case expectNear(PartyMember, SIMD2<Float>, within: Float)
@@ -70,7 +71,6 @@
       case swap
       case grenade
       case expectGrenadeDamage
-      case expectLegLoss
       /// Dismantle the guard through ordinary movement, leader/weapon switches and Fire.
       case dismantleGuard
       /// Miki shoots down every scout drone with the aim help, stepping out of each dive and
@@ -426,10 +426,6 @@
           expect(
             snapshot.damage.grenade > 0 && snapshot.grenadeCooldown > 0,
             "Tom's manual grenade did not cause native blast damage")
-        case .expectLegLoss:
-          expect(
-            snapshot.guardStrategy?.detachedLegs.isEmpty == false,
-            "no leg detached through native sword contacts")
         case .dismantleGuard:
           if let raw = dismantleGuard(snapshot) { return raw }
         case .downDrones:
@@ -533,6 +529,10 @@
           return press(touch)
         case .switchLeader:
           return press(InputRules.Raw(controllerSwitch: true))
+        case .expectLeader(let member):
+          expect(
+            snapshot.leader == member,
+            "\(snapshot.leader.displayName) led instead of \(member.displayName)")
         case .expectOrder(let member, let word):
           let actual = snapshot.orders[member]?.word ?? "following"
           expect(actual == word, "\(member.displayName) was \(actual) instead of \(word)")
@@ -1050,7 +1050,7 @@
         advance()
         return nil
       }
-      if let member = snapshot.guardTarget, member != snapshot.leader,
+      if let member = snapshot.guardTarget, member == .miki,
         snapshot.robotPhase == .notice || snapshot.robotPhase == .tracking
       {
         retaliationMember = member
@@ -1562,20 +1562,17 @@
       else { return InputRules.Raw() }
       // This player script explicitly commits the squad. Normal companion support is useful
       // throughout the longer health-based fight; no automatic permission bypass supplies it.
-      if !strategy.detachedLegs.isEmpty && snapshot.combatStance != .attack {
+      if snapshot.combatStance != .attack {
         guardRelease = true
         return InputRules.Raw(dpadUp: true)
       }
       if guardStageSeen != strategy.phase {
         guardStageSeen = strategy.phase
-        recordGuardMark("eye and legs", snapshot: snapshot)
+        recordGuardMark("fighter support", snapshot: snapshot)
       }
       let member: PartyMember
       let kind: Weapon.Kind
-      if strategy.detachedLegs.isEmpty {
-        member = .laura
-        kind = .energySword
-      } else if snapshot.damage.weakpoint == 0 {
+      if snapshot.damage.weakpoint == 0 {
         member = .miki
         kind = .longRifle
       } else {
@@ -1590,13 +1587,7 @@
         guardRelease = true
         return InputRules.Raw(controllerSwap: true)
       }
-      let candidates = snapshot.guardPoints.filter {
-        if member == .laura {
-          if case .leg = $0.part { return true }
-          return false
-        }
-        return $0.part == .eye
-      }
+      let candidates = snapshot.guardPoints.filter { $0.part == .eye }
       guard
         let point = candidates.min(by: {
           simd_distance_squared($0.ground, at) < simd_distance_squared($1.ground, at)
@@ -1606,57 +1597,32 @@
       var raw = InputRules.Raw()
       let radial = at - centre
       let distance = simd_length(radial)
-      var needsPeek = false
-      if member == .laura {
-        // Repeated native swings on the nearest intact leg; movement remains outside hull.
-        let side = simd_normalize(point.ground - centre)
-        let radius: Float = 2.4
-        var destination = centre + side * radius
-        if distance > 0.1 {
-          let direction = radial / distance
-          let cross = direction.x * side.y - direction.y * side.x
-          if simd_dot(direction, side) < 0.9 {
-            let angle: Float = cross >= 0 ? 0.35 : -0.35
-            let rotated = SIMD2(
-              direction.x * cos(angle) - direction.y * sin(angle),
-              direction.x * sin(angle) + direction.y * cos(angle))
-            destination = centre + rotated * max(radius, distance)
-          }
-        }
-        let approach = destination - at
-        if simd_length(approach) > 0.18 {
+      let ballistics = Ballistics(level: snapshot.level)
+      let clearShot = ballistics.isClear(from: ballistics.point(at), to: point.centre)
+      let visibleBody = ballistics.isClear(
+        from: ballistics.point(centre, above: 1.52), to: ballistics.point(at))
+      let needsPeek = !clearShot || !visibleBody
+      if needsPeek {
+        // The new rear cover can hide a rolled leader at a perfectly valid rifle range.
+        // Peek through the authored central lane using ordinary input, rather than keep
+        // firing into a barrier or waiting forever for an unseen guard to recover.
+        let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
+        let front = SIMD2<Float>(6.5, 8)
+        let rear = SIMD2<Float>(6.5, 10.6)
+        let destination = movement.canTraverse(from: at, to: front) ? front : rear
+        if movement.canTraverse(from: at, to: destination), simd_distance(at, destination) > 0.15 {
           raw.stick = Movement.stick(
-            towards: approach, cameraOffset: snapshot.level.cameraOffset)
+            towards: destination - at, cameraOffset: snapshot.level.cameraOffset)
         }
-      } else {
-        let ballistics = Ballistics(level: snapshot.level)
-        let clearShot = ballistics.isClear(from: ballistics.point(at), to: point.centre)
-        let visibleBody = ballistics.isClear(
-          from: ballistics.point(centre, above: 1.52), to: ballistics.point(at))
-        needsPeek = !clearShot || !visibleBody
-        if needsPeek {
-          // The new rear cover can hide a rolled leader at a perfectly valid rifle range.
-          // Peek through the authored central lane using ordinary input, rather than keep
-          // firing into a barrier or waiting forever for an unseen guard to recover.
-          let movement = PartyMotion(radius: PartyBody.radius, obstacles: snapshot.level.obstacles)
-          let front = SIMD2<Float>(6.5, 8)
-          let rear = SIMD2<Float>(6.5, 10.6)
-          let destination = movement.canTraverse(from: at, to: front) ? front : rear
-          if movement.canTraverse(from: at, to: destination), simd_distance(at, destination) > 0.15
-          {
-            raw.stick = Movement.stick(
-              towards: destination - at, cameraOffset: snapshot.level.cameraOffset)
-          }
-        } else if distance > 11 || distance < 5 {
-          let away = distance > 0.1 ? radial / distance : snapshot.robotFacing ?? [0, 1]
-          raw.stick = Movement.stick(
-            towards: centre + away * 8 - at, cameraOffset: snapshot.level.cameraOffset)
-        }
+      } else if distance > 11 || distance < 5 {
+        let away = distance > 0.1 ? radial / distance : snapshot.robotFacing ?? [0, 1]
+        raw.stick = Movement.stick(
+          towards: centre + away * 8 - at, cameraOffset: snapshot.level.cameraOffset)
       }
       // A committed volley does not home in. A real roll crosses its old line; its ordinary
       // cooldown and vulnerability rules still apply; eye criticals have no exposure timer.
       if snapshot.robotPhase == .committed, elapsed - lastGuardDodge > 1,
-        member != .laura, distance > 0.1
+        distance > 0.1
       {
         let tangent = SIMD2(-radial.y, radial.x)
         raw.stick = Movement.stick(
@@ -1675,10 +1641,7 @@
         raw.aimStick = Movement.stick(
           towards: delta, cameraOffset: snapshot.level.cameraOffset)
       }
-      // Every real contact counts. Sword hits must actually reach a surviving leg.
-      raw.controllerFire =
-        member != .laura
-        || simd_length(delta) < Weapon.energySword.range + point.radius
+      raw.controllerFire = true
       return raw
     }
 
@@ -1775,8 +1738,8 @@
 
     private mutating func finish() {
       guard summary == nil else { return }
-      if name == "robot-parts",
-        legStagger?.completed != true || (legStagger?.staggeredSamples ?? 0) < 2
+      if name == "robot-parts", let legStagger,
+        !legStagger.completed || legStagger.staggeredSamples < 2
       {
         failures.append("robot-parts did not observe a complete nonlethal leg-break stagger")
       }
@@ -1888,11 +1851,13 @@
     private static let weapons: [Step] =
       toTheStranger + [
         .order(.hold),
-        .switchLeader, .walk([6.5, 8]), .waitForRobotPhase(.tracking, seconds: 30),
+        .switchLeader, .expectLeader(.tom), .walk([6.5, 8]),
+        .waitForRobotPhase(.tracking, seconds: 30),
         .swap, .wait(seconds: 0.3), .shieldGuardBurst, .mark("Tom's dome"),
         .swap, .wait(seconds: 0.3), .fireForDamage(.minigun, seconds: 1.2),
         .expectDefeated(0), .mark("minigun damage"), .formation, .dismantleGuard,
-        .expectDefeated(1), .mark("guard dismantled by the party"), .wait(seconds: 1),
+        .expectDefeated(1), .expectLeader(.miki), .mark("guard dismantled by the party"),
+        .wait(seconds: 1),
       ] + restartRun
 
     /// Miki supplies only the sensor shot; her two companions move and fight for themselves.
@@ -1951,8 +1916,9 @@
         .touchPress(InputRules.Raw(touchSwap: true)),
         .touchPress(InputRules.Raw(touchSwap: true)),
         .touchPress(InputRules.Raw(touchSwitch: true)),
+        .expectLeader(.tom),
         .touchPress(InputRules.Raw(touchSwitch: true)),
-        .touchPress(InputRules.Raw(touchSwitch: true)),
+        .expectLeader(.miki),
         .touchOrder(.bothGo, at: [6.5, 13]),
         .expectOrder(.tom, "going"), .expectOrder(.laura, "going"), .expectRefused(0),
         .touchPress(InputRules.Raw(touchOrder: InputRules.TouchOrder(command: .hold, point: nil))),
@@ -2053,7 +2019,7 @@
       ] + restartRun + [.expectParty([.miki, .tom, .laura])]
 
     /// The new mechanics are accepted through ordinary input, not injected damage/parts:
-    /// Tom throws, Pause freezes the flight, Laura breaks a leg, then the squad finishes.
+    /// Tom throws, Pause freezes the flight, then the two selectable fighters finish.
     private static let robotParts: [Step] =
       toTheStranger + [
         // Leave Miki behind the west block instead of holding her in the firing lane.
@@ -2063,8 +2029,8 @@
         .wait(seconds: 0.2), .mark("Tom's grenade in flight"),
         .pause, .wait(seconds: 0.5), .pause, .wait(seconds: 1.5),
         .expectGrenadeDamage, .mark("grenade detonated"), .formation,
-        .dismantleGuard, .expectDefeated(1), .expectLegLoss, .expectDamageFeedback,
-        .mark("leg detached and guard down"), .wait(seconds: 1),
+        .dismantleGuard, .expectDefeated(1), .expectDamageFeedback,
+        .expectLeader(.miki), .mark("two fighters and support, guard down"), .wait(seconds: 1),
       ] + restartRun
 
     /// The shipped first-tower fight, the guard with both scout drones (issue #201): Miki

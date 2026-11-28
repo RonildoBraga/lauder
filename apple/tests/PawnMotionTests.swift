@@ -106,8 +106,7 @@ struct DodgeRollTests {
     world.session.cycleLeader()
     world.advanceParty(movement: .zero, deltaTime: 1 / 60)
     #expect(world.roll == nil, "the switch ends Miki's roll")
-    // Round the party, Tom then Laura, and back to Miki.
-    world.session.cycleLeader()
+    // Tom switches back to Miki; Laura remains a companion.
     world.session.cycleLeader()
     world.advanceParty(movement: .zero, dodgePressed: true, deltaTime: 1 / 60)
     #expect(world.roll == nil, "the next roll waits for the cooldown")

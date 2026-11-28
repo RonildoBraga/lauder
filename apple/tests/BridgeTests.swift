@@ -107,16 +107,21 @@ struct BridgeTests {
     }
   }
 
-  /// Next goes round the three, and Restart starts them together again with Miki leading.
+  /// Next toggles the two fighters; Laura stays with the party across switching and Restart.
   @Test
-  func nextGoesRoundTheThreeAndRestartKeepsThemTogether() {
+  func nextTogglesTheFightersAndRestartKeepsAllThreeTogether() {
     let session = GameSession(level: BrooklynBridge.level)
     session.recruit(.tom)
     #expect(session.party == [.miki, .tom, .laura], "joining twice changes nothing")
-    for expected in [PartyMember.tom, .laura, .miki] {
+    for expected in [PartyMember.tom, .miki, .tom, .miki] {
       #expect(session.nextLeader == expected)
       session.cycleLeader()
       #expect(session.leader == expected)
+      #expect(session.companions.contains(.laura))
+      #expect(session.rightCompanion != session.leftCompanion)
+      #expect(
+        Set([session.rightCompanion, session.leftCompanion].compactMap { $0 })
+          == Set(session.companions))
     }
     session.cycleLeader()
     session.restart()

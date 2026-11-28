@@ -216,12 +216,9 @@ struct GrenadePriorityTests {
       let world: GameWorld
 
       init(leader: PartyMember, level: Level = TestRange.practice) {
-        world = GameWorld(level: level)
+        world = GameWorld(level: levelStarting(with: leader, from: level))
         for _ in 0..<3 { frame() }
-        while world.session.leader != leader {
-          frame(.init(keyboardSwitch: true))
-          frame()
-        }
+        #expect(world.session.leader == leader)
         _ = world.takeCombatEvents()
       }
 

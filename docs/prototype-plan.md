@@ -2,7 +2,7 @@
 
 **Updated:** 28 November 2026
 
-**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). [Maintenance build 46](#build-46-maintenance-testflight-preview), frozen main/archive source `e025cc6`, is available to the existing Lauder TestFlight testers. It packages the merged PR #219–#222 cleanup and verification with the existing mechanics, balance and artwork. Fresh source-bound checks, signing, independent pre/post-upload audits and Apple/notes readback pass. Physical controls/touch, audio, combat feel and sustained phone performance remain unverified. Builds 33–45 retain their source-specific records below.
+**Status:** The Brooklyn Bridge remains the only playable scene after the [bridge-only reset](decisions/0017-bridge-only-reset.md). The [two-leader pilot](#two-leader-party--in-development) is authorised and in development; source checks and independent diff review pass, with recorded Simulator evidence tracked on its PR. [Maintenance build 46](#build-46-maintenance-testflight-preview), frozen main/archive source `e025cc6`, remains the delivered comparison, with its verified release evidence preserved below. The pilot has not been merged or uploaded, and physical controls/touch, audio, combat feel and sustained phone performance remain unverified. Builds 33–46 retain their source-specific records.
 
 The [leg-break stagger](#leg-break-stagger--in-development), under closed [issue #199](https://github.com/RonildoBraga/lauder/issues/199), is merged in [PR #202](https://github.com/RonildoBraga/lauder/pull/202) and delivered in [build 40](#build-40-testflight-preview). Its original full local check and three final rendered encounters passed on `4e114bb`; the release reran source-bound checks on frozen main `9b5ec53` and verified the packaged Simulator routes separately. The preceding locomotion, ordinary damage, cover/spacing and retaliation checks retain their actual sources below. Generic phone feedback for build 39 and earlier previews does not establish controls, audibility, combat feel or sustained performance for build 40.
 
@@ -13,6 +13,20 @@ On 25 November 2026 the maintainer replaced the party's figures with [pawns](vis
 On 26 November 2026 the maintainer asked for three changes to the controls: one leader switch on L1 / LB that goes round the party, the status panel's toggle moved from Circle / B into the pause menu, and a [lock-on](decisions/0020-lock-on.md) on a press of the right stick. Their verification is recorded under [Controls pass](#controls-pass).
 
 Later that day the maintainer started Miki, Tom and Laura together and kept the first-tower guard as the bridge's only fight. That change is recorded under [Three together](#three-together). In the same message the maintainer gave each character two weapons to switch between, recorded under [Paired weapons](#paired-weapons).
+
+## Two-leader party — in development
+
+The maintainer accepted the first increment with **“Ok proceed with your suggestion”** ([issue #225](https://github.com/RonildoBraga/lauder/issues/225); chat, 28 November 2026, no public permalink). It keeps all three travellers, toggles normal control **Miki → Tom → Miki** in travel and combat, and keeps Laura as safe ranged AI support under explicit Attack. She retains orders, cover/leash, withdrawal and lifecycle authority without remote sword-leg pursuit. Either selectable fighter can win with ordinary damage; no Laura-only progress gate is added.
+
+The existing input path, weapon/enemy tuning, injury/Retry rules, Tom-only manual shield/grenade and optional west bypass remain the baseline. Healing/revive, transferring leg damage to Tom, a scouting/salvage objective, inventory and new art remain proposals. The authored sword, underlying leg rules and their native fixtures remain retained; they are not a new pilot attack or a reason to force Laura into the control cycle.
+
+**Verified source:** [PR #228](https://github.com/RonildoBraga/lauder/pull/228), commit `4f569a59a3e4633f8ec7a94b2403c959ce3f6d2b`, passes the complete `./scripts/check` on Xcode 27.2 and an iOS 27 iPhone Simulator, completed at **2026-11-28 01:27:10 UTC**. This includes declaration and tooling contracts, 54 Blender tests, sixteen generated sounds, strict formatting, the app build and hosted Swift Testing, including all seventeen headless routes. Normal routes assert that Laura never becomes leader; controller, keyboard and touch Switch edges toggle the two fighters. Native planner-to-weapon tests establish real Laura shotgun damage under both leaders, wall/ally blockage, distant-shot refusal, explicit Attack/Defend and quiet engagement, no sword/leg contacts, and cached-goal invalidation. The retained sword, leg, cover, lethal-third-contact and reset fixtures use explicit initial actors rather than making Laura selectable through Switch. Independent review of the committed diff found no actionable findings.
+
+**Recorded Simulator evidence:** On frozen source `4f569a5`, `weapons` passes **35/35**, `companions` **32/32** and `touch-fight` **53/53**, each with zero Retry/party-stop diagnostics. Tom's dome blocks two actual shots, and Laura contributes 360 damage through native ranged support in the companion run. The HUD visibly identifies Laura as support, and the shared Switch input selects only Miki/Tom. Follow-up app source `3117dd8eca746e7cb13868ecfb81087983e2935f` changes only the guard's stale sword/leg advice to eye/body guidance; gameplay, native tests and assets are unchanged. [PR #228](https://github.com/RonildoBraga/lauder/pull/228) records exact follow-up checks and the new full shipped `opening` and `touch-fight` recordings. The native suite, rather than the normal pilot routes, retains sword/leg/stagger contact proof.
+
+**Remaining gates:** Affected controls/lifecycle and sustained performance on the baseline phone remain unverified. Simulator success does not establish physical controller forwarding, multi-touch, audio/haptics or enjoyment. Claude's review is requested on the PR; requesting it is not a completed review. Review, the phone milestone and a separate release go-ahead remain gates; no merge or TestFlight upload is claimed.
+
+**Support-arrival follow-up:** Automated review on PR #228 identified an exact-position comparison that could leave Laura waiting for a covered target after her movement motor had already settled short of it. The correction recognises the motor's arrival tolerance while retaining close-range, legality, spacing and threat safety at her actual position. Its regression drives the real motor and collision resolution to a nonexact stop with a blocked guard shot, then checks that safe support can consider a pack target. Exact follow-up source, negative-control, check and recorded results belong to the PR; earlier results above retain their original sources.
 
 ## Build 46 maintenance TestFlight preview
 
@@ -547,7 +561,7 @@ The story's foundations remain in the [story bible](story/story-bible.md). Explo
 
 The [walkthrough](gameplay-script.md#the-brooklyn-bridge-opening) follows Miki, Tom and Laura from the Brooklyn end to Manhattan:
 
-1. Move, look, switch leaders and try the formations on the snowbound bridge, the three together from the start.
+1. Move, look, toggle Miki ↔ Tom and try the formations on the snowbound bridge, with Laura as AI support and all three together from the start. This is the two-leader pilot under verification.
 2. Meet the C robot at the first tower. Fight using the tower as cover, or take the west arch to its safe exit. Each committed burst can cause at most one injury; a third injury retries that fight.
 3. Cross the second tower together. Try Close/Spread/Column and move/hold orders, then gather at the Manhattan end.
 
@@ -559,13 +573,13 @@ Only the bridge is available. Pause has Resume, Restart, Vibration and Status pa
 |---|---|---|---|
 | Move active character | Left stick | Bottom-left analog stick | WASD |
 | Look around, advance dialogue or confirm menu | Cross / A | Look, Continue, or Restart while paused | E |
-| Next leader, going round the party | L1 / LB | Next: name | Q |
+| Toggle Miki ↔ Tom; Laura remains AI support | L1 / LB | Next: name | Q |
 | Change formation; call ordered companions back first | Triangle / Y | Formation / Follow | R |
 | Permit companion attacks / cease fire and recall via cover | D-pad up / down | Hold on ground, then the drawn Attack / Defend choice | Up / down arrows |
 | Send left / right member ahead | D-pad left / right | Hold on ground, then a name | Left / right arrows |
 | Both go / both hold | No direct binding | Hold on ground, then Both / Hold | G / H |
 | Tom throws one grenade while leading | Circle / B | Grenade (Tom only) | C |
-| Use the weapon in hand: fire a gun, swing the sword or hold up the dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
+| Use the active fighter's gun or Tom's dome; automatic reload | R2 / RT | Fire, with assisted aim | F |
 | [Switch](decisions/0021-paired-weapons.md) to the other weapon | R1 / RB | Swap: weapon | T |
 | Aim apart from movement | Right stick | Assisted aim | I, K, J, L |
 | [Lock the aim](decisions/0020-lock-on.md) on a hostile, or move it to the next; two quick controller/keyboard presses let go | R3 / RS, a press of the right stick | Tap an enemy to select; tap it again to release; Fire accessibility actions target / next / let go | O |

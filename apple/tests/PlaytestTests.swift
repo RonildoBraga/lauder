@@ -32,6 +32,8 @@
         world.update(
           with: world.controls.resolve(raw, mode: mode), sampledIn: mode, deltaTime: dt)
         let after = world
+        #expect(after.session.leader != .laura)
+        #expect(after.session.party == [.miki, .tom, .laura])
         if name == "opening", after.session.beat == .arrived {
           let snapshot = after.playtestSnapshot
           let leader = try #require(snapshot.positions[snapshot.leader])
@@ -110,13 +112,9 @@
       }
       if name == "robot-parts" {
         #expect(coveredGrenadeSamples > 0)
-        let opening = try #require(summary.legStagger)
-        #expect(opening.completed && opening.staggeredSamples >= 2)
-        #expect(opening.observedSeconds > 0 && opening.shotsDuringStagger == 0)
-        #expect(opening.firstShotSerial == opening.lastShotSerial)
-        let mark = try #require(summary.marks.first { $0.name == "leg-break stagger begins" })
-        #expect(mark.robotPhase == "staggered" && (mark.health ?? 0) > 0)
-        #expect((mark.legsLost ?? 0) > 0)
+        #expect(summary.damage.grenade > 0 && summary.damage.weakpoint > 0)
+        #expect(summary.retryCount == 0)
+        #expect(world.session.party == [.miki, .tom, .laura] && world.session.leader == .miki)
       }
     }
 
@@ -306,7 +304,7 @@
         !rays.isClear(from: rays.point(at), to: point.centre)
           || !rays.isClear(from: rays.point(centre, above: 1.52), to: rays.point(at)))
       // This policy-only observation starts after Laura's leg break. The native world is
-      // unchanged; actual contacts/detachment are exercised by robot-parts and combat tests.
+      // unchanged; actual contacts/detachment remain exercised by native combat tests.
       var observed = try #require(snapshot.guardStrategy)
       for _ in 0..<GuardStrategy.swordHitsToDetach {
         _ = observed.accept(weapon: .energySword, part: .leg(0), damage: 30)

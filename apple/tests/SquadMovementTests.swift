@@ -135,10 +135,13 @@ struct SquadMovementTests {
     #expect(world.diagnostic == nil)
   }
 
-  @Test(arguments: PartyMember.allCases)
-  func everyLeaderTakesThePartyThroughTheOpeningAndBack(leader: PartyMember) throws {
+  @Test(arguments: [PartyMember.miki, .tom])
+  func bothFightersTakeTheWholePartyThroughTheOpeningAndBack(leader: PartyMember) throws {
     let world = GameWorld(level: TestYard.level)
-    while world.session.leader != leader { world.session.cycleLeader() }
+    for _ in 0..<PartyMember.allCases.count where world.session.leader != leader {
+      world.session.cycleLeader()
+    }
+    try #require(world.session.leader == leader)
     let inward: [SIMD2<Float>] = [[2.5, 3], [2.5, -4.5], [5, -4.5], [6.5, -3]]
     let outward: [SIMD2<Float>] = [[5, -4.5], [2.5, -4.5], [2.5, 3], [-6, 3]]
 

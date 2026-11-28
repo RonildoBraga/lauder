@@ -238,10 +238,8 @@ struct PairedWeaponTests {
     let spawns: [PartyMember: SIMD2<Float>] = [.laura: [0, 2], .miki: [-6, 6], .tom: [6, 6]]
     let ahead = robot("ahead", at: [0, -0.6], hits: Weapon.energySword.damage)
     let behind = robot("behind", at: [0, 4.6], hits: Weapon.energySword.damage)
-    let level = range(hostiles: [ahead, behind], spawns: spawns)
+    let level = range(leader: .laura, hostiles: [ahead, behind], spawns: spawns)
     let session = GameSession(level: level)
-    session.cycleLeader()
-    session.cycleLeader()
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     fight.swapWeapon(for: .laura)
@@ -273,10 +271,8 @@ struct PairedWeaponTests {
   @Test
   func theSwordTurnsShotsFromInFrontOnly() throws {
     let spawns: [PartyMember: SIMD2<Float>] = [.laura: [0, 2], .miki: [-6, 6], .tom: [6, 6]]
-    let level = range(shooter: true, spawns: spawns)
+    let level = range(leader: .laura, shooter: true, spawns: spawns)
     let session = GameSession(level: level)
-    session.cycleLeader()
-    session.cycleLeader()
     let fight = EncounterSimulation(level: level)
     try begin(fight, session: session, level: level)
     fight.swapWeapon(for: .laura)
@@ -328,7 +324,8 @@ struct PairedWeaponTests {
   /// An open range with one target in front of the party: a guard robot that is a target at
   /// once, or a shooter that keeps firing at the leader.
   private func range(
-    hits: Int = 500, shooter: Bool = false, hostiles: [Level.Hostile]? = nil,
+    leader: PartyMember = .miki, hits: Int = 500, shooter: Bool = false,
+    hostiles: [Level.Hostile]? = nil,
     spawns: [PartyMember: SIMD2<Float>] = [.miki: [0, 2], .tom: [-0.9, 2.9], .laura: [0.9, 2.9]]
   ) -> Level {
     let hostiles =
@@ -350,7 +347,8 @@ struct PairedWeaponTests {
     return Level(
       id: "paired-weapon-range",
       ground: .box("ground", at: [0, -0.15, 0], size: [30, 0.3, 30]), boxes: [], triggers: [],
-      encounters: [encounter], party: [.miki, .tom, .laura], spawns: spawns, heading: [0, -1],
+      encounters: [encounter], party: [leader] + PartyMember.allCases.filter { $0 != leader },
+      spawns: spawns, heading: [0, -1],
       cameraOffset: TestYard.cameraOffset, fieldOfView: 42,
       opening: "A range.", objective: "Test.", lookAround: "Snow.", restartNote: "Restart.")
   }

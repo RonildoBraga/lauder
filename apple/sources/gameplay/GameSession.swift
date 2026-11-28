@@ -99,8 +99,8 @@ final class GameSession {
   private var checkpoint: Checkpoint?
   private(set) var mode = Mode.exploring
   private(set) var leader: PartyMember
-  /// Who travels together, in switching order. A level can start with fewer than three; the
-  /// others join through the story (ADR 0004).
+  /// Who travels together, in formation order. Laura remains an AI support companion when
+  /// leadership switches between Miki and Tom.
   private(set) var party: [PartyMember]
   /// The trigger areas that have shown their line in this run.
   private(set) var firedTriggers: Set<String> = []
@@ -141,10 +141,11 @@ final class GameSession {
     conversation.map { MissionScript.lines($0)[lineIndex] }
   }
 
-  /// Who Next would switch to, going round the party, or nil while the leader travels alone.
+  /// Next toggles between the available fighters; Laura stays computer-controlled.
   var nextLeader: PartyMember? {
-    guard party.count > 1, let index = party.firstIndex(of: leader) else { return nil }
-    return party[(index + 1) % party.count]
+    let fighters = party.filter { $0 != .laura }
+    guard let index = fighters.firstIndex(of: leader) else { return fighters.first }
+    return fighters.count > 1 ? fighters[(index + 1) % fighters.count] : nil
   }
 
   func togglePause() {
@@ -165,20 +166,19 @@ final class GameSession {
     pauseChoice = all[min(max(index + step.signum(), 0), all.count - 1)]
   }
 
-  /// Who the right D-pad direction sends: whoever Next would lead as.
-  var rightCompanion: PartyMember? { party.count > 2 ? nextLeader : nil }
+  /// Position orders address both actual companions, independently of who can lead.
+  var rightCompanion: PartyMember? { party.count > 2 ? companions.first : nil }
 
-  /// Who the left D-pad direction sends: the member Next reaches last. The two sides keep this
-  /// order for whoever leads, as the HUD's "◀ Laura · Tom ▶" shows.
+  /// The other companion, keeping the two D-pad destinations distinct after a leader switch.
   var leftCompanion: PartyMember? { party.count > 2 ? companions.last : nil }
 
-  /// The leader's companions, in switching order from the leader.
+  /// The leader's companions, in formation order from the leader.
   var companions: [PartyMember] {
     guard let index = party.firstIndex(of: leader) else { return [] }
     return (1..<party.count).map { party[(index + $0) % party.count] }
   }
 
-  /// Next: lead as the member after the leader, going round the party, only while exploring.
+  /// Next: change fighter, only while exploring.
   func cycleLeader() {
     guard let next = nextLeader else { return }
     lead(as: next)
@@ -274,7 +274,7 @@ final class GameSession {
     formation = all[(index + 1) % all.count]
   }
 
-  /// A member joins the party and can lead from now on. Joining twice changes nothing.
+  /// A member joins the party. Joining twice changes nothing.
   func recruit(_ member: PartyMember) {
     guard !party.contains(member) else { return }
     party.append(member)

@@ -33,7 +33,7 @@ struct GuardRetaliationTests {
     #expect(trial.fight.guardTarget(for: "guard") == .miki)
     trial.session.cycleLeader()
     trial.session.setCombatStance(.defend)
-    #expect(trial.session.leader == .laura)
+    #expect(trial.session.leader == .tom)
     for _ in 0..<120 * 8 {
       trial.step()
       #expect(trial.fight.guardTarget(for: "guard") == .miki)

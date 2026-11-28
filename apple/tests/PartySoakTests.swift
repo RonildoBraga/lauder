@@ -21,6 +21,7 @@ struct PartySoakTests {
     var remaining = 0
     var coverage = [0, 0, 0]
     var switches = 0
+    var leaders: Set<PartyMember> = []
     var formations: Set<GameSession.Formation> = []
     var orders = 0
 
@@ -46,6 +47,9 @@ struct PartySoakTests {
         world.update(with: press, sampledIn: .exploring, deltaTime: 0)
         if !world.session.orders.isEmpty { orders += 1 }
       }
+      leaders.insert(world.session.leader)
+      #expect(world.session.leader != .laura)
+      #expect(world.session.party.count == 3)
       formations.insert(world.session.formation)
       let previous = bodies.map { SIMD2($0.position.x, $0.position.z) }
       let leader = previous[members.firstIndex(of: world.session.leader)!]
@@ -113,7 +117,7 @@ struct PartySoakTests {
       }
     }
     #expect(coverage.allSatisfy { $0 > 0 }, "seed \(seed): every heading family was exercised")
-    #expect(switches > 0)
+    #expect(switches > 0 && leaders == [.miki, .tom])
     #expect(formations.count == GameSession.Formation.allCases.count)
     #expect(orders > 0, "seed \(seed): orders were given")
     #expect(world.diagnostic == nil)

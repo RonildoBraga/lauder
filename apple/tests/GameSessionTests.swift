@@ -53,12 +53,35 @@ struct GameSessionTests {
   }
 
   @Test
-  func leadershipCyclesThroughAllThreeMembers() {
+  func leadershipTogglesBetweenFightersWithoutRemovingLaura() {
     let session = GameSession(level: TestYard.level)
-    for expected in [PartyMember.laura, .tom, .miki, .laura] {
+    for expected in [PartyMember.tom, .miki, .tom, .miki] {
+      #expect(session.nextLeader == expected)
       session.cycleLeader()
       #expect(session.leader == expected)
+      #expect(session.companions.contains(.laura))
+      #expect(session.party == TestYard.level.party)
     }
+  }
+
+  @Test
+  func supportingLauraDoesNotCreateASwitchTargetForASingleFighter() {
+    let level = Level(
+      id: "single-fighter", ground: TestYard.ground, boxes: [], triggers: [],
+      party: [.miki, .laura], spawns: TestYard.level.spawns, heading: [0, -1],
+      cameraOffset: TestYard.cameraOffset, fieldOfView: 42, opening: "", objective: "",
+      lookAround: "", restartNote: "")
+    let session = GameSession(level: level)
+    #expect(session.nextLeader == nil && session.companions == [.laura])
+    session.cycleLeader()
+    #expect(session.leader == .miki)
+    session.recruit(.tom)
+    #expect(session.nextLeader == .tom)
+    session.cycleLeader()
+    #expect(session.nextLeader == .miki && session.companions.contains(.laura))
+    #expect(session.rightCompanion != session.leftCompanion)
+    #expect(
+      Set([session.rightCompanion, session.leftCompanion].compactMap { $0 }) == [.miki, .laura])
   }
 
   @Test
@@ -69,17 +92,17 @@ struct GameSessionTests {
     #expect(session.mode == .paused)
     #expect(session.isPaused)
     session.cycleLeader()
-    #expect(session.leader == .laura)
+    #expect(session.leader == .tom)
 
     session.togglePause()
     #expect(session.mode == .exploring)
-    #expect(session.leader == .laura)
-    session.cycleLeader()
     #expect(session.leader == .tom)
+    session.cycleLeader()
+    #expect(session.leader == .miki)
   }
 
-  @Test
-  func aHeldSwitchProducesOnlyOneLeadershipChange() {
+  @Test(arguments: ["controller", "keyboard", "touch"])
+  func aHeldSwitchProducesOnlyOneLeadershipChange(source: String) {
     let session = GameSession(level: TestYard.level)
     var state = InputRules.State(needsNeutralInput: false)
     func sample(_ raw: InputRules.Raw) {
@@ -88,11 +111,17 @@ struct GameSessionTests {
       if result.input.switchPressed { session.cycleLeader() }
     }
 
-    for _ in 0..<4 { sample(.init(controllerSwitch: true)) }
-    #expect(session.leader == .laura)
-    sample(.init())
-    sample(.init(controllerSwitch: true))
+    let pressed: InputRules.Raw =
+      switch source {
+      case "touch": .init(touchSwitch: true)
+      case "keyboard": .init(keyboardSwitch: true)
+      default: .init(controllerSwitch: true)
+      }
+    for _ in 0..<4 { sample(pressed) }
     #expect(session.leader == .tom)
+    sample(.init())
+    sample(pressed)
+    #expect(session.leader == .miki)
   }
 
   // MARK: - Conversations and the pause menu, with the bridge's exchange
