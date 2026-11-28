@@ -288,6 +288,9 @@ struct CompanionTacticsTests {
     }
 
     for rejected in ["illegal", "unspaced", "threatened", "outside-close-radius"] {
+      planner = CompanionTactics()
+      let ready = support(at: position)
+      try #require(ready.position == cover && ready.engaged && ready.activity == .waiting)
       let currentLeader = rejected == "outside-close-radius" ? cover + [0, 2.55] : leader
       let unsafe = plan(
         &planner,
