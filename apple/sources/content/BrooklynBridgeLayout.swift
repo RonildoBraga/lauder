@@ -31,14 +31,8 @@ extension BrooklynBridge {
     ],
     markers: [
       .marker("spawn.miki", at: [6.5, 116]),
-      .marker("spawn.tom", at: [2, -3]),
-      .marker("spawn.laura", at: [-7.6, -235.15]),
-      .marker("stranger.hidden", at: [1.2, 5.2]),
       .marker("stranger.stand", at: [4.4, 3.6]),
       .marker("stranger.retry", at: [6.5, 19]),
-      .marker("attacker.hidden", at: [-10, 11.5]),
-      .marker("attacker.stand", at: [-10.5, 6.5]),
-      .marker("supply.case", at: [-8.5, -8]),
     ],
     camera: .camera(offset: [0, 56, 44], fieldOfView: 22),
     lights: [

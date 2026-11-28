@@ -174,11 +174,7 @@ struct BridgeTests {
       layout.areas.map(\.name)
         == level.triggers.map(\.id)
         + ["stranger", "search.stranger", "laura.found", "help.laura", "robot.exit"])
-    #expect(
-      layout.markers.map(\.name) == [
-        "spawn.miki", "spawn.tom", "spawn.laura", "stranger.hidden", "stranger.stand",
-        "stranger.retry", "attacker.hidden", "attacker.stand", "supply.case",
-      ])
+    #expect(layout.markers.map(\.name) == ["spawn.miki", "stranger.stand", "stranger.retry"])
   }
 
   /// The bridge's look comes from its scene file, which Blender exports with the layout file from
