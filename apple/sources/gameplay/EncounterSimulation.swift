@@ -70,16 +70,14 @@ final class EncounterSimulation {
     return guardStrategies[id]?.health
   }
 
-  /// Persistent, short guidance alongside the current enemy warning. Switching never erases
-  /// a component already broken; only Retry/Restart restores the machine.
+  /// Short guidance for the selectable fighters alongside the current enemy warning.
   var guardHint: String? {
     guard let id = encounter?.hostiles.first(where: { $0.strategicGuard })?.id,
       let strategy = guardStrategies[id], let robot = hostiles[id]?.robot,
       !robot.isDown, !robot.isCleared
     else { return nil }
     guard strategy.health > 0 else { return nil }
-    let lost = strategy.detachedLegs.count
-    return "Eye hits: critical · Sword: break a leg (3 hits) · \(lost)/4 legs lost"
+    return "Eye hits: critical · Body hits: normal damage"
   }
 
   var isDrawn: Bool { handling[slot(of: weaponLeader)]?.isDrawn == true }
