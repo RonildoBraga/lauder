@@ -8,7 +8,7 @@ The maintainer approved the first Eitr-inspired gameplay experiment on 28 Novemb
 
 The duel is implemented in [PR #237](https://github.com/RonildoBraga/lauder/pull/237), with the complete local check and all three rendered Simulator routes passing on the recorded source. It replaces the active bridge/squad/shooting loop. The old project remains available through the [bridge checkpoints](docs/milestones/bridge-prototype.md), including the separate unmerged two-leader pilot. Authored Blender sources, exported reference models, concept art and attribution are preserved. No old model is packaged in the duel.
 
-This is a gameplay experiment, not a claim that combat is enjoyable or phone-ready. The [prototype plan](docs/prototype-plan.md) records exact verification and remaining human playtest gates. Merge and TestFlight delivery remain separate operations. Existing TestFlight 0.1.0 (46) still contains the old bridge.
+This is a gameplay experiment, not a claim that combat is enjoyable or phone-ready. The [prototype plan](docs/prototype-plan.md) records exact verification and remaining human playtest gates. **Internal TestFlight 0.1.0 (47) is now available** to existing testers from reviewed source e984b60; see the [delivery record](docs/prototype-plan.md#internal-testflight-build-47--available) for checks, signing, Apple processing and access proof. Choose TestFlight → Lauder → Update. This reviewed preview leaves merge and physical gameplay acceptance open. Build46 remains the earlier bridge comparison.
 
 ## Play and contribute
 
