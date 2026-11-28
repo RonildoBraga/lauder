@@ -6,11 +6,16 @@ struct CameraRig {
 
   let offset: SIMD3<Float>
   let fieldOfView: Float
+  let orthographicHeight: Float?
   private(set) var target: SIMD3<Float>
 
-  init(offset: SIMD3<Float>, fieldOfView: Float, over point: SIMD2<Float>) {
+  init(
+    offset: SIMD3<Float>, fieldOfView: Float, over point: SIMD2<Float>,
+    orthographicHeight: Float? = nil
+  ) {
     self.offset = offset
     self.fieldOfView = fieldOfView
+    self.orthographicHeight = orthographicHeight
     target = [point.x, 0.85, point.y]
   }
 
@@ -35,7 +40,9 @@ struct CameraRig {
   }
 
   func projection(aspect: Float) -> CameraProjection {
-    CameraProjection(eye: eye, target: target, fieldOfView: fieldOfView, aspect: aspect)
+    CameraProjection(
+      eye: eye, target: target, fieldOfView: fieldOfView, aspect: aspect,
+      orthographicHeight: orthographicHeight)
   }
 
   private static func composition(

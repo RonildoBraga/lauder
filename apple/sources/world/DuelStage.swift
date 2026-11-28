@@ -28,6 +28,9 @@ final class DuelStage {
   private var hero: Figure
   private var enemy: Figure
   private let focusRing = Entity()
+  private let attackWarning = Entity()
+  private let sweepWarning = DuelStage.warning(kind: .sweep)
+  private let thrustWarning = DuelStage.warning(kind: .thrust)
   private var players: [CombatSound: AVAudioPlayer] = [:]
   private let flash = SimpleMaterial(color: .white, roughness: 0.8, isMetallic: false)
 
@@ -41,6 +44,11 @@ final class DuelStage {
     root.name = "duel.stage"
     root.addChild(hero.body)
     root.addChild(enemy.body)
+    attackWarning.name = "duel.attack-warning"
+    attackWarning.isEnabled = false
+    attackWarning.addChild(sweepWarning)
+    attackWarning.addChild(thrustWarning)
+    root.addChild(attackWarning)
     focusRing.name = "duel.focus-ring"
     focusRing.isEnabled = false
     let segments = 16
@@ -113,6 +121,7 @@ final class DuelStage {
     pose(&enemy, fighter: simulation.enemy, deltaTime: deltaTime)
     focusRing.position = [simulation.enemy.position.x, 0, simulation.enemy.position.y]
     focusRing.isEnabled = simulation.isFocused
+    presentWarning(simulation)
   }
 
   func play(_ events: [DuelEvent]) {
@@ -131,10 +140,108 @@ final class DuelStage {
   }
 
   func stopFeedback() {
+    attackWarning.isEnabled = false
+    sweepWarning.isEnabled = false
+    thrustWarning.isEnabled = false
     for player in players.values {
       player.stop()
       player.currentTime = 0
     }
+  }
+
+  private func presentWarning(_ simulation: DuelSimulation) {
+    attackWarning.isEnabled = false
+    sweepWarning.isEnabled = false
+    thrustWarning.isEnabled = false
+    guard simulation.outcome == .fighting, simulation.enemy.health > 0,
+      let action = simulation.enemy.action, action.phase == .windup,
+      action.kind == .sweep || action.kind == .thrust
+    else { return }
+    // Enemy actions freeze their origin and direction when accepted. Do not aim this
+    // presentation at the hero: it previews the committed attack, even after a sidestep.
+    attackWarning.position = [simulation.enemy.position.x, 0.004, simulation.enemy.position.y]
+    attackWarning.orientation = simd_quatf(
+      angle: Movement.yaw(towards: action.direction), axis: [0, 1, 0])
+    sweepWarning.isEnabled = action.kind == .sweep
+    thrustWarning.isEnabled = action.kind == .thrust
+    attackWarning.isEnabled = true
+  }
+
+  private static func warning(kind: DuelAction.Kind) -> Entity {
+    let profile = DuelAction(kind: kind, direction: [0, -1]).profile
+    let segments = kind == .sweep ? 32 : 12
+    let bands = 8
+    // Contact tests a target disc, not a point. Include the same radius/range and angular
+    // padding in this full-action envelope; thrust may reach it only late in its active phase.
+    // It is a preparation cue, not a promise of contact: timing and scenery still decide hits.
+    // The 0.6m cutout preserves feet and the focus ring, inside normal 0.76m body separation.
+    let inner: Float = 0.6
+    let outer = profile.reach + DuelArena.radius
+    var positions: [SIMD3<Float>] = []
+    for band in 0...bands {
+      let radius = inner + (outer - inner) * Float(band) / Float(bands)
+      let angle = profile.halfAngle + asin(DuelArena.radius / radius)
+      for segment in 0...segments {
+        let yaw = -angle + 2 * angle * Float(segment) / Float(segments)
+        positions.append([sin(yaw) * radius, 0, -cos(yaw) * radius])
+      }
+    }
+    var indices: [UInt32] = []
+    for band in 0..<bands {
+      for segment in 0..<segments {
+        let a = UInt32(band * (segments + 1) + segment)
+        let b = a + UInt32(segments + 1)
+        indices += [a, a + 1, b, a + 1, b + 1, b]
+      }
+    }
+    var boundary: [SIMD3<Float>] = []
+    boundary += positions[(bands * (segments + 1))...]
+    for band in stride(from: bands - 1, through: 0, by: -1) {
+      boundary.append(positions[band * (segments + 1) + segments])
+    }
+    for segment in stride(from: segments - 1, through: 0, by: -1) {
+      boundary.append(positions[segment])
+    }
+    for band in 1..<bands { boundary.append(positions[band * (segments + 1)]) }
+    var outline: [SIMD3<Float>] = []
+    var outlineIndices: [UInt32] = []
+    for index in boundary.indices {
+      let start = boundary[index]
+      let end = boundary[(index + 1) % boundary.count]
+      let side = simd_normalize(simd_cross(end - start, [0, 1, 0])) * 0.014
+      let base = UInt32(outline.count)
+      let lift = SIMD3<Float>(0, 0.002, 0)
+      outline += [start - side + lift, start + side + lift, end - side + lift, end + side + lift]
+      outlineIndices += [base, base + 1, base + 2, base + 1, base + 3, base + 2]
+    }
+    let name = "duel.attack-warning.\(kind == .sweep ? "sweep" : "thrust")"
+    let entity = Entity()
+    entity.name = name
+    entity.isEnabled = false
+    entity.addChild(
+      warningMesh(name: "\(name).fill", positions: positions, indices: indices, opacity: 0.13))
+    entity.addChild(
+      warningMesh(
+        name: "\(name).outline", positions: outline, indices: outlineIndices, opacity: 0.58))
+    return entity
+  }
+
+  private static func warningMesh(
+    name: String, positions: [SIMD3<Float>], indices: [UInt32], opacity: Float
+  ) -> ModelEntity {
+    var descriptor = MeshDescriptor(name: name)
+    descriptor.positions = MeshBuffers.Positions(positions)
+    descriptor.normals = MeshBuffers.Normals(Array(repeating: [0, 1, 0], count: positions.count))
+    descriptor.primitives = .triangles(indices)
+    guard let mesh = try? MeshResource.generate(from: [descriptor]) else {
+      preconditionFailure("The primitive attack warning could not be generated: \(name)")
+    }
+    var material = UnlitMaterial()
+    material.color = .init(tint: UIColor(red: 0.95, green: 0.64, blue: 0.2, alpha: 1))
+    material.blending = .transparent(opacity: .init(floatLiteral: opacity))
+    let entity = ModelEntity(mesh: mesh, materials: [material])
+    entity.name = name
+    return entity
   }
 
   private func pose(_ figure: inout Figure, fighter: DuelFighter, deltaTime: Float) {

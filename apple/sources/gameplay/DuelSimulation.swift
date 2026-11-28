@@ -114,6 +114,8 @@ enum DuelArena {
   static let halfWidth: Float = 7
   static let halfDepth: Float = 5
   static let radius: Float = 0.38
+  /// The agreed 45-degree camera yaw projects this ground direction horizontally.
+  static let screenRight = simd_normalize(SIMD2<Float>(1, -1))
   static let heroSpawn = SIMD2<Float>(0, 2.5)
   static let enemySpawn = SIMD2<Float>(0, -1.5)
   static let obstacles: [PartyMotion.Box] = [
@@ -156,6 +158,8 @@ struct DuelSimulation: Sendable {
   private var staminaDelay: Float = 0
   private var enemyCooldown: Float = 1.1
   private var nextEnemyAttack: DuelAction.Kind = .sweep
+  private var enemyApproachSide: Float = 0
+  private var enemyApproachTime: Float = 0
   private let collision = PartyMotion(radius: DuelArena.radius, obstacles: DuelArena.obstacles)
 
   init(
@@ -261,7 +265,7 @@ struct DuelSimulation: Sendable {
       }
     } else if command.attackPressed {
       requested = BufferedAction(
-        kind: .slash, direction: Movement.facing(yaw: hero.yaw),
+        kind: .slash, direction: direction,
         remaining: Self.bufferWindow + Self.fixedStep)
     }
 
@@ -299,23 +303,69 @@ struct DuelSimulation: Sendable {
     // Retreating beyond the local engagement range makes room to recover; the enemy returns
     // home instead of following forever or attacking an unseen opponent at arbitrary range.
     let leashed = simd_distance(hero.position, DuelArena.enemySpawn) > 5.5
-    let wanted = leashed ? DuelArena.enemySpawn - enemy.position : offset
-    if simd_length_squared(wanted) > 0.001 {
+    let facing = leashed ? DuelArena.enemySpawn - enemy.position : offset
+    if simd_length_squared(facing) > 0.001 {
       enemy.yaw = Movement.turn(
-        from: enemy.yaw, towards: Movement.yaw(towards: wanted), limit: 4 * dt)
+        from: enemy.yaw, towards: Movement.yaw(towards: facing), limit: 4 * dt)
     }
     let attackDistance: Float = nextEnemyAttack == .sweep ? 1.9 : 2.45
+    var wanted = facing
+    var approachReady = false
+    if leashed || distance > attackDistance + 1 {
+      enemyApproachSide = 0
+      enemyApproachTime = 0
+    } else {
+      // One short lateral attempt makes the committed weapon readable. A latched side
+      // avoids orbiting or alternating goals; blocked sides and moving targets cannot
+      // postpone an otherwise valid attack forever.
+      enemyApproachTime += dt
+      let target = enemyLateralTarget(distance: attackDistance * 0.8)
+      let lateral = abs(simd_dot(enemy.position - hero.position, DuelArena.screenRight))
+      let separated = lateral >= attackDistance * 0.6 && lateral / distance >= 0.85
+      if !separated, enemyApproachTime < 1.25, let target {
+        wanted = target - enemy.position
+      } else {
+        approachReady = true
+      }
+    }
     if !leashed, distance <= attackDistance, enemyCooldown == 0,
+      approachReady,
       simd_dot(Movement.facing(yaw: enemy.yaw), offset / distance) > 0.94
     {
       // Facing is committed here, before the visible preparation starts.
       enemy.action = DuelAction(kind: nextEnemyAttack, direction: offset / distance)
       enemy.yaw = Movement.yaw(towards: offset)
-    } else if simd_length(wanted) > (leashed ? 0.1 : attackDistance * 0.9) {
+      enemyApproachSide = 0
+      enemyApproachTime = 0
+    } else if simd_length(wanted) > (leashed || !approachReady ? 0.1 : attackDistance * 0.9) {
       let speed: Float = leashed ? 1.2 : 1.6
       enemy.position = move(
         enemy.position, delta: simd_normalize(wanted) * speed * dt, avoiding: hero.position)
     }
+  }
+
+  private mutating func enemyLateralTarget(distance: Float) -> SIMD2<Float>? {
+    let right = DuelArena.screenRight * distance
+    if enemyApproachSide == 0 {
+      let nearer: Float = simd_dot(enemy.position - hero.position, right) >= 0 ? 1 : -1
+      for side in [nearer, -nearer] {
+        let target = hero.position + right * side
+        if canApproach(target) {
+          enemyApproachSide = side
+          return target
+        }
+      }
+      return nil
+    }
+    let target = hero.position + right * enemyApproachSide
+    return canApproach(target) ? target : nil
+  }
+
+  private func canApproach(_ target: SIMD2<Float>) -> Bool {
+    guard collision.canTraverse(from: enemy.position, to: target) else { return false }
+    // A route clear of scenery may still cut through the hero's occupied footprint.
+    return simd_distance(
+      move(enemy.position, delta: target - enemy.position, avoiding: hero.position), target) < 0.002
   }
 
   private mutating func advanceActions(dt: Float) {

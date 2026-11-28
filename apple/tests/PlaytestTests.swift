@@ -28,6 +28,7 @@
       case "duel-defence":
         #expect(summary.blocks > 0 && summary.evasions > 0)
         #expect(summary.heroHealth == DuelSimulation.heroMaxHealth)
+        #expect(summary.warningsShown == ["sweep", "thrust"])
       case "duel-recovery":
         #expect(summary.retries == 1 && summary.heroHits == 0)
       case "duel-focus":

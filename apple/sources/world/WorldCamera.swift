@@ -14,6 +14,22 @@ final class WorldCamera {
   }()
   static let offset = offset(forPitch: pitchDegrees)
   static let fieldOfView: Float = 24
+  static let projectionKind: String = {
+    #if DEBUG
+      if UserDefaults.standard.string(forKey: "LauderCameraProjection") == "perspective" {
+        return "perspective"
+      }
+    #endif
+    return "orthographic"
+  }()
+  static let orthographicHeight: Float? =
+    projectionKind == "orthographic" ? orthographicHeight(forPitch: pitchDegrees) : nil
+
+  static func orthographicHeight(forPitch pitch: Float) -> Float {
+    let offset = offset(forPitch: pitch)
+    let horizontal = simd_length(SIMD2(offset.x, offset.z))
+    return 1.85 * horizontal / simd_length(offset) / 0.101041492
+  }
 
   static func offset(forPitch pitch: Float) -> SIMD3<Float> {
     // Calibrated through CameraProjection at target height 0.85m and vertical FOV 24°:
@@ -26,14 +42,25 @@ final class WorldCamera {
     }
   }
 
-  private let entity = PerspectiveCamera()
-  private var rig = CameraRig(
-    offset: WorldCamera.offset, fieldOfView: WorldCamera.fieldOfView, over: DuelArena.heroSpawn)
+  private let entity = Entity()
+  private var rig: CameraRig
 
-  init() {
+  init(orthographicHeight: Float? = WorldCamera.orthographicHeight) {
+    rig = CameraRig(
+      offset: Self.offset, fieldOfView: Self.fieldOfView, over: DuelArena.heroSpawn,
+      orthographicHeight: orthographicHeight)
     entity.name = "duel.camera"
-    entity.camera.fieldOfViewInDegrees = Self.fieldOfView
-    entity.camera.fieldOfViewOrientation = .vertical
+    if let orthographicHeight {
+      var camera = OrthographicCameraComponent()
+      // RealityKit scale is half the selected world span (verified with ARView.project).
+      camera.scale = orthographicHeight / 2
+      camera.scaleDirection = .vertical
+      entity.components.set(camera)
+    } else {
+      entity.components.set(
+        PerspectiveCameraComponent(
+          fieldOfViewInDegrees: Self.fieldOfView, fieldOfViewOrientation: .vertical))
+    }
     apply()
   }
 
