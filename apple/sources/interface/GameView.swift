@@ -58,7 +58,7 @@ struct GameView: View {
         // Never unmount on Pause: every captured finger must lift to clear the neutral gate.
         TouchControls(
           controls: world.controls, generation: world.controls.touchGeneration,
-          mode: world.session.mode
+          mode: world.session.mode, isFocused: world.simulation.isFocused
         )
         .ignoresSafeArea()
       }
@@ -86,6 +86,8 @@ struct GameView: View {
           "Enemy", value: world.simulation.enemy.health,
           maximum: DuelSimulation.enemyMaxHealth, tint: HUDStyle.ink)
         Text(enemyIntent).font(.caption2.weight(.semibold))
+        Text(world.simulation.isFocused ? "Enemy focused · strafe and backpedal" : "Free facing")
+          .font(.caption2)
       }
       .padding(10)
       .frostedPanel()
@@ -118,8 +120,10 @@ struct GameView: View {
           .font(.caption2)
           Text("\(world.controls.dodgeButtonName) Dodge")
             .font(.caption2)
+          Text("\(world.controls.focusButtonName) · Focus / Unfocus")
+            .font(.caption2)
         } else {
-          Text("Keyboard: WASD · F Attack\nQ Guard · Space Dodge · Esc Pause")
+          Text("Keyboard: WASD · F Attack\nQ Guard · Space Dodge\nTab Focus · Esc Pause")
             .font(.caption2)
             .multilineTextAlignment(.trailing)
             .allowsHitTesting(false)

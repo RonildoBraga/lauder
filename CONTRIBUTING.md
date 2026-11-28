@@ -67,7 +67,7 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 ```
 
 ```bash
-./apple/scripts/playtest duel-attack duel-defence duel-recovery
+./apple/scripts/playtest duel-attack duel-defence duel-recovery duel-focus
 ```
 
 It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and reports pass/fail with reasons, frame/simulation times, health/stamina, actual contacts, blocks, evasions and Retry. It saves marked screenshots, video, traces and summaries under `.local/playtest/<time>/`, which Git ignores, or under `--output`.
@@ -76,10 +76,21 @@ Use `./apple/scripts/playtest --list` for the current scenario names. The scenar
 
 - A native defensive win, directional blocking and timed dodge contact.
 - Pause/release/resume, fresh movement and native Restart.
+- Enemy focus, retreat while facing the opponent and focus reset (the fourth route).
 
 Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-status), rather than maintaining a second scenario list here.
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the route result; the runner records trace/summary evidence. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
+
+The [camera comparison](docs/prototype-plan.md#camera-pitch-comparison--verified-in-simulator) uses the same routes and three Debug-only pitches. The maintainer selected the 35° default after reviewing the three Simulator views. To play manually, run `./apple/scripts/play --camera-pitch 35`. To record comparable defensive and boundary/focus moments:
+
+```bash
+./apple/scripts/playtest duel-defence duel-focus --camera-pitch 30.5
+./apple/scripts/playtest duel-defence duel-focus --camera-pitch 35
+./apple/scripts/playtest duel-defence duel-focus --camera-pitch 40
+```
+
+Both scripts accept only `30.5`, `35` or `40`, forwarding `-LauderCameraPitch` to the Debug app. Release uses only the selected 35° view and ignores the comparison argument. All three views keep 45° yaw, 24° vertical FOV and approximately the same centred character height. They are pulled back from the preceding camera revision to retain distant feet at 40°; the new 30.5° preview is therefore not an unchanged baseline. Summaries record the actual pitch and offset. Compare corresponding marked phases with their recorded timestamps: screenshot capture is asynchronous, so separate runs do not promise identical poses. No orbit, zoom, gameplay or control variant is added.
 
 The duel is the only playable scene. Pause offers **Resume** and **Restart**; the outcome panel offers immediate Retry. There is no level selector, party switch or weapon bench. Test-only historical collision geometry is retained without the removed bridge policy. The [prototype plan](docs/prototype-plan.md) records current scope and verification; [bridge history](docs/bridge-prototype-plan.md) retains the earlier evidence.
 

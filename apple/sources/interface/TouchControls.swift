@@ -2,12 +2,13 @@ import SwiftUI
 import UIKit
 import simd
 
-/// Three combat actions. The capture surface stays mounted while paused.
+/// Three combat actions and an enemy-focus toggle. Captures stay mounted while paused.
 @MainActor
 struct TouchControls: UIViewRepresentable {
   let controls: GameControls
   let generation: Int
   let mode: GameSession.Mode
+  var isFocused = false
 
   func makeUIView(context: Context) -> Surface {
     let view = Surface(controls: controls)
@@ -16,7 +17,7 @@ struct TouchControls: UIViewRepresentable {
   }
 
   func updateUIView(_ uiView: Surface, context: Context) {
-    uiView.update(mode: mode, generation: generation)
+    uiView.update(mode: mode, generation: generation, isFocused: isFocused)
   }
 
   static func dismantleUIView(_ uiView: Surface, coordinator: ()) {
@@ -29,6 +30,7 @@ struct TouchControls: UIViewRepresentable {
     private let attack = TouchZone(title: "Attack")
     private let guardAction = TouchZone(title: "Guard")
     private let dodge = TouchZone(title: "Dodge")
+    private let focus = TouchZone(title: "Focus")
     private let pause = TouchZone(title: "Pause")
     private let restart = TouchZone(title: "Restart")
     private var generation: Int?
@@ -46,6 +48,7 @@ struct TouchControls: UIViewRepresentable {
       attack.accessibilityHint = "One sword attack per press."
       guardAction.accessibilityHint = "Hold to block attacks from the direction you face."
       dodge.accessibilityHint = "Dodge in the direction you move, then recover."
+      focus.accessibilityHint = "Toggle facing the enemy while moving."
       restart.accessibilityHint = "Begin a fresh duel."
       stick.changed = { [weak self] point, isTouching, generation in
         guard let self else { return }
@@ -59,7 +62,7 @@ struct TouchControls: UIViewRepresentable {
         self.controls.setTouchStick(movement, isTouching: isTouching, generation: generation)
       }
       let buttons: [(TouchZone, TouchInput.Button)] = [
-        (attack, .attack), (guardAction, .guardAction), (dodge, .dodge),
+        (attack, .attack), (guardAction, .guardAction), (dodge, .dodge), (focus, .focus),
         (pause, .pause), (restart, .restart),
       ]
       for (zone, button) in buttons {
@@ -73,12 +76,14 @@ struct TouchControls: UIViewRepresentable {
 
     required init?(coder: NSCoder) { nil }
 
-    private var zones: [TouchZone] { [stick, attack, guardAction, dodge, pause, restart] }
+    private var zones: [TouchZone] { [stick, attack, guardAction, dodge, focus, pause, restart] }
 
-    func update(mode: GameSession.Mode, generation: Int) {
+    func update(mode: GameSession.Mode, generation: Int, isFocused: Bool = false) {
       self.mode = mode
       if self.generation != generation { reset() }
       pause.setTitle(mode == .paused ? "Resume" : "Pause")
+      focus.setTitle(isFocused ? "Unfocus" : "Focus")
+      focus.accessibilityValue = isFocused ? "On" : "Off"
       refreshVisibility()
     }
 
@@ -90,7 +95,7 @@ struct TouchControls: UIViewRepresentable {
 
     private func refreshVisibility() {
       // Preserve the original binding and capture until lift. A held attack never becomes Restart.
-      for zone in [attack, guardAction, dodge] {
+      for zone in [attack, guardAction, dodge, focus] {
         zone.isHidden = mode == .paused && !zone.isCaptured
         zone.alpha = mode == .paused ? 0.3 : 1
       }
@@ -106,6 +111,7 @@ struct TouchControls: UIViewRepresentable {
       let top = max(12, safeAreaInsets.top + 8)
       stick.frame = CGRect(x: left, y: bottom - 132, width: 132, height: 132)
       attack.frame = CGRect(x: right - 96, y: bottom - 64, width: 96, height: 64)
+      focus.frame = CGRect(x: right - 96, y: bottom - 116, width: 96, height: 44)
       guardAction.frame = CGRect(x: right - 204, y: bottom - 128, width: 96, height: 56)
       dodge.frame = CGRect(x: right - 204, y: bottom - 60, width: 96, height: 60)
       pause.frame = CGRect(x: right - 96, y: top, width: 96, height: 44)

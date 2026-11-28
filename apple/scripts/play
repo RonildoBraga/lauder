@@ -8,6 +8,7 @@ quick, then installs and launches it on a booted iOS 27 or later iPhone simulato
 LAUDER_DESTINATION names, with the Simulator in front.
 """
 
+import argparse
 import importlib.machinery
 import importlib.util
 from pathlib import Path
@@ -38,6 +39,10 @@ def show_simulator():
 
 def main():
     tools = playtest()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--camera-pitch", choices=tools.CAMERA_PITCHES,
+                        help="Debug-only camera comparison; default is 35 degrees")
+    options = parser.parse_args()
     tools.check_assets()
     device = tools.simulator()
     app = tools.build(device, ROOT / ".local/play/DerivedData")
@@ -46,7 +51,8 @@ def main():
     if tools.run(["xcrun", "simctl", "install", device, str(app)]).returncode:
         raise SystemExit("Install failed.")
     launched = tools.run(
-        ["xcrun", "simctl", "launch", "--terminate-running-process", device, tools.BUNDLE])
+        ["xcrun", "simctl", "launch", "--terminate-running-process", device, tools.BUNDLE,
+         *tools.camera_arguments(options.camera_pitch)])
     if launched.returncode:
         raise SystemExit(f"Launch failed: {launched.stderr.strip()}")
     tools.say("The game is running in the Simulator.")

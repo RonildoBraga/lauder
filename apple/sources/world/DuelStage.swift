@@ -27,6 +27,7 @@ final class DuelStage {
 
   private var hero: Figure
   private var enemy: Figure
+  private let focusRing = Entity()
   private var players: [CombatSound: AVAudioPlayer] = [:]
   private let flash = SimpleMaterial(color: .white, roughness: 0.8, isMetallic: false)
 
@@ -40,6 +41,23 @@ final class DuelStage {
     root.name = "duel.stage"
     root.addChild(hero.body)
     root.addChild(enemy.body)
+    focusRing.name = "duel.focus-ring"
+    focusRing.isEnabled = false
+    let segments = 16
+    let radius: Float = 0.56
+    let mesh = MeshResource.generateBox(
+      size: [0.035, 0.018, 2 * radius * sin(.pi / Float(segments))])
+    let ringMaterial = SimpleMaterial(
+      color: UIColor(red: 0.95, green: 0.82, blue: 0.42, alpha: 1),
+      roughness: 1, isMetallic: false)
+    for index in 0..<segments {
+      let angle = Float(index) * 2 * .pi / Float(segments)
+      let segment = ModelEntity(mesh: mesh, materials: [ringMaterial])
+      segment.position = [sin(angle) * radius, 0.018, cos(angle) * radius]
+      segment.orientation = simd_quatf(angle: angle + .pi / 2, axis: [0, 1, 0])
+      focusRing.addChild(segment)
+    }
+    root.addChild(focusRing)
     root.addChild(
       Self.box(
         size: [14.8, 0.2, 10.8], position: [0, -0.12, 0],
@@ -47,8 +65,13 @@ final class DuelStage {
     for (index, obstacle) in DuelArena.obstacles.enumerated() {
       let centre = (obstacle.minimum + obstacle.maximum) / 2
       let size = obstacle.maximum - obstacle.minimum
+      // Foreground curbs retain a visible boundary without hiding feet in the lower camera.
+      // Collision stays in the unchanged flat arena geometry.
+      let foreground =
+        obstacle.minimum.x >= DuelArena.halfWidth || obstacle.minimum.y >= DuelArena.halfDepth
+      let height: Float = foreground ? 0.18 : 0.7
       let box = Self.box(
-        size: [size.x, 0.7, size.y], position: [centre.x, 0.35, centre.y],
+        size: [size.x, height, size.y], position: [centre.x, height / 2, centre.y],
         color: UIColor(red: 0.43, green: 0.46, blue: 0.46, alpha: 1))
       box.name = "duel.blocker.\(index)"
       root.addChild(box)
@@ -88,6 +111,8 @@ final class DuelStage {
   func present(_ simulation: DuelSimulation, deltaTime: Float) {
     pose(&hero, fighter: simulation.hero, deltaTime: deltaTime)
     pose(&enemy, fighter: simulation.enemy, deltaTime: deltaTime)
+    focusRing.position = [simulation.enemy.position.x, 0, simulation.enemy.position.y]
+    focusRing.isEnabled = simulation.isFocused
   }
 
   func play(_ events: [DuelEvent]) {

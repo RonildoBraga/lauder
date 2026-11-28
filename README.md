@@ -8,6 +8,8 @@ The maintainer approved the first Eitr-inspired gameplay experiment on 28 Novemb
 
 The duel is implemented in [PR #237](https://github.com/RonildoBraga/lauder/pull/237), with the complete local check and all three rendered Simulator routes passing on the recorded source. It replaces the active bridge/squad/shooting loop. The old project remains available through the [bridge checkpoints](docs/milestones/bridge-prototype.md), including the separate unmerged two-leader pilot. Authored Blender sources, exported reference models, concept art and attribution are preserved. No old model is packaged in the duel.
 
+The camera and enemy-focus follow-up is in [PR #239](https://github.com/RonildoBraga/lauder/pull/239), tracked by [issue #238](https://github.com/RonildoBraga/lauder/issues/238) and stacked on PR #237. It adds a diagonal camera and a focus toggle for retreating while facing the opponent. The calibrated comparison uses a **selected 35° default**, with Debug-only 30.5°/35°/40° views and matched centred character size. The full check and eight recorded Simulator runs pass on source 83b79e7; the [prototype plan](docs/prototype-plan.md#camera-and-enemy-focus-follow-up--in-progress) records results and remaining review/phone gates. Build47 below predates this follow-up.
+
 This is a gameplay experiment, not a claim that combat is enjoyable or phone-ready. The [prototype plan](docs/prototype-plan.md) records exact verification and remaining human playtest gates. **Internal TestFlight 0.1.0 (47) is now available** to existing testers from reviewed source e984b60; see the [delivery record](docs/prototype-plan.md#internal-testflight-build-47--available) for checks, signing, Apple processing and access proof. Choose TestFlight → Lauder → Update. This reviewed preview leaves merge and physical gameplay acceptance open. Build46 remains the earlier bridge comparison.
 
 ## Play and contribute
@@ -16,7 +18,9 @@ Use Xcode 27.2 and an iOS 27 or later iPhone Simulator. Read [CONTRIBUTING.md](C
 
     ./apple/scripts/play
     ./scripts/check
-    ./apple/scripts/playtest duel-attack duel-defence duel-recovery
+    ./apple/scripts/playtest duel-attack duel-defence duel-recovery duel-focus
+
+For the camera comparison, use `./apple/scripts/play --camera-pitch 35`; the Debug scripts accept only `30.5`, `35` or `40`. [Contributing](CONTRIBUTING.md#scripted-simulator-playtests) describes reproducible recordings. These previews change the view only; the selected default and Release camera use 35°.
 
 | Action | Keyboard | PS5 / Xbox | Touch |
 | --- | --- | --- | --- |
@@ -24,10 +28,11 @@ Use Xcode 27.2 and an iOS 27 or later iPhone Simulator. Read [CONTRIBUTING.md](C
 | Attack | F | R1 / RB | Attack |
 | Guard | Hold Q | Hold L1 / LB | Hold Guard |
 | Dodge | Space | Circle / B | Dodge |
+| Focus / unfocus enemy | Tab | R3 / Right stick click | Focus / Unfocus |
 | Pause / resume | Escape | Options / Menu | Pause / Resume |
 | Menu confirm / outcome Retry | E | Cross / A | Dedicated button |
 
-Guard holds facing so the hero can back away behind the shield. Release it to turn normally and recover stamina. Enemy preparation commits its direction; wait for recovery to punish. Dodge has a vulnerable start and finish. Retry immediately resets the duel.
+Focus lets the hero strafe or retreat while turning towards the enemy; a ground ring marks the selection. Without focus, Guard holds the current facing. Committed attacks and dodges keep their direction. Release Guard to recover stamina. Enemy preparation commits its direction; wait for recovery to punish. Dodge has a vulnerable start and finish. Retry immediately resets the duel and clears focus.
 
 Simulator keyboard/pointer iteration is the everyday path. Live controller forwarding has not worked in the tested Simulator setup; controller enumeration is not proof of input delivery. Touch/controller comfort, audio, sustained phone performance and enjoyment need physical playtests.
 

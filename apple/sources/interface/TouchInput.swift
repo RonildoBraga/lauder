@@ -4,7 +4,7 @@ import simd
 /// InputRules retains edge detection and mode policy.
 struct TouchInput {
   enum Button: CaseIterable, Hashable, Sendable {
-    case attack, guardAction, dodge, pause, restart
+    case attack, guardAction, dodge, focus, pause, restart
   }
 
   private(set) var generation = 0
@@ -34,7 +34,8 @@ struct TouchInput {
     return InputRules.Raw(
       touchStick: stick, touchIsTouching: isTouching,
       touchAttack: pressed.contains(.attack), touchGuard: pressed.contains(.guardAction),
-      touchDodge: pressed.contains(.dodge), touchPause: pressed.contains(.pause),
+      touchDodge: pressed.contains(.dodge), touchFocus: pressed.contains(.focus),
+      touchPause: pressed.contains(.pause),
       touchRestart: pressed.contains(.restart))
   }
 

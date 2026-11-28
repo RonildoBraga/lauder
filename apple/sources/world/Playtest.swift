@@ -6,14 +6,16 @@
   /// Debug-only command drivers. No route changes health, poses, actions or enemy decisions.
   @MainActor
   final class PlaytestRunner {
-    enum Route: Sendable { case attack, defence, recovery }
+    enum Route: Sendable { case attack, defence, recovery, focus }
     private nonisolated static let attack = Route.attack
     private nonisolated static let defence = Route.defence
     private nonisolated static let recovery = Route.recovery
+    private nonisolated static let focus = Route.focus
     nonisolated static let scenarios: [(String, Route)] = [
       ("duel-attack", attack),
       ("duel-defence", defence),
       ("duel-recovery", recovery),
+      ("duel-focus", focus),
     ]
     nonisolated static var scenarioNames: [String] { scenarios.map(\.0) }
 
@@ -54,6 +56,9 @@
       let blocks: Int
       let evasions: Int
       let retries: Int
+      let focused: Bool
+      let cameraPitch: Float
+      let cameraOffset: [Float]
       let marks: [Mark]
     }
 
@@ -85,6 +90,7 @@
       case .attack: 2
       case .defence: 2
       case .recovery: 4
+      case .focus: 5
       }
     }
 
@@ -98,7 +104,8 @@
         if let folder {
           do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try "seconds,heroX,heroZ,enemyX,enemyZ,heroHealth,enemyHealth,stamina,mode\n"
+            try
+              "seconds,heroX,heroZ,enemyX,enemyZ,heroHealth,enemyHealth,stamina,mode,focused,heroYaw\n"
               .write(
                 to: folder.appendingPathComponent("trace.csv"), atomically: true, encoding: .utf8)
             try "".write(
@@ -117,6 +124,7 @@
       case .attack: return attackInput(world)
       case .defence: return defenceInput(world)
       case .recovery: return recoveryInput(world)
+      case .focus: return focusInput(world)
       }
     }
 
@@ -140,6 +148,11 @@
         finish(world)
         return .init()
       }
+      return combatInput(world)
+    }
+
+    private func combatInput(_ world: GameWorld) -> InputRules.Raw {
+      let simulation = world.simulation
       let offset = simulation.enemy.position - simulation.hero.position
       let distance = simd_length(offset)
       var raw = InputRules.Raw()
@@ -166,6 +179,69 @@
         raw.stick = stick(towards: offset)
       }
       return raw
+    }
+
+    private func focusInput(_ world: GameWorld) -> InputRules.Raw {
+      let simulation = world.simulation
+      if simulation.outcome == .lost {
+        fail("The focused route lost its only attempt", world: world)
+        return .init()
+      }
+      if stage == 0 {
+        frozenTime = simulation.elapsed
+        advance()
+        return .init(controllerFocus: true)
+      }
+      if stage == 1 {
+        // A render frame may arrive before the next fixed simulation tick accepts the edge.
+        if simulation.elapsed == frozenTime && stageSeconds < 0.1 { return .init() }
+        guard simulation.isFocused else {
+          fail("Fresh Focus did not acquire the enemy", world: world)
+          return .init()
+        }
+        completed = 1
+        movementStart = simulation.hero.position
+        mark("enemy focused")
+        advance()
+      }
+      if stage == 2 || stage == 3 {
+        let towards = simulation.enemy.position - simulation.hero.position
+        if stageSeconds < (stage == 2 ? 0.85 : 0.4) {
+          let direction = stage == 2 ? -towards : SIMD2(-towards.y, towards.x)
+          return .init(stick: stick(towards: direction))
+        }
+        let facing = Movement.facing(yaw: simulation.hero.yaw)
+        guard simd_distance(movementStart, simulation.hero.position) > 0.35,
+          simd_dot(facing, simd_normalize(towards)) > 0.98
+        else {
+          fail("Focused movement failed to travel while facing the enemy", world: world)
+          return .init()
+        }
+        if stage == 2, simulation.hero.position.y < DuelArena.halfDepth - 0.5 {
+          fail("Focused retreat did not reach the near boundary for the camera check", world: world)
+          return .init()
+        }
+        completed += 1
+        mark(stage == 2 ? "focused backpedal" : "focused strafe")
+        movementStart = simulation.hero.position
+        advance()
+        return .init()
+      }
+      if simulation.hitsLanded > 0, completed == 3 {
+        completed = 4
+        mark("focused sword contact")
+      }
+      if simulation.outcome == .won {
+        guard !simulation.isFocused else {
+          fail("Defeated enemy retained Focus", world: world)
+          return .init()
+        }
+        completed = 5
+        mark("focused duel won and released")
+        finish(world)
+        return .init()
+      }
+      return combatInput(world)
     }
 
     private func defenceInput(_ world: GameWorld) -> InputRules.Raw {
@@ -301,7 +377,8 @@
         let enemy = world.simulation.enemy
         append(
           "\(seconds),\(hero.position.x),\(hero.position.y),\(enemy.position.x),\(enemy.position.y),"
-            + "\(hero.health),\(enemy.health),\(hero.stamina),\(world.session.mode)\n",
+            + "\(hero.health),\(enemy.health),\(hero.stamina),\(world.session.mode),"
+            + "\(world.simulation.isFocused),\(hero.yaw)\n",
           to: folder.appendingPathComponent("trace.csv"))
       }
       if seconds > 90 { fail("Scenario exceeded its 90-second budget", world: world) }
@@ -342,6 +419,9 @@
         heroHealth: simulation.hero.health, enemyHealth: simulation.enemy.health,
         stamina: simulation.hero.stamina, heroHits: simulation.hitsLanded,
         blocks: simulation.blocks, evasions: simulation.evasions, retries: world.retries,
+        focused: simulation.isFocused,
+        cameraPitch: WorldCamera.pitchDegrees,
+        cameraOffset: [WorldCamera.offset.x, WorldCamera.offset.y, WorldCamera.offset.z],
         marks: marks)
       if let folder, let summary {
         do {

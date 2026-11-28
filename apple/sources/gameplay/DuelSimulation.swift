@@ -8,6 +8,7 @@ struct DuelCommand: Equatable, Sendable {
   var attackPressed = false
   var guardHeld = false
   var dodgePressed = false
+  var focusPressed = false
 
   static let neutral = DuelCommand()
 }
@@ -143,6 +144,7 @@ struct DuelSimulation: Sendable {
   private(set) var hero: DuelFighter
   private(set) var enemy: DuelFighter
   private(set) var outcome: DuelOutcome = .fighting
+  private(set) var isFocused = false
   private(set) var elapsed: Float = 0
   private(set) var hitsLanded = 0
   private(set) var hitsTaken = 0
@@ -192,12 +194,17 @@ struct DuelSimulation: Sendable {
       tick(input, dt: dt)
       input.attackPressed = false
       input.dodgePressed = false
+      input.focusPressed = false
       remaining -= dt
     }
   }
 
   private mutating func tick(_ command: DuelCommand, dt: Float) {
     elapsed += dt
+    if command.focusPressed {
+      isFocused.toggle()
+      buffered = nil
+    }
     hero.hitFlash = max(0, hero.hitFlash - dt)
     enemy.hitFlash = max(0, enemy.hitFlash - dt)
     hero.stagger = max(0, hero.stagger - dt)
@@ -208,7 +215,9 @@ struct DuelSimulation: Sendable {
     }
 
     moveHero(command, dt: dt)
-    chooseHeroAction(command)
+    // Selecting a facing mode consumes simultaneous future combat, without cancelling an
+    // existing committed swing or its owed recovery.
+    if !command.focusPressed { chooseHeroAction(command) }
     chooseEnemyAction(dt: dt)
     advanceActions(dt: dt)
     resolveContacts()
@@ -224,13 +233,13 @@ struct DuelSimulation: Sendable {
       command.guardHeld && hero.action == nil && hero.stagger == 0 && hero.stamina > 0
     guard hero.action == nil, hero.stagger == 0 else { return }
     let direction = Self.validMovement(command.movement)
-    guard simd_length_squared(direction) > 0 else { return }
-    if !hero.guarding {
-      hero.yaw = Movement.turn(
-        from: hero.yaw, towards: Movement.yaw(towards: direction), limit: 5 * .pi * dt)
-    }
     let speed = hero.guarding ? Self.movementSpeed * 0.4 : Self.movementSpeed
     hero.position = move(hero.position, delta: direction * speed * dt, avoiding: enemy.position)
+    let facing = isFocused ? enemy.position - hero.position : hero.guarding ? .zero : direction
+    if simd_length_squared(facing) > 0.0001 {
+      hero.yaw = Movement.turn(
+        from: hero.yaw, towards: Movement.yaw(towards: facing), limit: 5 * .pi * dt)
+    }
   }
 
   private mutating func chooseHeroAction(_ command: DuelCommand) {
@@ -267,13 +276,17 @@ struct DuelSimulation: Sendable {
     guard hero.stagger == 0 else { return }
     guard let wanted = requested ?? buffered else { return }
     buffered = nil
-    let action = DuelAction(kind: wanted.kind, direction: wanted.direction)
+    // A queued focused slash takes the current bounded facing at acceptance. After that,
+    // its direction is committed, while a dodge always keeps its requested travel direction.
+    let acceptedDirection =
+      wanted.kind == .slash && isFocused ? Movement.facing(yaw: hero.yaw) : wanted.direction
+    let action = DuelAction(kind: wanted.kind, direction: acceptedDirection)
     guard hero.stamina >= action.profile.stamina else { return }
     hero.stamina -= action.profile.stamina
     staminaDelay = 0.6
     hero.guarding = false
     hero.action = action
-    if wanted.kind == .slash { hero.yaw = Movement.yaw(towards: wanted.direction) }
+    if wanted.kind == .slash { hero.yaw = Movement.yaw(towards: acceptedDirection) }
   }
 
   private mutating func chooseEnemyAction(dt: Float) {
@@ -371,6 +384,7 @@ struct DuelSimulation: Sendable {
     }
     if hero.health == 0 || enemy.health == 0 {
       outcome = hero.health == 0 ? .lost : .won
+      isFocused = false
       hero.action = nil
       enemy.action = nil
       hero.guarding = false

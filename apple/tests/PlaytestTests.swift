@@ -30,6 +30,9 @@
         #expect(summary.heroHealth == DuelSimulation.heroMaxHealth)
       case "duel-recovery":
         #expect(summary.retries == 1 && summary.heroHits == 0)
+      case "duel-focus":
+        #expect(summary.outcome == "won" && summary.heroHits >= 5 && summary.heroHealth > 0)
+        #expect(summary.blocks > 0 && summary.retries == 0 && !summary.focused)
       default: Issue.record("Unasserted scenario")
       }
     }
