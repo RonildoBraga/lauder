@@ -6,7 +6,7 @@ An open-source Apple game exploring deliberate close combat in a fully 3D world.
 
 The maintainer approved the first Eitr-inspired gameplay experiment on 28 November 2026. [Issue #236](https://github.com/RonildoBraga/lauder/issues/236) tracks implementation and validation: one hero, sword, directional shield, dodge and stamina against one enemy with a sweep and thrust. The scene uses plain geometry; the hero has no settled story identity.
 
-The duel replaces the active bridge/squad/shooting loop. The old project remains available through the [bridge checkpoints](docs/milestones/bridge-prototype.md), including the separate unmerged two-leader pilot. Authored Blender sources, exported reference models, concept art and attribution are preserved. No old model is packaged in the duel.
+The duel is implemented in [PR #237](https://github.com/RonildoBraga/lauder/pull/237), with the complete local check and all three rendered Simulator routes passing on the recorded source. It replaces the active bridge/squad/shooting loop. The old project remains available through the [bridge checkpoints](docs/milestones/bridge-prototype.md), including the separate unmerged two-leader pilot. Authored Blender sources, exported reference models, concept art and attribution are preserved. No old model is packaged in the duel.
 
 This is a gameplay experiment, not a claim that combat is enjoyable or phone-ready. The [prototype plan](docs/prototype-plan.md) records exact verification and remaining human playtest gates. Merge and TestFlight delivery remain separate operations. Existing TestFlight 0.1.0 (46) still contains the old bridge.
 

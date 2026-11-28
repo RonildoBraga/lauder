@@ -40,7 +40,21 @@ The blade's shared pose controls the swept contact interval and thrust reach. Hi
 
 ## Verification status
 
-Implementation and source verification are in progress. Exact source, complete check, rendered route results and review findings will be added here and in #236 before handoff. No new phone, TestFlight, enjoyment or measured phone-performance acceptance is claimed.
+**Implemented and locally verified:** frozen implementation source cad54500e61fcbdb805c758a6c5b970776b88de3 passes the complete ./scripts/check on 28 November 2026: formatting, iOS build and hosted Swift Testing, including all three native command routes. Portable checks include 18 declaration mutations, 54 Blender export tests, 31 offline release-contract tests, six recording-lifecycle tests and three sound fingerprints. The combat suite covers once-per-action contact, the shared blade interval, facing, resource exhaustion, buffer handoff, invulnerability and reset; its stationary attack-spam control loses while causing useful damage. Actual captured-touch Retry and sub-tick source-generation regressions pass.
+
+Fresh rendered Simulator recordings on that same implementation source pass:
+
+| Route | Result | Actual evidence |
+| --- | --- | --- |
+| duel-attack | 2/2, 18.8 s, 1,099 frames | Victory, seven real sword contacts, six blocks, health 100, zero Retry/failures |
+| duel-defence | 2/2, 4.6 s, 255 frames | One directional block and one real timed evasion, health 100, zero failures |
+| duel-recovery | 4/4, 2.7 s, 140 frames | Paused inputs ignored, released controls resume, fresh movement and one native menu Restart |
+
+Screenshots/video/traces and summaries remain in the ignored verification folder. Captured frames were inspected for readable actors, weapons and HUD. Frame-time observations are Simulator evidence, including startup/scheduling spikes; no 60 fps phone claim follows.
+
+Independent review findings were addressed: buffered-facing drift, handoff tolerance, visual/contact timing, orphaned helpers and historical links. Twenty-five moved reference files match the original source bytes/LFS hashes; no Blender source changed. Documentation file/heading links pass. [PR #237](https://github.com/RonildoBraga/lauder/pull/237), stacked on research PR #235, owns current CI/external-review status. The later evidence-only documentation commit changes no application/test/tooling files.
+
+No new phone, TestFlight, enjoyment or measured phone-performance acceptance is claimed. #236 stays open for review, the human gate and a separately authorised merge/delivery.
 
 Run:
 
