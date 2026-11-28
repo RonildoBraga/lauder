@@ -1,6 +1,6 @@
 # ADR 0023 — basic body rig and connected dungeon prototype
 
-**Date:** 29 November 2026. **Status:** assigned implementation; fresh validation pending.
+**Date:** 29 November 2026. **Status:** implemented in [PR #255](https://github.com/RonildoBraga/lauder/pull/255); Simulator checks pass, external review and human acceptance pending.
 
 ## Context and authority
 

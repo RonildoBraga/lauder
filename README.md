@@ -4,7 +4,7 @@ An open-source Apple game exploring deliberate close combat in a fully 3D world.
 
 ## Current prototype
 
-**Dungeon implementation in progress:** [issue #243](https://github.com/RonildoBraga/lauder/issues/243) tracks the assigned basic 17-bone mannequin and connected corridor/room route. The external character mesh and detailed hands are excluded. The maintainer found build 48's isolated duel insufficiently Soulslike; the new work evaluates traversal and combat together. Fresh checks, rendered evidence and review remain pending. [ADR 0023](docs/decisions/0023-basic-rig-dungeon-prototype.md) records the scope and reset rules.
+**Dungeon prototype implemented:** [PR #255](https://github.com/RonildoBraga/lauder/pull/255), tracked by [issue #243](https://github.com/RonildoBraga/lauder/issues/243), adds a basic 17-bone mannequin and connected corridor/room route after build 48's negative gameplay feedback. The full check and all four recorded Simulator routes pass on source 577d110. External review and human playtest remain pending. The external character mesh and detailed hands are excluded; [ADR 0023](docs/decisions/0023-basic-rig-dungeon-prototype.md) records scope/reset rules and the [current plan](docs/prototype-plan.md#basic-rig-dungeon--review-and-playtest-pending) records exact results/limits.
 
 The maintainer approved the first Eitr-inspired gameplay experiment on 28 November 2026. [Issue #236](https://github.com/RonildoBraga/lauder/issues/236) tracks implementation and validation: one hero, sword, directional shield, dodge and stamina against one enemy with a sweep and thrust. The scene uses plain geometry; the hero has no settled story identity.
 

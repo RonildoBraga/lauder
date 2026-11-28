@@ -1,6 +1,6 @@
 # Gameplay walkthrough — a short dungeon journey
 
-**Assigned prototype:** [issue #243](https://github.com/RonildoBraga/lauder/issues/243), following the maintainer's negative duel feedback and basic-armature direction on [#241](https://github.com/RonildoBraga/lauder/issues/241). Implementation is in progress; fresh validation and human acceptance belong in the [prototype plan](prototype-plan.md#basic-rig-dungeon--implementation-in-progress). This anonymous mannequin does not rewrite the preserved [story bible](story/story-bible.md).
+**Assigned prototype:** [issue #243](https://github.com/RonildoBraga/lauder/issues/243), following the maintainer's negative duel feedback and basic-armature direction on [#241](https://github.com/RonildoBraga/lauder/issues/241). Implementation and Simulator validation are recorded; external review and human acceptance belong in the [prototype plan](prototype-plan.md#basic-rig-dungeon--review-and-playtest-pending). This anonymous mannequin does not rewrite the preserved [story bible](story/story-bible.md).
 
 You begin at a quiet entry landing with a sword and shield. A closed side gate hints at a connection you cannot yet use. Ahead, a bent passage leads into the first chamber. The camera keeps its selected diagonal orientation while following you; low foreground wall cuts preserve your feet and nearby threats.
 

@@ -2,13 +2,30 @@
 
 **Updated:** 29 November 2026. **Tracking:** [issue #243](https://github.com/RonildoBraga/lauder/issues/243).
 
-## Basic-rig dungeon — implementation in progress
+## Basic-rig dungeon — review and playtest pending
 
 The maintainer assigned the combined mannequin/dungeon experiment after reporting that the isolated duel lacked Soulslike combat feel and Eitr-style corridors. [Issue #243](https://github.com/RonildoBraga/lauder/issues/243) owns progress; [ADR 0023](decisions/0023-basic-rig-dungeon-prototype.md) records the selected simple 17-bone armature, route and reset semantics. The external character mesh and detailed hands are excluded. The anonymous mannequin does not replace the preserved story characters.
 
 The route has a safe entry, bent approach, two sequential sentry rooms, a once-per-life recovery find, a far-side shortcut and an exit. Room kills leave exploration running. Health/stamina carry between rooms. Death Retry restores encounters/recovery while retaining an opened shortcut; Pause Restart resets the whole route. The shortcut provides a return/navigation loop; sequential encounters still both reset after death, so it does not bypass the first required fight. Focus is restricted to an active opponent with clear sight. Shared layout values supply terrain and triggers; Blender-authored body poses follow simulation-owned movement/action timing.
 
-Fresh validation and review are pending. First verify the animated approach/first fight, then all four native and recorded routes: dungeon-journey, dungeon-defence, dungeon-recovery and dungeon-focus. Check readable limb/weapon poses, real contact/defence, room transitions, useful healing, return shortcut, exit, and input/Pause/Retry/Restart recovery. Source tests and recordings do not establish enjoyment or phone performance.
+Implementation is prepared in [PR #255](https://github.com/RonildoBraga/lauder/pull/255), stacked on #242. **Verified application/test/tooling source: 577d110b1cf37040c843cd4d94a8df4d2b719dc5.** The complete `./scripts/check` passes, including formatting, native build/Swift Testing and all four native command routes. Independent source reviews checked rules, presentation, integration and documentation; the slow-call trigger finding is fixed with regressions that fail against the old wrapper. Claude's concrete phase-marker finding [#253](https://github.com/RonildoBraga/lauder/issues/253) is addressed; external review has been requested on the PR, with no completed review claimed.
+
+All four fresh rendered Simulator runs pass on that source, with no failures, at the unchanged orthographic 35°/45° framing:
+
+| Route | Result | Actual evidence |
+| --- | --- | --- |
+| dungeon-focus | 5/5, 25.4 s, 1,486 frames | Active-enemy Focus, backpedal/strafe, seven hits/eight blocks, room clear releases Focus and exploration continues |
+| dungeon-journey | 7/7, 72.1 s, 4,261 frames | Both encounters, fourteen hits/fourteen blocks, a real injury healed, opened shortcut/return and actual exit; final health 100, zero Retry |
+| dungeon-defence | 3/3, 10.1 s, 581 frames | Directional block and real timed evasion, health 100 |
+| dungeon-recovery | 4/4, 2.7 s, 139 frames | Paused actions ignored, release/resume, fresh movement and one native full Restart |
+
+Captured first/second-room, recovery and route frames were inspected. Foreground doorframes and adjacent returns no longer hide the captured hero's feet/body; collision footprints are unchanged. The complete journey follows real command input without injected positions, health or progress. The driver now returns to local Focus range and uses actual doorways rather than requesting paths through corners.
+
+The original 17-bone source is byte-preserved; portable pose checks cover 13 clips/351 samples, a separate 240 Hz Blender audit covers 2,713 poses, and a scratch re-export of the final source produces byte-identical JSON. Native tests cover phase remapping, fixed-size weapon tips, natural arm reach, moving guard, recoil, direction-neutral dodge, visual floor correction and reset. The [source README](../blender/animations/mannequin/README.md) records reproduction and numerical limits. No open Blender scene was edited.
+
+**Limits:** every recorded attack envelope was omitted by the conservative scenery-clearance rule; body/weapon poses are the primary cues. Separate open-floor tests verify visible warning geometry/lifecycle. Hands are rigid, clip changes have no blend and Guard is a held brace rather than a distinct impact clip. Combat balance is unchanged; [#245](https://github.com/RonildoBraga/lauder/issues/245), [#246](https://github.com/RonildoBraga/lauder/issues/246) and broader flask/groups/rest suggestions remain separate proposals. The navigation shortcut does not bypass a mandatory encounter after death.
+
+Simulator p99 frame intervals are approximately 31.8–32.7 ms on the three longer routes and 187.5 ms on the short recovery route, including startup/scheduling spikes. These are not phone performance or enjoyment evidence. Recordings, traces, screenshots, check receipts and source fingerprints remain outside Git. Human playtest/physical acceptance, external feedback and merge remain open.
 
 The current TestFlight build remains the earlier flat-duel **0.1.0 (48)**. Its release and earlier camera/duel results below retain their exact sources; they do not validate this new implementation.
 
@@ -31,7 +48,7 @@ No extra enemy, art asset, target selector, orbit/zoom control, new input stick 
 
 **Verified application/test/tooling source:** 0e57b6d6ca4e4e7afa098ea6405e953cc43b0dd5. The complete `./scripts/check` passed on 28 November 2026. Native tests cover action-direction and bounded-approach regressions; parallel projection/rays and actual renderer agreement; warning reach, angle, orientation, geometry reuse and phase cleanup; and world-level Pause/resume/Retry cleanup. Independent source reviews found no blocking issue in the core AI/aim or camera/stage/world integration.
 
-Six recorded Simulator runs on that source pass, all at 35° and health100 with no failures. The orthographic runs use the default without a projection override; perspective is the Debug comparison.
+Six recorded Simulator runs on that source pass, all at 35° and health 100 with no failures. The orthographic runs use the default without a projection override; perspective is the Debug comparison.
 
 | Projection | Route | Result | Actual evidence |
 | --- | --- | --- | --- |
@@ -60,7 +77,7 @@ Choose **TestFlight → Lauder → Update** to evaluate camera readability, side
 
 ## Camera and enemy-focus follow-up — in progress
 
-**Earlier source record:** this section preserves the focus and three-angle perspective work through checkpoint 16a202e. The readability follow-up above owns historical duel changes and build48 delivery status; #243 above owns current work.
+**Earlier source record:** this section preserves the focus and three-angle perspective work through checkpoint 16a202e. The readability follow-up above owns historical duel changes and build 48 delivery status; #243 above owns current work.
 
 The maintainer requested a camera closer to Eitr's framing and a way to retreat without turning away from the enemy (chat, 28 November 2026; no public permalink). [Issue #238](https://github.com/RonildoBraga/lauder/issues/238) tracks this follow-up in [PR #239](https://github.com/RonildoBraga/lauder/pull/239), stacked on [PR #237](https://github.com/RonildoBraga/lauder/pull/237).
 
@@ -86,7 +103,7 @@ The existing [play and playtest scripts](../CONTRIBUTING.md#scripted-simulator-p
 
 **Verified source:** 83b79e78994052b95089e6ac555654dcf4d3f22d. The complete `./scripts/check` passed at 08:08:38 UTC on 28 November 2026, including formatting/build, hosted Swift Testing with all four native routes and the portable contracts. Projection tests verify the three actual pitches, common centred character scale, diagonal orientation and both fighters' head/feet at near and opposite corners without relaxing the viewport bounds. Independent Codex review found no actionable issue in the camera selection, launch arguments, release isolation, metadata or tests.
 
-Eight recorded runs on that same built Debug app passed. The four 35° runs used the ordinary default with no camera override; the remaining runs verify both alternate launch selections. Every run ended with health100 and no failures. Only the recovery route intentionally uses Retry.
+Eight recorded runs on that same built Debug app passed. The four 35° runs used the ordinary default with no camera override; the remaining runs verify both alternate launch selections. Every run ended with health 100 and no failures. Only the recovery route intentionally uses Retry.
 
 | Pitch | Route | Result | Actual evidence |
 | --- | --- | --- | --- |
@@ -117,10 +134,10 @@ Fresh rendered Simulator runs on that exact application/test/tooling source pass
 
 | Route | Result | Actual evidence |
 | --- | --- | --- |
-| duel-attack | 2/2, 17.8 s, 1,048 frames | Victory, seven sword contacts, six blocks, health100, no Retry/failures |
-| duel-defence | 2/2, 4.6 s, 253 frames | One directional block and one timed evasion, health100 |
+| duel-attack | 2/2, 17.8 s, 1,048 frames | Victory, seven sword contacts, six blocks, health 100, no Retry/failures |
+| duel-defence | 2/2, 4.6 s, 253 frames | One directional block and one timed evasion, health 100 |
 | duel-recovery | 4/4, 2.7 s, 138 frames | Paused input consumed, neutral resume, fresh movement and native Restart |
-| duel-focus | 5/5, 18.8 s, 1,082 frames | Focus, boundary retreat and strafe while facing the enemy; seven sword contacts/five blocks, victory, health100, automatic focus release |
+| duel-focus | 5/5, 18.8 s, 1,082 frames | Focus, boundary retreat and strafe while facing the enemy; seven sword contacts/five blocks, victory, health 100, automatic focus release |
 
 Before/after captures, videos, traces and summaries remain in the ignored local verification folders. Actual frames were inspected for diagonal scenery, upright fighters, focus ring, weapons, HUD and near-wall foot visibility. This exposed foreground walls hiding feet; the two foreground wall visuals now use 0.18m curbs while the flat collision boxes remain unchanged. Independent Codex source review found no blocking issue; its pending-focus/Pause and first-fixed-tick acquisition coverage suggestions were addressed. At that checkpoint, Claude/external review and human framing acceptance remained open; the later choice and review record above supersede that status.
 
@@ -132,7 +149,7 @@ At this checkpoint, no new TestFlight upload had been made: build47 remained the
 
 The preview contains the single-hero duel, shared touch/controller/keyboard input and the corrected held-Guard/Dodge-buffer handoff. New positive, suppression and interruption regressions pass: the old branch fails eight assertions; corrected code passes all 26 combat test functions. Independent exact-tree review and the [fresh automatic review](https://github.com/RonildoBraga/lauder/pull/237#issuecomment-7235410783) report no findings. The reported P2 thread is resolved; Claude's separate requested review is not claimed complete.
 
-Fresh source-bound ./scripts/check passed at **06:33:56 UTC on 28 November 2026**, including formatting/build, hosted Swift Testing, all three native command routes and resource/export/release/recording contracts. [CI231](https://github.com/RonildoBraga/lauder/actions/runs/46117051629) passed on that same source. Fresh rendered routes pass: duel-attack 2/2 (seven contacts, seven blocks, health100, no Retry); duel-defence 2/2 (one block and one real timed evasion, health100); duel-recovery 4/4 (Pause/release/resume/native Restart), all without failures. Simulator evidence does not establish phone performance or enjoyment.
+Fresh source-bound ./scripts/check passed at **06:33:56 UTC on 28 November 2026**, including formatting/build, hosted Swift Testing, all three native command routes and resource/export/release/recording contracts. [CI231](https://github.com/RonildoBraga/lauder/actions/runs/46117051629) passed on that same source. Fresh rendered routes pass: duel-attack 2/2 (seven contacts, seven blocks, health 100, no Retry); duel-defence 2/2 (one block and one real timed evasion, health 100); duel-recovery 4/4 (Pause/release/resume/native Restart), all without failures. Simulator evidence does not establish phone performance or enjoyment.
 
 Fresh Apple discovery selected unused build47 after checking accepted/processing reservations and captured the existing internal-group/tester baseline. The signed Release archive passes bundle/version/build/team signature and matching-dSYM verification. Independent pre-upload audit passes **66 assertions**; independent post-upload audit passes **111 assertions**, reconfirming source/check-log binding, unchanged full archive fingerprint, strict signature/provisioning/symbols, exactly the three intended WAVs, no retired models or DEBUG runner, and internal-only export policy.
 
