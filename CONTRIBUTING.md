@@ -67,7 +67,7 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 ```
 
 ```bash
-./apple/scripts/playtest duel-attack duel-defence duel-recovery
+./apple/scripts/playtest duel-attack duel-defence duel-recovery duel-focus
 ```
 
 It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and reports pass/fail with reasons, frame/simulation times, health/stamina, actual contacts, blocks, evasions and Retry. It saves marked screenshots, video, traces and summaries under `.local/playtest/<time>/`, which Git ignores, or under `--output`.
@@ -76,6 +76,7 @@ Use `./apple/scripts/playtest --list` for the current scenario names. The scenar
 
 - A native defensive win, directional blocking and timed dodge contact.
 - Pause/release/resume, fresh movement and native Restart.
+- Enemy focus, retreat while facing the opponent and focus reset (the fourth route).
 
 Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-status), rather than maintaining a second scenario list here.
 

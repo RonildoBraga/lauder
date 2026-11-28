@@ -2,6 +2,29 @@
 
 **Updated:** 28 November 2026. **Tracking:** [issue #236](https://github.com/RonildoBraga/lauder/issues/236).
 
+## Camera and enemy-focus follow-up — in progress
+
+The maintainer requested a camera closer to Eitr's framing and a way to retreat without turning away from the enemy (chat, 28 November 2026; no public permalink). [Issue #238](https://github.com/RonildoBraga/lauder/issues/238) tracks this follow-up, stacked on [PR #237](https://github.com/RonildoBraga/lauder/pull/237).
+
+The view uses a fixed 45° diagonal orientation, approximately 30.5° downward pitch and a 24° vertical perspective field of view. These are our 3D adaptation informed by Eitr footage, not measured Eitr camera parameters. Translation follows the hero when free and the fighters' midpoint when focused, with smooth frame-rate-independent damping. The camera never orbits with movement or focus; Retry snaps it to the fresh composition. Rendered geometry and screen projection share that transform.
+
+Focus is an explicit toggle, with bounded facing towards the one living opponent and a ground-ring indicator. It works while idle, moving or guarding, but cannot redirect or cancel an accepted slash or dodge. Focus persists through Pause and input interruption; Retry or either fighter's defeat clears it. Paused/suppressed commands are consumed rather than replayed.
+
+**Verified source:** 6c765af17a8372c70bb4a18b7b18887b1644336a. The complete `./scripts/check` passed at 07:23:40 UTC on 28 November 2026, including formatting/build, hosted Swift Testing with all four native routes, and the declaration/export/release/recording contracts. New regressions cover focused backpedal/strafe/guard, bounded turns, committed action directions, buffered attack facing, once-only sub-tick focus, Pause cancellation, source generations and Retry/defeat release. Input tests cover all three sources, rapid touch taps, separate finger release and non-overlapping touch targets.
+
+Fresh rendered Simulator runs on that exact application/test/tooling source pass:
+
+| Route | Result | Actual evidence |
+| --- | --- | --- |
+| duel-attack | 2/2, 17.8 s, 1,048 frames | Victory, seven sword contacts, six blocks, health100, no Retry/failures |
+| duel-defence | 2/2, 4.6 s, 253 frames | One directional block and one timed evasion, health100 |
+| duel-recovery | 4/4, 2.7 s, 138 frames | Paused input consumed, neutral resume, fresh movement and native Restart |
+| duel-focus | 5/5, 18.8 s, 1,082 frames | Focus, boundary retreat and strafe while facing the enemy; seven sword contacts/five blocks, victory, health100, automatic focus release |
+
+Before/after captures, videos, traces and summaries remain in the ignored local verification folders. Actual frames were inspected for diagonal scenery, upright fighters, focus ring, weapons, HUD and near-wall foot visibility. This exposed foreground walls hiding feet; the two foreground wall visuals now use 0.18m curbs while the flat collision boxes remain unchanged. Independent Codex source review found no blocking issue; its pending-focus/Pause and first-fixed-tick acquisition coverage suggestions were addressed. Claude/external review and human framing acceptance remain open.
+
+No new TestFlight upload has been made: build47 remains the delivered earlier revision. Scripted raw commands and native touch tests do not establish physical R3/Tab delivery, real multi-touch comfort, sustained phone performance or enjoyment. Existing source-bound results below retain their original revisions.
+
 ## Internal TestFlight build 47 — available
 
 **Verified delivery:** the maintainer requested delivery to the phone through TestFlight (chat, 28 November 2026; no public permalink), tracked in [issue #236](https://github.com/RonildoBraga/lauder/issues/236). Internal **0.1.0 (47)** is available to the existing Lauder testers from frozen reviewed source **e984b60446152716a1b3d1add7b2122b593a7f67**, on the clean named branch codex/graybox-duel. This uses the documented reviewed-preview path without merging [PR #235](https://github.com/RonildoBraga/lauder/pull/235) or [PR #237](https://github.com/RonildoBraga/lauder/pull/237).
@@ -32,12 +55,13 @@ The active bridge/squad/shooting graph and its obsolete test requirements are re
 | Attack | F | R1 / RB | Attack |
 | Hold guard | Q | L1 / LB | Guard |
 | Dodge | Space | Circle / B | Dodge |
+| Focus / unfocus enemy | Tab | R3 / Right stick click | Focus / Unfocus |
 | Pause / resume | Escape | Options / Menu | Pause / Resume |
 | Menu confirm / outcome Retry | E | Cross / A | Dedicated menu/Retry target |
 
-Movement is camera-relative. Guard holds facing while the hero moves more slowly; release it to turn and regain stamina. Attack commits its direction. A fresh dodge wins simultaneous attack; guard suppresses an attack. Pause wins all combat input. A late-recovery request may buffer one next action for a short bounded handoff, not an entire combo.
+Movement is camera-relative. Without focus, Guard holds facing while the hero moves more slowly. Focus turns towards the enemy at a bounded rate while the hero can strafe, retreat or guard; release Guard to regain stamina. Accepted attacks and dodges commit their direction even if focus changes. Simultaneous command priority is **Pause → fresh Focus → Dodge → Guard → Attack**. A fresh Focus consumes simultaneous Attack/Dodge requests while preserving held Guard; suppressed fresh commands are consumed. A late-recovery request may buffer one next action for a short bounded handoff, not an entire combo.
 
-Source/lifecycle changes clear captures and pending actions and require neutral input. Pause freezes actors and action timers. Captured touch controls remain mounted until every finger lifts, including centred-stick contact. Resume does not replay inputs pressed while paused. Foreground Lauder keeps the screen awake; leaving it restores normal idle locking.
+Source/lifecycle changes clear captures and pending actions and require neutral input. Pause freezes actors and action timers. Focus selection survives both; Retry and defeat clear it. Captured touch controls remain mounted until every finger lifts, including centred-stick contact. Resume does not replay inputs pressed while paused. Foreground Lauder keeps the screen awake; leaving it restores normal idle locking.
 
 ## Starting tuning
 
@@ -73,12 +97,12 @@ No new phone, TestFlight, enjoyment or measured phone-performance acceptance is 
 Run:
 
     ./scripts/check
-    ./apple/scripts/playtest duel-attack duel-defence duel-recovery
+    ./apple/scripts/playtest duel-attack duel-defence duel-recovery duel-focus
 
-The routes drive real shared input, not injected damage or outcomes. They cover a native win, block/timed evasion, and pause/release/resume/Restart. Retained collision tests include previous wall-contact escape regressions as plain geometry fixtures.
+The routes drive real shared input, not injected damage or outcomes. The original three cover a native win, block/timed evasion, and pause/release/resume/Restart. The fourth covers focus, boundary retreat and strafe through a real victory; source-bound results are above. Retained collision tests include previous wall-contact escape regressions as plain geometry fixtures.
 
 ## Next gate
 
 A short human session should establish whether preparation is readable, block/dodge/repositioning offer distinct choices, damage feels fair and Retry invites another attempt. Physical touch/controller comfort and sustained phone performance require a separately arranged milestone.
 
-Only after the duel works should we compare parry/charged actions, another enemy pattern and camera alternatives. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel. Merge and TestFlight publication retain their own go-ahead.
+Complete and review the assigned camera/focus follow-up before expanding the duel. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel. Merge and TestFlight publication retain their own go-ahead.
