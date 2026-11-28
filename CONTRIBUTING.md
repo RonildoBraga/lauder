@@ -82,7 +82,7 @@ Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario 
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the route result; the runner records trace/summary evidence. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
-The [earlier camera comparison](docs/prototype-plan.md#camera-pitch-comparison--verified-in-simulator) selected the 35° downward pitch. The [readability follow-up](docs/prototype-plan.md#duel-readability-follow-up--in-progress) compares perspective and orthographic projection at that same pitch, yaw and approximately 10.1% centred actor height. Orthographic is the working preview after six passing recorded runs and visual inspection; this does not establish human phone acceptance. To compare manually:
+The [earlier camera comparison](docs/prototype-plan.md#camera-pitch-comparison--verified-in-simulator) selected the 35° downward pitch. The [readability follow-up](docs/prototype-plan.md#duel-readability-follow-up--in-progress) compares perspective and orthographic projection at that same pitch, yaw and approximately 10.1% centred actor height. Orthographic is the working preview after six passing recorded runs and visual inspection, now [available in internal TestFlight build 48](docs/prototype-plan.md#internal-testflight-build-48--available). Availability does not establish human phone acceptance. To compare manually:
 
 ```bash
 ./apple/scripts/play --camera-projection perspective
