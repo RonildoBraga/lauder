@@ -639,16 +639,14 @@ final class EncounterSimulation {
         let previousPhase = state.robot?.phase
         var chosenMember: PartyMember? = session.leader
         var chosenPoint = leader
-        var hasSight = ballistics.isClear(
-          from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
+        // A robot hostile always has its robot.
+        var hasSight = state.robot.map { guardSees(leader, from: $0) } ?? false
         var retaliation = false
         if spec.strategicGuard, let robot = state.robot {
           let visible = Set(
             party.compactMap { member, point -> PartyMember? in
               simd_distance(point, state.position) <= RobotGuard.detectionRange
-                && ballistics.isClear(
-                  from: ballistics.point(state.position, above: 1.52),
-                  to: ballistics.point(point))
+                && guardSees(point, from: robot)
                 ? member : nil
             })
           // Retaliation must be able to reach commitment. Keep the wider sight set for
@@ -962,13 +960,23 @@ final class EncounterSimulation {
       targets.contains(where: { $0.id == eye.id })
     else { return broad }
     let offset = SIMD2(start.x, start.z) - robot.position
-    // The physical eye's front plane, not an arbitrary aim cone, admits oblique face hits.
-    let inFrontOfEye = simd_dot(SIMD2(start.x, start.z) - eye.ground, robot.facing) > 0.0001
-    guard simd_length(offset) > RobotModelGeometry.bodyRadius, inFrontOfEye
+    // The recessed eye shows only to shots from within its view angle of the guard's facing.
+    let fromEye = SIMD2(start.x, start.z) - eye.ground
+    let seesEye =
+      simd_length(fromEye) > 0.0001
+      && simd_dot(simd_normalize(fromEye), robot.facing) >= cos(GuardWeakpoint.eyeViewAngle)
+    guard simd_length(offset) > RobotModelGeometry.bodyRadius, seesEye
     else { return broad }
     let refined = ballistics.traceAcrossLevel(
       from: start, direction: direction, targets: targets.filter { $0.id != id })
     return refined.strike == .body(eye.id) ? refined : broad
+  }
+
+  /// Whether a guard sees `point`, looking out from its sight height, which drops with its body.
+  func guardSees(_ point: SIMD2<Float>, from robot: RobotGuard) -> Bool {
+    ballistics.isClear(
+      from: ballistics.point(robot.position, above: robot.sightHeight),
+      to: ballistics.point(point))
   }
 
   private func scattered(
@@ -1739,7 +1747,7 @@ final class EncounterSimulation {
   ) -> Bool {
     let radial = origin - centre
     let side = point.ground - centre
-    return simd_length(radial) >= RobotModelGeometry.bodyRadius + PartyBody.radius
+    return simd_length(radial) >= GuardCollision.pawnClearance
       && simd_length(side) > 0.001
       && simd_dot(simd_normalize(radial), simd_normalize(side)) >= Self.swordSide
       && simd_distance(origin, point.ground) <= reach + point.radius
@@ -1821,7 +1829,7 @@ final class EncounterSimulation {
       let offset = target.position - origin
       let distance = simd_length(offset)
       let radius = target.robot == nil ? bodyRadius(target.spec.id) : RobotModelGeometry.bodyRadius
-      if target.robot != nil, distance < RobotModelGeometry.bodyRadius + PartyBody.radius {
+      if target.robot != nil, distance < GuardCollision.pawnClearance {
         continue
       }
       guard distance <= reach + radius,

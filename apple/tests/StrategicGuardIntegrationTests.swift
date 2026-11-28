@@ -175,12 +175,16 @@ struct StrategicGuardIntegrationTests {
       from: start, direction: eye.centre - start, targets: targets)
     #expect(clear.strike == .body(eye.id))
     let side = SIMD2(-robot.facing.y, robot.facing.x)
-    let obliqueGround = robot.position + robot.facing * 3 + side * 8
-    let oblique = SIMD3(obliqueGround.x, 1.25, obliqueGround.y)
-    #expect(
-      trial.fight.traceCombat(
-        from: oblique, direction: eye.centre - oblique, targets: targets
-      ).strike == .body(eye.id))
+    // A clear oblique contact within 60° of the guard's facing still finds the eye. From
+    // further round, where the recessed eye can't be seen, the body takes the hit (#200).
+    for (ahead, across, struck) in [(Float(6), Float(4), eye.id), (3, 8, Trial.id)] {
+      let obliqueGround = robot.position + robot.facing * ahead + side * across
+      let oblique = SIMD3(obliqueGround.x, 1.25, obliqueGround.y)
+      #expect(
+        trial.fight.traceCombat(
+          from: oblique, direction: eye.centre - oblique, targets: targets
+        ).strike == .body(struck))
+    }
     for id in ["ally.laura", "other-enemy"] {
       let blocker = Ballistics.Target(id: id, centre: [0, 1.4, 3])
       let stopped = trial.fight.traceCombat(
