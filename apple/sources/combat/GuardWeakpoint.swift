@@ -9,6 +9,11 @@ struct GuardWeakpoint {
   let centre: SIMD3<Float>
   let radius: Float
 
+  /// The eye sits recessed in the guard's face, so a shot scores its critical only from within
+  /// this angle of the guard's facing, measured from the eye. From further round, the body
+  /// takes the hit. The maintainer chose 60° on #200.
+  static let eyeViewAngle: Float = 60 * .pi / 180
+
   var ground: SIMD2<Float> { [centre.x, centre.z] }
   var target: Ballistics.Target {
     Ballistics.Target(

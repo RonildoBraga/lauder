@@ -185,6 +185,9 @@ final class EncounterSimulation {
   /// One shared squad grenade; switching leaders cannot reset its recharge.
   private(set) var grenade: Grenade?
   private(set) var grenadeCooldown: Float = 0
+  /// Whether the grenade in flight was thrown during the encounter. A throw made before it began
+  /// is practice, as gunfire is: the maintainer chose that on #200.
+  private var grenadeCounts = false
   /// Consumed by presentation in this fixed step, never used as damage authority.
   private(set) var blasts: [SIMD3<Float>] = []
   private var scatters: [PartyMember: Scatter] = [:]
@@ -643,16 +646,14 @@ final class EncounterSimulation {
         let previousPhase = state.robot?.phase
         var chosenMember: PartyMember? = session.leader
         var chosenPoint = leader
-        var hasSight = ballistics.isClear(
-          from: ballistics.point(state.position, above: 1.52), to: ballistics.point(leader))
+        // A robot hostile always has its robot.
+        var hasSight = state.robot.map { guardSees(leader, from: $0) } ?? false
         var retaliation = false
         if spec.strategicGuard, let robot = state.robot {
           let visible = Set(
             party.compactMap { member, point -> PartyMember? in
               simd_distance(point, state.position) <= RobotGuard.detectionRange
-                && ballistics.isClear(
-                  from: ballistics.point(state.position, above: 1.52),
-                  to: ballistics.point(point))
+                && guardSees(point, from: robot)
                 ? member : nil
             })
           // Retaliation must be able to reach commitment. Keep the wider sight set for
@@ -966,13 +967,23 @@ final class EncounterSimulation {
       targets.contains(where: { $0.id == eye.id })
     else { return broad }
     let offset = SIMD2(start.x, start.z) - robot.position
-    // The physical eye's front plane, not an arbitrary aim cone, admits oblique face hits.
-    let inFrontOfEye = simd_dot(SIMD2(start.x, start.z) - eye.ground, robot.facing) > 0.0001
-    guard simd_length(offset) > RobotModelGeometry.bodyRadius, inFrontOfEye
+    // The recessed eye shows only to shots from within its view angle of the guard's facing.
+    let fromEye = SIMD2(start.x, start.z) - eye.ground
+    let seesEye =
+      simd_length(fromEye) > 0.0001
+      && simd_dot(simd_normalize(fromEye), robot.facing) >= cos(GuardWeakpoint.eyeViewAngle)
+    guard simd_length(offset) > RobotModelGeometry.bodyRadius, seesEye
     else { return broad }
     let refined = ballistics.traceAcrossLevel(
       from: start, direction: direction, targets: targets.filter { $0.id != id })
     return refined.strike == .body(eye.id) ? refined : broad
+  }
+
+  /// Whether a guard sees `point`, looking out from its sight height, which drops with its body.
+  func guardSees(_ point: SIMD2<Float>, from robot: RobotGuard) -> Bool {
+    ballistics.isClear(
+      from: ballistics.point(robot.position, above: robot.sightHeight),
+      to: ballistics.point(point))
   }
 
   private func scattered(
@@ -1036,15 +1047,25 @@ final class EncounterSimulation {
     from origin: SIMD2<Float>, facing: SIMD2<Float>, aiming: Bool, by member: PartyMember
   ) -> Bool {
     guard canThrowGrenade(by: member) else { return false }
+    // Without a lock, the throw takes an enemy its arc lands on. The arc clears low cover that
+    // a bullet line can't, though tall cover still stops it (#200).
+    let inRange = hostiles.values.filter {
+      $0.isTargetable && !$0.isDown && simd_distance(origin, $0.position) <= Grenade.maximumRange
+    }.sorted { $0.spec.id < $1.spec.id }
     let destination: SIMD2<Float>
     if let lock, let state = hostiles[lock], state.isTargetable, !state.isDown {
       destination = state.position
+    } else if aiming,
+      let aimed = Targeting.aimed(
+        along: facing, within: Aim.helpAngle, from: origin,
+        candidates: inRange.map { Targeting.Candidate(id: $0.spec.id, position: $0.position) },
+        range: Grenade.maximumRange, isClear: { self.grenadeLands(from: $0, at: $1) }),
+      let state = hostiles[aimed]
+    {
+      // Aimed like the guns' help: an enemy in the narrow aim cone takes the throw.
+      destination = state.position
     } else if !aiming,
-      let nearest = hostiles.values.filter({
-        $0.isTargetable && !$0.isDown
-          && simd_distance(origin, $0.position) <= Grenade.maximumRange
-          && ballistics.isClear(from: ballistics.point(origin), to: ballistics.point($0.position))
-      }).min(by: {
+      let nearest = inRange.filter({ grenadeLands(from: origin, at: $0.position) }).min(by: {
         let a = simd_distance_squared(origin, $0.position)
         let b = simd_distance_squared(origin, $1.position)
         return a == b ? $0.spec.id < $1.spec.id : a < b
@@ -1057,23 +1078,35 @@ final class EncounterSimulation {
     guard let thrown = Grenade(from: ballistics.point(origin), toward: destination, by: member)
     else { return false }
     grenade = thrown
+    grenadeCounts = encounter != nil
     grenadeCooldown = Grenade.cooldown
     recordGuardAttack(by: member, from: origin)
     return true
   }
 
+  /// Whether a throw from `origin` at `point` lands there, rather than stopping short on cover.
+  private func grenadeLands(from origin: SIMD2<Float>, at point: SIMD2<Float>) -> Bool {
+    guard var trial = Grenade(from: ballistics.point(origin), toward: point, by: .tom)
+    else { return false }
+    _ = trial.step(dt: Grenade.flightDuration, trace: grenadeTrace)
+    return simd_distance(SIMD2(trial.position.x, trial.position.z), point) < 0.25
+  }
+
+  /// A grenade's flight meets scenery, never bodies.
+  private func grenadeTrace(_ start: SIMD3<Float>, _ end: SIMD3<Float>) -> Ballistics.Trace {
+    let delta = end - start
+    return ballistics.trace(from: start, direction: delta, range: simd_length(delta), targets: [])
+  }
+
   private func advanceGrenade(dt: Float, session: GameSession, outcome: inout Outcome) {
     guard var thrown = grenade else { return }
-    let explosion = thrown.step(dt: dt) { start, end in
-      let delta = end - start
-      return ballistics.trace(from: start, direction: delta, range: simd_length(delta), targets: [])
-    }
+    let explosion = thrown.step(dt: dt, trace: grenadeTrace)
     grenade = thrown.isFinished ? nil : thrown
     guard let centre = explosion else { return }
     blasts.append(centre)
     // Reuse the existing one impact-sound event; damage numbers never emit duplicate sound.
     events.append(.struckBlock(at: [centre.x, centre.z]))
-    guard session.inEncounter else { return }
+    guard session.inEncounter, grenadeCounts else { return }
     for state in hostiles.values.sorted(by: { $0.spec.id < $1.spec.id })
     where state.isTargetable && !state.isDown {
       let target = hostileTarget(state.spec.id)
@@ -1491,6 +1524,10 @@ final class EncounterSimulation {
           dt: dt, target: nil, engaged: false, mayWindUp: false, motion: crawlerMotion,
           guardian: nil, others: [])
         hostiles[id] = state
+      } else if let robot = state.robot, robot.isDown || robot.isCleared {
+        state.settleRobotWreck(
+          dt: dt, grounded: guardStrategies[id]?.detachedLegs.count == GuardStrategy.legCount)
+        hostiles[id] = state
       }
     }
   }
@@ -1731,7 +1768,7 @@ final class EncounterSimulation {
   ) -> Bool {
     let radial = origin - centre
     let side = point.ground - centre
-    return simd_length(radial) >= RobotModelGeometry.bodyRadius + PartyBody.radius
+    return simd_length(radial) >= GuardCollision.pawnClearance
       && simd_length(side) > 0.001
       && simd_dot(simd_normalize(radial), simd_normalize(side)) >= Self.swordSide
       && simd_distance(origin, point.ground) <= reach + point.radius
@@ -1813,7 +1850,7 @@ final class EncounterSimulation {
       let offset = target.position - origin
       let distance = simd_length(offset)
       let radius = target.robot == nil ? bodyRadius(target.spec.id) : RobotModelGeometry.bodyRadius
-      if target.robot != nil, distance < RobotModelGeometry.bodyRadius + PartyBody.radius {
+      if target.robot != nil, distance < GuardCollision.pawnClearance {
         continue
       }
       guard distance <= reach + radius,

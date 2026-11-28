@@ -852,12 +852,10 @@ final class GameWorld {
   /// slid segment against scenery so avoiding the machine never pushes a pawn through a pier.
   private func resolvePartyMotion(start: SIMD2<Float>, delta: SIMD2<Float>) -> SIMD2<Float> {
     var end = motion.resolve(start: start, delta: delta)
-    for state in fight.hostiles.values
-    where state.spec.strategicGuard && state.isVisible && !state.isDown {
-      guard let robot = state.robot, !robot.isCleared else { continue }
+    for state in fight.hostiles.values where state.blocksParty {
       end = GuardCollision.resolve(
         start: start, delta: end - start, centre: state.position,
-        radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
+        radius: GuardCollision.pawnClearance)
     }
     return motion.canTraverse(from: start, to: end) ? end : start
   }
@@ -865,11 +863,9 @@ final class GameWorld {
   private func canStandParty(_ point: SIMD2<Float>) -> Bool {
     grid.isWalkable(point)
       && fight.hostiles.values.allSatisfy { state in
-        guard state.spec.strategicGuard, state.isVisible, !state.isDown,
-          let robot = state.robot, !robot.isCleared
-        else { return true }
-        return simd_distance(point, state.position)
-          >= RobotModelGeometry.bodyRadius + PartyBody.radius + PartyMotion.skin
+        !state.blocksParty
+          || simd_distance(point, state.position)
+            >= GuardCollision.pawnClearance + PartyMotion.skin
       }
   }
 
@@ -880,12 +876,10 @@ final class GameWorld {
 
   private func clearsGuard(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Bool {
     return fight.hostiles.values.allSatisfy { state in
-      guard state.spec.strategicGuard, state.isVisible, !state.isDown,
-        let robot = state.robot, !robot.isCleared
-      else { return true }
+      guard state.blocksParty else { return true }
       let resolved = GuardCollision.resolve(
         start: start, delta: end - start, centre: state.position,
-        radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
+        radius: GuardCollision.pawnClearance)
       return simd_distance(resolved, end) < 0.001
     }
   }
@@ -904,12 +898,10 @@ final class GameWorld {
   private func guardWaypoint(from start: SIMD2<Float>, towards target: SIMD2<Float>) -> SIMD2<
     Float
   >? {
-    for state in fight.hostiles.values
-    where state.spec.strategicGuard && state.isVisible && !state.isDown {
-      guard let robot = state.robot, !robot.isCleared else { continue }
+    for state in fight.hostiles.values where state.blocksParty {
       let end = GuardCollision.resolve(
         start: start, delta: target - start, centre: state.position,
-        radius: RobotModelGeometry.bodyRadius + PartyBody.radius)
+        radius: GuardCollision.pawnClearance)
       guard simd_distance(end, target) > 0.01 else { continue }
       let radial = start - state.position
       guard simd_length(radial) > 0.001 else { return nil }

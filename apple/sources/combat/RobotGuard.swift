@@ -57,6 +57,8 @@ struct RobotGuard {
   static let settleDuration: Float = 0.6
   static let staggerDuration: Float = 0.6
   static let staggerDepth: Float = 0.08
+  /// A standing guard looks out from its guns' height.
+  static let standingSightHeight = RobotModelGeometry.gunMounts[0].y
   /// The final leg faces the bridge entrance again instead of patrolling only north/east/west.
   private static let patrolOffsets: [SIMD2<Float>] = [[0, -1.5], [3, -1.5], [1.5, 0]]
 
@@ -98,6 +100,10 @@ struct RobotGuard {
     return min(Self.groundedDrop, lowered + Self.staggerDepth * pulse * pulse)
   }
 
+  /// Where the guard looks from: its guns' height, which drops with its body as they do. The
+  /// maintainer chose to let a crippled guard's sight drop on #226.
+  var sightHeight: Float { Self.standingSightHeight - bodyDrop }
+
   init(home: SIMD2<Float>, strategicPatterns: Bool = false) {
     self.home = home
     self.strategicPatterns = strategicPatterns
@@ -135,6 +141,13 @@ struct RobotGuard {
     committedPoint = nil
     gunRecoil = .zero
     recoilElapsed = SIMD2(repeating: 10)
+  }
+
+  /// A downed or cleared guard with no legs left keeps settling onto its belly, even after the
+  /// fight ends, so its wreck never stays raised. A wreck never rises (#200).
+  mutating func settleWreck(dt: Float, grounded: Bool) {
+    guard dt.isFinite, dt > 0, grounded, phase == .down || phase == .cleared else { return }
+    settleDrop = min(Self.groundedDrop, settleDrop + Self.groundedDrop / Self.settleDuration * dt)
   }
 
   mutating func clear() {
@@ -188,6 +201,7 @@ struct RobotGuard {
     let speed = !grounded && speedMultiplier.isFinite ? max(0, min(1, speedMultiplier)) : 0
     let pivot = turnMultiplier.isFinite ? max(0, min(1, turnMultiplier)) : 0
     let turning = grounded ? min(pivot, GuardStrategy.groundedTurnMultiplier) : pivot
+    settleWreck(dt: dt, grounded: grounded)
     guard phase != .hidden, phase != .down, phase != .cleared else { return nil }
     let wantedDrop: Float = grounded ? Self.groundedDrop : 0
     let dropStep = Self.groundedDrop / Self.settleDuration * dt
@@ -217,11 +231,15 @@ struct RobotGuard {
       aimingPoint = nil
       if repositionRemaining > 0 {
         repositionRemaining = max(0, repositionRemaining - dt)
-        let goal = repositionGoal ?? home
-        move(
-          towards: goal, dt: dt, obstacles: obstacles, party: party,
-          speedMultiplier: speed, turnMultiplier: turning)
-        if simd_distance(position, goal) < 0.1 { repositionRemaining = 0 }
+        // A guard that can't move holds its place for the whole pause instead of walking at a
+        // goal it can't reach. The maintainer kept that pause as a reward for breaking its legs.
+        if speed > 0 {
+          let goal = repositionGoal ?? home
+          move(
+            towards: goal, dt: dt, obstacles: obstacles, party: party,
+            speedMultiplier: speed, turnMultiplier: turning)
+          if simd_distance(position, goal) < 0.1 { repositionRemaining = 0 }
+        }
       } else if canAcquire {
         needsAttackRange = false
         aimingPoint = target
