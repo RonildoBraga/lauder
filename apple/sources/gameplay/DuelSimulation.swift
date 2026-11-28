@@ -136,6 +136,8 @@ struct DuelSimulation: Sendable {
   static let maxStamina: Float = 100
   static let movementSpeed: Float = 2.8
   static let bufferWindow: Float = 0.15
+  static let hitFlashDuration: Float = 0.16
+  static let guardBreakStaggerDuration: Float = 0.5
 
   private struct BufferedAction: Sendable {
     let kind: DuelAction.Kind
@@ -160,18 +162,74 @@ struct DuelSimulation: Sendable {
   private var nextEnemyAttack: DuelAction.Kind = .sweep
   private var enemyApproachSide: Float = 0
   private var enemyApproachTime: Float = 0
-  private let collision = PartyMotion(radius: DuelArena.radius, obstacles: DuelArena.obstacles)
+  private var collision: PartyMotion
+  private var enemyHome: SIMD2<Float>
+  private var enemyLeash: Float
+  private let endsOnEnemyDefeat: Bool
+  private(set) var enemyEnabled: Bool
+
+  var canFocusEnemy: Bool {
+    enemyEnabled && enemy.health > 0 && outcome == .fighting
+      && simd_distance(hero.position, enemyHome) <= enemyLeash
+      && hasClearPath(to: enemy.position)
+  }
+
+  func hasClearPath(to point: SIMD2<Float>) -> Bool {
+    collision.canTraverse(from: hero.position, to: point)
+  }
 
   init(
     heroPosition: SIMD2<Float> = DuelArena.heroSpawn,
     enemyPosition: SIMD2<Float> = DuelArena.enemySpawn,
-    heroYaw: Float = 0
+    heroYaw: Float = 0,
+    obstacles: [PartyMotion.Box] = DuelArena.obstacles,
+    enemyHome: SIMD2<Float> = DuelArena.enemySpawn,
+    enemyLeash: Float = 5.5, enemyEnabled: Bool = true, endsOnEnemyDefeat: Bool = true
   ) {
     hero = DuelFighter(position: heroPosition, yaw: heroYaw, health: Self.heroMaxHealth)
     enemy = DuelFighter(position: enemyPosition, yaw: .pi, health: Self.enemyMaxHealth)
+    collision = PartyMotion(radius: DuelArena.radius, obstacles: obstacles)
+    self.enemyHome = enemyHome
+    self.enemyLeash = enemyLeash
+    self.enemyEnabled = enemyEnabled
+    self.endsOnEnemyDefeat = endsOnEnemyDefeat
   }
 
   mutating func reset() { self = DuelSimulation() }
+
+  /// A room changes the opponent, never the hero, clock, counters or owed recovery.
+  mutating func beginEncounter(
+    at home: SIMD2<Float>, leash: Float, firstAttack: DuelAction.Kind
+  ) {
+    guard outcome == .fighting, !enemyEnabled else { return }
+    enemy = DuelFighter(
+      position: home, yaw: Movement.yaw(towards: hero.position - home),
+      health: Self.enemyMaxHealth)
+    enemyHome = home
+    enemyLeash = leash
+    nextEnemyAttack = firstAttack
+    enemyCooldown = 1.1
+    enemyApproachSide = 0
+    enemyApproachTime = 0
+    enemyEnabled = true
+    isFocused = false
+  }
+
+  mutating func setObstacles(_ obstacles: [PartyMotion.Box]) {
+    collision = PartyMotion(radius: DuelArena.radius, obstacles: obstacles)
+  }
+
+  mutating func heal(_ amount: Float) -> Float {
+    guard outcome == .fighting, amount.isFinite, amount > 0 else { return 0 }
+    let before = hero.health
+    hero.health = min(Self.heroMaxHealth, before + amount)
+    return hero.health - before
+  }
+
+  mutating func complete() {
+    guard outcome == .fighting else { return }
+    finish(.won)
+  }
 
   /// Interruptions do not grant a fresh enemy attack or erase an owed recovery. The owning
   /// world freezes this simulation and requires released input before any further step.
@@ -205,8 +263,9 @@ struct DuelSimulation: Sendable {
 
   private mutating func tick(_ command: DuelCommand, dt: Float) {
     elapsed += dt
+    if isFocused, !canFocusEnemy { isFocused = false }
     if command.focusPressed {
-      isFocused.toggle()
+      if canFocusEnemy { isFocused.toggle() }
       buffered = nil
     }
     hero.hitFlash = max(0, hero.hitFlash - dt)
@@ -238,7 +297,8 @@ struct DuelSimulation: Sendable {
     guard hero.action == nil, hero.stagger == 0 else { return }
     let direction = Self.validMovement(command.movement)
     let speed = hero.guarding ? Self.movementSpeed * 0.4 : Self.movementSpeed
-    hero.position = move(hero.position, delta: direction * speed * dt, avoiding: enemy.position)
+    hero.position = move(
+      hero.position, delta: direction * speed * dt, avoiding: enemyEnabled ? enemy.position : nil)
     let facing = isFocused ? enemy.position - hero.position : hero.guarding ? .zero : direction
     if simd_length_squared(facing) > 0.0001 {
       hero.yaw = Movement.turn(
@@ -294,7 +354,7 @@ struct DuelSimulation: Sendable {
   }
 
   private mutating func chooseEnemyAction(dt: Float) {
-    guard enemy.action == nil else { return }
+    guard enemyEnabled, enemy.action == nil else { return }
     enemyCooldown = max(0, enemyCooldown - dt)
     let offset = hero.position - enemy.position
     let distance = simd_length(offset)
@@ -302,8 +362,8 @@ struct DuelSimulation: Sendable {
 
     // Retreating beyond the local engagement range makes room to recover; the enemy returns
     // home instead of following forever or attacking an unseen opponent at arbitrary range.
-    let leashed = simd_distance(hero.position, DuelArena.enemySpawn) > 5.5
-    let facing = leashed ? DuelArena.enemySpawn - enemy.position : offset
+    let leashed = simd_distance(hero.position, enemyHome) > enemyLeash
+    let facing = leashed ? enemyHome - enemy.position : offset
     if simd_length_squared(facing) > 0.001 {
       enemy.yaw = Movement.turn(
         from: enemy.yaw, towards: Movement.yaw(towards: facing), limit: 4 * dt)
@@ -375,7 +435,7 @@ struct DuelSimulation: Sendable {
         let travel = max(0, min(action.elapsed + dt, travelEnd) - min(action.elapsed, travelEnd))
         hero.position = move(
           hero.position, delta: action.direction * (1.7 / travelEnd) * travel,
-          avoiding: enemy.position)
+          avoiding: enemyEnabled ? enemy.position : nil)
       }
       action.previousElapsed = action.elapsed
       action.elapsed += dt
@@ -399,12 +459,12 @@ struct DuelSimulation: Sendable {
   private mutating func resolveContacts() {
     // Both active contacts are sampled before defeat is applied, so a deliberate trade can
     // land. If the hero dies in that trade, defeat takes precedence over a victory screen.
-    let heroContact = contact(from: hero, to: enemy)
-    let enemyContact = contact(from: enemy, to: hero)
+    let heroContact = enemyEnabled && contact(from: hero, to: enemy)
+    let enemyContact = enemyEnabled && contact(from: enemy, to: hero)
     if heroContact {
       hero.action?.contacted = true
       enemy.health = max(0, enemy.health - (hero.action?.profile.damage ?? 0))
-      enemy.hitFlash = 0.16
+      enemy.hitFlash = Self.hitFlashDuration
       hitsLanded += 1
       emit(.hit(.enemy))
     }
@@ -423,7 +483,7 @@ struct DuelSimulation: Sendable {
         } else {
           hero.stamina = 0
           hero.guarding = false
-          hero.stagger = 0.5
+          hero.stagger = Self.guardBreakStaggerDuration
           guardBreaks += 1
           emit(.guardBroken)
           damageHero()
@@ -432,15 +492,25 @@ struct DuelSimulation: Sendable {
         damageHero()
       }
     }
-    if hero.health == 0 || enemy.health == 0 {
-      outcome = hero.health == 0 ? .lost : .won
+    if hero.health == 0 {
+      finish(.lost)
+    } else if enemyEnabled, enemy.health == 0 {
+      enemyEnabled = false
       isFocused = false
-      hero.action = nil
       enemy.action = nil
-      hero.guarding = false
       buffered = nil
-      emit(.finished(outcome))
+      if endsOnEnemyDefeat { finish(.won) }
     }
+  }
+
+  private mutating func finish(_ result: DuelOutcome) {
+    outcome = result
+    isFocused = false
+    hero.action = nil
+    enemy.action = nil
+    hero.guarding = false
+    buffered = nil
+    emit(.finished(result))
   }
 
   private func contact(from attacker: DuelFighter, to target: DuelFighter) -> Bool {
@@ -478,7 +548,7 @@ struct DuelSimulation: Sendable {
 
   private mutating func damageHero() {
     hero.health = max(0, hero.health - (enemy.action?.profile.damage ?? 0))
-    hero.hitFlash = 0.16
+    hero.hitFlash = Self.hitFlashDuration
     hitsTaken += 1
     emit(.hit(.hero))
   }
@@ -493,9 +563,10 @@ struct DuelSimulation: Sendable {
   }
 
   private func move(
-    _ start: SIMD2<Float>, delta: SIMD2<Float>, avoiding other: SIMD2<Float>
+    _ start: SIMD2<Float>, delta: SIMD2<Float>, avoiding other: SIMD2<Float>?
   ) -> SIMD2<Float> {
     let candidate = collision.resolve(start: start, delta: delta)
+    guard let other else { return candidate }
     let displacement = candidate - start
     let offset = start - other
     let radius = DuelArena.radius * 2 + PartyMotion.skin

@@ -9,7 +9,7 @@ struct GameView: View {
 
   var body: some View {
     ZStack {
-      HUDStyle.snow.ignoresSafeArea()
+      Color(red: 0.08, green: 0.10, blue: 0.12).ignoresSafeArea()
       RealityView { [world] content in
         content.camera = .virtual
         content.add(world.root)
@@ -24,7 +24,7 @@ struct GameView: View {
       VStack(spacing: 10) {
         topBar
         Spacer(minLength: 0)
-        if !world.isPaused && world.simulation.outcome == .fighting {
+        if !world.isPaused && world.run.outcome == .fighting {
           Text(world.observation)
             .font(.caption.weight(.medium))
             .multilineTextAlignment(.center)
@@ -40,7 +40,7 @@ struct GameView: View {
       if world.isPaused {
         Color.black.opacity(0.3).ignoresSafeArea().allowsHitTesting(false)
         pauseMenu
-      } else if world.simulation.outcome != .fighting {
+      } else if world.run.outcome != .fighting {
         outcomePanel
       }
 
@@ -73,7 +73,6 @@ struct GameView: View {
   private var topBar: some View {
     HStack(alignment: .top, spacing: 12) {
       VStack(alignment: .leading, spacing: 6) {
-        Text("GRAYBOX DUEL").font(.caption2.weight(.semibold))
         HStack(spacing: 14) {
           meter(
             "Health", value: world.simulation.hero.health,
@@ -82,12 +81,13 @@ struct GameView: View {
             "Stamina", value: world.simulation.hero.stamina,
             maximum: DuelSimulation.maxStamina, tint: HUDStyle.stamina)
         }
-        meter(
-          "Enemy", value: world.simulation.enemy.health,
-          maximum: DuelSimulation.enemyMaxHealth, tint: HUDStyle.ink)
-        Text(enemyIntent).font(.caption2.weight(.semibold))
-        Text(world.simulation.isFocused ? "Enemy focused · strafe and backpedal" : "Free facing")
-          .font(.caption2)
+        if let enemy = world.run.enemy {
+          meter(
+            "Enemy", value: enemy.health,
+            maximum: DuelSimulation.enemyMaxHealth, tint: HUDStyle.ink)
+          Text(enemyIntent).font(.caption2.weight(.semibold))
+        }
+        Text(world.run.objective).font(.caption2.weight(.semibold))
       }
       .padding(10)
       .frostedPanel()
@@ -114,19 +114,8 @@ struct GameView: View {
         if !world.controls.touchControlsEnabled {
           Text("\(world.controls.pauseButtonName) · Pause")
             .font(.caption2)
-          Text(
-            "\(world.controls.attackButtonName) Attack · \(world.controls.guardButtonName) Guard"
-          )
-          .font(.caption2)
-          Text("\(world.controls.dodgeButtonName) Dodge")
+          Text(world.run.isFocused ? "Enemy focused" : "\(world.controls.focusButtonName) · Focus")
             .font(.caption2)
-          Text("\(world.controls.focusButtonName) · Focus / Unfocus")
-            .font(.caption2)
-        } else {
-          Text("Keyboard: WASD · F Attack\nQ Guard · Space Dodge\nTab Focus · Esc Pause")
-            .font(.caption2)
-            .multilineTextAlignment(.trailing)
-            .allowsHitTesting(false)
         }
       }
       .padding(8)
@@ -150,8 +139,9 @@ struct GameView: View {
   }
 
   private var enemyIntent: String {
-    guard let action = world.simulation.enemy.action else {
-      return world.simulation.outcome == .fighting ? "Watch the enemy's weapon" : "Duel complete"
+    guard let enemy = world.run.enemy else { return "Passage clear" }
+    guard let action = enemy.action else {
+      return "Watch the enemy's weapon"
     }
     let name = action.kind == .thrust ? "Thrust" : "Sweep"
     switch action.phase {
@@ -180,6 +170,13 @@ struct GameView: View {
       }
       Text("Release Guard to turn freely and regain stamina.")
         .font(.caption2)
+      Text(
+        "\(world.controls.attackButtonName) Attack · \(world.controls.guardButtonName) Guard\n"
+          + "\(world.controls.dodgeButtonName) Dodge · \(world.controls.focusButtonName) Focus\n"
+          + "Keyboard: WASD · F Attack · Q Guard · Space Dodge · Tab Focus"
+      )
+      .font(.caption2)
+      .multilineTextAlignment(.center)
     }
     .padding(18)
     .frostedPanel(cornerRadius: 14)
@@ -188,15 +185,21 @@ struct GameView: View {
 
   private var outcomePanel: some View {
     VStack(spacing: 12) {
-      Text(world.simulation.outcome == .won ? "Duel won" : "Try another approach")
+      Text(world.run.outcome == .won ? "Route cleared" : "Try another approach")
         .font(.title3.bold())
-      Text("Read the preparation. Defend, then answer.")
-        .font(.caption)
-      Button("Retry") { world.retry() }
-        .font(.headline)
-        .buttonStyle(.borderedProminent)
-        .tint(HUDStyle.ink)
-        .frame(minHeight: 44)
+      Text(
+        world.run.outcome == .won
+          ? "You found the way through. Start again to try a different approach."
+          : "Return to the checkpoint. An opened shortcut stays open."
+      )
+      .font(.caption)
+      Button(world.run.outcome == .won ? "Run again" : "Return to checkpoint") {
+        if world.run.outcome == .won { world.restart() } else { world.retry() }
+      }
+      .font(.headline)
+      .buttonStyle(.borderedProminent)
+      .tint(HUDStyle.ink)
+      .frame(minHeight: 44)
       if !world.controls.touchControlsEnabled {
         Label("Retry", systemImage: world.controls.actionSymbol ?? "a.circle")
           .font(.caption)

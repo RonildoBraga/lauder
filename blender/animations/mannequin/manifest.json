@@ -1,0 +1,40 @@
+{
+  "blendSHA256": "3d66ed6b160f748edd7093667f219970151354f40c7b8a64662b5620c37830b8",
+  "boneCount": 17,
+  "clipCount": 13,
+  "dodgeStyle": "Direction-neutral quickstep/compression; simulation owns displacement",
+  "historicalCommit": "f80fa1391824432726f45c69d51e13a2f0f49334",
+  "jsonSHA256": "b262ec9acc863cd16705241226afeedd01e80fc0c61c947c249069067e97fc10",
+  "maximumAuthoringGripGap": {
+    "dodge": 0,
+    "guard": 0,
+    "slash": 0,
+    "sweep": 0,
+    "thrust": 0
+  },
+  "maximumSourceGroundingAdjustment": 1.78708833118435e-05,
+  "meleeClips": [
+    "slash",
+    "sweep",
+    "thrust",
+    "guard",
+    "dodge"
+  ],
+  "sampleRate": 30,
+  "sourceClips": [
+    "party.idle",
+    "party.walk",
+    "party.jog",
+    "party.run",
+    "party.backward",
+    "party.strafe_left",
+    "party.strafe_right",
+    "party.hit"
+  ],
+  "sourceSHA256": "7abc47d922621f1685522083afee445927f3625f86b2c19eb7077f437703a4b8",
+  "tools": {
+    "build.py": "b77e03da76a3231cd5aad2eb7c820a817c8f1c35aa4e5b033248454099dc3cc3",
+    "export.py": "a315551078c6c88c4a7cc615c3b67ac25957c1af5dcf48d71dcc363d2b15b53f"
+  },
+  "version": 1
+}

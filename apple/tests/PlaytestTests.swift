@@ -7,11 +7,11 @@
   @MainActor
   struct PlaytestTests {
     @Test(arguments: PlaytestRunner.scenarioNames)
-    func scriptedDuelRoutesUseTheRealInputAndSimulation(name: String) throws {
+    func scriptedDungeonRoutesUseTheRealInputAndSimulation(name: String) throws {
       let world = GameWorld()
       let runner = try #require(PlaytestRunner(scenario: name))
       var frames = 0
-      while !runner.isFinished && frames < 60 * 95 {
+      while !runner.isFinished && frames < 60 * 185 {
         let input = runner.input(world: world)
         world.update(raw: input, deltaTime: 1 / 60)
         runner.record(world: world, deltaTime: 1 / 60, milliseconds: 0)
@@ -22,17 +22,22 @@
       #expect(summary.stepsCompleted == summary.steps)
       #expect(!summary.marks.isEmpty)
       switch name {
-      case "duel-attack":
-        #expect(summary.outcome == "won" && summary.heroHits >= 5 && summary.heroHealth > 0)
+      case "dungeon-journey":
+        #expect(summary.outcome == "won" && summary.heroHits >= 10 && summary.heroHealth > 0)
+        #expect(summary.encountersCleared == [0, 1])
+        #expect(summary.shortcutOpen && summary.healingUsed)
         #expect(summary.retries == 0)
-      case "duel-defence":
+      case "dungeon-defence":
         #expect(summary.blocks > 0 && summary.evasions > 0)
         #expect(summary.heroHealth == DuelSimulation.heroMaxHealth)
-        #expect(summary.warningsShown == ["sweep", "thrust"])
-      case "duel-recovery":
+        // Near a wall the whole supplementary envelope is deliberately omitted.
+        // Stage tests separately verify both visible kinds on clear floor.
+        #expect(Set(summary.warningsShown).isSubset(of: ["sweep", "thrust"]))
+      case "dungeon-recovery":
         #expect(summary.retries == 1 && summary.heroHits == 0)
-      case "duel-focus":
-        #expect(summary.outcome == "won" && summary.heroHits >= 5 && summary.heroHealth > 0)
+      case "dungeon-focus":
+        #expect(summary.outcome == "fighting" && summary.heroHits >= 5 && summary.heroHealth > 0)
+        #expect(summary.encountersCleared == [0])
         #expect(summary.blocks > 0 && summary.retries == 0 && !summary.focused)
       default: Issue.record("Unasserted scenario")
       }

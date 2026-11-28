@@ -29,7 +29,8 @@ class ContractTests(unittest.TestCase):
             shutil.copyfile(contracts.ROOT / name, target)
         for folder in ("apple/sources", "blender/reference-exports"):
             for source in (contracts.ROOT / folder).rglob("*"):
-                if source.is_file() and source.suffix in (".usdz", ".wav"):
+                if source.is_file() and (source.suffix in (".usdz", ".wav")
+                        or (source.suffix == ".json" and source.is_relative_to(contracts.ROOT / "apple/sources/content"))):
                     target = self.root / source.relative_to(contracts.ROOT)
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.touch()  # These tests check declarations; preflight checks payloads.
@@ -47,10 +48,10 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(contracts.problems(contracts.ROOT), [])
 
     def test_renamed_and_reordered_script_scenarios_are_rejected(self):
-        self.change("apple/scripts/playtest", '"duel-attack", "duel-defence"',
-                    '"duel-defence", "duel-attack"')
+        self.change("apple/scripts/playtest", '"dungeon-journey", "dungeon-defence"',
+                    '"dungeon-defence", "dungeon-journey"')
         self.refuses("Python playtest scenarios/order")
-        self.change("apple/scripts/playtest", '"duel-recovery"', '"unknown-recovery"')
+        self.change("apple/scripts/playtest", '"dungeon-recovery"', '"unknown-recovery"')
         self.refuses("Python playtest scenarios/order")
 
     def test_missing_preflight_registration_is_rejected(self):
@@ -91,6 +92,14 @@ class ContractTests(unittest.TestCase):
         (self.root / "apple/sources/world/retired.usdz").touch()
         self.refuses("Preflight assets")
 
+    def test_animation_resources_need_preflight_registration(self):
+        (self.root / "apple/sources/content/unregistered-animation.json").touch()
+        self.refuses("Preflight assets")
+
+    def test_missing_animation_payload_is_rejected(self):
+        (self.root / "apple/sources/content/mannequin.json").unlink()
+        self.refuses("Preflight assets")
+
     def test_missing_reference_model_is_rejected(self):
         (self.root / "blender/reference-exports/models/miki.usdz").unlink()
         self.refuses("Blender SPAWNED models")
@@ -122,8 +131,8 @@ class ContractTests(unittest.TestCase):
             contracts.problems(self.root)
 
     def test_unread_scenario_expression_fails_closed(self):
-        self.change("apple/sources/world/Playtest.swift", '("duel-defence", defence)',
-                    '("duel-defence", Routes.defence)')
+        self.change("apple/sources/world/Playtest.swift", '("dungeon-defence", defence)',
+                    '("dungeon-defence", Routes.defence)')
         with self.assertRaisesRegex(ValueError, "expected named scenarios"):
             contracts.problems(self.root)
 

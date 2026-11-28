@@ -36,8 +36,9 @@ struct DuelWorldTests {
     #expect(world.simulation.hero.action?.kind == .slash)
     world.retry()
     #expect(world.retries == 1 && world.session.mode == .exploring)
-    #expect(world.simulation.hero.position == DuelArena.heroSpawn)
-    #expect(world.simulation.enemy.position == DuelArena.enemySpawn)
+    #expect(world.simulation.hero.position == DungeonLayout.heroSpawn)
+    #expect(world.run.enemy == nil && world.run.visibleEnemy == nil)
+    #expect(world.run.activeEncounter == nil && world.run.clearedEncounters.isEmpty)
     #expect(world.simulation.hero.stamina == DuelSimulation.maxStamina)
     #expect(world.simulation.hero.action == nil && world.simulation.enemy.action == nil)
     for _ in 0..<12 {
