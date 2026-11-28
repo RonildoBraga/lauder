@@ -76,6 +76,57 @@ struct DuelSimulationTests {
     #expect(duel.hitsLanded == 1)
   }
 
+  @Test(arguments: [DuelAction.Kind.slash, .dodge])
+  func heldGuardPreservesOneBufferedDodgeAcrossRecovery(kind: DuelAction.Kind) {
+    var duel = nearby()
+    let action = DuelAction(kind: kind, direction: [0, -1])
+    advance(
+      &duel, seconds: action.duration - 0.1,
+      command: .init(attackPressed: kind == .slash, dodgePressed: kind == .dodge))
+    #expect(duel.hero.action?.kind == kind && duel.hero.action?.phase == .recovery)
+    let stamina = duel.hero.stamina
+    duel.step(
+      .init(attackPressed: true, guardHeld: true, dodgePressed: true),
+      deltaTime: DuelSimulation.fixedStep)
+    #expect(duel.hero.action?.kind == kind, "the original action still owes its recovery")
+    #expect(duel.hero.stamina == stamina, "buffering does not spend stamina early")
+
+    // Dodge is a single fresh edge. Keep Guard held on every following tick and include a
+    // lower-priority Attack edge to ensure it cannot replace the pending dodge.
+    advance(&duel, seconds: 0.12, command: .init(attackPressed: true, guardHeld: true))
+    #expect(duel.hero.action?.kind == .dodge && duel.hero.action?.phase == .windup)
+    #expect(duel.hero.stamina == stamina - 30)
+    #expect(!duel.hero.guarding)
+
+    advance(&duel, seconds: 0.5, command: .init(guardHeld: true))
+    #expect(duel.hero.action == nil && duel.hero.guarding)
+    #expect(duel.hero.stamina == stamina - 30, "held Guard cannot repeat or repay the dodge")
+  }
+
+  @Test(arguments: [false, true])
+  func heldGuardStillSuppressesFreshAndPreviouslyBufferedSlashes(alreadyBuffered: Bool) {
+    var duel = nearby()
+    advance(&duel, seconds: 0.56, command: .init(attackPressed: true))
+    if alreadyBuffered { duelPress(&duel, attack: true) }
+    advance(&duel, seconds: 0.16, command: .init(attackPressed: true, guardHeld: true))
+    #expect(duel.hero.action == nil && duel.hero.guarding)
+    #expect(duel.hero.stamina == 76)
+    #expect(duel.hitsLanded == 1)
+  }
+
+  @Test func interruptionClearsAGuardedDodgeBufferWithoutErasingRecovery() {
+    var duel = nearby()
+    advance(&duel, seconds: 0.56, command: .init(attackPressed: true))
+    duel.step(.init(guardHeld: true, dodgePressed: true), deltaTime: DuelSimulation.fixedStep)
+    let action = duel.hero.action
+    duel.interrupt()
+    #expect(duel.hero.action == action)
+    advance(&duel, seconds: 0.15, command: .init(guardHeld: true))
+    #expect(duel.hero.action == nil && duel.hero.guarding)
+    #expect(duel.hero.stamina == 76)
+    #expect(duel.hitsLanded == 1)
+  }
+
   @Test(arguments: [Float(0.525), 0.533, 0.54, 0.55])
   func theWholeLateBufferWindowSurvivesItsHandoff(seconds: Float) {
     var duel = nearby()

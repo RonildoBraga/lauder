@@ -2,6 +2,12 @@
 
 **Updated:** 28 November 2026. **Tracking:** [issue #236](https://github.com/RonildoBraga/lauder/issues/236).
 
+## Internal TestFlight build 47 — preparation
+
+The maintainer requested delivery to the phone through TestFlight (chat, 28 November 2026; no public permalink), tracked in [issue #236](https://github.com/RonildoBraga/lauder/issues/236). Fresh Lauder-specific Apple discovery selected unused 0.1.0 (47), including accepted/processing reservations and the existing internal-tester baseline. This is an authorised reviewed preview from the named duel branch, not a merge or a phone-acceptance claim.
+
+Before delivery, address the automatic review's held-Guard/buffered-Dodge finding, verify the resulting source and archive, and read back successful Apple processing plus unchanged existing-tester access. Final delivery evidence will replace this preparation status after verification. Build 46 remains the previously delivered bridge meanwhile.
+
 ## Assignment and scope
 
 After the Eitr research and reuse audit, the maintainer said **“Proceed with your recommendations but don’t forget to open a git issue and track its progress”** (chat, 28 November 2026; no public permalink). This assigns the first small duel experiment. The [research](research/eitr-gameplay-and-reset-proposal.md) retains dated evidence and later proposals; [ADR 0022](decisions/0022-single-hero-graybox-duel.md) records the runtime change.

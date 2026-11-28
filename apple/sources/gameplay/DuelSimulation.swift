@@ -244,8 +244,12 @@ struct DuelSimulation: Sendable {
       requested = BufferedAction(
         kind: .dodge, direction: direction, remaining: Self.bufferWindow + Self.fixedStep)
     } else if command.guardHeld {
-      buffered = nil
-      return
+      // Guard suppresses attacks, but an already accepted dodge keeps its higher priority
+      // through the recovery handoff after the fresh Dodge edge has been consumed.
+      guard buffered?.kind == .dodge else {
+        buffered = nil
+        return
+      }
     } else if command.attackPressed {
       requested = BufferedAction(
         kind: .slash, direction: Movement.facing(yaw: hero.yaw),
