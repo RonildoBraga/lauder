@@ -44,9 +44,11 @@ The app stays awake while foreground-active, Pause included, and restores normal
 
 ## Camera and focus presentation
 
-The [issue #238](https://github.com/RonildoBraga/lauder/issues/238) follow-up uses a fixed 45° yaw, approximately 30.5° downward pitch and 24° vertical field of view. This is our perspective 3D approximation of the [Eitr reference](research/eitr-gameplay-and-reset-proposal.md), not a claim about that game's exact projection.
+The [issue #238](https://github.com/RonildoBraga/lauder/issues/238) follow-up in [PR #239](https://github.com/RonildoBraga/lauder/pull/239) uses a fixed 45° yaw and 24° vertical field of view, with 35° downward pitch as the recommended candidate pending human framing choice. This is our perspective 3D approximation of the [Eitr reference](research/eitr-gameplay-and-reset-proposal.md), not a claim about that game's exact projection.
 
 CameraRig owns a value-only target and exponentially damped translation towards the hero when free or the fighters' midpoint when focused. Eye and target translate together, preserving camera-relative movement axes; no orbit or zoom system is introduced. WorldCamera applies that same rig to the RealityKit camera, and CameraProjection supplies its matching transform/lens to screen-space consumers. Reset snaps instead of carrying motion from the previous duel. DuelStage consumes focus state for an enemy ground ring; neither camera nor marker selects targets or changes combat.
+
+A Debug-only launch argument permits three explicit comparison offsets for 30.5°, 35° and 40°. The [comparison record](prototype-plan.md#camera-pitch-comparison--pending-verification) owns the offsets and verification status; the [Simulator scripts](../CONTRIBUTING.md#scripted-simulator-playtests) expose them through `--camera-pitch`. Distances are calibrated for a common centred 1.85 m actor height of approximately 10.1% of the viewport, about 20.6% smaller than the preceding 30.5° revision so that opposite-corner feet fit at 40°. Release has only the 35° candidate, without selectable presets or a camera framework. Playtest summaries record the active pitch and offset; comparisons reuse ordinary command routes and do not inject poses or outcomes.
 
 ## Content and authoring
 

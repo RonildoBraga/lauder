@@ -82,6 +82,16 @@ Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario 
 
 Scenario input passes through the ordinary controls and input rules. The HUD shows the route result; the runner records trace/summary evidence. The runner is compiled only in Debug and starts only when requested; released TestFlight builds contain no runner. `PlaytestTests` drives the same scenarios without rendering as part of `./scripts/check`. Headless success, rendered Simulator timing and pointer-driven touches do not establish physical controls, multi-touch, haptics or enjoyment.
 
+The [camera comparison](docs/prototype-plan.md#camera-pitch-comparison--pending-verification) uses the same routes and three Debug-only pitches. The default 35° is a recommended candidate pending the maintainer's framing choice. To play manually, run `./apple/scripts/play --camera-pitch 35`. To record comparable defensive and boundary/focus moments:
+
+```bash
+./apple/scripts/playtest duel-defence duel-focus --camera-pitch 30.5
+./apple/scripts/playtest duel-defence duel-focus --camera-pitch 35
+./apple/scripts/playtest duel-defence duel-focus --camera-pitch 40
+```
+
+Both scripts accept only `30.5`, `35` or `40`, forwarding `-LauderCameraPitch` to the Debug app. Release uses only the 35° candidate and ignores the comparison argument. All three views keep 45° yaw, 24° vertical FOV and approximately the same centred character height. They are pulled back from the preceding camera revision to retain distant feet at 40°; the new 30.5° preview is therefore not an unchanged baseline. Summaries record the actual pitch and offset. Compare corresponding marked phases with their recorded timestamps: screenshot capture is asynchronous, so separate runs do not promise identical poses. No orbit, zoom, gameplay or control variant is added.
+
 The duel is the only playable scene. Pause offers **Resume** and **Restart**; the outcome panel offers immediate Retry. There is no level selector, party switch or weapon bench. Test-only historical collision geometry is retained without the removed bridge policy. The [prototype plan](docs/prototype-plan.md) records current scope and verification; [bridge history](docs/bridge-prototype-plan.md) retains the earlier evidence.
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.
