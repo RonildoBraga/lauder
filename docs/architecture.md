@@ -1,6 +1,6 @@
 # Lauder architecture
 
-**Updated:** 28 November 2026. **Scope:** the single-hero graybox duel tracked in [issue #236](https://github.com/RonildoBraga/lauder/issues/236). [ADR 0022](decisions/0022-single-hero-graybox-duel.md) records the authorised experiment; the [bridge checkpoints](milestones/bridge-prototype.md) preserve the previous runtime.
+**Updated:** 29 November 2026. **Scope:** the basic-rig dungeon tracked in [issue #243](https://github.com/RonildoBraga/lauder/issues/243). [ADR 0023](decisions/0023-basic-rig-dungeon-prototype.md) records the assigned extension of the earlier [duel](decisions/0022-single-hero-graybox-duel.md); the [bridge checkpoints](milestones/bridge-prototype.md) preserve the previous runtime.
 
 ## Platform and boundaries
 
@@ -13,16 +13,24 @@ Swift 6 language mode, RealityKit rendering, SwiftUI interface and Swift Testing
 | GameControls / InputRules | Source selection, touch generations, neutral gates, fresh edges and Pause priority | Input intents; no stamina, damage or action legality |
 | TouchInput / TouchControls | Independent finger capture, held/pending taps and UIKit surface | Mounted during Pause; no gameplay authority |
 | GameWorld | One scene subscription, fixed-step accumulator, accepted pending edges, interruption/reset and presentation coordination | Does not duplicate combat rules |
+| DungeonLayout / DungeonRun | Shared flat route geometry/triggers and encounter/checkpoint/cache/shortcut progress | Delegates to one combat owner; no duplicate hero or clock |
 | DuelSimulation | Hero/enemy positions, facing/focus, health/stamina, action timelines, enemy decisions, collision and outcomes | Plain Swift values; no entities, UI or audio |
 | DuelAction | Preparation/contact/recovery, committed direction and shared blade pose | One timing source for contact and rendering |
 | PartyMotion / Movement | Swept flat collision and camera-relative ground directions | Retained geometry; party naming does not imply companions |
 | CameraRig / WorldCamera / CameraProjection | Fixed diagonal orientation, smooth hero/pair framing and shared projection / camera entity | Consumes focus state; no combat or input authority |
-| DuelStage | Primitive models, resolved poses, wind-up warning meshes and three sound effects | Consumes state/events; cannot award damage |
+| MannequinLibrary / Mannequin | Checked Blender body poses and matching 17-joint hierarchy with plain rigid limb proxies | Animation consumes accepted phases/displacement; cannot schedule damage |
+| DuelStage | Shared dungeon terrain, separate weapons, resolved mannequin poses, conditional wind-up warnings and three sound effects | Consumes state/events; cannot award damage |
 | PlaytestRunner | DEBUG-only command routes and evidence | Uses ordinary input; cannot inject health, attacks or outcomes |
 
 ## Swift conventions
 
 Use Swift 6 language mode and complete concurrency checking. Session, UI and scene owners stay on the main actor; combat and geometry use plain Sendable values. Use Swift Testing and toolchain swift format with the committed apple/.swift-format (two-space indentation, 100-column lines). The standard check verifies formatting, build and hosted tests.
+
+## Dungeon and combat ownership
+
+DungeonRun owns one DuelSimulation and route progress. The combat owner retains the hero, action clock, collision, health/stamina and contact counters during exploration and both encounters. A room kill clears only that encounter; reaching the exit after both rooms completes the run. DungeonLayout supplies floor patches, solid wall/gate footprints, encounter homes/activation regions, checkpoint, recovery find and exit to both rules and scene presentation. Route transitions are checked after every authoritative fixed substep, including when a slow direct caller crosses and leaves a trigger in one outer frame. There is no navmesh, terrain height or alternate playable arena.
+
+Only an active guard attacks or receives Focus. A bounded scenery-clear idle preview can reveal the next guard through a doorway; preview presentation grants no combat authority. Encounter-local home/leash prevents pursuit into unrelated rooms. Health/stamina carry between fights. Recovery is capped at 40 health, once per life outside combat; healthy heroes leave it available. Retry restores encounters/find and preserves an opened shortcut; full Restart resets the route. Proximity supplies these interactions without a new input action.
 
 ## Rules and presentation
 
@@ -34,7 +42,9 @@ Damage uses a target disc, range, scenery clearance and the blade's swept angula
 
 The enemy approaches inside a local engagement area. Near attack range it briefly seeks a screen-lateral position, preferring the nearer collision-clear side and retaining that side for the attempt. Blocked routes and a 1.25 s attempt limit fall back to direct engagement rather than extending an orbit indefinitely. The same swept collision, occupied fighter disc and local leash remain authoritative. Once accepted, a warned sweep/thrust keeps its origin and direction, then owes its recovery before another choice. Retreat beyond the local leash sends the enemy towards its start. No navmesh, random criticals, weak-point sequence, companion AI, projectile system or physics-driven damage is required.
 
-DuelStage caches one broad sweep mesh and one narrow thrust mesh, each with a restrained amber fill and outline. During a living enemy's committed wind-up it places the relevant mesh at that action's origin and orientation. The footprint uses DuelAction's reach/half-angle and contact's target-disc radius/angular padding, with a 0.6 m central cutout inside ordinary body separation to keep feet and the focus ring visible. It previews the full action's possible target-centre envelope, not an exact hit map: active timing, target motion and scenery still decide contact. It never tracks the hero independently, creates damage or generates meshes per frame. Active/recovery, outcome and reset hide it; stopFeedback hides it on Pause/interruption and a resumed presentation restores only the current wind-up.
+The [mannequin source](../blender/animations/mannequin/README.md) preserves the original project armature and useful locomotion. A derivative owns basic melee/defence/evasion poses, exported as checked local joint samples. RealityKit mirrors the 17-joint hierarchy using rigid limb proxies; simple hand sockets and separate props avoid an external character mesh or detailed fingers. Displacement advances locomotion, and accepted action phase/progress maps onto authored clip markers. The visible weapon follows the same committed blade geometry used by contact; animation never independently triggers damage. Fresh-run presentation resets its motion baselines. Grip fitting checks natural arm reach and wrist position, not detailed palm/finger grasp; clip changes currently have no transition blend. These are basic-mannequin presentation limits, not new gameplay authority.
+
+DuelStage caches one broad sweep mesh and one narrow thrust mesh, each with a restrained amber fill and outline. During a living enemy's committed wind-up it places the relevant mesh at that action's origin and orientation. The footprint uses DuelAction's reach/half-angle and contact's target-disc radius/angular padding, with a 0.6 m central cutout inside ordinary body separation to keep feet and the focus ring visible. It previews the full action's possible target-centre envelope, not an exact hit map: active timing, target motion and scenery still decide contact. It never tracks the hero independently, creates damage or generates meshes per frame. A full envelope is omitted when scenery blocks its footprint, avoiding a through-wall danger cue; the committed body/weapon pose remains visible. Active/recovery, outcome and reset hide it; stopFeedback hides it on Pause/interruption and a resumed presentation restores only the current wind-up.
 
 ## Input and interruption
 
@@ -54,12 +64,12 @@ Debug-only launch arguments permit `--camera-projection perspective|orthographic
 
 ## Content and authoring
 
-The duel is a flat arena with boundary collision and two edge pillars, rendered from primitive boxes. The two foreground boundaries use low visual curbs to keep feet visible from the diagonal camera; the collision boxes remain unchanged. No historical character, bridge or robot USDZ is loaded or packaged. Three deterministic generated WAVs are active. Resource/scenario/sound drift tests validate actual packaged files.
+The active route is flat connected corridors, two rooms, an alcove, return connection and exit, rendered from shared boxes/doorframes with deliberate camera-near cutaways. Visual wall heights do not remove their solid footprints. No historical character, bridge or robot USDZ is loaded or packaged. Three deterministic WAVs and one checked mannequin JSON resource are active. Source/export hashes and structure/pose tests validate animation provenance and payloads alongside the existing resource/scenario/sound checks.
 
 Authored Blender assets and their byte-preserved [reference exports](../blender/reference-exports/README.md) remain available, with source fingerprints and licences. The exporter now targets that reference folder. Retaining an authored model is distinct from shipping it in the app.
 
 ## Validation and next gates
 
-Run the full [check](../scripts/check) and the four [scripted Simulator routes](../CONTRIBUTING.md#scripted-simulator-playtests), including the focus follow-up. Native tests cover combat, shared input, lifecycle/reset, collision and camera projection. Portable tests cover authoring/export, active resource declarations, sound generation, recording and release contracts. The [prototype plan](prototype-plan.md) owns exact source/results and remaining physical acceptance gates.
+Run the full [check](../scripts/check) and the four [scripted Simulator routes](../CONTRIBUTING.md#scripted-simulator-playtests), including the complete journey, defence, recovery and focus routes. Native tests cover combat, shared input, lifecycle/reset, collision and camera projection. Portable tests cover authoring/export, active resource declarations, sound generation, recording and release contracts. The [prototype plan](prototype-plan.md) owns exact source/results and remaining physical acceptance gates.
 
-Human readability/fun and physical control/performance acceptance remain separate from the [verified TestFlight delivery](prototype-plan.md#internal-testflight-build-48--available). Parrying, charged attacks, a second enemy, exploration/progression and new art follow the [research roadmap](research/eitr-gameplay-and-reset-proposal.md) only after their gates. Future deliveries follow the same source/signing/Apple-processing/tester checks within the maintainer's authorised scope.
+Human readability/fun and physical control/performance acceptance remain separate from the [verified TestFlight delivery](prototype-plan.md#internal-testflight-build-48--available). Parrying, charged attacks, simultaneous enemy groups, progression and new art follow the [research roadmap](research/eitr-gameplay-and-reset-proposal.md) only after their gates. Future deliveries follow the same source/signing/Apple-processing/tester checks within the maintainer's authorised scope.

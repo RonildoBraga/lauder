@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 #: The only runtime payloads used by the primitive duel. Historical bridge/model exports
 #: remain outside the app resource tree in blender/reference-exports.
 ASSETS = (
+    "apple/sources/content/mannequin.json",
     "apple/sources/content/sounds/strike-block.wav",
     "apple/sources/content/sounds/strike-body.wav",
     "apple/sources/content/sounds/sword-swing.wav",

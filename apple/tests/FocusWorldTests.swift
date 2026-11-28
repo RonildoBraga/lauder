@@ -6,7 +6,7 @@ import simd
 @MainActor
 struct FocusWorldTests {
   @Test func aSubTickFocusPressWinsQueuedCombatAndTogglesOnlyOnce() {
-    let world = GameWorld()
+    let world = firstEncounterWorld()
     world.update(raw: .init(), deltaTime: 0.001)
     world.update(raw: .init(controllerAttack: true), deltaTime: 0.001)
     world.update(raw: .init(controllerDodge: true, controllerFocus: true), deltaTime: 0.001)
@@ -18,7 +18,7 @@ struct FocusWorldTests {
   }
 
   @Test func pausePreservesSelectionButConsumesFocusPresses() {
-    let world = GameWorld()
+    let world = firstEncounterWorld()
     world.update(raw: .init(), deltaTime: 1 / 60)
     world.update(raw: .init(controllerFocus: true), deltaTime: 1 / 60)
     #expect(world.simulation.isFocused)
@@ -40,7 +40,7 @@ struct FocusWorldTests {
   }
 
   @Test func sourceGenerationCannotReplayAnAcceptedSubTickFocus() {
-    let world = GameWorld()
+    let world = firstEncounterWorld()
     world.controls.setActive(true)
     world.controls.useTouchControls()
     defer { world.controls.setActive(false) }
@@ -63,7 +63,7 @@ struct FocusWorldTests {
   }
 
   @Test func pauseDiscardsAQueuedFocusBeforeItsFirstSimulationTick() {
-    let world = GameWorld()
+    let world = firstEncounterWorld()
     world.update(raw: .init(), deltaTime: 0.001)
     world.update(raw: .init(keyboardFocus: true), deltaTime: 0.001)
     #expect(!world.simulation.isFocused)
@@ -78,30 +78,30 @@ struct FocusWorldTests {
   }
 
   @Test func retryClearsFocusAndItsMarkerAndWaitsForReleasedControls() throws {
-    let world = GameWorld()
+    let world = firstEncounterWorld()
     let marker = try #require(world.root.findEntity(named: "duel.focus-ring"))
     #expect(!marker.isEnabled)
-    let initialCamera = world.projection(aspect: 2.16)
     world.update(raw: .init(), deltaTime: 1 / 60)
     world.update(raw: .init(controllerFocus: true), deltaTime: 1 / 60)
     #expect(world.simulation.isFocused && marker.isEnabled)
     world.retry()
     #expect(!world.simulation.isFocused && !marker.isEnabled)
-    #expect(world.projection(aspect: 2.16).eye == initialCamera.eye)
+    #expect(simd_distance(world.run.hero.position, DungeonLayout.heroSpawn) < 0.001)
     world.update(raw: .init(controllerFocus: true), deltaTime: 1 / 60)
     #expect(!world.simulation.isFocused && world.controls.needsNeutralInput)
     world.update(raw: .init(), deltaTime: 1 / 60)
     world.update(raw: .init(controllerFocus: true), deltaTime: 1 / 60)
-    #expect(world.simulation.isFocused)
+    #expect(!world.simulation.isFocused, "the checkpoint cannot select a guard in another room")
   }
 
   @Test func focusDoesNotRotateMovementAxesAndTheLiveCameraFollowsItsActors() {
-    let world = GameWorld()
+    let world = firstEncounterWorld()
     world.update(raw: .init(), deltaTime: 1 / 60)
     world.update(raw: .init(controllerFocus: true), deltaTime: 1 / 60)
     let before = world.projection(aspect: 2.16)
     let start = world.simulation.hero.position
-    let away = simd_normalize(start - world.simulation.enemy.position)
+    // The clear doorway avoids confusing camera axes with wall sliding.
+    let away = SIMD2<Float>(1, 0)
     let stick = Movement.stick(towards: away, cameraOffset: WorldCamera.offset)
     for _ in 0..<30 { world.update(raw: .init(stick: stick), deltaTime: 1 / 60) }
     let travelled = world.simulation.hero.position - start

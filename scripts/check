@@ -55,6 +55,11 @@ def main():
             [sys.executable, "-I", "-B", "apple/scripts/test-contracts.py"],
             output / "contract-tests.log",
         )
+        print("Checking the basic body rig and exported mannequin poses.", flush=True)
+        run(
+            [sys.executable, "-I", "-B", "blender/animations/mannequin/verify.py"],
+            output / "mannequin.log",
+        )
         print("Checking TestFlight release contracts.", flush=True)
         run(
             [sys.executable, "-I", "-B", "apple/scripts/test-testflight-release.py"],

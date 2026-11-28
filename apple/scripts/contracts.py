@@ -78,7 +78,8 @@ def problems(root=ROOT):
 
     content = root / "apple/sources/content"
     packaged = [str(path.relative_to(root)) for path in (root / "apple/sources").rglob("*")
-                if path.is_file() and path.suffix in (".usdz", ".wav")]
+                if path.is_file() and (path.suffix in (".usdz", ".wav")
+                    or (path.suffix == ".json" and path.is_relative_to(content)))]
     same("Preflight assets versus packaged resources",
          literal(root, "apple/scripts/preflight.py", "ASSETS"), packaged)
 

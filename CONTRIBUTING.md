@@ -1,6 +1,6 @@
 # Contributing to Lauder
 
-People and AI-assisted contributors are welcome. The current Swift/RealityKit greybox is a single-hero duel; the README's [current prototype](README.md#current-prototype) has the status.
+People and AI-assisted contributors are welcome. The current Swift/RealityKit greybox is a single-hero dungeon prototype; the README's [current prototype](README.md#current-prototype) has the status.
 
 ## Before working
 
@@ -44,9 +44,9 @@ Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime
 ./scripts/check
 ```
 
-The script first checks that the required Git LFS assets, the USDZ files and the combat sounds, exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
+The script first checks that the required Git LFS assets, the preserved USDZ files, combat sounds and mannequin pose resource, exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
 
-It checks that the scenario and asset declarations shared by Swift, Python and Blender agree, with mutation tests that detect drift. It then runs offline release-contract tests without credentials and recording-lifecycle tests without Simulator, runs the Blender extension's tests, confirms that the [combat sounds](#sounds) and the [app icon](#app-icon) match their generators, runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
+It checks that the scenario and asset declarations shared by Swift, Python and Blender agree, with mutation tests that detect drift. It verifies the simple body rig and mannequin export fingerprints without requiring Blender. It then runs offline release-contract tests without credentials and recording-lifecycle tests without Simulator, runs the Blender extension's tests, confirms that the [combat sounds](#sounds) and the [app icon](#app-icon) match their generators, runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
 
 The [Check workflow](.github/workflows/check.yml) runs the same command for pull requests and pushes to `main`, with a manual trigger available. It selects Xcode 27.2 on GitHub's [`xcode-27` runner](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), downloads LFS payloads and requires no signing credentials. A configured workflow is not a successful run; inspect its result for the current commit. Runner/toolchain failures fail the check and must be investigated rather than reported as a passing app test.
 
@@ -67,16 +67,17 @@ Enable **Capture Keyboard** in Device Hub before playing. Tap Escape for Pause/R
 ```
 
 ```bash
-./apple/scripts/playtest duel-attack duel-defence duel-recovery duel-focus
+./apple/scripts/playtest dungeon-journey dungeon-defence dungeon-recovery dungeon-focus
 ```
 
 It builds the Debug app, launches it with `-LauderPlaytest <scenario>`, records the screen and reports pass/fail with reasons, frame/simulation times, health/stamina, actual contacts, blocks, evasions and Retry. Summaries also report actual camera projection, pitch, offset, optional orthographic vertical span and observed attack-warning kinds. It saves marked screenshots, video, traces and summaries under `.local/playtest/<time>/`, which Git ignores, or under `--output`.
 
 Use `./apple/scripts/playtest --list` for the current scenario names. The scenario families cover:
 
-- A native defensive win, directional blocking and timed dodge contact; the defence route also checks that both wind-up warning kinds were shown. Native stage/world tests verify phase disappearance and interruption/reset cleanup.
+- The complete journey: native fights, a useful recovery find, an opened return shortcut and the real exit.
+- First-room directional blocking and timed dodge contact; native stage/world tests verify warning phase disappearance and interruption/reset cleanup.
 - Pause/release/resume, fresh movement and native Restart.
-- Enemy focus, retreat while facing the opponent and focus reset (the fourth route).
+- Active-enemy focus, backpedal/strafe, focus reset and exploration continuing after the first kill.
 
 Scenarios are defined in `apple/sources/world/Playtest.swift`. With no scenario names, the script runs the current complete set. Keep names and exact completed results in the [prototype plan](docs/prototype-plan.md#verification-status), rather than maintaining a second scenario list here.
 
@@ -92,13 +93,13 @@ The [earlier camera comparison](docs/prototype-plan.md#camera-pitch-comparison--
 To record comparable defensive and boundary/focus moments:
 
 ```bash
-./apple/scripts/playtest duel-defence duel-focus --camera-projection perspective
-./apple/scripts/playtest duel-defence duel-focus --camera-projection orthographic
+./apple/scripts/playtest dungeon-defence dungeon-focus --camera-projection perspective
+./apple/scripts/playtest dungeon-defence dungeon-focus --camera-projection orthographic
 ```
 
-Both scripts accept only `perspective` or `orthographic`, forwarding the Debug-only `-LauderCameraProjection` argument. They also retain `--camera-pitch 30.5`, `35` or `40`, forwarding `-LauderCameraPitch`. Release ignores both overrides and uses the working preview's fixed orthographic 35° view. The perspective comparison uses a 24° vertical FOV; orthographic uses a full vertical world span of approximately 14.998 m at 35°. Both retain 45° yaw, matching follow/focus behaviour and centred actor size. Projection selection changes no input or combat rule. Compare corresponding marked phases with their recorded timestamps: screenshot capture is asynchronous, so separate runs do not promise identical poses. No orbit, user zoom or new scene is added.
+Both scripts accept only `perspective` or `orthographic`, forwarding the Debug-only `-LauderCameraProjection` argument. They also retain `--camera-pitch 30.5`, `35` or `40`, forwarding `-LauderCameraPitch`. Release ignores both overrides and uses the working preview's fixed orthographic 35° view. The perspective comparison uses a 24° vertical FOV; orthographic uses a full vertical world span of approximately 14.998 m at 35°. Both retain 45° yaw, matching follow/focus behaviour and centred actor size. Projection selection changes no input or combat rule. Compare corresponding marked phases with their recorded timestamps: screenshot capture is asynchronous, so separate runs do not promise identical poses. The projection comparison adds no orbit, user zoom or alternate playable scene.
 
-The duel is the only playable scene. Pause offers **Resume** and **Restart**; the outcome panel offers immediate Retry. There is no level selector, party switch or weapon bench. Test-only historical collision geometry is retained without the removed bridge policy. The [prototype plan](docs/prototype-plan.md) records current scope and verification; [bridge history](docs/bridge-prototype-plan.md) retains the earlier evidence.
+The dungeon route is the only playable scene. Pause offers **Resume** and **Restart**; the outcome panel offers immediate Retry. There is no level selector, party switch or weapon bench. Room kills continue exploration; death Retry retains an opened shortcut, while Pause Restart resets the entire run. Test-only historical collision geometry is retained without the removed bridge policy. The [prototype plan](docs/prototype-plan.md) records current scope and verification; [bridge history](docs/bridge-prototype-plan.md) retains the earlier evidence.
 
 If the Simulator keeps crashing in Apple's **PosterBoard** at startup, before Lauder launches, create a new Simulator device rather than looking for the cause in Lauder.
 
@@ -108,7 +109,7 @@ Use Simulator for everyday checks and intermediate PRs; the [prototype plan](doc
 
 ## Editing a level in Blender
 
-The current graybox duel creates its actors and arena in Swift. The tools below preserve bridge authoring and write to [blender/reference-exports](blender/reference-exports/README.md), outside the app bundle. **Play** launches the current duel; use a [bridge checkpoint](docs/milestones/bridge-prototype.md) in a separate worktree to play the historical level. No Blender or new artwork is needed to iterate on the duel.
+The current dungeon creates its terrain and rigid mannequin proxies in Swift; checked Blender body poses animate those proxies. The tools below preserve bridge authoring and write to [blender/reference-exports](blender/reference-exports/README.md), outside the app bundle. **Play** launches the current dungeon; use a [bridge checkpoint](docs/milestones/bridge-prototype.md) in a separate worktree to play the historical level. No Blender or new artwork is needed to iterate on dungeon rules. See [the mannequin source](blender/animations/mannequin/README.md) when changing body poses.
 
 Each level is a Blender file in the repository, the level's source ([ADR 0002](docs/decisions/0002-blender-source-of-truth.md)): for the Brooklyn Bridge, `blender/levels/brooklyn-bridge.blend`, stored with Git LFS. Saving it in Blender exports two historical reference files:
 
@@ -139,7 +140,7 @@ Never edit those two by hand; change the level in Blender instead.
 
    The towers cast no live shadow in the game, since a tower fades to a ghost while it hides the party and its shadow must stay. Their shadows are parts of Visual, `tower-shadow-brooklyn` and `tower-shadow-manhattan`, in the palette's shadow material, and each names the parts whose shadow it is, separated by commas, in its `lauder_shadow_of` property, under **Object Properties › Custom Properties**. After turning the sun that casts the shadow, or moving or resizing a tower, press **Bake Shadows**: it lays every such shadow again where that sun throws its parts. `./scripts/check` fails while a tower's shadow lies anywhere else.
 7. Press ⌘S. Saving checks the game's rules: if one fails, it explains what to fix, and only the Blender file is saved. Otherwise it exports, in a Blender of its own in the background, in about two seconds, and the Lauder tab says when it is done. **Export** does the same for a file you have not changed, for example after a pull.
-8. Press **Play** to refresh the reference exports and launch the current app through `./apple/scripts/play`. This launches the duel; the preserved bridge is not its active scene. Use the bridge checkpoint for the old playable level.
+8. Press **Play** to refresh the reference exports and launch the current app through `./apple/scripts/play`. This launches the dungeon; the preserved bridge is not its active scene. Use the bridge checkpoint for the old playable level.
 9. Run `./scripts/check`. Export fingerprint and authoring contract tests must still match the preserved sources and outputs.
 
 To change a level without Blender's interface, for example with a script in a background Blender, export it afterwards, giving the path of your Blender:
@@ -171,7 +172,7 @@ A model is a Blender file of its own, `blender/assets/<model>/<model>.blend`, st
 
   It takes Blender files, and the glTF, FBX, OBJ and USD files that Blender imports. It makes the model's folder: the model's Blender file, holding what the file shows, without its lights and cameras; a copy of every texture it uses; and a `README.md`. From a Blender file it takes what the first scene shows, and each instance of a collection becomes copies of its parts. Fill in the README's **Source** and **Licence** lines before committing, as [Assets and attribution](#assets-and-attribution) asks, then open the model in Blender to look at it.
 
-The preserved bridge registry contains miki, tom, laura, spider-bot-heavy, scout-drone, crawler and hostile. The extension's SPAWNED list remains authoritative for these authoring references. Saving a registered model exports blender/reference-exports/models/<model>.usdz; the active duel neither packages nor loads it. Play refreshes reference exports before launching the current duel; export-model.py can refresh one model directly:
+The preserved bridge registry contains miki, tom, laura, spider-bot-heavy, scout-drone, crawler and hostile. The extension's SPAWNED list remains authoritative for these authoring references. Saving a registered model exports blender/reference-exports/models/<model>.usdz; the active dungeon neither packages nor loads it. Play refreshes reference exports before launching the current dungeon; export-model.py can refresh one model directly:
 
 ```bash
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python-exit-code 1 --python blender/scripts/export-model.py -- miki
@@ -187,7 +188,7 @@ TestFlight builds use the app ID `com.ronildo.lauder` and the maintainer's paid 
 
 An existing App Store Connect API upload key can authenticate both archive and export/upload. Pass `-authenticationKeyPath "$LAUDER_ASC_KEY_PATH"`, `-authenticationKeyID "$LAUDER_ASC_KEY_ID"`, `-authenticationKeyIssuerID "$LAUDER_ASC_ISSUER_ID"` and `-allowProvisioningUpdates`; these variables refer to private local values, never committed credentials. Identify the existing authorised key rather than choosing arbitrarily if several exist. API authentication does not depend on Xcode's saved Apple-account session or a connected phone; signing material must still match the selected team. Keep keys, JWTs and full signing logs private.
 
-Discover Lauder's own App Store Connect record by bundle ID, and inspect both build records and accepted/processing build uploads before selecting and committing a number. Record the source commit and verify the signed archive's bundle ID, version/build, team and symbols. A previous archive is reusable only when its source is correct and its number remains unused. Upload for internal TestFlight testing using Lauder's distribution settings; preserve existing tester membership. Completion requires successful Apple processing and verified availability to the existing intended groups, not only a successful upload command. An explicit assignment may authorise a sequence of reviewed merges and TestFlight deliveries; do not request the same approval at every milestone or treat Simulator delivery as physical-playtest evidence. The [current prototype plan](docs/prototype-plan.md) and [duel decision](docs/decisions/0022-single-hero-graybox-duel.md) define the active scope.
+Discover Lauder's own App Store Connect record by bundle ID, and inspect both build records and accepted/processing build uploads before selecting and committing a number. Record the source commit and verify the signed archive's bundle ID, version/build, team and symbols. A previous archive is reusable only when its source is correct and its number remains unused. Upload for internal TestFlight testing using Lauder's distribution settings; preserve existing tester membership. Completion requires successful Apple processing and verified availability to the existing intended groups, not only a successful upload command. An explicit assignment may authorise a sequence of reviewed merges and TestFlight deliveries; do not request the same approval at every milestone or treat Simulator delivery as physical-playtest evidence. The [current prototype plan](docs/prototype-plan.md) and [dungeon decision](docs/decisions/0023-basic-rig-dungeon-prototype.md) define the active scope.
 
 ### Reproducible release command
 
@@ -274,7 +275,7 @@ Submit original material or material you are entitled to contribute. For third-p
 
 Group each asset's editable source, deliberate delivery export and a short provenance note together in the repository; use LFS for the applicable binaries. The note records the creator/source URL, licence and attribution, file sizes, and how the export was produced. A [model](#models) keeps its Blender file, textures and `README.md` in its own folder in `blender/assets`; each level's scene file is its export. Keep generated build products and caches out of source control.
 
-The active duel uses Swift primitives. The preserved bridge authoring path makes levels/models in Blender and exports USDZ references outside the app bundle. See the [engine decision](docs/decisions/0001-engine.md), historical [ADR 0002](docs/decisions/0002-blender-source-of-truth.md) and current [duel decision](docs/decisions/0022-single-hero-graybox-duel.md).
+The active dungeon uses Swift primitives. The preserved bridge authoring path makes levels/models in Blender and exports USDZ references outside the app bundle. See the [engine decision](docs/decisions/0001-engine.md), historical [ADR 0002](docs/decisions/0002-blender-source-of-truth.md) and current [dungeon decision](docs/decisions/0023-basic-rig-dungeon-prototype.md).
 
 ### Sounds
 

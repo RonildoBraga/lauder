@@ -10,8 +10,9 @@ final class GameWorld {
   let root = Entity()
   let controls = GameControls()
   let session = GameSession()
-  private(set) var simulation = DuelSimulation()
-  private(set) var observation = "Read the wind-up. Guard or dodge, then answer."
+  private(set) var run = DungeonRun()
+  var simulation: DuelSimulation { run.simulation }
+  private(set) var observation = "Follow the passage. Look for a way back."
   private(set) var retries = 0
 
   @ObservationIgnored private let camera = WorldCamera()
@@ -33,13 +34,13 @@ final class GameWorld {
   var isPaused: Bool { session.mode == .paused }
 
   init() {
-    root.name = "graybox-duel"
+    root.name = "dungeon"
     root.addChild(stage.root)
     camera.attach(to: root)
     camera.reset(
-      hero: simulation.hero.position, enemy: simulation.enemy.position,
-      isFocused: simulation.isFocused)
-    stage.present(simulation, deltaTime: 0)
+      hero: run.hero.position, enemy: run.enemy?.position ?? run.hero.position,
+      isFocused: run.isFocused)
+    stage.present(run, deltaTime: 0)
   }
 
   func projection(aspect: Float) -> CameraProjection { camera.projection(aspect: aspect) }
@@ -68,16 +69,26 @@ final class GameWorld {
   }
 
   func retry() {
-    simulation.reset()
+    run.retry()
+    resetPresentation(message: "Back at the checkpoint. An opened shortcut stays open.")
+  }
+
+  func restart() {
+    run.restart()
+    resetPresentation(message: "A fresh journey. The shortcut and healing find are reset.")
+  }
+
+  private func resetPresentation(message: String) {
     session.restart()
     retries += 1
-    observation = "A fresh duel. Read, defend, punish."
+    observation = message
     cancelPending()
     controls.requireNeutralInput()
+    stage.resetMotion()
     camera.reset(
-      hero: simulation.hero.position, enemy: simulation.enemy.position,
-      isFocused: simulation.isFocused)
-    stage.present(simulation, deltaTime: 0)
+      hero: run.hero.position, enemy: run.enemy?.position ?? run.hero.position,
+      isFocused: run.isFocused)
+    stage.present(run, deltaTime: 0)
   }
 
   private func cancelPending() {
@@ -86,8 +97,8 @@ final class GameWorld {
     pendingDodge = false
     pendingFocus = false
     wasReady = false
-    simulation.interrupt()
-    _ = simulation.takeEvents()
+    run.interrupt()
+    _ = run.takeEvents()
     stage.stopFeedback()
   }
 
@@ -134,10 +145,10 @@ final class GameWorld {
     }
     if mode == .paused {
       if input.restartPressed {
-        retry()
+        restart()
       } else if input.actionPressed {
         if session.pauseChoice == .restart {
-          retry()
+          restart()
         } else {
           session.togglePause()
           controls.requireNeutralInput()
@@ -148,12 +159,16 @@ final class GameWorld {
       }
       return
     }
-    if input.restartPressed || (simulation.outcome != .fighting && input.actionPressed) {
-      retry()
+    if input.restartPressed {
+      restart()
+      return
+    }
+    if run.outcome != .fighting && input.actionPressed {
+      if run.outcome == .won { restart() } else { retry() }
       return
     }
     let ready = !controls.needsNeutralInput && session.mode == .exploring
-    guard ready, simulation.outcome == .fighting else {
+    guard ready, run.outcome == .fighting else {
       if wasReady { cancelPending() }
       return
     }
@@ -169,9 +184,9 @@ final class GameWorld {
     }
     let direction = Movement.direction(for: input.movement, cameraOffset: WorldCamera.offset)
     accumulated += min(deltaTime, 1 / 15)
-    while accumulated >= DuelSimulation.fixedStep && simulation.outcome == .fighting {
+    while accumulated >= DuelSimulation.fixedStep && run.outcome == .fighting {
       accumulated -= DuelSimulation.fixedStep
-      simulation.step(
+      run.step(
         DuelCommand(
           movement: [direction.x, direction.z], attackPressed: pendingAttack,
           guardHeld: input.guardHeld, dodgePressed: pendingDodge, focusPressed: pendingFocus),
@@ -180,24 +195,33 @@ final class GameWorld {
       pendingDodge = false
       pendingFocus = false
     }
-    let events = simulation.takeEvents()
+    let events = run.takeEvents()
     camera.update(
-      hero: simulation.hero.position, enemy: simulation.enemy.position,
-      isFocused: simulation.isFocused, deltaTime: min(deltaTime, 1 / 15))
-    stage.present(simulation, deltaTime: min(deltaTime, 1 / 15))
-    if isActive { stage.play(events) }
+      hero: run.hero.position, enemy: run.enemy?.position ?? run.hero.position,
+      isFocused: run.isFocused, deltaTime: min(deltaTime, 1 / 15))
+    stage.present(run, deltaTime: min(deltaTime, 1 / 15))
+    if isActive {
+      stage.play(
+        events.compactMap { event in
+          if case .combat(let combat) = event { combat } else { nil }
+        })
+    }
     for event in events {
       switch event {
-      case .blocked:
+      case .combat(.blocked):
         observation = "Blocked. Keep stamina for the answer."
-      case .evaded:
+      case .combat(.evaded):
         observation = "Evaded. The enemy is committed."
-      case .guardBroken: observation = "Guard broken. Release guard and regain space."
-      case .hit(.hero): observation = "Hit. Watch the pose before the next attack."
-      case .hit(.enemy):
+      case .combat(.guardBroken): observation = "Guard broken. Release guard and regain space."
+      case .combat(.hit(.hero)): observation = "Hit. Watch the pose before the next attack."
+      case .combat(.hit(.enemy)):
         observation = "An opening earned."
-      case .finished(.won): observation = "Duel won. Retry and try another response."
-      case .finished(.lost): observation = "Duel lost. Retry is immediate."
+      case .encounterStarted: observation = "An enemy guards the room. Keep a retreat route."
+      case .encounterCleared: observation = "Passage clear. Explore before moving on."
+      case .healed: observation = "Recovered health. This find is spent until your next life."
+      case .shortcutOpened: observation = "Shortcut opened. The checkpoint is close again."
+      case .finished(.won): observation = "The route is clear. You found the way through."
+      case .finished(.lost): observation = "Return to the checkpoint and try another approach."
       default: break
       }
     }

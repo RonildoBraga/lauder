@@ -1,6 +1,16 @@
-# Lauder — single-hero graybox duel
+# Lauder — basic-rig dungeon prototype
 
-**Updated:** 28 November 2026. **Tracking:** [issue #236](https://github.com/RonildoBraga/lauder/issues/236).
+**Updated:** 29 November 2026. **Tracking:** [issue #243](https://github.com/RonildoBraga/lauder/issues/243).
+
+## Basic-rig dungeon — implementation in progress
+
+The maintainer assigned the combined mannequin/dungeon experiment after reporting that the isolated duel lacked Soulslike combat feel and Eitr-style corridors. [Issue #243](https://github.com/RonildoBraga/lauder/issues/243) owns progress; [ADR 0023](decisions/0023-basic-rig-dungeon-prototype.md) records the selected simple 17-bone armature, route and reset semantics. The external character mesh and detailed hands are excluded. The anonymous mannequin does not replace the preserved story characters.
+
+The route has a safe entry, bent approach, two sequential sentry rooms, a once-per-life recovery find, a far-side shortcut and an exit. Room kills leave exploration running. Health/stamina carry between rooms. Death Retry restores encounters/recovery while retaining an opened shortcut; Pause Restart resets the whole route. The shortcut provides a return/navigation loop; sequential encounters still both reset after death, so it does not bypass the first required fight. Focus is restricted to an active opponent with clear sight. Shared layout values supply terrain and triggers; Blender-authored body poses follow simulation-owned movement/action timing.
+
+Fresh validation and review are pending. First verify the animated approach/first fight, then all four native and recorded routes: dungeon-journey, dungeon-defence, dungeon-recovery and dungeon-focus. Check readable limb/weapon poses, real contact/defence, room transitions, useful healing, return shortcut, exit, and input/Pause/Retry/Restart recovery. Source tests and recordings do not establish enjoyment or phone performance.
+
+The current TestFlight build remains the earlier flat-duel **0.1.0 (48)**. Its release and earlier camera/duel results below retain their exact sources; they do not validate this new implementation.
 
 ## Duel readability follow-up — in progress
 
@@ -50,7 +60,7 @@ Choose **TestFlight → Lauder → Update** to evaluate camera readability, side
 
 ## Camera and enemy-focus follow-up — in progress
 
-**Earlier source record:** this section preserves the focus and three-angle perspective work through checkpoint 16a202e. The readability follow-up above owns current changes and delivery status.
+**Earlier source record:** this section preserves the focus and three-angle perspective work through checkpoint 16a202e. The readability follow-up above owns historical duel changes and build48 delivery status; #243 above owns current work.
 
 The maintainer requested a camera closer to Eitr's framing and a way to retreat without turning away from the enemy (chat, 28 November 2026; no public permalink). [Issue #238](https://github.com/RonildoBraga/lauder/issues/238) tracks this follow-up in [PR #239](https://github.com/RonildoBraga/lauder/pull/239), stacked on [PR #237](https://github.com/RonildoBraga/lauder/pull/237).
 
@@ -185,7 +195,7 @@ Independent review findings were addressed: buffered-facing drift, handoff toler
 
 No new phone, TestFlight, enjoyment or measured phone-performance acceptance is claimed. #236 stays open for review, the human gate and a separately authorised merge/delivery.
 
-Run:
+Historical checkpoint commands (use the README's dungeon routes on the current branch):
 
     ./scripts/check
     ./apple/scripts/playtest duel-attack duel-defence duel-recovery duel-focus
@@ -194,6 +204,6 @@ The routes drive real shared input, not injected damage or outcomes. The origina
 
 ## Next gate
 
-A short human session should establish whether preparation is readable, block/dodge/repositioning offer distinct choices, damage feels fair and Retry invites another attempt. Physical touch/controller comfort and sustained phone performance require a separately arranged milestone.
+Complete source-bound checks and rendered recordings for #243, review the connected route and basic-rig animation, and address findings. Then a short human session should establish whether the corridor approach creates tension, enemy preparation is readable, block/dodge/repositioning offer distinct choices, the recovery find has value, and Retry invites another attempt. Physical touch/controller comfort and sustained phone performance remain separate evidence gates.
 
-The three-angle comparison selected 35°; #241 now has passing source-bound checks, a rendered projection comparison and verified internal TestFlight build 48 delivery. Gather Claude's requested feedback and the maintainer's phone evaluation before expanding the duel. Merge remains a separate instruction. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel.
+The maintainer has assigned this dungeon experiment after the flat-duel feedback; the earlier plan to wait before adding traversal is superseded by #243. Merge and another TestFlight delivery retain their applicable authorisation and release checks. More art, story, inventories and a campaign remain outside this experiment.
