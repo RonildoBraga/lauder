@@ -57,6 +57,8 @@ struct RobotGuard {
   static let settleDuration: Float = 0.6
   static let staggerDuration: Float = 0.6
   static let staggerDepth: Float = 0.08
+  /// A standing guard looks out from its guns' height.
+  static let standingSightHeight = RobotModelGeometry.gunMounts[0].y
   /// The final leg faces the bridge entrance again instead of patrolling only north/east/west.
   private static let patrolOffsets: [SIMD2<Float>] = [[0, -1.5], [3, -1.5], [1.5, 0]]
 
@@ -97,6 +99,10 @@ struct RobotGuard {
     let pulse = sin(.pi * progress)
     return min(Self.groundedDrop, lowered + Self.staggerDepth * pulse * pulse)
   }
+
+  /// Where the guard looks from: its guns' height, which drops with its body as they do. The
+  /// maintainer chose to let a crippled guard's sight drop on #226.
+  var sightHeight: Float { Self.standingSightHeight - bodyDrop }
 
   init(home: SIMD2<Float>, strategicPatterns: Bool = false) {
     self.home = home
