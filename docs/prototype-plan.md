@@ -6,23 +6,25 @@
 
 The maintainer requested a camera closer to Eitr's framing and a way to retreat without turning away from the enemy (chat, 28 November 2026; no public permalink). [Issue #238](https://github.com/RonildoBraga/lauder/issues/238) tracks this follow-up in [PR #239](https://github.com/RonildoBraga/lauder/pull/239), stacked on [PR #237](https://github.com/RonildoBraga/lauder/pull/237).
 
-The view uses a fixed 45° diagonal orientation and a 24° vertical perspective field of view. A 35° downward pitch is the recommended candidate while the maintainer compares three angles below. These are our 3D adaptation informed by Eitr footage, not measured Eitr camera parameters. Translation follows the hero when free and the fighters' midpoint when focused, with smooth frame-rate-independent damping. The camera never orbits with movement or focus; Retry snaps it to the fresh composition. Rendered geometry and screen projection share that transform.
+The view uses a fixed 45° diagonal orientation and a 24° vertical perspective field of view. The maintainer selected a 35° downward pitch (option B) after reviewing the three Simulator views below. These are our 3D adaptation informed by Eitr footage, not measured Eitr camera parameters. Translation follows the hero when free and the fighters' midpoint when focused, with smooth frame-rate-independent damping. The camera never orbits with movement or focus; Retry snaps it to the fresh composition. Rendered geometry and screen projection share that transform.
 
 Focus is an explicit toggle, with bounded facing towards the one living opponent and a ground-ring indicator. It works while idle, moving or guarding, but cannot redirect or cancel an accepted slash or dodge. Focus persists through Pause and input interruption; Retry or either fighter's defeat clears it. Paused/suppressed commands are consumed rather than replayed.
 
 ### Camera-pitch comparison — verified in Simulator
+
+**Selection:** after the side-by-side captures and the recommendation of option B, the maintainer said **“Let’s proceed with your recommendations”** (chat, 28 November 2026; no public permalink). This selects the implemented 35° perspective framing, retaining 45° yaw, 24° vertical FOV, following and Focus. The alternate Debug views remain useful verification controls. Selection is not a phone playtest, merge instruction or TestFlight upload.
 
 The maintainer approved comparing 30.5°, 35° and 40° downward tilt, with 35° as the candidate default (chat, 28 November 2026; no public permalink). This continues the existing PR and issue; it does not authorise merge or TestFlight delivery. Yaw, lens, follow/focus behaviour, input and combat remain shared.
 
 | Downward pitch | Camera offset (x, y, z), metres | Status |
 | --- | --- | --- |
 | 30.5° | (22.659590, 18.876242, 22.659590) | Debug comparison |
-| 35° | (20.489737, 20.289818, 20.489737) | Recommended candidate/default |
+| 35° | (20.489737, 20.289818, 20.489737) | Selected/default |
 | 40° | (17.929450, 21.276270, 17.929450) | Debug comparison |
 
 The three offsets are calibrated for the same centred 1.85 m actor height, approximately 10.1041% of viewport height at 24° vertical FOV. All three are pulled back from the preceding revision's approximately 12.7254% actor height, making the actor about 20.6% smaller on screen to retain full opposite-corner feet at 40°. The new 30.5° option is recalibrated too; it is not the unchanged earlier framing. Equal centred scale does not imply identical perspective at every world position.
 
-The existing [play and playtest scripts](../CONTRIBUTING.md#scripted-simulator-playtests) accept only `--camera-pitch 30.5`, `35` or `40`, forwarding a Debug-only launch argument. Release uses only the 35° candidate. Recorded summaries include the actual pitch and offset. Comparisons reuse `duel-defence` and `duel-focus` and show corresponding marked encounter phases with timestamps, rather than claiming identical poses across asynchronously captured runs. No extra scene, pose injection, gameplay control, orbit or zoom system is introduced.
+The existing [play and playtest scripts](../CONTRIBUTING.md#scripted-simulator-playtests) accept only `--camera-pitch 30.5`, `35` or `40`, forwarding a Debug-only launch argument. Release uses only the selected 35° view. Recorded summaries include the actual pitch and offset. Comparisons reuse `duel-defence` and `duel-focus` and show corresponding marked encounter phases with timestamps, rather than claiming identical poses across asynchronously captured runs. No extra scene, pose injection, gameplay control, orbit or zoom system is introduced.
 
 **Verified source:** 83b79e78994052b95089e6ac555654dcf4d3f22d. The complete `./scripts/check` passed at 08:08:38 UTC on 28 November 2026, including formatting/build, hosted Swift Testing with all four native routes and the portable contracts. Projection tests verify the three actual pitches, common centred character scale, diagonal orientation and both fighters' head/feet at near and opposite corners without relaxing the viewport bounds. Independent Codex review found no actionable issue in the camera selection, launch arguments, release isolation, metadata or tests.
 
@@ -41,7 +43,13 @@ Eight recorded runs on that same built Debug app passed. The four 35° runs used
 
 The app-reported pitch/offset in every summary agrees with its requested view. Actual sweep-preparation and boundary-retreat captures were inspected at all three pitches: feet, weapons, shield, focus ring and HUD remain visible. The 35° view shows more ground and fighter separation than 30.5° while retaining a less overhead presentation than 40°. Captures, recordings, traces and a source-bound manifest remain in the ignored local comparison folder. These are comparable encounter phases, not identical poses; timing figures are Simulator observations, not phone performance evidence.
 
-Hosted [Check233](https://github.com/RonildoBraga/lauder/actions/runs/46121232924) succeeded on earlier documentation head 222ffed60d1de97899a039a4412440ed72c7cce7; it does not validate this new camera source. Current CI/review status is on PR #239. Claude's separately requested review has no recorded response. Human framing choice and physical controls/performance acceptance remain open; build47 is unchanged.
+Hosted [Check235](https://github.com/RonildoBraga/lauder/actions/runs/46124844322) passed on head 77a5863c83e10c36267e652f1daf29a70e3f8a8d, whose application/test/tooling source remains 83b79e7. Claude's [review](https://github.com/RonildoBraga/lauder/pull/239#issuecomment-7236453857) reports no blocking findings on earlier source 222ffed; the later calibration review is still requested. The visual framing choice is settled from Simulator captures. Physical controls, phone readability/performance and human gameplay acceptance remain open; build47 is unchanged. Current PR checks are separate from this source-bound CI record.
+
+### Review follow-ups
+
+Claude’s review correctly identifies perspective convergence and occasional projected body overlap as remaining differences/readability risks. Current matched scale is approximately 10.1%; the review’s earlier scale comparison predates this calibration. The 35° view improves separation but does not guarantee that one fighter can never obscure the other.
+
+Orthographic/longer-lens comparisons, side-approach enemy movement, attack-area indicators and stick-directed free slashes are separate proposals, coordinated through [issue #240](https://github.com/RonildoBraga/lauder/issues/240). They are not silently included in the framing selection. Free slashes still use bounded current facing and their committed direction; Focus assists tracking while directional Guard, stamina and guard-break rules remain.
 
 ### Initial focus implementation — verified on earlier source
 
@@ -56,7 +64,7 @@ Fresh rendered Simulator runs on that exact application/test/tooling source pass
 | duel-recovery | 4/4, 2.7 s, 138 frames | Paused input consumed, neutral resume, fresh movement and native Restart |
 | duel-focus | 5/5, 18.8 s, 1,082 frames | Focus, boundary retreat and strafe while facing the enemy; seven sword contacts/five blocks, victory, health100, automatic focus release |
 
-Before/after captures, videos, traces and summaries remain in the ignored local verification folders. Actual frames were inspected for diagonal scenery, upright fighters, focus ring, weapons, HUD and near-wall foot visibility. This exposed foreground walls hiding feet; the two foreground wall visuals now use 0.18m curbs while the flat collision boxes remain unchanged. Independent Codex source review found no blocking issue; its pending-focus/Pause and first-fixed-tick acquisition coverage suggestions were addressed. Claude/external review and human framing acceptance remain open.
+Before/after captures, videos, traces and summaries remain in the ignored local verification folders. Actual frames were inspected for diagonal scenery, upright fighters, focus ring, weapons, HUD and near-wall foot visibility. This exposed foreground walls hiding feet; the two foreground wall visuals now use 0.18m curbs while the flat collision boxes remain unchanged. Independent Codex source review found no blocking issue; its pending-focus/Pause and first-fixed-tick acquisition coverage suggestions were addressed. At that checkpoint, Claude/external review and human framing acceptance remained open; the later choice and review record above supersede that status.
 
 No new TestFlight upload has been made: build47 remains the delivered earlier revision. Scripted raw commands and native touch tests do not establish physical R3/Tab delivery, real multi-touch comfort, sustained phone performance or enjoyment. Existing source-bound results below retain their original revisions.
 
@@ -140,4 +148,4 @@ The routes drive real shared input, not injected damage or outcomes. The origina
 
 A short human session should establish whether preparation is readable, block/dodge/repositioning offer distinct choices, damage feels fair and Retry invites another attempt. Physical touch/controller comfort and sustained phone performance require a separately arranged milestone.
 
-Complete the three-angle comparison, choose the framing and review the assigned camera/focus follow-up before expanding the duel. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel. Merge and TestFlight publication retain their own go-ahead.
+The three-angle comparison is complete and the 35° framing is selected. Review the selected camera/focus calibration before expanding the duel. Only after the duel works should we compare parry/charged actions and another enemy pattern. Then test a short exploration route with a useful optional reward and shortcut. More art, story, inventories and a campaign do not repair an unsatisfying duel. Merge and TestFlight publication retain their own go-ahead.
