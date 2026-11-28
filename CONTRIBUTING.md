@@ -46,7 +46,7 @@ Select stable Xcode 27.2 and install an iOS 27 or later iPhone simulator runtime
 
 The script first checks that the required Git LFS assets, the USDZ files and the combat sounds, exist and are downloaded payloads rather than Git LFS pointers. Missing assets produce `git lfs install` and `git lfs pull` recovery instructions before any Apple tools run; Git LFS itself is not required when the payloads are already present.
 
-It checks that the scenario and asset declarations shared by Swift, Python and Blender agree, with mutation tests that detect drift. It then runs offline release-contract tests without credentials and recording-lifecycle tests without Simulator, runs the Blender extension's tests, confirms that the [combat sounds](#sounds) match their generator, runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
+It checks that the scenario and asset declarations shared by Swift, Python and Blender agree, with mutation tests that detect drift. It then runs offline release-contract tests without credentials and recording-lifecycle tests without Simulator, runs the Blender extension's tests, confirms that the [combat sounds](#sounds) and the [app icon](#app-icon) match their generators, runs the selected toolchain's `swift format` with the committed `apple/.swift-format`, builds the shared `Lauder` scheme and runs the hosted Swift Testing target. It prefers an already booted eligible iPhone simulator, otherwise chooses an installed one deterministically. Successful runs remove their own temporary build products, logs and result bundle. Failed runs retain their generated output outside Git and print the directory path for inspection.
 
 The [Check workflow](.github/workflows/check.yml) runs the same command for pull requests and pushes to `main`, with a manual trigger available. It selects Xcode 27.2 on GitHub's [`xcode-27` runner](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md), downloads LFS payloads and requires no signing credentials. A configured workflow is not a successful run; inspect its result for the current commit. Runner/toolchain failures fail the check and must be investigated rather than reported as a passing app test.
 
@@ -266,6 +266,16 @@ python3 apple/scripts/make-sounds.py
 ```
 
 `./scripts/check` fails while the committed files differ from what the script makes. A recording can later replace a sound under the same name, with no change to the game's code: record its source, licence and attribution here, and change the script so that it no longer makes or checks that sound.
+
+### App icon
+
+The placeholder app icon, `apple/sources/app/Assets.xcassets/AppIcon.appiconset/AppIcon.png`, is drawn by [`apple/scripts/make-app-icon.py`](apple/scripts/make-app-icon.py) with Python's standard library: the three in a wedge, in simple shapes and their in-game colours, until icon art is assigned. To redraw it:
+
+```sh
+python3 apple/scripts/make-app-icon.py
+```
+
+`./scripts/check` fails while the committed icon differs from what the script draws, beyond a step in a colour channel that another platform's maths could account for.
 
 ### Target membership
 

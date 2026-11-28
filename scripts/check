@@ -75,6 +75,11 @@ def main():
             [sys.executable, "-I", "-B", "apple/scripts/make-sounds.py", "--check"],
             output / "sounds.log",
         )
+        print("Checking the generated app icon.", flush=True)
+        run(
+            [sys.executable, "-I", "-B", "apple/scripts/make-app-icon.py", "--check"],
+            output / "icon.log",
+        )
         print("Checking Swift formatting.", flush=True)
         run(
             [
